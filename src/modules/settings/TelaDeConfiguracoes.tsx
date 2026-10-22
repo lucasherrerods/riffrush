@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Gamepad2, Keyboard, Monitor, RotateCcw, Volume2 } from "lucide-react";
-import { CORES_DAS_PISTAS, COR_DA_ESTRELA } from "@/modules/gameplay";
+import { CORES_DAS_PISTAS, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "@/modules/gameplay";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
@@ -17,7 +17,6 @@ interface Props {
   aoVoltar: () => void;
 }
 
-const NOMES_DOS_TRASTES = ["Verde", "Vermelho", "Amarelo", "Azul", "Laranja"];
 const INDICE_DA_ESTRELA = 5;
 const porcentagem = (valor: number) => `${Math.round(valor * 100)}%`;
 
@@ -91,7 +90,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
         <div className="mt-4 min-h-0 flex-1 overflow-y-auto rounded-3xl border border-borda bg-superficie p-4">
           <TabsContent value="controles" className="flex flex-col gap-2">
             <p className="px-4 py-2 text-base text-texto-suave">Clique numa tecla e aperte a nova. Esc cancela.</p>
-            {NOMES_DOS_TRASTES.map((nome, i) => (
+            {NOMES_DAS_PISTAS.map((nome, i) => (
               <LinhaDeOpcao key={nome} rotulo={`Traste ${nome}`}>
                 {botaoDeTecla(i, `do traste ${nome}`, configuracoes.teclas[i], CORES_DAS_PISTAS[i])}
               </LinhaDeOpcao>

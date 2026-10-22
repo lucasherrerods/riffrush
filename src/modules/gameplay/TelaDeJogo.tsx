@@ -9,7 +9,7 @@ import { Button } from "@/shared/ui/button";
 import { criarBot, jogarSozinho } from "./bot";
 import { MedidorDeVida } from "./componentes/MedidorDeVida";
 import { MenuDePausa } from "./componentes/MenuDePausa";
-import { CORES_DO_MULTIPLICADOR } from "./cores";
+import { CORES_DO_MULTIPLICADOR, NOMES_DAS_PISTAS } from "./cores";
 import { ativarEstrela, avancar, criarPartida, multiplicador, retirarEventos, soltar, tocar } from "./partida";
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { layoutDaPista } from "./pista/geometria";
@@ -84,7 +84,13 @@ const nada = () => {};
 export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSair, aoTerminar }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const video = useRef<HTMLVideoElement>(null);
-  const controles = useRef({ pausar: nada, continuar: nada, desistir: nada });
+  const controles = useRef<{ pausar: () => void; continuar: () => void; desistir: () => void; apertar: (pista: number, evento: Event) => void; largar: (pista: number) => void }>({
+    pausar: nada,
+    continuar: nada,
+    desistir: nada,
+    apertar: nada,
+    largar: nada,
+  });
   const emRede = !!rede;
   // A rede chega como objeto novo a cada render; só o instante de largada reinicia a partida.
   const inicioEmRede = rede?.inicio;
@@ -225,7 +231,22 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
       publicar(true);
       aoTerminar(resultadoDaPartida(partida, musica.id, dificuldade));
     };
-    controles.current = { pausar, continuar, desistir };
+    Object.assign(controles.current, { pausar, continuar, desistir });
+
+    /** Teclado e toque apertam do mesmo jeito: o instante vem do próprio evento. */
+    const apertar = (pista: number, evento: Event) => {
+      if (pausadoAgora || terminou) return;
+      apertados[pista] = true;
+      const tempo = tempoDaMusica(momentoDoEvento(audio, evento));
+      tocar(partida, pista, tempo);
+      tratarEventos(tempo);
+    };
+    const largar = (pista: number) => {
+      apertados[pista] = false;
+      soltar(partida, pista, tempoDaMusica(agoraNoAudio(audio)));
+    };
+    controles.current.apertar = apertar;
+    controles.current.largar = largar;
 
     const aoApertar = (evento: KeyboardEvent) => {
       if (evento.code === "Escape") {
@@ -238,11 +259,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
       const pista = opcoes.teclas.indexOf(evento.code);
       if (pista >= 0) {
         evento.preventDefault();
-        if (evento.repeat) return;
-        apertados[pista] = true;
-        const tempo = tempoDaMusica(momentoDoEvento(audio, evento));
-        tocar(partida, pista, tempo);
-        tratarEventos(tempo);
+        if (!evento.repeat) apertar(pista, evento);
       } else if (evento.code === opcoes.teclaDaEstrela) {
         evento.preventDefault();
         ativarEstrela(partida);
@@ -250,9 +267,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
     };
     const aoSoltar = (evento: KeyboardEvent) => {
       const pista = opcoes.teclas.indexOf(evento.code);
-      if (pista < 0) return;
-      apertados[pista] = false;
-      soltar(partida, pista, tempoDaMusica(agoraNoAudio(audio)));
+      if (pista >= 0) largar(pista);
     };
     window.addEventListener("keydown", aoApertar);
     window.addEventListener("keyup", aoSoltar);
@@ -399,6 +414,27 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
               <Pause />
             </Button>
           </header>
+
+          {/* Áreas de toque: uma embaixo de cada traste (funcionam com o mouse também). */}
+          <div
+            className="absolute bottom-0 flex"
+            style={{ left: layout.centro - layout.largura / 2, width: layout.largura, top: layout.linhaDeBatida - layout.larguraDoTraste * 0.45 }}
+          >
+            {NOMES_DAS_PISTAS.map((nome, pista) => (
+              <div
+                key={nome}
+                role="button"
+                aria-label={`Traste ${nome}`}
+                className="h-full flex-1"
+                onPointerDown={(e) => {
+                  e.currentTarget.setPointerCapture?.(e.pointerId);
+                  controles.current.apertar(pista, e.nativeEvent);
+                }}
+                onPointerUp={() => controles.current.largar(pista)}
+                onPointerCancel={() => controles.current.largar(pista)}
+              />
+            ))}
+          </div>
 
           {rede?.adversarios}
 
