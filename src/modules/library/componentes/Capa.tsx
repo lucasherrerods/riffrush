@@ -13,8 +13,8 @@ export function Capa({ musica, className, girando = false, decorativa = false }:
       {musica.imagemDeCapa ? (
         <img src={musica.imagemDeCapa} alt={decorativa ? "" : `Capa de ${musica.titulo}`} className="absolute inset-0 size-full object-cover" />
       ) : (
-        <motion.div animate={girando ? { rotate: 360 } : undefined} transition={{ repeat: Infinity, duration: 4, ease: "linear" }}>
-          <Disc3 className="size-1/2 min-h-6 min-w-6 text-texto/80" aria-hidden />
+        <motion.div className="size-1/2" animate={girando ? { rotate: 360 } : undefined} transition={{ repeat: Infinity, duration: 4, ease: "linear" }}>
+          <Disc3 className="size-full text-texto/80" aria-hidden />
         </motion.div>
       )}
     </div>
