@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/compartilhado/estilos/global.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": "@/compartilhado",
+    "ui": "@/compartilhado/ui",
+    "utils": "@/compartilhado/lib/utils",
+    "lib": "@/compartilhado/lib",
+    "hooks": "@/compartilhado/hooks"
+  }
+}
