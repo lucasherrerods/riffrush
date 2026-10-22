@@ -16,12 +16,17 @@ interface Props {
   volumeDosEfeitos: number;
   aoRepetir: () => void;
   aoContinuar: () => void;
+  /** Em rede: o placar da sala aparece aqui e o botão volta para a sala, sem "tocar de novo". */
+  extra?: React.ReactNode;
+  rotuloDeContinuar?: string;
 }
 
 const DURACAO_DA_CONTAGEM = 1.6;
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
-export function TelaDeResultado({ titulo, artista, resultado, recordeNovo, volumeDosEfeitos, aoRepetir, aoContinuar }: Props) {
+export function TelaDeResultado(props: Props) {
+  const { titulo, artista, resultado, recordeNovo, volumeDosEfeitos, aoRepetir, aoContinuar, extra, rotuloDeContinuar } = props;
+  const podeRepetir = rotuloDeContinuar === undefined;
   const [pontosNaTela, setPontosNaTela] = useState(0);
   const estrelas = estrelasDoResultado(resultado);
   const precisao = resultado.total ? Math.round((resultado.acertos / resultado.total) * 100) : 0;
@@ -42,7 +47,7 @@ export function TelaDeResultado({ titulo, artista, resultado, recordeNovo, volum
 
   useTeclado((evento) => {
     if (evento.code === "Enter" || evento.code === "Escape") aoContinuar();
-    else if (evento.code === "KeyR") aoRepetir();
+    else if (evento.code === "KeyR" && podeRepetir) aoRepetir();
   });
 
   const estatisticas = [
@@ -89,6 +94,8 @@ export function TelaDeResultado({ titulo, artista, resultado, recordeNovo, volum
         )}
       </div>
 
+      {extra}
+
       <dl className="grid grid-cols-4 gap-4 max-md:grid-cols-2">
         {estatisticas.map((e) => (
           <div key={e.rotulo} className="w-40 rounded-2xl border border-borda bg-superficie p-4 text-center">
@@ -99,11 +106,13 @@ export function TelaDeResultado({ titulo, artista, resultado, recordeNovo, volum
       </dl>
 
       <div className="flex gap-4">
-        <Button size="lg" variant="outline" onClick={aoRepetir}>
-          <RotateCcw className="opacity-70" /> Tocar de novo (R)
-        </Button>
+        {podeRepetir && (
+          <Button size="lg" variant="outline" onClick={aoRepetir}>
+            <RotateCcw className="opacity-70" /> Tocar de novo (R)
+          </Button>
+        )}
         <Button size="lg" onClick={aoContinuar}>
-          <ListMusic className="opacity-70" /> Escolher outra (Enter)
+          <ListMusic className="opacity-70" /> {rotuloDeContinuar ?? "Escolher outra"} (Enter)
         </Button>
       </div>
     </div>

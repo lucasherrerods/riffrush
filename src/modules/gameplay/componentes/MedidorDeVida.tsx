@@ -2,11 +2,11 @@ import { motion } from "framer-motion";
 import { cn } from "@/shared/lib/utils";
 
 /** O medidor de rock: vermelho embaixo (perdendo), verde em cima (mandando bem). */
-export function MedidorDeVida({ vida, horizontal = false, className }: { vida: number; horizontal?: boolean; className?: string }) {
+export function MedidorDeVida({ vida, horizontal = false, rotulo = "Vida", className }: { vida: number; horizontal?: boolean; rotulo?: string; className?: string }) {
   return (
     <div
       role="meter"
-      aria-label="Vida"
+      aria-label={rotulo}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(vida * 100)}
