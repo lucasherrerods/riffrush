@@ -228,3 +228,28 @@ describe("TelaDeJogo com toque", () => {
     expect(screen.getByLabelText("Pontos").textContent).toBe(aoSoltar);
   });
 });
+
+describe("TelaDeJogo no celular", () => {
+  beforeEach(() => Object.defineProperty(window, "innerWidth", { value: 375, configurable: true }));
+  afterEach(() => Object.defineProperty(window, "innerWidth", { value: 1024, configurable: true }));
+
+  it("troca o painel lateral por um painel compacto no topo", async () => {
+    carregarCom([nota(5)]);
+    abrir();
+    await screen.findByRole("heading", { name: "Neon Highway" });
+    expect(document.querySelector('[data-parte="hud-compacto"]')).not.toBeNull();
+    expect(document.querySelector('[data-parte="hud-lateral"]')).toBeNull();
+  });
+
+  it("o star power vira um botão para tocar com o dedo", async () => {
+    carregarCom([nota(5)]);
+    abrir();
+    expect(await screen.findByRole("button", { name: /Ativar star power/ })).toHaveTextContent("0%");
+  });
+
+  it("o personagem continua aparecendo", async () => {
+    carregarCom([nota(5)]);
+    abrir();
+    expect(await screen.findByRole("img", { name: "Personagem Rockstar" })).toBeInTheDocument();
+  });
+});
