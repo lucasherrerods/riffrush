@@ -5,7 +5,7 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Chibi } from "./Chibi";
-import { GrupoDeOpcoes } from "./componentes/GrupoDeOpcoes";
+import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import {
   ACESSORIOS,
   CABELOS,
