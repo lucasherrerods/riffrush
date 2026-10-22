@@ -45,3 +45,13 @@ describe("Adversarios", () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+describe("Adversarios no celular", () => {
+  it("vira uma linha de pílulas pequenas, sem os chibis, para não cobrir a pista", () => {
+    render(<Adversarios compacto sala={sala({ adversarios: { 2: { pontos: 12345, vida: 0.2, sequencia: 0, pulso: 0, derrota: false, terminou: false } } })} />);
+    expect(screen.queryByRole("img", { name: "Personagem Vitor" })).toBeNull();
+    expect(screen.getByText("Vitor")).toBeInTheDocument();
+    expect(screen.getByText("12k")).toBeInTheDocument();
+    expect(screen.getByRole("meter", { name: "Vida de Vitor" })).toHaveAttribute("aria-valuenow", "20");
+  });
+});

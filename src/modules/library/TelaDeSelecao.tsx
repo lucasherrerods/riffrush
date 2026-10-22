@@ -86,7 +86,7 @@ export function TelaDeSelecao(props: Props) {
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1">
-        <ul ref={lista} className="col-span-5 flex min-h-0 flex-col gap-2 overflow-y-auto pr-2">
+        <ul ref={lista} className="col-span-5 flex min-h-0 min-w-0 flex-col gap-2 overflow-y-auto pr-2">
           {musicas.map((m, i) => {
             const selecionada = i === indice;
             const recorde = recordeDe(recordes, m.id, dificuldade);
@@ -122,7 +122,7 @@ export function TelaDeSelecao(props: Props) {
           })}
         </ul>
 
-        <section className="col-span-7 flex flex-col gap-6 rounded-3xl border border-borda bg-superficie p-6 max-md:gap-4 max-md:p-4">
+        <section className="col-span-7 flex min-w-0 flex-col gap-6 rounded-3xl border border-borda bg-superficie p-6 max-md:gap-4 max-md:p-4">
           <div className="flex items-center gap-6">
             <Capa musica={musica} girando className="size-44 rounded-2xl max-md:hidden" />
             <div className="flex min-w-0 flex-col gap-2">

@@ -6,9 +6,9 @@ import { MenuPrincipal } from "./MenuPrincipal";
 
 vi.mock("@/modules/platform", () => ({ fecharJanela: vi.fn() }));
 
-function abrir() {
+function abrir({ noCelular = false } = {}) {
   const acoes = { aoJogar: vi.fn(), aoMultijogador: vi.fn(), aoPersonagem: vi.fn(), aoConfigurar: vi.fn() };
-  render(<MenuPrincipal volumeDosEfeitos={0} {...acoes} />);
+  render(<MenuPrincipal volumeDosEfeitos={0} noCelular={noCelular} {...acoes} />);
   return { ...acoes, usuario: userEvent.setup() };
 }
 
@@ -55,5 +55,26 @@ describe("MenuPrincipal", () => {
     const { usuario } = abrir();
     await usuario.click(screen.getByRole("button", { name: "Sair" }));
     expect(fecharJanela).toHaveBeenCalled();
+  });
+});
+
+describe("MenuPrincipal no celular que entrou pelo QR code", () => {
+  it("começa por entrar na sala e não tem Sair (é só fechar a aba)", () => {
+    abrir({ noCelular: true });
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Entrar na sala", "Jogar sozinho", "Personagem", "Configurações"]);
+  });
+
+  it("Enter já leva para a sala", async () => {
+    const { aoMultijogador, usuario } = abrir({ noCelular: true });
+    await usuario.keyboard("{Enter}");
+    expect(aoMultijogador).toHaveBeenCalled();
+  });
+});
+
+describe("MenuPrincipal na tela estreita", () => {
+  // Bug: com espaçamento largo entre letras, o subtítulo estourava a largura do celular.
+  it("o subtítulo diminui o espaçamento e quebra a linha centralizado", () => {
+    abrir();
+    expect(screen.getByText("TOQUE ATÉ OS DEDOS SANGRAREM")).toHaveClass("max-md:tracking-[0.15em]", "text-center");
   });
 });

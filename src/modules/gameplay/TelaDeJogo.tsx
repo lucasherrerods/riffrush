@@ -4,12 +4,13 @@ import { Loader2, Pause, Skull, Zap } from "lucide-react";
 import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, tocarEfeito } from "@/modules/audio";
 import { Chibi, type Personagem } from "@/modules/character";
 import { DIFICULDADES, carregarMusica, type Dificuldade, type Musica, type MusicaCarregada } from "@/modules/songs";
+import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { criarBot, jogarSozinho } from "./bot";
 import { MedidorDeVida } from "./componentes/MedidorDeVida";
 import { MenuDePausa } from "./componentes/MenuDePausa";
-import { CORES_DO_MULTIPLICADOR } from "./cores";
+import { CORES_DO_MULTIPLICADOR, NOMES_DAS_PISTAS } from "./cores";
 import { ativarEstrela, avancar, criarPartida, multiplicador, retirarEventos, soltar, tocar } from "./partida";
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { layoutDaPista } from "./pista/geometria";
@@ -84,7 +85,15 @@ const nada = () => {};
 export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSair, aoTerminar }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const video = useRef<HTMLVideoElement>(null);
-  const controles = useRef({ pausar: nada, continuar: nada, desistir: nada });
+  const controles = useRef<{ pausar: () => void; continuar: () => void; desistir: () => void; apertar: (pista: number, evento: Event) => void; largar: (pista: number) => void; estrela: () => void }>({
+    pausar: nada,
+    continuar: nada,
+    desistir: nada,
+    apertar: nada,
+    largar: nada,
+    estrela: nada,
+  });
+  const estreita = useTelaEstreita();
   const emRede = !!rede;
   // A rede chega como objeto novo a cada render; só o instante de largada reinicia a partida.
   const inicioEmRede = rede?.inicio;
@@ -225,7 +234,22 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
       publicar(true);
       aoTerminar(resultadoDaPartida(partida, musica.id, dificuldade));
     };
-    controles.current = { pausar, continuar, desistir };
+    Object.assign(controles.current, { pausar, continuar, desistir, estrela: () => ativarEstrela(partida) });
+
+    /** Teclado e toque apertam do mesmo jeito: o instante vem do próprio evento. */
+    const apertar = (pista: number, evento: Event) => {
+      if (pausadoAgora || terminou) return;
+      apertados[pista] = true;
+      const tempo = tempoDaMusica(momentoDoEvento(audio, evento));
+      tocar(partida, pista, tempo);
+      tratarEventos(tempo);
+    };
+    const largar = (pista: number) => {
+      apertados[pista] = false;
+      soltar(partida, pista, tempoDaMusica(agoraNoAudio(audio)));
+    };
+    controles.current.apertar = apertar;
+    controles.current.largar = largar;
 
     const aoApertar = (evento: KeyboardEvent) => {
       if (evento.code === "Escape") {
@@ -238,11 +262,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
       const pista = opcoes.teclas.indexOf(evento.code);
       if (pista >= 0) {
         evento.preventDefault();
-        if (evento.repeat) return;
-        apertados[pista] = true;
-        const tempo = tempoDaMusica(momentoDoEvento(audio, evento));
-        tocar(partida, pista, tempo);
-        tratarEventos(tempo);
+        if (!evento.repeat) apertar(pista, evento);
       } else if (evento.code === opcoes.teclaDaEstrela) {
         evento.preventDefault();
         ativarEstrela(partida);
@@ -250,9 +270,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
     };
     const aoSoltar = (evento: KeyboardEvent) => {
       const pista = opcoes.teclas.indexOf(evento.code);
-      if (pista < 0) return;
-      apertados[pista] = false;
-      soltar(partida, pista, tempoDaMusica(agoraNoAudio(audio)));
+      if (pista >= 0) largar(pista);
     };
     window.addEventListener("keydown", aoApertar);
     window.addEventListener("keyup", aoSoltar);
@@ -400,6 +418,27 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
             </Button>
           </header>
 
+          {/* Áreas de toque: uma embaixo de cada traste (funcionam com o mouse também). */}
+          <div
+            className="absolute bottom-0 flex"
+            style={{ left: layout.centro - layout.largura / 2, width: layout.largura, top: layout.linhaDeBatida - layout.larguraDoTraste * 0.45 }}
+          >
+            {NOMES_DAS_PISTAS.map((nome, pista) => (
+              <div
+                key={nome}
+                role="button"
+                aria-label={`Traste ${nome}`}
+                className="h-full flex-1"
+                onPointerDown={(e) => {
+                  e.currentTarget.setPointerCapture?.(e.pointerId);
+                  controles.current.apertar(pista, e.nativeEvent);
+                }}
+                onPointerUp={() => controles.current.largar(pista)}
+                onPointerCancel={() => controles.current.largar(pista)}
+              />
+            ))}
+          </div>
+
           {rede?.adversarios}
 
           {urlDoVideo && (
@@ -412,18 +451,19 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
             </motion.div>
           )}
 
-          <div className="absolute bottom-10 left-8 flex flex-col gap-4">
+          {/* No celular a pista ocupa a largura toda: os pontos sobem para o topo. */}
+          <div className={cn("absolute flex gap-4", estreita ? "top-20 left-4 items-center" : "bottom-10 left-8 flex-col")}>
             <motion.div
               key={hud.multiplicador}
               initial={{ scale: 1.5 }}
               animate={{ scale: 1 }}
-              className="flex size-20 items-center justify-center rounded-full border-4 text-3xl font-black"
+              className={cn("flex items-center justify-center rounded-full font-black", estreita ? "size-12 border-2 text-base" : "size-20 border-4 text-3xl")}
               style={{ borderColor: hud.estrelaAtiva ? "#38bdf8" : CORES_DO_MULTIPLICADOR[Math.min(3, hud.multiplicador - 1)] }}
             >
               {hud.multiplicador}x
             </motion.div>
             <div>
-              <p aria-label="Pontos" className="font-mono text-4xl font-black tabular-nums">
+              <p aria-label="Pontos" className={cn("font-mono font-black tabular-nums", estreita ? "text-2xl" : "text-4xl")}>
                 {hud.pontos.toLocaleString("pt-BR")}
               </p>
               <p className="text-base text-texto-suave">
@@ -435,22 +475,36 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
             </div>
           </div>
 
-          <div className="absolute bottom-10 flex flex-col items-center" style={{ left: layout.centro + layout.largura / 2 + 24 }}>
-            <Chibi personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} className="mb-2 h-44 w-auto" />
-            <div className="flex items-end gap-4">
-              <div className="flex flex-col items-center gap-2" aria-label="Star power">
-                <Zap className={cn("size-5", hud.estrela >= 0.5 ? "text-[#38bdf8]" : "text-borda")} aria-hidden />
-                <div className="relative h-40 w-4 overflow-hidden rounded-full bg-superficie-elevada">
-                  <div className={cn("absolute bottom-0 w-full rounded-full bg-[#38bdf8] transition-all", hud.estrelaAtiva && "animate-pulse")} style={{ height: `${hud.estrela * 100}%` }} />
-                  <div className="absolute bottom-1/2 h-px w-full bg-texto/60" />
+          {estreita ? (
+            <div data-parte="hud-compacto" className="absolute top-20 right-4 flex flex-col items-end gap-2">
+              <Chibi personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} className="h-20 w-auto" />
+              <MedidorDeVida vida={hud.vida} horizontal className="h-2.5 w-24" />
+              <button
+                aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`}
+                onClick={() => controles.current.estrela()}
+                className={cn("flex items-center gap-1 rounded-full px-3 py-1 text-base font-bold", hud.estrela >= 0.5 ? "bg-[#38bdf8] text-fundo" : "bg-superficie-elevada text-texto-suave")}
+              >
+                <Zap className="size-4 opacity-70" aria-hidden /> {Math.round(hud.estrela * 100)}%
+              </button>
+            </div>
+          ) : (
+            <div data-parte="hud-lateral" className="absolute bottom-10 flex flex-col items-center" style={{ left: layout.centro + layout.largura / 2 + 24 }}>
+              <Chibi personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} className="mb-2 h-44 w-auto" />
+              <div className="flex items-end gap-4">
+                <div className="flex flex-col items-center gap-2" aria-label="Star power">
+                  <Zap className={cn("size-5", hud.estrela >= 0.5 ? "text-[#38bdf8]" : "text-borda")} aria-hidden />
+                  <div className="relative h-40 w-4 overflow-hidden rounded-full bg-superficie-elevada">
+                    <div className={cn("absolute bottom-0 w-full rounded-full bg-[#38bdf8] transition-all", hud.estrelaAtiva && "animate-pulse")} style={{ height: `${hud.estrela * 100}%` }} />
+                    <div className="absolute bottom-1/2 h-px w-full bg-texto/60" />
+                  </div>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-base font-bold text-texto-suave">ROCK</span>
+                  <MedidorDeVida vida={hud.vida} className="h-40 w-6" />
                 </div>
               </div>
-              <div className="flex flex-col items-center gap-2">
-                <span className="text-base font-bold text-texto-suave">ROCK</span>
-                <MedidorDeVida vida={hud.vida} className="h-40 w-6" />
-              </div>
             </div>
-          </div>
+          )}
 
           <AnimatePresence>
             {hud.contagem > 0 && !pausado && (

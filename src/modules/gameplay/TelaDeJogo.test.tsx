@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { obterContextoDeAudio } from "@/modules/audio";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
@@ -40,8 +40,20 @@ const irPara = (tempo: number) => act(() => void (audio().currentTime = ENTRADA 
 
 vi.stubGlobal("AudioContext", AudioContextFalso);
 
+let fontesAntes = 0;
+
+/**
+ * O título aparece um instante antes de o efeito ligar o teclado, o toque e o loop.
+ * Interagir antes disso faz o toque cair no vazio: espera a fonte da música desta partida existir.
+ */
+async function partidaPronta() {
+  await screen.findByRole("heading", { name: "Neon Highway" });
+  await waitFor(() => expect(audio().fontes.length).toBeGreaterThan(fontesAntes));
+}
+
 // O contexto de áudio é um só para o jogo inteiro: zera o relógio entre os testes.
 beforeEach(() => {
+  fontesAntes = audio().fontes.length;
   audio().currentTime = 0;
   audio().state = "running";
   vi.clearAllMocks();
@@ -64,7 +76,7 @@ describe("TelaDeJogo", () => {
   it("acertar uma nota soma pontos e sequência", async () => {
     carregarCom([nota(0.5)]);
     const { usuario } = abrir();
-    await screen.findByRole("heading", { name: "Neon Highway" });
+    await partidaPronta();
     irPara(0.5);
     await usuario.keyboard("a");
     await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
@@ -74,7 +86,7 @@ describe("TelaDeJogo", () => {
   it("Esc pausa a música e Continuar retoma", async () => {
     carregarCom([nota(5)]);
     const { usuario } = abrir();
-    await screen.findByRole("heading", { name: "Neon Highway" });
+    await partidaPronta();
     await usuario.keyboard("{Escape}");
     expect(await screen.findByRole("heading", { name: "Pausado" })).toBeInTheDocument();
     expect(audio().suspend).toHaveBeenCalled();
@@ -85,7 +97,7 @@ describe("TelaDeJogo", () => {
   it("perder o foco da janela pausa", async () => {
     carregarCom([nota(5)]);
     abrir();
-    await screen.findByRole("heading", { name: "Neon Highway" });
+    await partidaPronta();
     act(() => void window.dispatchEvent(new Event("blur")));
     expect(await screen.findByRole("heading", { name: "Pausado" })).toBeInTheDocument();
   });
@@ -93,7 +105,7 @@ describe("TelaDeJogo", () => {
   it("Sair da música avisa a tela de cima", async () => {
     carregarCom([nota(5)]);
     const { aoSair, usuario } = abrir();
-    await screen.findByRole("heading", { name: "Neon Highway" });
+    await partidaPronta();
     await usuario.keyboard("{Escape}");
     await usuario.click(await screen.findByRole("button", { name: /Sair da música/ }));
     expect(aoSair).toHaveBeenCalled();
@@ -102,7 +114,7 @@ describe("TelaDeJogo", () => {
   it("entrega o resultado quando a música termina", async () => {
     carregarCom([nota(0.5)], 1);
     const { aoTerminar } = abrir();
-    await screen.findByRole("heading", { name: "Neon Highway" });
+    await partidaPronta();
     irPara(1.2);
     await waitFor(() => expect(aoTerminar).toHaveBeenCalled());
     expect(aoTerminar.mock.calls[0][0]).toMatchObject({ musicaId: "neon-highway", dificuldade: "medio", total: 1, acertos: 0, derrota: false });
@@ -111,7 +123,7 @@ describe("TelaDeJogo", () => {
   it("mostra a vaia quando a vida acaba", async () => {
     carregarCom(Array.from({ length: 30 }, (_, i) => nota(i * 0.1)), 20);
     abrir();
-    await screen.findByRole("heading", { name: "Neon Highway" });
+    await partidaPronta();
     irPara(5);
     expect(await screen.findByRole("heading", { name: /A galera vaiou/ })).toBeInTheDocument();
   });
@@ -146,20 +158,27 @@ describe("TelaDeJogo em rede", () => {
     );
     return { aoAtualizar, aoTerminar, usuario: userEvent.setup() };
   }
-  const fonteDaMusica = () => audio().fontes.at(-1)!;
+  /** Espera a tela criar a fonte da música desta partida (a lista guarda as de testes anteriores). */
+  async function fonteNova(antes: number) {
+    await waitFor(() => expect(audio().fontes.length).toBeGreaterThan(antes));
+    return audio().fontes.at(-1)!;
+  }
 
   it("começa a música no instante combinado com a sala", async () => {
     carregarCom([nota(5)]);
+    const antes = audio().fontes.length;
     abrirEmRede(performance.now() + 5000);
-    await screen.findByRole("heading", { name: "Neon Highway" });
-    expect(fonteDaMusica().inicio).toBeCloseTo(5, 0);
+    const inicio = (await fonteNova(antes)).inicio!;
+    // Alguns décimos de segundo passam até a música carregar; a largada continua sendo a combinada.
+    expect(inicio).toBeGreaterThan(3.5);
+    expect(inicio).toBeLessThanOrEqual(5);
   });
 
   it("quem carregou atrasado entra no meio da música", async () => {
     carregarCom([nota(5)]);
+    const antes = audio().fontes.length;
     abrirEmRede(performance.now() - 2000);
-    await screen.findByRole("heading", { name: "Neon Highway" });
-    expect(fonteDaMusica().deslocamento).toBeGreaterThan(1.9);
+    expect((await fonteNova(antes)).deslocamento).toBeGreaterThan(1.9);
   });
 
   it("manda o estado do jogador para a sala", async () => {
@@ -171,7 +190,7 @@ describe("TelaDeJogo em rede", () => {
   it("a pausa só abre o menu: a música dos outros não para", async () => {
     carregarCom([nota(5)]);
     const { usuario } = abrirEmRede(performance.now() + 5000);
-    await screen.findByRole("heading", { name: "Neon Highway" });
+    await partidaPronta();
     await usuario.keyboard("{Escape}");
     expect(await screen.findByRole("heading", { name: "Menu" })).toBeInTheDocument();
     expect(audio().suspend).not.toHaveBeenCalled();
@@ -180,7 +199,7 @@ describe("TelaDeJogo em rede", () => {
   it("desistir entrega o resultado como derrota", async () => {
     carregarCom([nota(5)]);
     const { aoTerminar, usuario } = abrirEmRede(performance.now() + 5000);
-    await screen.findByRole("heading", { name: "Neon Highway" });
+    await partidaPronta();
     await usuario.keyboard("{Escape}");
     await usuario.click(await screen.findByRole("button", { name: /Desistir e ver placar/ }));
     expect(aoTerminar).toHaveBeenCalledWith(expect.objectContaining({ derrota: true }));
@@ -190,5 +209,65 @@ describe("TelaDeJogo em rede", () => {
     carregarCom([nota(5)]);
     abrirEmRede(performance.now() + 5000);
     expect(await screen.findByText("painel dos adversários")).toBeInTheDocument();
+  });
+});
+
+describe("TelaDeJogo com toque", () => {
+  it("tem uma área de toque embaixo de cada traste, na ordem", async () => {
+    carregarCom([nota(5)]);
+    abrir();
+    await partidaPronta();
+    const areas = screen.getAllByRole("button", { name: /^Traste / });
+    expect(areas.map((a) => a.getAttribute("aria-label"))).toEqual(["Traste Verde", "Traste Vermelho", "Traste Amarelo", "Traste Azul", "Traste Laranja"]);
+  });
+
+  it("tocar na área do traste acerta a nota", async () => {
+    carregarCom([nota(0.5, 2)]);
+    abrir();
+    await partidaPronta();
+    irPara(0.55);
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Traste Amarelo" }));
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
+  });
+
+  it("tirar o dedo larga o sustain e para de somar pontos", async () => {
+    carregarCom([{ ...nota(0.5), duracao: 2 }]);
+    abrir();
+    await partidaPronta();
+    irPara(0.55);
+    const verde = screen.getByRole("button", { name: "Traste Verde" });
+    fireEvent.pointerDown(verde);
+    irPara(1);
+    await waitFor(() => expect(Number(screen.getByLabelText("Pontos").textContent!.replace(/\D/g, ""))).toBeGreaterThan(50));
+    fireEvent.pointerUp(verde);
+    const aoSoltar = screen.getByLabelText("Pontos").textContent;
+    irPara(2);
+    await new Promise((r) => setTimeout(r, 100));
+    expect(screen.getByLabelText("Pontos").textContent).toBe(aoSoltar);
+  });
+});
+
+describe("TelaDeJogo no celular", () => {
+  beforeEach(() => Object.defineProperty(window, "innerWidth", { value: 375, configurable: true }));
+  afterEach(() => Object.defineProperty(window, "innerWidth", { value: 1024, configurable: true }));
+
+  it("troca o painel lateral por um painel compacto no topo", async () => {
+    carregarCom([nota(5)]);
+    abrir();
+    await partidaPronta();
+    expect(document.querySelector('[data-parte="hud-compacto"]')).not.toBeNull();
+    expect(document.querySelector('[data-parte="hud-lateral"]')).toBeNull();
+  });
+
+  it("o star power vira um botão para tocar com o dedo", async () => {
+    carregarCom([nota(5)]);
+    abrir();
+    expect(await screen.findByRole("button", { name: /Ativar star power/ })).toHaveTextContent("0%");
+  });
+
+  it("o personagem continua aparecendo", async () => {
+    carregarCom([nota(5)]);
+    abrir();
+    expect(await screen.findByRole("img", { name: "Personagem Rockstar" })).toBeInTheDocument();
   });
 });

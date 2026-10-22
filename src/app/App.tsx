@@ -5,11 +5,12 @@ import { TelaDeJogo, type Resultado } from "@/modules/gameplay";
 import { TelaDeSelecao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
-import { Adversarios, Placar, TelaDeMultijogador, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
+import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { TelaDeResultado, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { MUSICAS_EMBUTIDAS, importarArquivo, type Dificuldade, type Musica } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
+import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { opcoesDaPartida } from "./opcoes";
 
@@ -33,6 +34,7 @@ export function App() {
   const [emRede, setEmRede] = useState<PartidaEmRede | null>(null);
   const [voltarDoPersonagemPara, setVoltarDoPersonagemPara] = useState<Tela>("menu");
   const conexao = useConexao();
+  const estreita = useTelaEstreita();
   const partidasVistas = useRef(0);
 
   const musica = emRede?.musica ?? musicas[indice];
@@ -120,6 +122,7 @@ export function App() {
           {tela === "menu" && (
             <MenuPrincipal
               volumeDosEfeitos={configuracoes.volumeDosEfeitos}
+              noCelular={ehClienteWebDaSala()}
               aoJogar={() => setTela("selecao")}
               aoMultijogador={() => setTela("multijogador")}
               aoPersonagem={() => {
@@ -178,7 +181,7 @@ export function App() {
               personagem={personagem}
               rede={
                 emRede && conexao.sala
-                  ? { inicio: emRede.inicio, aoAtualizar: enviarEstado, adversarios: <Adversarios sala={conexao.sala} /> }
+                  ? { inicio: emRede.inicio, aoAtualizar: enviarEstado, adversarios: <Adversarios sala={conexao.sala} compacto={estreita} /> }
                   : undefined
               }
               aoSair={() => setTela(emRede ? "multijogador" : "selecao")}
