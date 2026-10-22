@@ -53,7 +53,7 @@ describe("App", () => {
   it("Jogar abre a seleção e Esc volta ao menu", async () => {
     const usuario = abrir();
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
-    expect(await screen.findByRole("heading", { name: "Escolha a música" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
     await usuario.keyboard("{Escape}");
     expect(await screen.findByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
   });
@@ -114,7 +114,7 @@ describe("App", () => {
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
     await usuario.click(await screen.findByRole("button", { name: "sair" }));
-    expect(await screen.findByRole("heading", { name: "Escolha a música" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
     expect(within(document.body).queryByText(/Jogando/)).toBeNull();
   });
 });

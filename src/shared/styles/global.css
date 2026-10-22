@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
+@import "@fontsource/chakra-petch/600.css";
+@import "@fontsource/chakra-petch/700.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -41,6 +43,7 @@ body {
 
 @theme inline {
   --font-sans: "Geist Variable", sans-serif;
+  --font-display: "Chakra Petch", sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
