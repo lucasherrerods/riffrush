@@ -46,6 +46,12 @@ describe("chartDoAudio", () => {
     expect(notas.find((n) => Math.abs(n.tempo - 3) < 0.05)!.duracao).toBeGreaterThan(0);
   });
 
+  // Bug do projeto antigo: o primeiro e o último segundo da música nunca viravam nota.
+  it("detecta ataques logo no começo e no fim da música", () => {
+    const notas = chartDoAudio(audioComEstalos(3, [{ tempo: 0.2, frequencia: 500 }, { tempo: 2.8, frequencia: 500 }]), TAXA, "expert");
+    expect(notas.map((n) => Math.round(n.tempo * 10) / 10)).toEqual([0.2, 2.8]);
+  });
+
   it("não cria notas no silêncio", () => {
     expect(chartDoAudio(new Float32Array(3 * TAXA), TAXA, "expert")).toHaveLength(0);
   });
