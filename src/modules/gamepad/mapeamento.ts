@@ -18,6 +18,8 @@ export const BOTOES = {
 
 /** Verde, vermelho, amarelo, azul e laranja. */
 const TRASTES = [BOTOES.LT, BOTOES.LB, BOTOES.RB, BOTOES.RT, BOTOES.A];
+export const ROTULOS_DOS_TRASTES = ["LT", "LB", "RB", "RT", "A"];
+export const ROTULO_DA_ESTRELA = "Select";
 const PALHETADAS = [BOTOES.CIMA, BOTOES.BAIXO];
 const SETAS: Record<number, string> = {
   [BOTOES.CIMA]: "ArrowUp",

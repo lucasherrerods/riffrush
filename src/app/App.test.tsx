@@ -27,7 +27,7 @@ vi.mock("@/modules/gameplay", async (original) => ({
   ),
 }));
 
-vi.mock("@/modules/gamepad", () => ({ iniciarControle: vi.fn(() => () => {}) }));
+vi.mock("@/modules/gamepad", async (original) => ({ ...(await original<typeof import("@/modules/gamepad")>()), iniciarControle: vi.fn(() => () => {}) }));
 
 vi.mock("@/modules/multiplayer", async (original) => ({
   ...(await original<typeof import("@/modules/multiplayer")>()),

@@ -1,2 +1,2 @@
 export { iniciarControle } from "./controle";
-export { BOTOES, type Modo } from "./mapeamento";
+export { BOTOES, ROTULOS_DOS_TRASTES, ROTULO_DA_ESTRELA, type Modo } from "./mapeamento";
