@@ -88,7 +88,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
               }}
               onClick={() => escolher(item)}
               className={cn(
-                "corte flex items-center gap-4 border px-6 py-3 text-left font-titulo text-3xl tracking-wide uppercase transition-colors",
+                "chapa flex items-center gap-4 px-6 py-3 text-left font-titulo text-3xl tracking-wide uppercase transition-colors",
                 ativo ? "gasto border-primaria bg-primaria text-texto" : "border-borda bg-superficie text-texto-suave",
               )}
             >

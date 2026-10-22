@@ -49,7 +49,7 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1 max-md:overflow-y-auto">
-      <section className="col-span-4 flex flex-col items-center gap-4 rounded-3xl border border-borda bg-superficie p-6">
+      <section className="col-span-4 flex flex-col items-center gap-4 placa p-6">
         <Avatar personagem={personagem} className="h-48 w-auto" />
         <p className="text-xl font-black">{personagem.nome}</p>
         <Button variant="outline" onClick={aoEditarPersonagem}>
@@ -75,7 +75,7 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
       </section>
 
       {!noCelular && (
-        <section className="col-span-8 flex min-h-0 flex-col gap-4 rounded-3xl border border-borda bg-superficie p-6">
+        <section className="col-span-8 flex min-h-0 flex-col gap-4 placa p-6">
           <div className="flex items-center gap-4">
             <Wifi className="text-primaria opacity-70" aria-hidden />
             <h2 className="text-xl font-bold">Salas na sua rede</h2>
@@ -94,7 +94,7 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
               <li key={`${s.ip}:${s.porta}`}>
                 <button
                   onClick={() => entrar(`http://${s.ip}:${s.porta}`)}
-                  className="flex w-full items-center gap-4 rounded-2xl border border-borda bg-superficie-elevada p-4 text-left transition-colors hover:border-primaria"
+                  className="chapa flex w-full items-center gap-4 bg-superficie-elevada p-4 text-left transition-colors hover:border-primaria"
                 >
                   <Crown className="text-ouro opacity-70" aria-hidden />
                   <span className="flex-1">

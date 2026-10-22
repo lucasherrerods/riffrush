@@ -35,7 +35,7 @@ export function Placar({ sala, meusPontos, minhaDerrota }: Props) {
           <motion.li
             key={linha.id}
             layout
-            className={cn("flex items-center gap-4 rounded-2xl border p-2 pr-4", linha.meu ? "border-primaria bg-superficie-elevada" : "border-borda bg-superficie")}
+            className={cn("chapa flex items-center gap-4 p-2 pr-4", linha.meu ? "border-primaria bg-superficie-elevada" : "border-borda bg-superficie")}
           >
             <span className="w-8 text-center text-2xl font-black text-texto-suave">{i + 1}º</span>
             <Avatar personagem={linha.personagem} tocando={!linha.terminou} triste={linha.derrota} className="h-14 w-auto" />

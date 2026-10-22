@@ -98,7 +98,7 @@ export function TelaDeResultado(props: Props) {
 
       <dl className="grid grid-cols-4 gap-4 max-md:grid-cols-2">
         {estatisticas.map((e) => (
-          <div key={e.rotulo} className="w-40 rounded-2xl border border-borda bg-superficie p-4 text-center">
+          <div key={e.rotulo} className="chapa w-40 p-4 text-center">
             <dd className="text-2xl font-black">{e.valor}</dd>
             <dt className="text-base text-texto-suave">{e.rotulo}</dt>
           </div>

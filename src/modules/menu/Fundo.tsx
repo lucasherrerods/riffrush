@@ -1,19 +1,48 @@
+import type React from "react";
 import { CORES_DAS_PISTAS } from "@/modules/gameplay";
 import { cn } from "@/shared/lib/utils";
 
 const PARTICULAS = 24;
 
+/** Holofotes do palco: posição, cor (token do tema), ângulos da varredura e duração em segundos. */
+const HOLOFOTES = [
+  { esquerda: "12%", cor: "--cor-primaria", de: "-24deg", ate: "8deg", duracao: 7 },
+  { esquerda: "36%", cor: "--cor-texto", de: "-10deg", ate: "14deg", duracao: 9 },
+  { esquerda: "64%", cor: "--cor-destaque", de: "12deg", ate: "-14deg", duracao: 8 },
+  { esquerda: "88%", cor: "--cor-primaria", de: "22deg", ate: "-6deg", duracao: 6 },
+];
+
 /** Raio em zigue-zague, desenhado num quadro de 100 × 100. */
 const RAIO = "M58 0 L22 52 L44 50 L8 100 L78 38 L54 40 L86 0 Z";
 
 /**
- * Fundo de palco no desenho da logo: anel creme gasto, raios vermelhos,
+ * Fundo de palco no desenho da logo: holofotes varrendo, anel creme gasto, raios vermelhos,
  * as cinco pistas coloridas convergindo e faíscas subindo.
  * Durante a música as animações param, para a GPU ficar livre para a pista.
  */
 export function Fundo({ tocando = false }: { tocando?: boolean }) {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden bg-fundo">
+      <div className={cn("absolute inset-0 transition-opacity duration-700", tocando ? "opacity-30" : "opacity-100")}>
+        {HOLOFOTES.map((h) => (
+          <div
+            key={h.esquerda}
+            data-parte="holofote"
+            className={cn("holofote", tocando && "holofote-parado")}
+            style={
+              {
+                left: h.esquerda,
+                "--de": h.de,
+                "--ate": h.ate,
+                animationDuration: `${h.duracao}s`,
+                background: `linear-gradient(to bottom, color-mix(in srgb, var(${h.cor}) 38%, transparent), transparent 78%)`,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+        {/* Luz batendo no chão do palco. */}
+        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-[radial-gradient(ellipse_at_bottom,color-mix(in_srgb,var(--cor-primaria)_22%,transparent),transparent_70%)]" />
+      </div>
       <div className={cn("absolute inset-0 transition-opacity duration-700", tocando ? "opacity-20" : "opacity-100")}>
         <div className="desgastado absolute top-[10%] left-1/2 size-[440px] -translate-x-1/2 rounded-full border-[28px] border-texto/25 max-md:size-[300px] max-md:border-[18px]" />
         <svg viewBox="0 0 100 100" className="desgastado absolute top-[8%] left-[calc(50%-340px)] size-56 -rotate-12 fill-primaria/80 max-md:left-[2%] max-md:size-32">

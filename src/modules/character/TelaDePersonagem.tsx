@@ -80,13 +80,13 @@ export function TelaDePersonagem({ personagem, aoSalvar, aoVoltar }: Props) {
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1 max-md:overflow-y-auto">
-        <section className="col-span-5 flex min-h-0 flex-col items-center justify-center gap-2 rounded-3xl border border-borda bg-superficie p-6">
+        <section className="col-span-5 flex min-h-0 flex-col items-center justify-center gap-2 placa p-6">
           <Avatar personagem={rascunho} tocando pulso={pulso} className="h-[min(60vh,480px)] w-auto" />
           <p className="font-titulo text-3xl uppercase">{rascunho.nome.trim() || "Sem nome"}</p>
           <p className="text-base text-texto-suave">{INSTRUMENTOS.find((i) => i.id === rascunho.instrumento)?.rotulo}</p>
         </section>
 
-        <section className="col-span-7 flex min-h-0 flex-col gap-6 rounded-3xl border border-borda bg-superficie p-6">
+        <section className="col-span-7 flex min-h-0 flex-col gap-6 placa p-6">
           <div>
             <Label htmlFor="nome-do-personagem" className="mb-2 text-base font-semibold text-texto-suave">
               Nome

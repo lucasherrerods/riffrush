@@ -38,7 +38,7 @@ export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVo
       </header>
 
       {erro && !sala && (
-        <p role="alert" className="rounded-2xl border border-perigo bg-superficie px-4 py-3 text-base">
+        <p role="alert" className="chapa border-perigo px-4 py-3 text-base">
           {erro}
         </p>
       )}

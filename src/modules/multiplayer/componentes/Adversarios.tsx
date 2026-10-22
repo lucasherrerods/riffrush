@@ -46,7 +46,7 @@ export function Adversarios({ sala, compacto = false }: { sala: EstadoDaSala; co
             key={jogador.id}
             initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
-            className={cn("flex w-56 items-center gap-2 rounded-2xl border border-borda bg-superficie p-2", estado?.derrota && "opacity-60")}
+            className={cn("chapa flex w-56 items-center gap-2 p-2", estado?.derrota && "opacity-60")}
           >
             <Avatar personagem={jogador.personagem} tocando={!!estado && !estado.terminou} pulso={estado?.pulso ?? 0} triste={vida < VIDA_BAIXA} className="h-16 w-auto" />
             <div className="min-w-0 flex-1">
