@@ -58,7 +58,7 @@ describe("traduzir no jogo", () => {
 });
 
 describe("traduzir nos menus", () => {
-  it("A confirma, bolinha volta e o direcional navega", () => {
+  it("A confirma, B volta e o direcional navega", () => {
     expect(traduzir(solto(), com(BOTOES.A), vazio(), "menu", mapa).eventos).toEqual([{ tipo: "keydown", code: "Enter" }]);
     expect(traduzir(solto(), com(BOTOES.B), vazio(), "menu", mapa).eventos).toEqual([{ tipo: "keydown", code: "Escape" }]);
     expect(traduzir(solto(), com(BOTOES.ESQUERDA), vazio(), "menu", mapa).eventos).toEqual([{ tipo: "keydown", code: "ArrowLeft" }]);
