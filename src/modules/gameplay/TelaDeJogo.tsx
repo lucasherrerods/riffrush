@@ -26,6 +26,8 @@ export interface OpcoesDaPartida {
   teclas: string[];
   teclaDaEstrela: string;
   rotuloDaTeclaDaEstrela: string;
+  /** Com um controle conectado, o nome do botão aparece embaixo de cada traste. */
+  rotulosDosTrastes?: string[];
   /** Segundos que a nota leva do horizonte até a linha de batida. */
   antecedencia: number;
   volumeDaMusica: number;
@@ -477,14 +479,18 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
                 key={nome}
                 role="button"
                 aria-label={`Traste ${nome}`}
-                className="h-full flex-1"
+                className="flex h-full flex-1 items-end justify-center"
                 onPointerDown={(e) => {
                   e.currentTarget.setPointerCapture?.(e.pointerId);
                   controles.current.apertar(pista, e.nativeEvent);
                 }}
                 onPointerUp={() => controles.current.largar(pista)}
                 onPointerCancel={() => controles.current.largar(pista)}
-              />
+              >
+                {opcoes.rotulosDosTrastes && (
+                  <span className="mb-2 rounded-sm bg-superficie-elevada px-2 font-titulo text-lg tracking-wide text-texto-suave">{opcoes.rotulosDosTrastes[pista]}</span>
+                )}
+              </div>
             ))}
           </div>
 

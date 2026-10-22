@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { salvarRecorde } from "@/modules/results";
@@ -99,5 +99,33 @@ describe("TelaDeSelecao na tela estreita", () => {
     abrir();
     expect(screen.getAllByRole("list")[0]).toHaveClass("min-w-0");
     expect(screen.getByRole("heading", { name: "Neon Highway" }).closest("section")).toHaveClass("min-w-0");
+  });
+});
+
+describe("TelaDeSelecao com estética arcade", () => {
+  it("tem um header com o título da tela", () => {
+    abrir();
+    expect(within(screen.getByRole("banner")).getByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
+  });
+
+  it("o painel mostra BPM, gênero e intensidade em cards", () => {
+    abrir({ indice: 0 });
+    const painel = screen.getByRole("region", { name: "Informações da música" });
+    expect(within(painel).getByText("BPM").nextSibling).toHaveTextContent(String(MUSICAS_EMBUTIDAS[0].bpm));
+    expect(within(painel).getByText("Gênero").nextSibling).toHaveTextContent(MUSICAS_EMBUTIDAS[0].genero);
+    expect(within(painel).getByLabelText(/Intensidade/)).toBeInTheDocument();
+  });
+
+  it("a lista de músicas fica à direita, depois do painel", () => {
+    abrir();
+    const painel = screen.getByRole("region", { name: "Informações da música" });
+    const lista = screen.getByRole("list", { name: "Músicas" });
+    expect(painel.compareDocumentPosition(lista) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("o rodapé mostra os comandos do teclado", () => {
+    abrir();
+    const legenda = screen.getByRole("contentinfo");
+    for (const comando of ["Dificuldade", "Confirmar", "Voltar"]) expect(legenda).toHaveTextContent(comando);
   });
 });

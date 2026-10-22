@@ -5,6 +5,7 @@ import { carregarRecordes } from "@/modules/results";
 import { useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { AudioContextFalso } from "@/test/audioFalso";
+import { iniciarControle } from "@/modules/gamepad";
 import { App } from "./App";
 
 vi.mock("@/modules/platform", () => ({
@@ -25,6 +26,8 @@ vi.mock("@/modules/gameplay", async (original) => ({
     </div>
   ),
 }));
+
+vi.mock("@/modules/gamepad", async (original) => ({ ...(await original<typeof import("@/modules/gamepad")>()), iniciarControle: vi.fn(() => () => {}) }));
 
 vi.mock("@/modules/multiplayer", async (original) => ({
   ...(await original<typeof import("@/modules/multiplayer")>()),
@@ -53,7 +56,7 @@ describe("App", () => {
   it("Jogar abre a seleção e Esc volta ao menu", async () => {
     const usuario = abrir();
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
-    expect(await screen.findByRole("heading", { name: "Escolha a música" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
     await usuario.keyboard("{Escape}");
     expect(await screen.findByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
   });
@@ -103,6 +106,17 @@ describe("App", () => {
     expect(await screen.findByText(/1 música importada/)).toBeInTheDocument();
   });
 
+  it("o controle usa os trastes na partida e navega nos menus", async () => {
+    const usuario = abrir();
+    const { modo, mapa } = vi.mocked(iniciarControle).mock.lastCall![0];
+    expect(modo()).toBe("menu");
+    expect(mapa().teclas).toEqual(["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"]);
+    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
+    await screen.findByRole("button", { name: "terminar" });
+    expect(modo()).toBe("jogo");
+  });
+
   it("F11 alterna a tela cheia", async () => {
     const usuario = abrir();
     await usuario.keyboard("[F11]");
@@ -114,7 +128,7 @@ describe("App", () => {
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
     await usuario.click(await screen.findByRole("button", { name: "sair" }));
-    expect(await screen.findByRole("heading", { name: "Escolha a música" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
     expect(within(document.body).queryByText(/Jogando/)).toBeNull();
   });
 });

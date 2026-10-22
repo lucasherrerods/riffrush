@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/character";
+import { ROTULOS_DOS_TRASTES, ROTULO_DA_ESTRELA, iniciarControle } from "@/modules/gamepad";
 import { TelaDeJogo, type Resultado } from "@/modules/gameplay";
 import { TelaDeSelecao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
@@ -39,13 +40,40 @@ export function App() {
 
   const musica = emRede?.musica ?? musicas[indice];
   const dificuldadeDaPartida = emRede?.dificuldade ?? dificuldade;
-  const opcoes = useMemo(() => opcoesDaPartida(configuracoes), [configuracoes]);
+  const [comControle, setComControle] = useState(() => Array.from(navigator.getGamepads?.() ?? []).some((c) => c));
+  const opcoes = useMemo(() => {
+    const base = opcoesDaPartida(configuracoes);
+    return comControle ? { ...base, rotulosDosTrastes: ROTULOS_DOS_TRASTES, rotuloDaTeclaDaEstrela: ROTULO_DA_ESTRELA } : base;
+  }, [configuracoes, comControle]);
 
   useTeclado(async (evento) => {
     if (evento.code !== "F11") return;
     evento.preventDefault();
     await definirTelaCheia(!(await estaEmTelaCheia()));
   });
+
+  const telaAtual = useRef(tela);
+  telaAtual.current = tela;
+  const configuracoesAtuais = useRef(configuracoes);
+  configuracoesAtuais.current = configuracoes;
+  useEffect(() => {
+    const aoConectar = () => {
+      setComControle(true);
+      avisar(`Controle conectado! Trastes: ${ROTULOS_DOS_TRASTES.join(" ")}`);
+    };
+    const aoDesconectar = () => setComControle(Array.from(navigator.getGamepads?.() ?? []).some((c) => c));
+    window.addEventListener("gamepadconnected", aoConectar);
+    window.addEventListener("gamepaddisconnected", aoDesconectar);
+    const parar = iniciarControle({
+      modo: () => (telaAtual.current === "jogo" ? "jogo" : "menu"),
+      mapa: () => configuracoesAtuais.current,
+    });
+    return () => {
+      parar();
+      window.removeEventListener("gamepadconnected", aoConectar);
+      window.removeEventListener("gamepaddisconnected", aoDesconectar);
+    };
+  }, []);
 
   // O host deu a largada: acha a música (baixando do host se for importada) e entra na partida.
   useEffect(() => {
