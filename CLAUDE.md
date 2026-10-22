@@ -22,8 +22,8 @@ npm run build       # typecheck + build web (também é a versão servida aos ce
 ```
 src/
   app/            composição das telas e navegação
-  compartilhado/  ui (shadcn), utilitários e estilos globais
-  modulos/<nome>/ uma pasta por funcionalidade
+  shared/         ui (shadcn), utilitários e estilos globais
+  modules/<nome>/ uma pasta por funcionalidade
 src-tauri/        lado nativo (Rust)
 docs/design.md    regras visuais
 ```
@@ -39,13 +39,14 @@ Cada módulo expõe sua API pública em `index.ts`. Outros módulos importam só
 - Testes ficam ao lado do arquivo testado: `arquivo.ts` → `arquivo.test.ts`.
 
 ### Código
-- Nunca duplique código ou componentes. Se algo se repete, extraia para o módulo dono ou para `compartilhado/`.
-- Tudo em português: nomes de arquivos, funções, variáveis, componentes, textos da interface e testes. Termos de bibliotecas e do React continuam como são.
+- Nunca duplique código ou componentes. Se algo se repete, extraia para o módulo dono ou para `shared/`.
+- Pastas em inglês (`shared`, `modules`, `styles`).
+- O resto em português: nomes de arquivos, funções, variáveis, componentes, textos da interface e testes. Termos de bibliotecas e do React continuam como são.
 - Comentários só quando explicam algo que o código não mostra, em frases simples.
 
 ### Design
 - Toda mudança de interface segue `docs/design.md`.
-- Use os tokens de cor e espaçamento definidos em `src/compartilhado/estilos`, nunca cores soltas.
+- Use os tokens de cor e espaçamento definidos em `src/shared/styles`, nunca cores soltas.
 - Exceção: o brilho neon é permitido apenas dentro do canvas da pista (notas, explosões, trilhos), por ser efeito de jogo. Menus, painéis e botões seguem a regra de não usar sombras no tema escuro.
 
 ### Git

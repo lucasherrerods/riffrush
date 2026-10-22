@@ -9,7 +9,7 @@ describe("componentes de ui", () => {
   it.each(componentes)("%s importa o cn do utilitário local", (arquivo: string) => {
     const codigo = readFileSync(join(pasta, arquivo), "utf8");
     if (!codigo.includes("cn(")) return;
-    expect(codigo).toMatch(/import \{ cn \} from "@\/compartilhado\/lib\/utils"/);
+    expect(codigo).toMatch(/import \{ cn \} from "@\/shared\/lib\/utils"/);
   });
 
   // design.md, regra 11: sem sombras em interfaces escuras.
