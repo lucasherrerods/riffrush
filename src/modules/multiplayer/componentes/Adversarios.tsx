@@ -19,7 +19,7 @@ export function Adversarios({ sala, compacto = false }: { sala: EstadoDaSala; co
 
   if (compacto) {
     return (
-      <ul className="pointer-events-none absolute top-20 left-4 flex max-w-[60%] flex-wrap gap-1" aria-label="Adversários">
+      <ul className="pointer-events-none absolute top-36 left-4 flex max-w-[60%] flex-wrap gap-1" aria-label="Adversários">
         {outros.map((jogador) => {
           const estado = sala.adversarios[jogador.id];
           return (
