@@ -1,4 +1,4 @@
-import { geradorAleatorioDeTeste } from "@/test/aleatorio";
+import { geradorAleatorio } from "@/shared/lib/aleatorio";
 import {
   ACESSORIOS,
   CABELOS,
@@ -33,7 +33,7 @@ describe("carregarPersonagem", () => {
 
 describe("personagemAleatorio", () => {
   it("mantém o nome e sorteia só opções que existem", () => {
-    const personagem = personagemAleatorio("Lucas", geradorAleatorioDeTeste(3));
+    const personagem = personagemAleatorio("Lucas", geradorAleatorio(3));
     expect(personagem.nome).toBe("Lucas");
     expect(TONS_DE_PELE).toContain(personagem.pele);
     expect(CABELOS.map((c) => c.id)).toContain(personagem.cabelo);
@@ -45,7 +45,7 @@ describe("personagemAleatorio", () => {
   });
 
   it("varia entre sorteios", () => {
-    const aleatorio = geradorAleatorioDeTeste(7);
+    const aleatorio = geradorAleatorio(7);
     const sorteios = new Set(Array.from({ length: 10 }, () => JSON.stringify(personagemAleatorio("x", aleatorio))));
     expect(sorteios.size).toBeGreaterThan(1);
   });
