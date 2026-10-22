@@ -22,7 +22,7 @@ const arquivoSng = (metadados: Record<string, string>, arquivos: Record<string, 
   new File([construirSng(metadados, arquivos)], nome);
 
 beforeEach(() => {
-  vi.stubGlobal("URL", { ...URL, createObjectURL: vi.fn(() => "blob:capa") });
+  Object.defineProperty(URL, "createObjectURL", { value: vi.fn(() => "blob:capa"), configurable: true });
 });
 
 describe("carregarMusica (embutidas)", () => {
@@ -50,7 +50,8 @@ describe("importarArquivo", () => {
   it("usa o nome 'Artista - Título' de um áudio comum", async () => {
     const { importarArquivo } = await importar();
     const musica = await importarArquivo(new File([construirWav(1, 440)], "Banda X - Música Y.wav"));
-    expect(musica).toMatchObject({ titulo: "Música Y", artista: "Banda X", sng: undefined });
+    expect(musica).toMatchObject({ titulo: "Música Y", artista: "Banda X" });
+    expect(musica.sng).toBeFalsy();
   });
 
   it("marca clipes de vídeo pela extensão", async () => {
