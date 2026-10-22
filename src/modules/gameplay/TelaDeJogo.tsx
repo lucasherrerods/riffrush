@@ -10,7 +10,7 @@ import { Button } from "@/shared/ui/button";
 import { criarBot, jogarSozinho } from "./bot";
 import { MedidorDeVida } from "./componentes/MedidorDeVida";
 import { MenuDePausa } from "./componentes/MenuDePausa";
-import { CORES_DO_MULTIPLICADOR, NOMES_DAS_PISTAS } from "./cores";
+import { CORES_DO_MULTIPLICADOR, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "./cores";
 import { ativarEstrela, avancar, criarPartida, multiplicador, retirarEventos, soltar, tocar } from "./partida";
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { layoutDaPista } from "./pista/geometria";
@@ -407,7 +407,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
               <h1 className="truncate text-lg font-bold">{musica.titulo}</h1>
               <p className="truncate text-base text-texto-suave">
                 {musica.artista} · {rotuloDaDificuldade}
-                {opcoes.bot && <span className="ml-2 rounded bg-[#38bdf8] px-2 font-black text-fundo">BOT</span>}
+                {opcoes.bot && <span className="ml-2 rounded bg-estrela px-2 font-black text-fundo">BOT</span>}
               </p>
             </div>
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-superficie-elevada" aria-label="Progresso da música">
@@ -458,7 +458,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
               initial={{ scale: 1.5 }}
               animate={{ scale: 1 }}
               className={cn("flex items-center justify-center rounded-full font-black", estreita ? "size-12 border-2 text-base" : "size-20 border-4 text-3xl")}
-              style={{ borderColor: hud.estrelaAtiva ? "#38bdf8" : CORES_DO_MULTIPLICADOR[Math.min(3, hud.multiplicador - 1)] }}
+              style={{ borderColor: hud.estrelaAtiva ? COR_DA_ESTRELA : CORES_DO_MULTIPLICADOR[Math.min(3, hud.multiplicador - 1)] }}
             >
               {hud.multiplicador}x
             </motion.div>
@@ -482,7 +482,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
               <button
                 aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`}
                 onClick={() => controles.current.estrela()}
-                className={cn("flex items-center gap-1 rounded-full px-3 py-1 text-base font-bold", hud.estrela >= 0.5 ? "bg-[#38bdf8] text-fundo" : "bg-superficie-elevada text-texto-suave")}
+                className={cn("flex items-center gap-1 rounded-full px-3 py-1 text-base font-bold", hud.estrela >= 0.5 ? "bg-estrela text-fundo" : "bg-superficie-elevada text-texto-suave")}
               >
                 <Zap className="size-4 opacity-70" aria-hidden /> {Math.round(hud.estrela * 100)}%
               </button>
@@ -492,9 +492,9 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
               <Chibi personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} className="mb-2 h-44 w-auto" />
               <div className="flex items-end gap-4">
                 <div className="flex flex-col items-center gap-2" aria-label="Star power">
-                  <Zap className={cn("size-5", hud.estrela >= 0.5 ? "text-[#38bdf8]" : "text-borda")} aria-hidden />
+                  <Zap className={cn("size-5", hud.estrela >= 0.5 ? "text-estrela" : "text-borda")} aria-hidden />
                   <div className="relative h-40 w-4 overflow-hidden rounded-full bg-superficie-elevada">
-                    <div className={cn("absolute bottom-0 w-full rounded-full bg-[#38bdf8] transition-all", hud.estrelaAtiva && "animate-pulse")} style={{ height: `${hud.estrela * 100}%` }} />
+                    <div className={cn("absolute bottom-0 w-full rounded-full bg-estrela transition-all", hud.estrelaAtiva && "animate-pulse")} style={{ height: `${hud.estrela * 100}%` }} />
                     <div className="absolute bottom-1/2 h-px w-full bg-texto/60" />
                   </div>
                 </div>
@@ -529,7 +529,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
                 exit={{ y: -16, opacity: 0 }}
                 transition={{ duration: 0.25 }}
                 onAnimationComplete={() => setTimeout(() => setAviso((a) => (a?.id === aviso.id ? null : a)), 1200)}
-                className={cn("pointer-events-none absolute top-24 left-1/2 -translate-x-1/2 text-3xl font-black", aviso.estrela ? "text-[#38bdf8]" : "text-[#facc15]")}
+                className={cn("pointer-events-none absolute top-24 left-1/2 -translate-x-1/2 text-3xl font-black", aviso.estrela ? "text-estrela" : "text-ouro")}
               >
                 {aviso.texto}
               </motion.p>

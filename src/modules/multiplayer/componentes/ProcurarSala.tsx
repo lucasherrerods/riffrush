@@ -96,7 +96,7 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
                   onClick={() => entrar(`http://${s.ip}:${s.porta}`)}
                   className="flex w-full items-center gap-4 rounded-2xl border border-borda bg-superficie-elevada p-4 text-left transition-colors hover:border-primaria"
                 >
-                  <Crown className="text-[#facc15] opacity-70" aria-hidden />
+                  <Crown className="text-ouro opacity-70" aria-hidden />
                   <span className="flex-1">
                     <span className="block text-base font-bold">Sala de {s.nome}</span>
                     <span className="block font-mono text-base text-texto-suave">{s.ip}</span>

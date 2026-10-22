@@ -73,7 +73,7 @@ export function TelaDeResultado(props: Props) {
             animate={{ scale: 1, rotate: 0 }}
             transition={{ delay: 0.4 + i * 0.15, type: "spring", stiffness: 200 }}
           >
-            <Star className={i < estrelas ? "size-16 fill-[#facc15] text-[#facc15]" : "size-16 text-borda"} />
+            <Star className={i < estrelas ? "size-16 fill-ouro text-ouro" : "size-16 text-borda"} />
           </motion.div>
         ))}
       </div>

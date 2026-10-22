@@ -112,7 +112,7 @@ export function TelaDeSelecao(props: Props) {
                   {recorde && (
                     <span className="flex gap-1 pr-2" aria-label={`${recorde.estrelas} estrelas`}>
                       {Array.from({ length: 5 }, (_, k) => (
-                        <Star key={k} className={cn("size-3", k < recorde.estrelas ? "fill-[#facc15] text-[#facc15]" : "text-borda")} />
+                        <Star key={k} className={cn("size-3", k < recorde.estrelas ? "fill-ouro text-ouro" : "text-borda")} />
                       ))}
                     </span>
                   )}
@@ -172,7 +172,7 @@ export function TelaDeSelecao(props: Props) {
 
           {recordeAtual && (
             <p className="flex items-center gap-2 text-base text-texto-suave">
-              <Trophy className="size-4 text-[#facc15] opacity-70" /> Recorde:
+              <Trophy className="size-4 text-ouro opacity-70" /> Recorde:
               <span className="font-mono font-bold text-texto">{formatar(recordeAtual.pontos)}</span>
             </p>
           )}
