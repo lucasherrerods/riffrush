@@ -65,7 +65,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
           <Guitar className="size-16 text-primaria" />
         </motion.div>
         <h1 className="titulo-do-jogo text-8xl leading-[1.1] font-black tracking-[-0.02em] uppercase italic max-md:text-5xl">Riff Rush</h1>
-        <p className="text-base font-semibold tracking-[0.4em] text-texto-suave">TOQUE ATÉ OS DEDOS SANGRAREM</p>
+        <p className="text-center text-base font-semibold tracking-[0.4em] text-texto-suave max-md:tracking-[0.15em]">TOQUE ATÉ OS DEDOS SANGRAREM</p>
       </motion.div>
 
       <nav className="flex w-80 flex-col gap-2 max-md:w-[85vw]">

@@ -70,3 +70,11 @@ describe("MenuPrincipal no celular que entrou pelo QR code", () => {
     expect(aoMultijogador).toHaveBeenCalled();
   });
 });
+
+describe("MenuPrincipal na tela estreita", () => {
+  // Bug: com espaçamento largo entre letras, o subtítulo estourava a largura do celular.
+  it("o subtítulo diminui o espaçamento e quebra a linha centralizado", () => {
+    abrir();
+    expect(screen.getByText("TOQUE ATÉ OS DEDOS SANGRAREM")).toHaveClass("max-md:tracking-[0.15em]", "text-center");
+  });
+});

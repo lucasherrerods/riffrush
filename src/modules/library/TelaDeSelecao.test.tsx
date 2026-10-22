@@ -92,3 +92,12 @@ describe("TelaDeSelecao", () => {
     expect(screen.getByRole("img", { name: "Personagem Rockstar" }).querySelector('[data-parte="instrumento-guitarra"]')).not.toBeNull();
   });
 });
+
+describe("TelaDeSelecao na tela estreita", () => {
+  // Bug: itens de grid não encolhem sem min-w-0, e a seleção ficava mais larga que o celular.
+  it("as colunas podem encolher até caber na tela", () => {
+    abrir();
+    expect(screen.getAllByRole("list")[0]).toHaveClass("min-w-0");
+    expect(screen.getByRole("heading", { name: "Neon Highway" }).closest("section")).toHaveClass("min-w-0");
+  });
+});
