@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/character";
 import { TelaDeJogo, type Resultado } from "@/modules/gameplay";
 import { TelaDeSelecao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
+import { Adversarios, Placar, TelaDeMultijogador, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { TelaDeResultado, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { MUSICAS_EMBUTIDAS, importarArquivo, type Dificuldade, type Musica } from "@/modules/songs";
@@ -12,7 +13,13 @@ import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { opcoesDaPartida } from "./opcoes";
 
-type Tela = "menu" | "selecao" | "configuracoes" | "personagem" | "jogo" | "resultado";
+type Tela = "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "jogo" | "resultado";
+
+interface PartidaEmRede {
+  musica: Musica;
+  dificuldade: Dificuldade;
+  inicio: number;
+}
 
 export function App() {
   const [tela, setTela] = useState<Tela>("menu");
@@ -23,8 +30,13 @@ export function App() {
   const [dificuldade, setDificuldade] = useState<Dificuldade>("medio");
   const [resultado, setResultado] = useState<{ resultado: Resultado; recordeNovo: boolean } | null>(null);
   const [partida, setPartida] = useState(0);
+  const [emRede, setEmRede] = useState<PartidaEmRede | null>(null);
+  const [voltarDoPersonagemPara, setVoltarDoPersonagemPara] = useState<Tela>("menu");
+  const conexao = useConexao();
+  const partidasVistas = useRef(0);
 
-  const musica = musicas[indice];
+  const musica = emRede?.musica ?? musicas[indice];
+  const dificuldadeDaPartida = emRede?.dificuldade ?? dificuldade;
   const opcoes = useMemo(() => opcoesDaPartida(configuracoes), [configuracoes]);
 
   useTeclado(async (evento) => {
@@ -33,12 +45,35 @@ export function App() {
     await definirTelaCheia(!(await estaEmTelaCheia()));
   });
 
+  // O host deu a largada: acha a música (baixando do host se for importada) e entra na partida.
+  useEffect(() => {
+    const sala = conexao.sala;
+    if (!sala || sala.partidas === partidasVistas.current) return;
+    partidasVistas.current = sala.partidas;
+    resolverMusica(sala.musica, musicas, conexao.endereco)
+      .then((m) => {
+        setEmRede({ musica: m, dificuldade: sala.dificuldade, inicio: sala.inicio });
+        setPartida((p) => p + 1);
+        setTela("jogo");
+      })
+      .catch((erro) => avisar.error(String(erro)));
+  }, [conexao, musicas]);
+
+  // A sala acabou no meio da partida.
+  useEffect(() => {
+    if (conexao.sala || !emRede) return;
+    setEmRede(null);
+    if (conexao.erro) avisar.error(conexao.erro);
+    setTela("multijogador");
+  }, [conexao, emRede]);
+
   const mudarConfiguracoes = (novas: Configuracoes) => {
     setConfiguracoes(novas);
     salvarConfiguracoes(novas);
   };
 
   const jogar = () => {
+    setEmRede(null);
     setPartida((p) => p + 1);
     setTela("jogo");
   };
@@ -86,7 +121,11 @@ export function App() {
             <MenuPrincipal
               volumeDosEfeitos={configuracoes.volumeDosEfeitos}
               aoJogar={() => setTela("selecao")}
-              aoPersonagem={() => setTela("personagem")}
+              aoMultijogador={() => setTela("multijogador")}
+              aoPersonagem={() => {
+                setVoltarDoPersonagemPara("menu");
+                setTela("personagem");
+              }}
               aoConfigurar={() => setTela("configuracoes")}
             />
           )}
@@ -110,22 +149,39 @@ export function App() {
           {tela === "personagem" && (
             <TelaDePersonagem
               personagem={personagem}
-              aoVoltar={() => setTela("menu")}
+              aoVoltar={() => setTela(voltarDoPersonagemPara)}
               aoSalvar={(novo) => {
                 setPersonagem(novo);
                 salvarPersonagem(novo);
                 avisar.success("Personagem salvo!");
-                setTela("menu");
+                setTela(voltarDoPersonagemPara);
+              }}
+            />
+          )}
+          {tela === "multijogador" && (
+            <TelaDeMultijogador
+              personagem={personagem}
+              musicas={musicas}
+              volumeDosEfeitos={configuracoes.volumeDosEfeitos}
+              aoVoltar={() => setTela("menu")}
+              aoEditarPersonagem={() => {
+                setVoltarDoPersonagemPara("multijogador");
+                setTela("personagem");
               }}
             />
           )}
           {tela === "jogo" && (
             <TelaDeJogo
               musica={musica}
-              dificuldade={dificuldade}
+              dificuldade={dificuldadeDaPartida}
               opcoes={opcoes}
               personagem={personagem}
-              aoSair={() => setTela("selecao")}
+              rede={
+                emRede && conexao.sala
+                  ? { inicio: emRede.inicio, aoAtualizar: enviarEstado, adversarios: <Adversarios sala={conexao.sala} /> }
+                  : undefined
+              }
+              aoSair={() => setTela(emRede ? "multijogador" : "selecao")}
               aoTerminar={terminar}
             />
           )}
@@ -137,7 +193,18 @@ export function App() {
               recordeNovo={resultado.recordeNovo}
               volumeDosEfeitos={configuracoes.volumeDosEfeitos}
               aoRepetir={jogar}
-              aoContinuar={() => setTela("selecao")}
+              aoContinuar={() => {
+                if (!emRede) return setTela("selecao");
+                setEmRede(null);
+                voltarParaASala();
+                setTela("multijogador");
+              }}
+              rotuloDeContinuar={emRede ? "Voltar para a sala" : undefined}
+              extra={
+                emRede && conexao.sala ? (
+                  <Placar sala={conexao.sala} meusPontos={resultado.resultado.pontos} minhaDerrota={resultado.resultado.derrota} />
+                ) : undefined
+              }
             />
           )}
         </motion.div>

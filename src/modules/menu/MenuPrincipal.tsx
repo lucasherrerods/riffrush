@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Guitar, Play, Power, Settings2, Shirt, type LucideIcon } from "lucide-react";
+import { Guitar, Play, Power, Settings2, Shirt, Users, type LucideIcon } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { fecharJanela } from "@/modules/platform";
 import { useTeclado } from "@/shared/hooks/useTeclado";
@@ -9,6 +9,7 @@ import { cn } from "@/shared/lib/utils";
 interface Props {
   volumeDosEfeitos: number;
   aoJogar: () => void;
+  aoMultijogador: () => void;
   aoPersonagem: () => void;
   aoConfigurar: () => void;
 }
@@ -19,10 +20,11 @@ interface Item {
   acao: () => void;
 }
 
-export function MenuPrincipal({ volumeDosEfeitos, aoJogar, aoPersonagem, aoConfigurar }: Props) {
+export function MenuPrincipal({ volumeDosEfeitos, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar }: Props) {
   const [selecionado, setSelecionado] = useState(0);
   const itens: Item[] = [
     { rotulo: "Jogar", icone: Play, acao: aoJogar },
+    { rotulo: "Multijogador", icone: Users, acao: aoMultijogador },
     { rotulo: "Personagem", icone: Shirt, acao: aoPersonagem },
     { rotulo: "Configurações", icone: Settings2, acao: aoConfigurar },
     { rotulo: "Sair", icone: Power, acao: () => void fecharJanela() },

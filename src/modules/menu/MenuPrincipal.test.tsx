@@ -36,7 +36,7 @@ describe("MenuPrincipal", () => {
   it("marca a opção selecionada para leitores de tela", async () => {
     const { usuario } = abrir();
     await usuario.keyboard("{ArrowDown}");
-    expect(screen.getByRole("button", { name: "Personagem" })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByRole("button", { name: "Multijogador" })).toHaveAttribute("aria-current", "true");
   });
 
   it("Multijogador abre a tela da sala", async () => {
