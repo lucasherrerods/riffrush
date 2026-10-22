@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Crown, Loader2 } from "lucide-react";
-import { Chibi } from "@/modules/character";
+import { Avatar } from "@/modules/character";
 import { cn } from "@/shared/lib/utils";
 import type { EstadoDaSala } from "../protocolo";
 
@@ -38,7 +38,7 @@ export function Placar({ sala, meusPontos, minhaDerrota }: Props) {
             className={cn("flex items-center gap-4 rounded-2xl border p-2 pr-4", linha.meu ? "border-primaria bg-superficie-elevada" : "border-borda bg-superficie")}
           >
             <span className="w-8 text-center text-2xl font-black text-texto-suave">{i + 1}º</span>
-            <Chibi personagem={linha.personagem} tocando={!linha.terminou} triste={linha.derrota} className="h-14 w-auto" />
+            <Avatar personagem={linha.personagem} tocando={!linha.terminou} triste={linha.derrota} className="h-14 w-auto" />
             <span className="flex flex-1 items-center gap-2 truncate text-base font-bold">
               <span>{linha.personagem.nome}</span>
               {i === 0 && !esperando && <Crown aria-label="Vencedor" className="size-4 text-ouro" />}

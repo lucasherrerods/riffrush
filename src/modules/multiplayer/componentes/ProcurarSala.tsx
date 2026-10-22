@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Crown, Plus, RefreshCw, Users, Wifi } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
-import { Chibi, type Personagem } from "@/modules/character";
+import { Avatar, type Personagem } from "@/modules/character";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -50,7 +50,7 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1 max-md:overflow-y-auto">
       <section className="col-span-4 flex flex-col items-center gap-4 rounded-3xl border border-borda bg-superficie p-6">
-        <Chibi personagem={personagem} className="h-48 w-auto" />
+        <Avatar personagem={personagem} className="h-48 w-auto" />
         <p className="text-xl font-black">{personagem.nome}</p>
         <Button variant="outline" onClick={aoEditarPersonagem}>
           Editar personagem

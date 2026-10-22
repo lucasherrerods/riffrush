@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { Loader2, Play, Smartphone, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
-import { Chibi } from "@/modules/character";
+import { Avatar } from "@/modules/character";
 import { DIFICULDADES, type Musica } from "@/modules/songs";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -54,7 +54,7 @@ export function Lobby({ sala, info, musicas, volumeDosEfeitos }: Props) {
               >
                 {jogador ? (
                   <>
-                    <Chibi personagem={jogador.personagem} className="h-36 w-auto" />
+                    <Avatar personagem={jogador.personagem} className="h-36 w-auto" />
                     <p className="mt-2 truncate text-base font-bold">{jogador.personagem.nome}</p>
                     <div className="flex gap-1">
                       {jogador.id === sala.hostId && <span className="rounded-full bg-ouro px-2 text-base font-bold text-fundo">Host</span>}

@@ -89,7 +89,7 @@ describe("TelaDeSelecao", () => {
 
   it("mostra o personagem palhetando a guitarra ao lado da música", () => {
     abrir();
-    expect(screen.getByRole("img", { name: "Personagem Rockstar" }).querySelector('[data-parte="instrumento-guitarra"]')).not.toBeNull();
+    expect(screen.getByRole("img", { name: "Personagem Rockstar" })).toHaveAttribute("data-instrumento", "guitarra");
   });
 });
 

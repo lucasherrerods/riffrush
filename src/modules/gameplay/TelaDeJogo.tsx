@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, Pause, Skull, Zap } from "lucide-react";
 import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, tocarEfeito } from "@/modules/audio";
-import { Chibi, type Personagem } from "@/modules/character";
+import { Avatar, type Personagem } from "@/modules/character";
 import { DIFICULDADES, carregarMusica, type Dificuldade, type Musica, type MusicaCarregada } from "@/modules/songs";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
@@ -477,7 +477,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
 
           {estreita ? (
             <div data-parte="hud-compacto" className="absolute top-20 right-4 flex flex-col items-end gap-2">
-              <Chibi personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} className="h-20 w-auto" />
+              <Avatar personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} className="h-20 w-auto" />
               <MedidorDeVida vida={hud.vida} horizontal className="h-2.5 w-24" />
               <button
                 aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`}
@@ -489,7 +489,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
             </div>
           ) : (
             <div data-parte="hud-lateral" className="absolute bottom-10 flex flex-col items-center" style={{ left: layout.centro + layout.largura / 2 + 24 }}>
-              <Chibi personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} className="mb-2 h-44 w-auto" />
+              <Avatar personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} className="mb-2 h-44 w-auto" />
               <div className="flex items-end gap-4">
                 <div className="flex flex-col items-center gap-2" aria-label="Star power">
                   <Zap className={cn("size-5", hud.estrela >= 0.5 ? "text-estrela" : "text-borda")} aria-hidden />

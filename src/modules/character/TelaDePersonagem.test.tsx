@@ -16,20 +16,36 @@ describe("TelaDePersonagem", () => {
     expect(screen.getByRole("img", { name: "Personagem Rockstar" })).toBeInTheDocument();
   });
 
-  it("muda a prévia ao escolher uma opção", async () => {
+  it("muda a prévia ao escolher um instrumento", async () => {
     const { usuario } = abrir();
+    await usuario.click(screen.getByRole("tab", { name: /Instrumento/ }));
     await usuario.click(screen.getByRole("radio", { name: "Bateria" }));
     expect(screen.getByRole("radio", { name: "Bateria" })).toBeChecked();
-    expect(document.querySelector('[data-parte="instrumento-bateria"]')).not.toBeNull();
+    expect(screen.getByRole("img", { name: "Personagem Rockstar" })).toHaveAttribute("data-instrumento", "bateria");
+  });
+
+  it("separa a customização em abas de corpo, rosto, cabelo, roupa e instrumento", () => {
+    abrir();
+    for (const aba of ["Corpo", "Rosto", "Cabelo", "Roupa", "Instrumento"]) expect(screen.getByRole("tab", { name: new RegExp(aba) })).toBeInTheDocument();
+  });
+
+  it("ajusta o corpo com sliders", () => {
+    abrir();
+    expect(screen.getByRole("slider", { name: "Altura" })).toBeInTheDocument();
+    expect(screen.getByRole("slider", { name: "Porte físico" })).toBeInTheDocument();
   });
 
   it("salva o personagem com as mudanças", async () => {
     const { aoSalvar, usuario } = abrir();
     await usuario.clear(screen.getByLabelText("Nome"));
     await usuario.type(screen.getByLabelText("Nome"), "Vitor");
-    await usuario.click(screen.getByRole("radio", { name: "Coroa" }));
+    await usuario.click(screen.getByRole("tab", { name: /Cabelo/ }));
+    await usuario.click(screen.getByRole("radio", { name: "Moicano" }));
+    await usuario.click(screen.getByRole("radio", { name: "Cavanhaque" }));
+    await usuario.click(screen.getByRole("tab", { name: /Roupa/ }));
+    await usuario.click(screen.getByRole("radio", { name: "Sobretudo" }));
     await usuario.click(screen.getByRole("button", { name: /Salvar/ }));
-    expect(aoSalvar).toHaveBeenCalledWith({ ...PERSONAGEM_PADRAO, nome: "Vitor", acessorio: "coroa" });
+    expect(aoSalvar).toHaveBeenCalledWith({ ...PERSONAGEM_PADRAO, nome: "Vitor", cabelo: "moicano", barba: "cavanhaque", roupa: "sobretudo" });
   });
 
   it("não deixa salvar sem nome", async () => {
@@ -43,7 +59,7 @@ describe("TelaDePersonagem", () => {
     const { aoSalvar, usuario } = abrir();
     await usuario.click(screen.getByRole("button", { name: /Aleatório/ }));
     await usuario.click(screen.getByRole("button", { name: /Salvar/ }));
-    expect(aoSalvar).toHaveBeenCalledWith(expect.objectContaining({ nome: "Rockstar", instrumento: "vocal", acessorio: "coroa" }));
+    expect(aoSalvar).toHaveBeenCalledWith(expect.objectContaining({ nome: "Rockstar", instrumento: "vocal", acessorio: "bandana" }));
     sorteio.mockRestore();
   });
 
