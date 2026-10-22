@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { Loader2, Play, Smartphone, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
-import { Chibi } from "@/modules/character";
+import { Avatar } from "@/modules/character";
 import { DIFICULDADES, type Musica } from "@/modules/songs";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -48,13 +48,13 @@ export function Lobby({ sala, info, musicas, volumeDosEfeitos }: Props) {
               <li
                 key={jogador?.id ?? `vaga-${i}`}
                 className={cn(
-                  "flex flex-col items-center rounded-3xl border p-4",
+                  "chapa flex flex-col items-center p-4",
                   jogador ? "border-borda bg-superficie" : "border-dashed border-borda bg-fundo",
                 )}
               >
                 {jogador ? (
                   <>
-                    <Chibi personagem={jogador.personagem} className="h-36 w-auto" />
+                    <Avatar personagem={jogador.personagem} className="h-36 w-auto" />
                     <p className="mt-2 truncate text-base font-bold">{jogador.personagem.nome}</p>
                     <div className="flex gap-1">
                       {jogador.id === sala.hostId && <span className="rounded-full bg-ouro px-2 text-base font-bold text-fundo">Host</span>}
@@ -72,7 +72,7 @@ export function Lobby({ sala, info, musicas, volumeDosEfeitos }: Props) {
           })}
         </ul>
 
-        <section className="flex flex-col gap-4 rounded-3xl border border-borda bg-superficie p-6">
+        <section className="flex flex-col gap-4 placa p-6">
           <p className="text-base font-semibold text-texto-suave">Música</p>
           {sala.souHost ? (
             <div role="radiogroup" aria-label="Música" className="flex max-h-48 flex-col gap-1 overflow-y-auto pr-1">
@@ -124,7 +124,7 @@ export function Lobby({ sala, info, musicas, volumeDosEfeitos }: Props) {
       </div>
 
       {info && (
-        <section className="col-span-4 flex flex-col items-center gap-4 rounded-3xl border border-borda bg-superficie p-6 text-center">
+        <section className="col-span-4 flex flex-col items-center gap-4 placa p-6 text-center">
           <Smartphone className="text-primaria opacity-70" aria-hidden />
           <p className="text-base font-bold">Jogar pelo celular</p>
           <p className="text-base text-texto-suave">No mesmo Wi-Fi, abra a câmera no QR code:</p>

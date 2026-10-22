@@ -17,12 +17,9 @@ describe.each(Object.values(TEMAS).map((tema) => [tema.nome, tema] as const))("t
     for (const cor of neutros) expect(croma(cor)).toBeLessThanOrEqual(0.05);
   });
 
-  it("neutros têm uma única temperatura (fria)", () => {
-    for (const cor of neutros) {
-      const azul = parseInt(cor.slice(5, 7), 16);
-      const vermelho = parseInt(cor.slice(1, 3), 16);
-      expect(azul).toBeGreaterThanOrEqual(vermelho);
-    }
+  it("neutros têm uma única temperatura (todos frios ou todos quentes)", () => {
+    const temperaturas = neutros.map((cor) => Math.sign(parseInt(cor.slice(1, 3), 16) - parseInt(cor.slice(5, 7), 16)));
+    expect(temperaturas.includes(1) && temperaturas.includes(-1)).toBe(false);
   });
 
   it("superfícies ficam mais claras conforme a elevação, até 12% acima do fundo", () => {
@@ -50,10 +47,10 @@ describe.each(Object.values(TEMAS).map((tema) => [tema.nome, tema] as const))("t
 });
 
 describe("tema ativo", () => {
-  it("é o Crimson Noir", () => {
-    expect(temaAtivo.nome).toBe("Crimson Noir");
-    expect(cores.fundo).toBe("#0b0b0d");
-    expect(paleta.primaria).toBe("#c1121f");
+  it("é o Riff Rush, com as cores da logo", () => {
+    expect(temaAtivo.nome).toBe("Riff Rush");
+    expect(cores.texto).toBe("#e8e4dc");
+    expect(paleta.primaria).toBe("#e3191f");
   });
 });
 

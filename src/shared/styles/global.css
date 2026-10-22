@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
+@import "@fontsource/bebas-neue";
+@import "@fontsource/rubik-dirt";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -18,7 +20,14 @@ body {
 
 /* As cores vêm do tema ativo em temas.ts (aplicarTokens). Aqui só ligamos os nomes ao Tailwind e ao shadcn. */
 :root {
-  --radius: 0.75rem;
+  /* Cantos quase retos, como os cortes da guitarra da logo. */
+  --radius: 0.25rem;
+  /* Ruído que desgasta as formas, imitando a tinta gasta da logo. Opaco com falhas espalhadas. */
+  --textura-gasta: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -9 6.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23r)'/%3E%3C/svg%3E");
+  /* O inverso: só as falhas, para pintar por cima de áreas cheias. */
+  --textura-falhas: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9 -6.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23r)'/%3E%3C/svg%3E");
+  /* Metal escovado: riscos horizontais claros e finos, usados com pouca opacidade sobre as placas. */
+  --textura-metal: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.003 0.8' numOctaves='2' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 2.4 -1.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E");
   --background: var(--cor-fundo);
   --foreground: var(--cor-texto);
   --card: var(--cor-superficie);
@@ -41,10 +50,14 @@ body {
 
 @theme inline {
   --font-sans: "Geist Variable", sans-serif;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --font-titulo: "Bebas Neue", "Geist Variable", sans-serif;
+  --font-letreiro: "Rubik Dirt", "Bebas Neue", sans-serif;
+  --radius-sm: 2px;
+  --radius-md: var(--radius);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 2px);
+  --radius-2xl: calc(var(--radius) + 4px);
+  --radius-3xl: calc(var(--radius) + 8px);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -84,13 +97,52 @@ body {
   color: var(--cor-texto);
 }
 
-/* ---------- Fundo dos menus ---------- */
-.sol-listrado {
-  background: linear-gradient(180deg, var(--cor-destaque) 0%, var(--cor-primaria) 55%, var(--cor-superficie) 100%);
-  mask-image: repeating-linear-gradient(180deg, #000 0 18px, transparent 18px 26px);
+/* Títulos na fonte condensada, em caixa alta, como letreiro de show. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-titulo);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
-/* A grade anda com transform (composto na GPU), não com background-position, que repinta a cada frame. */
+/* O título de cada tela é um letreiro de show: fonte suja e agressiva, inclinada para frente. */
+h1 {
+  font-family: var(--font-letreiro);
+  transform: skewX(-6deg);
+}
+
+/* Quina cortada na diagonal, o desenho de ponta da guitarra da logo. */
+.corte {
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+}
+
+/* Tinta gasta: falhas da cor do fundo sobre a área pintada. */
+.gasto {
+  position: relative;
+  isolation: isolate;
+}
+
+.gasto::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--cor-fundo);
+  opacity: 0.6;
+  mask-image: var(--textura-falhas);
+  mask-mode: alpha;
+  mask-size: 240px;
+}
+
+.desgastado {
+  mask-image: var(--textura-gasta);
+  mask-size: 240px;
+}
+
+/* ---------- Fundo dos menus ---------- */
 .grade-perspectiva {
   perspective: 400px;
   overflow: hidden;
@@ -104,8 +156,8 @@ body {
   transform-origin: top;
   transform: rotateX(62deg);
   background-image:
-    linear-gradient(color-mix(in srgb, var(--cor-primaria) 55%, transparent) 2px, transparent 2px),
-    linear-gradient(90deg, color-mix(in srgb, var(--cor-primaria) 55%, transparent) 2px, transparent 2px);
+    linear-gradient(color-mix(in srgb, var(--cor-borda) 70%, transparent) 2px, transparent 2px),
+    linear-gradient(90deg, color-mix(in srgb, var(--cor-borda) 70%, transparent) 2px, transparent 2px);
   background-size: 70px 70px;
   will-change: transform;
   animation: grade-anda 1.6s linear infinite;
@@ -144,8 +196,94 @@ body {
 }
 
 .titulo-do-jogo {
-  background: linear-gradient(180deg, var(--cor-texto) 0%, var(--cor-texto) 35%, var(--cor-destaque) 60%, var(--cor-primaria) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--cor-texto);
+  mask-image: var(--textura-gasta);
+  mask-size: 240px;
 }
+
+/* ---------- Kit de palco ---------- */
+
+/* Em @layer components para as classes utilitárias (borda, fundo) poderem sobrescrever a placa. */
+@layer components {
+  /*
+   * Placa de metal: painel principal das telas. Quinas cortadas, metal escovado,
+   * quatro rebites e sujeira nas bordas. A profundidade continua vindo só do brilho (sem sombras).
+   */
+  .placa,
+  .chapa {
+    position: relative;
+    isolation: isolate;
+    border: 1px solid var(--cor-borda);
+    background-color: var(--cor-superficie);
+  }
+
+  .placa {
+    clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+  }
+
+  .chapa {
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  }
+
+  .placa::before,
+  .chapa::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: var(--textura-metal);
+    background-size: 300px;
+    opacity: 0.05;
+  }
+
+  /* Rebites nos quatro cantos, logo depois do corte da quina. */
+  .placa::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    --rebite: radial-gradient(circle, var(--cor-borda) 0 3px, transparent 3.5px);
+    background:
+      var(--rebite) 22px 10px / 8px 8px no-repeat,
+      var(--rebite) calc(100% - 10px) 10px / 8px 8px no-repeat,
+      var(--rebite) 10px calc(100% - 10px) / 8px 8px no-repeat,
+      var(--rebite) calc(100% - 22px) calc(100% - 10px) / 8px 8px no-repeat;
+  }
+}
+
+/* ---------- Holofotes ---------- */
+
+/* Feixe de luz em cone, preso no alto e balançando como luz de show. Só no fundo, nunca nos componentes. */
+.holofote {
+  position: absolute;
+  top: -12%;
+  width: 34vw;
+  height: 130vh;
+  transform-origin: 50% 0;
+  clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
+  mix-blend-mode: screen;
+  filter: blur(8px);
+  animation: holofote-varre ease-in-out infinite alternate;
+}
+
+.holofote-parado {
+  animation-play-state: paused;
+}
+
+@keyframes holofote-varre {
+  from {
+    transform: translateX(-50%) rotate(var(--de, -18deg));
+  }
+  to {
+    transform: translateX(-50%) rotate(var(--ate, 18deg));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .holofote {
+    animation: none;
+  }
+}
+

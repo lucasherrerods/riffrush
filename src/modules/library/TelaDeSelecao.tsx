@@ -100,7 +100,7 @@ export function TelaDeSelecao(props: Props) {
                     aoSelecionar(i);
                   }}
                   className={cn(
-                    "flex w-full items-center gap-4 rounded-2xl border p-2 text-left transition-colors",
+                    "chapa flex w-full items-center gap-4 p-2 text-left transition-colors",
                     selecionada ? "border-primaria bg-superficie-elevada" : "border-transparent bg-superficie hover:bg-superficie-elevada",
                   )}
                 >
@@ -122,7 +122,7 @@ export function TelaDeSelecao(props: Props) {
           })}
         </ul>
 
-        <section className="col-span-7 flex min-w-0 flex-col gap-6 rounded-3xl border border-borda bg-superficie p-6 max-md:gap-4 max-md:p-4">
+        <section className="col-span-7 flex min-w-0 flex-col gap-6 placa p-6 max-md:gap-4 max-md:p-4">
           <div className="flex items-center gap-6">
             <Capa musica={musica} girando className="size-44 rounded-2xl max-md:hidden" />
             <div className="flex min-w-0 flex-col gap-2">
@@ -157,7 +157,7 @@ export function TelaDeSelecao(props: Props) {
                       aoDificuldade(d.id);
                     }}
                     className={cn(
-                      "rounded-2xl border p-4 transition-colors",
+                      "chapa p-4 transition-colors",
                       escolhida ? "border-destaque bg-superficie-elevada" : "border-borda hover:bg-superficie-elevada",
                     )}
                   >

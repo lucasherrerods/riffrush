@@ -18,7 +18,7 @@ export function MenuDePausa({ derrota, emRede, aoContinuar, aoRecomecar, aoSair,
       <motion.div
         initial={{ scale: 0.9, y: 16 }}
         animate={{ scale: 1, y: 0 }}
-        className="flex w-80 flex-col gap-2 rounded-3xl border border-borda bg-superficie p-6 text-center"
+        className="flex w-80 flex-col gap-2 placa p-6 text-center"
       >
         {derrota ? (
           <>
