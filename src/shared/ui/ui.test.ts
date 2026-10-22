@@ -18,6 +18,12 @@ describe("componentes de ui", () => {
     expect(codigo).not.toMatch(/\bshadow-/);
   });
 
+  // design.md, regra 1: sem preto nem branco puros.
+  it.each(componentes)("%s não usa preto nem branco puros", (arquivo: string) => {
+    const codigo = readFileSync(join(pasta, arquivo), "utf8");
+    expect(codigo).not.toMatch(/\b(bg|text|border|fill|stroke)-(white|black)\b|#fff\b|#000\b/i);
+  });
+
   it("o pacote npm 'cn' não é dependência do projeto", () => {
     const pacote = JSON.parse(readFileSync(join(pasta, "../../../package.json"), "utf8"));
     expect({ ...pacote.dependencies, ...pacote.devDependencies }).not.toHaveProperty("cn");
