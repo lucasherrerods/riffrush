@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/character";
+import { iniciarControle } from "@/modules/gamepad";
 import { TelaDeJogo, type Resultado } from "@/modules/gameplay";
 import { TelaDeSelecao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
@@ -46,6 +47,23 @@ export function App() {
     evento.preventDefault();
     await definirTelaCheia(!(await estaEmTelaCheia()));
   });
+
+  const telaAtual = useRef(tela);
+  telaAtual.current = tela;
+  const configuracoesAtuais = useRef(configuracoes);
+  configuracoesAtuais.current = configuracoes;
+  useEffect(() => {
+    const aoConectar = () => avisar("Controle conectado! Trastes: A B Y X LB");
+    window.addEventListener("gamepadconnected", aoConectar);
+    const parar = iniciarControle({
+      modo: () => (telaAtual.current === "jogo" ? "jogo" : "menu"),
+      mapa: () => configuracoesAtuais.current,
+    });
+    return () => {
+      parar();
+      window.removeEventListener("gamepadconnected", aoConectar);
+    };
+  }, []);
 
   // O host deu a largada: acha a música (baixando do host se for importada) e entra na partida.
   useEffect(() => {
