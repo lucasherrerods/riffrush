@@ -24,9 +24,9 @@ describe("iniciarControle", () => {
     window.addEventListener("keyup", ouvir);
     const parar = iniciarControle({ modo: () => "jogo", mapa: () => ({ teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"], teclaDaEstrela: "Space" }) });
 
-    botoes[BOTOES.RB].pressed = true;
+    botoes[BOTOES.RT].pressed = true;
     proximoQuadro();
-    botoes[BOTOES.RB].pressed = false;
+    botoes[BOTOES.RT].pressed = false;
     proximoQuadro();
 
     expect(teclas).toEqual(["keydown:KeyK", "keyup:KeyK"]);

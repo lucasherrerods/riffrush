@@ -17,7 +17,7 @@ export const BOTOES = {
 } as const;
 
 /** Verde, vermelho, amarelo, azul e laranja. */
-const TRASTES = [BOTOES.LT, BOTOES.LB, BOTOES.RT, BOTOES.RB, BOTOES.A];
+const TRASTES = [BOTOES.LT, BOTOES.LB, BOTOES.RB, BOTOES.RT, BOTOES.A];
 const PALHETADAS = [BOTOES.CIMA, BOTOES.BAIXO];
 const SETAS: Record<number, string> = {
   [BOTOES.CIMA]: "ArrowUp",
