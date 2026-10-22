@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { definirTelaCheia } from "@/modules/platform";
 import { carregarRecordes } from "@/modules/results";
@@ -96,8 +96,8 @@ describe("App", () => {
 
   it("F11 alterna a tela cheia", async () => {
     const usuario = abrir();
-    await usuario.keyboard("{F11}");
-    expect(definirTelaCheia).toHaveBeenCalledWith(true);
+    await usuario.keyboard("[F11]");
+    await waitFor(() => expect(definirTelaCheia).toHaveBeenCalledWith(true));
   });
 
   it("sair da música volta para a seleção", async () => {
