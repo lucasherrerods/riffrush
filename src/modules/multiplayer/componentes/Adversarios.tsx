@@ -7,10 +7,35 @@ import type { EstadoDaSala } from "../protocolo";
 const VIDA_INICIAL = 0.5;
 const VIDA_BAIXA = 0.25;
 
-/** Os outros jogadores durante a partida: chibi, pontos e vida ao vivo (sem a pista deles). */
-export function Adversarios({ sala }: { sala: EstadoDaSala }) {
+const milhares = (pontos: number) => `${Math.floor(pontos / 1000)}k`;
+
+/**
+ * Os outros jogadores durante a partida: chibi, pontos e vida ao vivo (sem a pista deles).
+ * No celular (`compacto`) vira uma linha de pílulas pequenas, para não cobrir a pista.
+ */
+export function Adversarios({ sala, compacto = false }: { sala: EstadoDaSala; compacto?: boolean }) {
   const outros = sala.jogadores.filter((j) => j.id !== sala.meuId);
   if (!outros.length) return null;
+
+  if (compacto) {
+    return (
+      <ul className="pointer-events-none absolute top-20 left-4 flex max-w-[60%] flex-wrap gap-1" aria-label="Adversários">
+        {outros.map((jogador) => {
+          const estado = sala.adversarios[jogador.id];
+          return (
+            <li key={jogador.id} className={cn("flex w-24 flex-col gap-1 rounded-lg bg-superficie px-2 py-1", estado?.derrota && "opacity-50")}>
+              <span className="flex items-baseline justify-between gap-1 text-base leading-none">
+                <span className="truncate font-bold">{jogador.personagem.nome}</span>
+                <span className="font-mono text-texto-suave tabular-nums">{milhares(estado?.pontos ?? 0)}</span>
+              </span>
+              <MedidorDeVida vida={estado?.vida ?? VIDA_INICIAL} horizontal rotulo={`Vida de ${jogador.personagem.nome}`} className="h-1 w-full" />
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
   return (
     <ul className="absolute top-1/2 left-6 flex -translate-y-1/2 flex-col gap-2" aria-label="Adversários">
       {outros.map((jogador) => {
