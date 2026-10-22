@@ -1,8 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "@/app/App";
-import { aplicarTokens } from "@/compartilhado/estilos/tokens";
-import "@/compartilhado/estilos/global.css";
+import { aplicarTokens } from "@/shared/styles/tokens";
+import "@/shared/styles/global.css";
 
 aplicarTokens(document.documentElement);
 
