@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+*.local
+.env*
+!.env.example
+
+src-tauri/target/
+src-tauri/gen/schemas/
+
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.log
