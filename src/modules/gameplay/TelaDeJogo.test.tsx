@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { obterContextoDeAudio } from "@/modules/audio";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { MUSICAS_EMBUTIDAS, carregarMusica, type Nota } from "@/modules/songs";
 import { AudioContextFalso } from "@/test/audioFalso";
@@ -33,13 +34,17 @@ function abrir(opcoes: Partial<OpcoesDaPartida> = {}) {
   return { aoSair, aoTerminar, usuario: userEvent.setup() };
 }
 
-const audio = () => AudioContextFalso.instancias[0];
+const audio = () => obterContextoDeAudio() as unknown as AudioContextFalso;
 /** Faz o relógio do áudio chegar no segundo `tempo` da música. */
 const irPara = (tempo: number) => act(() => void (audio().currentTime = ENTRADA + tempo));
 
+vi.stubGlobal("AudioContext", AudioContextFalso);
+
+// O contexto de áudio é um só para o jogo inteiro: zera o relógio entre os testes.
 beforeEach(() => {
-  AudioContextFalso.instancias = [];
-  vi.stubGlobal("AudioContext", AudioContextFalso);
+  audio().currentTime = 0;
+  audio().state = "running";
+  vi.clearAllMocks();
 });
 
 describe("TelaDeJogo", () => {
