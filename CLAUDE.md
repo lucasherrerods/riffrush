@@ -51,6 +51,6 @@ Cada módulo expõe sua API pública em `index.ts`. Outros módulos importam só
 
 ### Git
 - Commits convencionais, curtos e em português: `feat: adiciona sustain nas notas`, `fix: corrige atraso do input`, `test: cobre parser de .chart`.
-- Nunca adicione co-autor nos commits.
+- Nunca adicione co-autor nos commits nem assinatura nas descrições de PR.
 - Um PR por funcionalidade ou pedido, sem misturar contextos. Abra o PR ao terminar.
 - Cada PR parte da `main` atualizada.
