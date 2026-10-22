@@ -65,3 +65,11 @@ Nenhuma regra é obrigatória: quebre qualquer uma quando houver um bom motivo. 
 ## Temas e skins
 
 As cores vivem em `src/shared/styles/temas.ts`. Cada tema define as cores da interface (`cores`) e a skin da pista (`pista`). Para criar um tema, copie um existente, troque os valores, registre-o em `TEMAS` e aponte `temaAtivo` para ele. Os testes de `tokens.test.ts` conferem as regras deste documento em todos os temas.
+
+## Palco (exceções deliberadas)
+
+O visual do jogo é um show de rock. Estas regras quebram as de cima de propósito, sempre com o mesmo motivo: ambientação de palco.
+
+- **Iluminação de palco:** feixes de holofote (`.holofote`) e luz no chão só no **fundo** das telas, atrás de tudo. Componentes continuam sem sombra (regra 11): a elevação segue vindo do brilho.
+- **Três fontes (regra 27):** `--font-letreiro` (Rubik Dirt) só no título de cada tela (`h1`); `--font-titulo` (Bebas Neue) em subtítulos e números de jogo; Geist no texto corrido. Fonte suja nunca em texto longo ou em número que precisa ser lido rápido.
+- **Texturas:** painéis usam `.placa` (painel principal: metal escovado, rebites, quinas de 16px) e `.chapa` (itens e cartões: metal escovado, quinas de 8px). Áreas pintadas de cor cheia usam `.gasto`. Não empilhe textura sobre textura (regra 23).

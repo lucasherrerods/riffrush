@@ -17,4 +17,16 @@ describe("Fundo", () => {
     const { container } = render(<Fundo />);
     expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
   });
+
+  it("acende holofotes de palco que varrem o fundo dos menus", () => {
+    const { container } = render(<Fundo />);
+    const holofotes = container.querySelectorAll("[data-parte='holofote']");
+    expect(holofotes.length).toBeGreaterThanOrEqual(3);
+    for (const holofote of holofotes) expect(holofote).not.toHaveClass("holofote-parado");
+  });
+
+  it("durante a música os holofotes param de varrer, para não distrair da pista", () => {
+    const { container } = render(<Fundo tocando />);
+    for (const holofote of container.querySelectorAll("[data-parte='holofote']")) expect(holofote).toHaveClass("holofote-parado");
+  });
 });

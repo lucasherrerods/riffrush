@@ -1,67 +1,90 @@
-export type Cabelo = "espetado" | "chanel" | "longo" | "moicano" | "coquinhos";
-export type Olhos = "fofo" | "feliz" | "marrento" | "estrela";
-export type Acessorio = "nenhum" | "oculos" | "fone" | "bandana" | "coroa";
-export type Instrumento = "guitarra" | "baixo" | "keytar" | "bateria" | "vocal";
+import {
+  AJUSTES_DO_CORPO,
+  BASES,
+  EXPRESSOES,
+  INSTRUMENTOS,
+  PALETAS,
+  PARTES_COLORIVEIS,
+  PECAS,
+  type Expressao,
+  type Instrumento,
+  type Opcao,
+  type ParteColorivel,
+} from "./catalogo";
 
 export interface Personagem {
+  versao: 3;
   nome: string;
-  pele: string;
-  cabelo: Cabelo;
-  corDoCabelo: string;
-  olhos: Olhos;
-  roupa: string;
-  acessorio: Acessorio;
+  /** Id do modelo .vrm em BASES. */
+  base: string;
   instrumento: Instrumento;
+  corpo: Record<(typeof AJUSTES_DO_CORPO)[number]["id"], number>;
+  expressao: Expressao;
+  /** null mantém a cor original da textura do modelo. */
+  cores: Record<ParteColorivel, string | null>;
+  /** Ids de peças extras vestidas por cima da base. */
+  pecas: string[];
 }
 
-export const TONS_DE_PELE = ["#ffe0c7", "#f5c9a0", "#d9a074", "#a86b45", "#6e4128"];
-export const CORES_DE_CABELO = ["#1f1b24", "#6b3f1f", "#f5d36b", "#ef4444", "#ec4899", "#3b82f6", "#22c55e", "#e5e7eb"];
-export const CORES_DE_ROUPA = ["#1a1722", "#7c3aed", "#db2777", "#ef4444", "#f97316", "#0ea5e9", "#16a34a", "#f3f2f7"];
-
-export const CABELOS: { id: Cabelo; rotulo: string }[] = [
-  { id: "espetado", rotulo: "Espetado" },
-  { id: "chanel", rotulo: "Chanel" },
-  { id: "longo", rotulo: "Longo" },
-  { id: "moicano", rotulo: "Moicano" },
-  { id: "coquinhos", rotulo: "Coquinhos" },
-];
-export const OLHOS: { id: Olhos; rotulo: string }[] = [
-  { id: "fofo", rotulo: "Fofo" },
-  { id: "feliz", rotulo: "Feliz" },
-  { id: "marrento", rotulo: "Marrento" },
-  { id: "estrela", rotulo: "Estrela" },
-];
-export const ACESSORIOS: { id: Acessorio; rotulo: string }[] = [
-  { id: "nenhum", rotulo: "Nada" },
-  { id: "oculos", rotulo: "Óculos escuros" },
-  { id: "fone", rotulo: "Fone" },
-  { id: "bandana", rotulo: "Bandana" },
-  { id: "coroa", rotulo: "Coroa" },
-];
-export const INSTRUMENTOS: { id: Instrumento; rotulo: string }[] = [
-  { id: "guitarra", rotulo: "Guitarra" },
-  { id: "baixo", rotulo: "Baixo" },
-  { id: "keytar", rotulo: "Keytar" },
-  { id: "bateria", rotulo: "Bateria" },
-  { id: "vocal", rotulo: "Vocal" },
-];
+const SEM_CORES = Object.fromEntries(PARTES_COLORIVEIS.map((p) => [p.id, null])) as Personagem["cores"];
 
 export const PERSONAGEM_PADRAO: Personagem = {
+  versao: 3,
   nome: "Rockstar",
-  pele: TONS_DE_PELE[1],
-  cabelo: "espetado",
-  corDoCabelo: CORES_DE_CABELO[4],
-  olhos: "fofo",
-  roupa: CORES_DE_ROUPA[0],
-  acessorio: "nenhum",
+  base: BASES[0].id,
   instrumento: "guitarra",
+  corpo: { altura: 0.5, porte: 0.5, ombros: 0.5 },
+  expressao: "confiante",
+  cores: SEM_CORES,
+  pecas: [],
 };
+
+const objeto = (valor: unknown): Record<string, unknown> => (valor && typeof valor === "object" ? (valor as Record<string, unknown>) : {});
+const ehCor = (valor: unknown): valor is string => typeof valor === "string" && /^#[0-9a-f]{6}$/i.test(valor);
+const opcao = <T extends string>(valor: unknown, opcoes: Opcao<T>[], padrao: T) => opcoes.find((o) => o.id === valor)?.id ?? padrao;
+
+function ajustes(valor: unknown) {
+  const dados = objeto(valor);
+  const resultado = { ...PERSONAGEM_PADRAO.corpo };
+  for (const { id } of AJUSTES_DO_CORPO) {
+    const numero = dados[id];
+    if (typeof numero === "number" && Number.isFinite(numero)) resultado[id] = Math.min(1, Math.max(0, numero));
+  }
+  return resultado;
+}
+
+/** Cores salvas em versões antigas, já no formato atual. */
+function coresAntigas(d: Record<string, unknown>): Record<string, unknown> {
+  if (d.versao === undefined) return { pele: d.pele, cabelo: d.corDoCabelo };
+  return objeto(d.cores);
+}
+
+/**
+ * Normaliza qualquer dado recebido (armazenamento local ou rede) para a versão atual.
+ * Chibis (v1) e bonecos procedurais (v2) aproveitam nome, instrumento, corpo e cores.
+ */
+export function migrarPersonagem(dado: unknown): Personagem {
+  const d = objeto(dado);
+  const p = PERSONAGEM_PADRAO;
+  const cores = coresAntigas(d);
+  return {
+    versao: 3,
+    nome: typeof d.nome === "string" && d.nome.trim() ? d.nome.slice(0, 16) : p.nome,
+    base: opcao(d.base, BASES, p.base),
+    instrumento: opcao(d.instrumento, INSTRUMENTOS, p.instrumento),
+    corpo: ajustes(d.corpo),
+    expressao: opcao(d.expressao, EXPRESSOES, p.expressao),
+    cores: Object.fromEntries(PARTES_COLORIVEIS.map(({ id }) => [id, ehCor(cores[id]) ? cores[id] : null])) as Personagem["cores"],
+    pecas: Array.isArray(d.pecas) ? d.pecas.filter((id) => PECAS.some((peca) => peca.id === id)) : [],
+  };
+}
 
 const CHAVE = "riffrush.personagem";
 
 export function carregarPersonagem(): Personagem {
   try {
-    return { ...PERSONAGEM_PADRAO, ...JSON.parse(localStorage.getItem(CHAVE) ?? "{}") };
+    const salvo = localStorage.getItem(CHAVE);
+    return salvo ? migrarPersonagem(JSON.parse(salvo)) : PERSONAGEM_PADRAO;
   } catch {
     return PERSONAGEM_PADRAO;
   }
@@ -78,13 +101,14 @@ export function salvarPersonagem(personagem: Personagem) {
 export function personagemAleatorio(nome: string, aleatorio: () => number = Math.random): Personagem {
   const sortear = <T,>(lista: readonly T[]) => lista[Math.floor(aleatorio() * lista.length)];
   return {
+    versao: 3,
     nome,
-    pele: sortear(TONS_DE_PELE),
-    cabelo: sortear(CABELOS).id,
-    corDoCabelo: sortear(CORES_DE_CABELO),
-    olhos: sortear(OLHOS).id,
-    roupa: sortear(CORES_DE_ROUPA),
-    acessorio: sortear(ACESSORIOS).id,
+    base: sortear(BASES).id,
     instrumento: sortear(INSTRUMENTOS).id,
+    corpo: Object.fromEntries(AJUSTES_DO_CORPO.map(({ id }) => [id, Math.round(aleatorio() * 100) / 100])) as Personagem["corpo"],
+    expressao: sortear(EXPRESSOES).id,
+    // Metade das vezes mantém a cor original do modelo.
+    cores: Object.fromEntries(PARTES_COLORIVEIS.map(({ id }) => [id, aleatorio() < 0.5 ? null : sortear(PALETAS[id])])) as Personagem["cores"],
+    pecas: [],
   };
 }
