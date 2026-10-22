@@ -128,3 +128,67 @@ describe("TelaDeJogo", () => {
     expect(await screen.findByRole("img", { name: "Personagem Rockstar" })).toBeInTheDocument();
   });
 });
+
+describe("TelaDeJogo em rede", () => {
+  function abrirEmRede(inicio: number) {
+    const aoAtualizar = vi.fn();
+    const aoTerminar = vi.fn();
+    render(
+      <TelaDeJogo
+        musica={MUSICAS_EMBUTIDAS[0]}
+        dificuldade="medio"
+        opcoes={OPCOES_PADRAO_DA_PARTIDA}
+        personagem={PERSONAGEM_PADRAO}
+        rede={{ inicio, aoAtualizar, adversarios: <p>painel dos adversários</p> }}
+        aoSair={vi.fn()}
+        aoTerminar={aoTerminar}
+      />,
+    );
+    return { aoAtualizar, aoTerminar, usuario: userEvent.setup() };
+  }
+  const fonteDaMusica = () => audio().fontes.at(-1)!;
+
+  it("começa a música no instante combinado com a sala", async () => {
+    carregarCom([nota(5)]);
+    abrirEmRede(performance.now() + 5000);
+    await screen.findByRole("heading", { name: "Neon Highway" });
+    expect(fonteDaMusica().inicio).toBeCloseTo(5, 0);
+  });
+
+  it("quem carregou atrasado entra no meio da música", async () => {
+    carregarCom([nota(5)]);
+    abrirEmRede(performance.now() - 2000);
+    await screen.findByRole("heading", { name: "Neon Highway" });
+    expect(fonteDaMusica().deslocamento).toBeGreaterThan(1.9);
+  });
+
+  it("manda o estado do jogador para a sala", async () => {
+    carregarCom([nota(5)]);
+    const { aoAtualizar } = abrirEmRede(performance.now() + 5000);
+    await waitFor(() => expect(aoAtualizar).toHaveBeenCalledWith(expect.objectContaining({ pontos: 0, vida: 0.5, terminou: false })));
+  });
+
+  it("a pausa só abre o menu: a música dos outros não para", async () => {
+    carregarCom([nota(5)]);
+    const { usuario } = abrirEmRede(performance.now() + 5000);
+    await screen.findByRole("heading", { name: "Neon Highway" });
+    await usuario.keyboard("{Escape}");
+    expect(await screen.findByRole("heading", { name: "Menu" })).toBeInTheDocument();
+    expect(audio().suspend).not.toHaveBeenCalled();
+  });
+
+  it("desistir entrega o resultado como derrota", async () => {
+    carregarCom([nota(5)]);
+    const { aoTerminar, usuario } = abrirEmRede(performance.now() + 5000);
+    await screen.findByRole("heading", { name: "Neon Highway" });
+    await usuario.keyboard("{Escape}");
+    await usuario.click(await screen.findByRole("button", { name: /Desistir e ver placar/ }));
+    expect(aoTerminar).toHaveBeenCalledWith(expect.objectContaining({ derrota: true }));
+  });
+
+  it("mostra o painel dos adversários", async () => {
+    carregarCom([nota(5)]);
+    abrirEmRede(performance.now() + 5000);
+    expect(await screen.findByText("painel dos adversários")).toBeInTheDocument();
+  });
+});
