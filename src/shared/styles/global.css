@@ -16,7 +16,7 @@ body {
   font-family: "Geist Variable", sans-serif;
 }
 
-/* As cores vêm de tokens.ts (aplicarTokens). Aqui só ligamos os nomes ao Tailwind e ao shadcn. */
+/* As cores vêm do tema ativo em temas.ts (aplicarTokens). Aqui só ligamos os nomes ao Tailwind e ao shadcn. */
 :root {
   --radius: 0.75rem;
   --background: var(--cor-fundo);
@@ -75,6 +75,8 @@ body {
   --color-sucesso: var(--cor-sucesso);
   --color-perigo: var(--cor-perigo);
   --color-destaque: var(--cor-destaque);
+  --color-ouro: var(--cor-ouro);
+  --color-estrela: var(--cor-estrela);
 }
 
 body {
@@ -84,7 +86,7 @@ body {
 
 /* ---------- Fundo dos menus ---------- */
 .sol-listrado {
-  background: linear-gradient(180deg, #fde047 0%, #f97316 45%, #db2777 100%);
+  background: linear-gradient(180deg, var(--cor-destaque) 0%, var(--cor-primaria) 55%, var(--cor-superficie) 100%);
   mask-image: repeating-linear-gradient(180deg, #000 0 18px, transparent 18px 26px);
 }
 
@@ -102,8 +104,8 @@ body {
   transform-origin: top;
   transform: rotateX(62deg);
   background-image:
-    linear-gradient(rgba(162, 28, 175, 0.55) 2px, transparent 2px),
-    linear-gradient(90deg, rgba(162, 28, 175, 0.55) 2px, transparent 2px);
+    linear-gradient(color-mix(in srgb, var(--cor-primaria) 55%, transparent) 2px, transparent 2px),
+    linear-gradient(90deg, color-mix(in srgb, var(--cor-primaria) 55%, transparent) 2px, transparent 2px);
   background-size: 70px 70px;
   will-change: transform;
   animation: grade-anda 1.6s linear infinite;
@@ -142,7 +144,7 @@ body {
 }
 
 .titulo-do-jogo {
-  background: linear-gradient(180deg, var(--cor-texto) 0%, #fde047 40%, var(--cor-destaque) 60%, #db2777 100%);
+  background: linear-gradient(180deg, var(--cor-texto) 0%, var(--cor-texto) 35%, var(--cor-destaque) 60%, var(--cor-primaria) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

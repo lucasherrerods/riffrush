@@ -1,20 +1,14 @@
-/** Cores com brilhos distintos para não disputarem atenção (design.md, regra 4). */
-export const paleta = {
-  primaria: "#a21caf",
-  sucesso: "#22c55e",
-  perigo: "#dc2626",
-  destaque: "#fb923c",
-};
+import { temaAtivo, type Tema } from "./temas";
 
-/** Neutros frios e levemente tingidos; quanto mais elevada a superfície, mais clara. */
-export const cores = {
-  fundo: "#121117",
-  superficie: "#1b1a21",
-  superficieElevada: "#252430",
-  borda: "#34333f",
-  texto: "#f3f2f7",
-  textoSuave: "#aaa8b4",
-  ...paleta,
+export { TEMAS, temaAtivo, type Tema } from "./temas";
+
+export const cores = temaAtivo.cores;
+
+export const paleta = {
+  primaria: cores.primaria,
+  sucesso: cores.sucesso,
+  perigo: cores.perigo,
+  destaque: cores.destaque,
 };
 
 const canais = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
@@ -30,8 +24,14 @@ export function croma(hex: string) {
   return Math.max(...c) - Math.min(...c);
 }
 
+/** Cor hex com transparência, para o canvas, que não lê variáveis CSS. */
+export function comAlfa(hex: string, alfa: number) {
+  const [r, g, b] = canais(hex).map((c) => Math.round(c * 255));
+  return `rgba(${r},${g},${b},${Math.max(0, alfa)})`;
+}
+
 const paraVariavel = (nome: string) => `--cor-${nome.replace(/[A-Z]/g, (letra) => `-${letra.toLowerCase()}`)}`;
 
-export function aplicarTokens(raiz: HTMLElement) {
-  for (const [nome, valor] of Object.entries(cores)) raiz.style.setProperty(paraVariavel(nome), valor);
+export function aplicarTokens(raiz: HTMLElement, tema: Tema = temaAtivo) {
+  for (const [nome, valor] of Object.entries(tema.cores)) raiz.style.setProperty(paraVariavel(nome), valor);
 }

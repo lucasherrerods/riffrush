@@ -1,5 +1,6 @@
 import type { Batida } from "@/modules/songs";
-import { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ESTRELA } from "../cores";
+import { cores, comAlfa } from "@/shared/styles/tokens";
+import { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ESTRELA, COR_DA_NOTA_PERDIDA, TRILHO_DA_ESTRELA } from "../cores";
 import type { NotaEmJogo } from "../partida";
 import { layoutDaPista, projetar, xDaPista } from "./geometria";
 
@@ -60,9 +61,9 @@ export function desenharPista(
   const chave = `${largura}x${altura}:${cena.estrelaAtiva}`;
   if (gradienteDaPista?.chave !== chave) {
     const gradiente = c.createLinearGradient(0, longe.y, 0, perto.y);
-    gradiente.addColorStop(0, cena.estrelaAtiva ? "rgba(14,165,233,0)" : "rgba(18,17,23,0)");
-    gradiente.addColorStop(0.25, cena.estrelaAtiva ? "rgba(14,116,144,0.9)" : "rgba(27,26,33,0.95)");
-    gradiente.addColorStop(1, cena.estrelaAtiva ? "rgba(8,47,73,0.98)" : "rgba(18,17,23,0.98)");
+    gradiente.addColorStop(0, comAlfa(cena.estrelaAtiva ? TRILHO_DA_ESTRELA[0] : cores.fundo, 0));
+    gradiente.addColorStop(0.25, cena.estrelaAtiva ? comAlfa(TRILHO_DA_ESTRELA[1], 0.9) : comAlfa(cores.superficie, 0.95));
+    gradiente.addColorStop(1, comAlfa(cena.estrelaAtiva ? TRILHO_DA_ESTRELA[2] : cores.fundo, 0.98));
     gradienteDaPista = { chave, valor: gradiente };
   }
   c.fillStyle = gradienteDaPista.valor;
@@ -94,7 +95,7 @@ export function desenharPista(
   trilhos(3, 1);
   c.globalAlpha = 1;
 
-  c.strokeStyle = "rgba(243,242,247,0.07)";
+  c.strokeStyle = comAlfa(cores.texto, 0.07);
   c.lineWidth = 1;
   c.beginPath();
   for (let i = 1; i < 5; i++) {
@@ -108,7 +109,7 @@ export function desenharPista(
     const distancia = (batida.tempo - tempo) / antecedencia;
     if (distancia > 1) break;
     const p = projetar(layout, distancia);
-    c.strokeStyle = batida.forte ? "rgba(243,242,247,0.28)" : "rgba(243,242,247,0.1)";
+    c.strokeStyle = batida.forte ? comAlfa(cores.texto, 0.28) : comAlfa(cores.texto, 0.1);
     c.lineWidth = batida.forte ? 2 * p.escala + 1 : 1;
     c.beginPath();
     c.moveTo(centro - metade * p.escala, p.y);
@@ -130,14 +131,14 @@ export function desenharPista(
     }
     c.beginPath();
     c.ellipse(x, linhaDeBatida, raio, raio * 0.55, 0, 0, Math.PI * 2);
-    c.fillStyle = apertado ? cor : "rgba(18,17,23,0.6)";
+    c.fillStyle = apertado ? cor : comAlfa(cores.fundo, 0.6);
     c.fill();
     c.lineWidth = 4;
     c.strokeStyle = cor;
     c.stroke();
     c.beginPath();
     c.ellipse(x, linhaDeBatida, raio * 0.45, raio * 0.25, 0, 0, Math.PI * 2);
-    c.fillStyle = apertado ? "rgba(243,242,247,0.8)" : "rgba(243,242,247,0.12)";
+    c.fillStyle = apertado ? comAlfa(cores.texto, 0.8) : comAlfa(cores.texto, 0.12);
     c.fill();
   }
 
@@ -170,10 +171,10 @@ export function desenharPista(
       c.fill();
     };
     c.globalAlpha = morto ? 0.3 : 1;
-    c.fillStyle = morto ? "#71717a" : cena.estrelaAtiva ? COR_DA_ESTRELA : CORES_DAS_PISTAS[nota.pista];
+    c.fillStyle = morto ? COR_DA_NOTA_PERDIDA : cena.estrelaAtiva ? COR_DA_ESTRELA : CORES_DAS_PISTAS[nota.pista];
     faixa(1);
     if (nota.segurando) {
-      c.fillStyle = "rgba(243,242,247,0.55)";
+      c.fillStyle = comAlfa(cores.texto, 0.55);
       faixa(0.35);
     }
   }

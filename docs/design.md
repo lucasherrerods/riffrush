@@ -61,3 +61,7 @@ Nenhuma regra é obrigatória: quebre qualquer uma quando houver um bom motivo. 
 - [ ] Nunca dois divisores rígidos juntos
 - [ ] Ícones junto ao texto com contraste reduzido
 - [ ] Tudo alinhado a alguma coisa, e cada decisão tem justificativa
+
+## Temas e skins
+
+As cores vivem em `src/shared/styles/temas.ts`. Cada tema define as cores da interface (`cores`) e a skin da pista (`pista`). Para criar um tema, copie um existente, troque os valores, registre-o em `TEMAS` e aponte `temaAtivo` para ele. Os testes de `tokens.test.ts` conferem as regras deste documento em todos os temas.

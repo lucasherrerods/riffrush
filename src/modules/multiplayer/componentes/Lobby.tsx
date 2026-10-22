@@ -57,7 +57,7 @@ export function Lobby({ sala, info, musicas, volumeDosEfeitos }: Props) {
                     <Chibi personagem={jogador.personagem} className="h-36 w-auto" />
                     <p className="mt-2 truncate text-base font-bold">{jogador.personagem.nome}</p>
                     <div className="flex gap-1">
-                      {jogador.id === sala.hostId && <span className="rounded-full bg-[#facc15] px-2 text-base font-bold text-fundo">Host</span>}
+                      {jogador.id === sala.hostId && <span className="rounded-full bg-ouro px-2 text-base font-bold text-fundo">Host</span>}
                       {jogador.id === sala.meuId && <span className="rounded-full bg-superficie-elevada px-2 text-base">Você</span>}
                     </div>
                   </>

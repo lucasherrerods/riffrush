@@ -41,7 +41,7 @@ export function Placar({ sala, meusPontos, minhaDerrota }: Props) {
             <Chibi personagem={linha.personagem} tocando={!linha.terminou} triste={linha.derrota} className="h-14 w-auto" />
             <span className="flex flex-1 items-center gap-2 truncate text-base font-bold">
               <span>{linha.personagem.nome}</span>
-              {i === 0 && !esperando && <Crown aria-label="Vencedor" className="size-4 text-[#facc15]" />}
+              {i === 0 && !esperando && <Crown aria-label="Vencedor" className="size-4 text-ouro" />}
             </span>
             {linha.derrota && <span className="text-base font-bold text-perigo">Vaiado</span>}
             {!linha.terminou && <Loader2 className="size-4 animate-spin text-texto-suave" aria-label="Ainda tocando" />}
