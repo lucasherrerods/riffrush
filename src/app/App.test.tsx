@@ -2,6 +2,8 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { definirTelaCheia } from "@/modules/platform";
 import { carregarRecordes } from "@/modules/results";
+import { useConexao, voltarParaASala } from "@/modules/multiplayer";
+import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { App } from "./App";
 
@@ -14,13 +16,20 @@ vi.mock("@/modules/platform", () => ({
 // A partida de verdade é testada no módulo de gameplay; aqui só importa a ligação entre as telas.
 vi.mock("@/modules/gameplay", async (original) => ({
   ...(await original<typeof import("@/modules/gameplay")>()),
-  TelaDeJogo: ({ musica, dificuldade, aoTerminar, aoSair }: { musica: { id: string; titulo: string }; dificuldade: string; aoTerminar: (r: unknown) => void; aoSair: () => void }) => (
+  TelaDeJogo: ({ musica, dificuldade, rede, aoTerminar, aoSair }: { musica: { id: string; titulo: string }; dificuldade: string; rede?: { adversarios?: React.ReactNode }; aoTerminar: (r: unknown) => void; aoSair: () => void }) => (
     <div>
-      <h1>Jogando {musica.titulo}</h1>
+      <h1>Jogando {musica.titulo}{rede ? " em rede" : ""}</h1>
+      {rede?.adversarios}
       <button onClick={() => aoTerminar({ musicaId: musica.id, dificuldade, pontos: 777, acertos: 9, total: 10, maiorSequencia: 9, derrota: false })}>terminar</button>
       <button onClick={aoSair}>sair</button>
     </div>
   ),
+}));
+
+vi.mock("@/modules/multiplayer", async (original) => ({
+  ...(await original<typeof import("@/modules/multiplayer")>()),
+  useConexao: vi.fn(() => ({ sala: null, endereco: "" })),
+  voltarParaASala: vi.fn(),
 }));
 
 vi.stubGlobal("AudioContext", AudioContextFalso);
@@ -107,5 +116,45 @@ describe("App", () => {
     await usuario.click(await screen.findByRole("button", { name: "sair" }));
     expect(await screen.findByRole("heading", { name: "Escolha a música" })).toBeInTheDocument();
     expect(within(document.body).queryByText(/Jogando/)).toBeNull();
+  });
+});
+
+describe("App em rede", () => {
+  const vitor = { ...PERSONAGEM_PADRAO, nome: "Vitor" };
+  const salaJogando = {
+    status: "jogando" as const,
+    souHost: false,
+    meuId: 2,
+    hostId: 1,
+    personagem: vitor,
+    jogadores: [{ id: 1, personagem: PERSONAGEM_PADRAO }, { id: 2, personagem: vitor }],
+    musica: { tipo: "embutida" as const, id: "overdrive" },
+    dificuldade: "expert" as const,
+    adversarios: {},
+    partidas: 1,
+    inicio: performance.now() + 5000,
+  };
+
+  it("Multijogador abre a tela da sala", async () => {
+    const usuario = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Multijogador" }));
+    expect(await screen.findByRole("heading", { name: "Multijogador" })).toBeInTheDocument();
+  });
+
+  it("quando o host dá a largada, abre a partida em rede com os adversários", async () => {
+    vi.mocked(useConexao).mockReturnValue({ sala: salaJogando, endereco: "http://h:7777" });
+    abrir();
+    expect(await screen.findByRole("heading", { name: "Jogando Overdrive em rede" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Personagem Rockstar" })).toBeInTheDocument();
+  });
+
+  it("no fim, mostra o placar da sala e volta para ela", async () => {
+    vi.mocked(useConexao).mockReturnValue({ sala: salaJogando, endereco: "http://h:7777" });
+    const usuario = abrir();
+    await usuario.click(await screen.findByRole("button", { name: "terminar" }));
+    expect(await screen.findByText("Vitor")).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: /Voltar para a sala/ }));
+    expect(voltarParaASala).toHaveBeenCalled();
+    expect(await screen.findByRole("heading", { name: "Multijogador" })).toBeInTheDocument();
   });
 });

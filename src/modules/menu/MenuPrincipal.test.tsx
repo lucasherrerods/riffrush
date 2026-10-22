@@ -7,7 +7,7 @@ import { MenuPrincipal } from "./MenuPrincipal";
 vi.mock("@/modules/platform", () => ({ fecharJanela: vi.fn() }));
 
 function abrir() {
-  const acoes = { aoJogar: vi.fn(), aoPersonagem: vi.fn(), aoConfigurar: vi.fn() };
+  const acoes = { aoJogar: vi.fn(), aoMultijogador: vi.fn(), aoPersonagem: vi.fn(), aoConfigurar: vi.fn() };
   render(<MenuPrincipal volumeDosEfeitos={0} {...acoes} />);
   return { ...acoes, usuario: userEvent.setup() };
 }
@@ -18,7 +18,7 @@ describe("MenuPrincipal", () => {
   it("mostra o nome do jogo e as opções", () => {
     abrir();
     expect(screen.getByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Personagem", "Configurações", "Sair"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Multijogador", "Personagem", "Configurações", "Sair"]);
   });
 
   it("Enter abre a opção selecionada, que começa em Jogar", async () => {
@@ -37,6 +37,12 @@ describe("MenuPrincipal", () => {
     const { usuario } = abrir();
     await usuario.keyboard("{ArrowDown}");
     expect(screen.getByRole("button", { name: "Personagem" })).toHaveAttribute("aria-current", "true");
+  });
+
+  it("Multijogador abre a tela da sala", async () => {
+    const { aoMultijogador, usuario } = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Multijogador" }));
+    expect(aoMultijogador).toHaveBeenCalled();
   });
 
   it("clicar abre a opção", async () => {
