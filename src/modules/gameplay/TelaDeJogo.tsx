@@ -10,9 +10,11 @@ import { Button } from "@/shared/ui/button";
 import { criarBot, jogarSozinho } from "./bot";
 import { MedidorDeVida } from "./componentes/MedidorDeVida";
 import { MenuDePausa } from "./componentes/MenuDePausa";
-import { CORES_DO_MULTIPLICADOR, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "./cores";
-import { ativarEstrela, avancar, criarPartida, multiplicador, retirarEventos, soltar, tocar } from "./partida";
+import { PainelDePontos } from "./componentes/PainelDePontos";
+import { NOMES_DAS_PISTAS } from "./cores";
+import { ativarEstrela, avancar, criarPartida, multiplicador, precisao, retirarEventos, soltar, tocar } from "./partida";
 import { desenharPista, type Cena } from "./pista/desenhar";
+import { forcaDoTrovao } from "./pista/efeitos";
 import { layoutDaPista } from "./pista/geometria";
 import { criarSprites } from "./pista/sprites";
 import type { EstadoDoJogador } from "./rede";
@@ -70,14 +72,16 @@ interface Hud {
   estrela: number;
   estrelaAtiva: boolean;
   progresso: number;
+  precisao: number;
   /** Segundos que faltam para a música começar (contagem), ou 0. */
   contagem: number;
   pulso: number;
 }
 
 const ENTRADA = 2.5;
-const HUD_INICIAL: Hud = { pontos: 0, sequencia: 0, multiplicador: 1, vida: 0.5, estrela: 0, estrelaAtiva: false, progresso: 0, contagem: 3, pulso: 0 };
+const HUD_INICIAL: Hud = { pontos: 0, sequencia: 0, multiplicador: 1, vida: 0.5, estrela: 0, estrelaAtiva: false, progresso: 0, precisao: 1, contagem: 3, pulso: 0 };
 const MAXIMO_DE_EXPLOSOES = 20;
+const MAXIMO_DE_TROVOES = 4;
 const SINCRONIA_DO_VIDEO = 0.15;
 const INTERVALO_DO_ENVIO_MS = 125;
 const nada = () => {};
@@ -156,6 +160,8 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
     const contexto2d = canvas.current?.getContext("2d") ?? null;
     const apertados = [false, false, false, false, false];
     const explosoes: Cena["explosoes"] = [];
+    const trovoes: Cena["trovoes"] = [];
+    let estrelaDesde: number | null = null;
     const atraso = opcoes.atrasoMs / 1000;
     const tempoDaMusica = (tempoDoAudio: number) => tempoDoAudio - inicio - atraso;
     let pausadoAgora = false;
@@ -195,6 +201,11 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
         if (evento.tipo === "acerto") {
           explosoes.push({ pista: evento.nota.pista, tempo });
           if (explosoes.length > MAXIMO_DE_EXPLOSOES) explosoes.shift();
+          const forca = forcaDoTrovao(partida.sequencia);
+          if (forca) {
+            trovoes.push({ tempo, forca, semente: partida.sequencia });
+            if (trovoes.length > MAXIMO_DE_TROVOES) trovoes.shift();
+          }
         } else if (evento.tipo === "erro" && ultimoHud.sequencia >= 10) {
           tocarEfeito("erro", opcoes.volumeDosEfeitos * 0.6);
         } else if (evento.tipo === "sequencia") {
@@ -204,6 +215,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
         } else if (evento.tipo === "estrelaPronta") {
           avisar(`Star Power pronto! [${opcoes.rotuloDaTeclaDaEstrela}]`, true);
         } else if (evento.tipo === "estrelaAtivada") {
+          estrelaDesde = tempo;
           tocarEfeito("estrela", opcoes.volumeDosEfeitos);
           avisar("STAR POWER!", true);
         } else if (evento.tipo === "derrota") {
@@ -324,6 +336,8 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
             estrelaAtiva: partida.estrelaAtiva,
             multiplicador: Math.min(4, 1 + Math.floor(partida.sequencia / 10)),
             frasesFalhas: partida.frasesFalhas,
+            trovoes,
+            estrelaDesde,
           },
           opcoes.efeitos,
           sprites,
@@ -339,6 +353,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
         estrela: Math.round(partida.estrela * 100) / 100,
         estrelaAtiva: partida.estrelaAtiva,
         progresso: Math.round(Math.max(0, Math.min(1, tempo / carregada.duracao)) * 500) / 500,
+        precisao: Math.round(precisao(partida) * 1000) / 1000,
         contagem: tempo < 0 ? Math.ceil(-tempo) : 0,
         pulso: partida.acertos,
       };
@@ -451,28 +466,19 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
             </motion.div>
           )}
 
-          {/* No celular a pista ocupa a largura toda: os pontos sobem para o topo. */}
-          <div className={cn("absolute flex gap-4", estreita ? "top-20 left-4 items-center" : "bottom-10 left-8 flex-col")}>
-            <motion.div
-              key={hud.multiplicador}
-              initial={{ scale: 1.5 }}
-              animate={{ scale: 1 }}
-              className={cn("flex items-center justify-center rounded-full font-black", estreita ? "size-12 border-2 text-base" : "size-20 border-4 text-3xl")}
-              style={{ borderColor: hud.estrelaAtiva ? COR_DA_ESTRELA : CORES_DO_MULTIPLICADOR[Math.min(3, hud.multiplicador - 1)] }}
-            >
-              {hud.multiplicador}x
-            </motion.div>
-            <div>
-              <p aria-label="Pontos" className={cn("font-mono font-black tabular-nums", estreita ? "text-2xl" : "text-4xl")}>
-                {hud.pontos.toLocaleString("pt-BR")}
-              </p>
-              <p className="text-base text-texto-suave">
-                Sequência{" "}
-                <span aria-label="Sequência" className="font-bold text-texto">
-                  {hud.sequencia}
-                </span>
-              </p>
-            </div>
+          {/* Os números ficam colados à esquerda da pista; no celular a pista ocupa a largura toda e eles sobem para o topo. */}
+          <div
+            className={cn("absolute", estreita ? "top-20 left-4" : "bottom-10 -translate-x-full")}
+            style={estreita ? undefined : { left: layout.centro - layout.largura / 2 - 24 }}
+          >
+            <PainelDePontos
+              pontos={hud.pontos}
+              sequencia={hud.sequencia}
+              multiplicador={hud.multiplicador}
+              precisao={hud.precisao}
+              estrelaAtiva={hud.estrelaAtiva}
+              compacto={estreita}
+            />
           </div>
 
           {estreita ? (
