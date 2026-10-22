@@ -32,6 +32,23 @@ export class OsciladorFalso {
   }
 }
 
+export class FonteFalsa {
+  buffer: unknown = null;
+  inicio?: number;
+  deslocamento?: number;
+  parada = false;
+  connect<T>(destino: T) {
+    return destino;
+  }
+  start(tempo = 0, deslocamento = 0) {
+    this.inicio = tempo;
+    this.deslocamento = deslocamento;
+  }
+  stop() {
+    this.parada = true;
+  }
+}
+
 export class GanhoFalso {
   gain = new ParametroFalso();
   connect<T>(destino: T) {
@@ -71,6 +88,14 @@ export class AudioContextFalso {
     const ganho = new GanhoFalso();
     this.ganhos.push(ganho);
     return ganho;
+  }
+
+  fontes: FonteFalsa[] = [];
+
+  createBufferSource() {
+    const fonte = new FonteFalsa();
+    this.fontes.push(fonte);
+    return fonte;
   }
 
   createBuffer(canais: number, tamanho: number, taxa: number) {

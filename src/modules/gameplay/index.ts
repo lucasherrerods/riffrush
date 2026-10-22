@@ -15,4 +15,7 @@ export {
 } from "./partida";
 export { desenharPista, type Cena, type Sprites } from "./pista/desenhar";
 export { layoutDaPista, type LayoutDaPista } from "./pista/geometria";
+export { resultadoDaPartida, type Resultado } from "./resultado";
+export { OPCOES_PADRAO_DA_PARTIDA, TelaDeJogo, type OpcoesDaPartida } from "./TelaDeJogo";
+export { MedidorDeVida } from "./componentes/MedidorDeVida";
 export { criarSprites } from "./pista/sprites";

@@ -81,3 +81,69 @@ body {
   background: var(--cor-fundo);
   color: var(--cor-texto);
 }
+
+/* ---------- Fundo dos menus ---------- */
+.sol-listrado {
+  background: linear-gradient(180deg, #fde047 0%, #f97316 45%, #db2777 100%);
+  mask-image: repeating-linear-gradient(180deg, #000 0 18px, transparent 18px 26px);
+}
+
+/* A grade anda com transform (composto na GPU), não com background-position, que repinta a cada frame. */
+.grade-perspectiva {
+  perspective: 400px;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, transparent, #000 35%);
+}
+
+.grade-chao {
+  position: absolute;
+  inset: -70px 0 0 0;
+  height: 250%;
+  transform-origin: top;
+  transform: rotateX(62deg);
+  background-image:
+    linear-gradient(rgba(162, 28, 175, 0.55) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(162, 28, 175, 0.55) 2px, transparent 2px);
+  background-size: 70px 70px;
+  will-change: transform;
+  animation: grade-anda 1.6s linear infinite;
+}
+
+.grade-parada {
+  animation-play-state: paused;
+}
+
+@keyframes grade-anda {
+  from {
+    transform: rotateX(62deg) translateY(0);
+  }
+  to {
+    transform: rotateX(62deg) translateY(70px);
+  }
+}
+
+.particula {
+  bottom: -10px;
+  animation: particula-sobe linear infinite;
+}
+
+@keyframes particula-sobe {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100vh) scale(0.3);
+    opacity: 0;
+  }
+}
+
+.titulo-do-jogo {
+  background: linear-gradient(180deg, var(--cor-texto) 0%, #fde047 40%, var(--cor-destaque) 60%, #db2777 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
