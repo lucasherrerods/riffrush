@@ -10,8 +10,8 @@ const com = (...botoes: number[]) => {
 const vazio = () => Array.from({ length: 17 }, () => [] as string[]);
 
 describe("traduzir no jogo", () => {
-  it("os trastes seguem o Guitar Hero: A, B, Y, X e LB", () => {
-    const ordem = [BOTOES.A, BOTOES.B, BOTOES.Y, BOTOES.X, BOTOES.LB];
+  it("os trastes ficam em LT, LB, RT, RB e A", () => {
+    const ordem = [BOTOES.LT, BOTOES.LB, BOTOES.RT, BOTOES.RB, BOTOES.A];
     ordem.forEach((botao, pista) => {
       const { eventos } = traduzir(solto(), com(botao), vazio(), "jogo", mapa);
       expect(eventos).toContainEqual({ tipo: "keydown", code: mapa.teclas[pista] });
@@ -19,24 +19,24 @@ describe("traduzir no jogo", () => {
   });
 
   it("segue as teclas que o jogador configurou", () => {
-    const { eventos } = traduzir(solto(), com(BOTOES.A), vazio(), "jogo", { ...mapa, teclas: ["KeyQ", "KeyW", "KeyE", "KeyR", "KeyT"] });
+    const { eventos } = traduzir(solto(), com(BOTOES.LT), vazio(), "jogo", { ...mapa, teclas: ["KeyQ", "KeyW", "KeyE", "KeyR", "KeyT"] });
     expect(eventos).toContainEqual({ tipo: "keydown", code: "KeyQ" });
   });
 
   it("soltar o botão solta a tecla", () => {
-    const apertou = traduzir(solto(), com(BOTOES.B), vazio(), "jogo", mapa);
-    const { eventos } = traduzir(com(BOTOES.B), solto(), apertou.emitidos, "jogo", mapa);
+    const apertou = traduzir(solto(), com(BOTOES.LB), vazio(), "jogo", mapa);
+    const { eventos } = traduzir(com(BOTOES.LB), solto(), apertou.emitidos, "jogo", mapa);
     expect(eventos).toEqual([{ tipo: "keyup", code: "KeyS" }]);
   });
 
   it("segurar o botão não repete a tecla", () => {
-    const apertou = traduzir(solto(), com(BOTOES.A), vazio(), "jogo", mapa);
-    expect(traduzir(com(BOTOES.A), com(BOTOES.A), apertou.emitidos, "jogo", mapa).eventos).toEqual([]);
+    const apertou = traduzir(solto(), com(BOTOES.LT), vazio(), "jogo", mapa);
+    expect(traduzir(com(BOTOES.LT), com(BOTOES.LT), apertou.emitidos, "jogo", mapa).eventos).toEqual([]);
   });
 
   it("palhetar no direcional toca de novo os trastes segurados", () => {
-    const segurando = traduzir(solto(), com(BOTOES.A, BOTOES.Y), vazio(), "jogo", mapa);
-    const { eventos } = traduzir(com(BOTOES.A, BOTOES.Y), com(BOTOES.A, BOTOES.Y, BOTOES.BAIXO), segurando.emitidos, "jogo", mapa);
+    const segurando = traduzir(solto(), com(BOTOES.LT, BOTOES.RT), vazio(), "jogo", mapa);
+    const { eventos } = traduzir(com(BOTOES.LT, BOTOES.RT), com(BOTOES.LT, BOTOES.RT, BOTOES.BAIXO), segurando.emitidos, "jogo", mapa);
     for (const code of ["KeyA", "KeyJ"]) {
       expect(eventos).toContainEqual({ tipo: "keyup", code });
       expect(eventos).toContainEqual({ tipo: "keydown", code });
@@ -49,7 +49,7 @@ describe("traduzir no jogo", () => {
   });
 
   it("B não pausa no meio da música", () => {
-    expect(traduzir(solto(), com(BOTOES.B), vazio(), "jogo", mapa).eventos).not.toContainEqual({ tipo: "keydown", code: "Escape" });
+    expect(traduzir(solto(), com(BOTOES.B), vazio(), "jogo", mapa).eventos).toEqual([]);
   });
 
   it("A confirma no menu de pausa", () => {
@@ -58,7 +58,7 @@ describe("traduzir no jogo", () => {
 });
 
 describe("traduzir nos menus", () => {
-  it("A confirma, B volta e o direcional navega", () => {
+  it("A confirma, bolinha volta e o direcional navega", () => {
     expect(traduzir(solto(), com(BOTOES.A), vazio(), "menu", mapa).eventos).toEqual([{ tipo: "keydown", code: "Enter" }]);
     expect(traduzir(solto(), com(BOTOES.B), vazio(), "menu", mapa).eventos).toEqual([{ tipo: "keydown", code: "Escape" }]);
     expect(traduzir(solto(), com(BOTOES.ESQUERDA), vazio(), "menu", mapa).eventos).toEqual([{ tipo: "keydown", code: "ArrowLeft" }]);

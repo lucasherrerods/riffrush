@@ -53,7 +53,7 @@ export function App() {
   const configuracoesAtuais = useRef(configuracoes);
   configuracoesAtuais.current = configuracoes;
   useEffect(() => {
-    const aoConectar = () => avisar("Controle conectado! Trastes: A B Y X LB");
+    const aoConectar = () => avisar("Controle conectado! Trastes: LT LB RT RB A");
     window.addEventListener("gamepadconnected", aoConectar);
     const parar = iniciarControle({
       modo: () => (telaAtual.current === "jogo" ? "jogo" : "menu"),

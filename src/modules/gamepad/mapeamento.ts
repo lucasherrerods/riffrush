@@ -5,6 +5,9 @@ export const BOTOES = {
   X: 2,
   Y: 3,
   LB: 4,
+  RB: 5,
+  LT: 6,
+  RT: 7,
   SELECT: 8,
   START: 9,
   CIMA: 12,
@@ -13,8 +16,8 @@ export const BOTOES = {
   DIREITA: 15,
 } as const;
 
-/** Verde, vermelho, amarelo, azul e laranja, como no Clone Hero. */
-const TRASTES = [BOTOES.A, BOTOES.B, BOTOES.Y, BOTOES.X, BOTOES.LB];
+/** Verde, vermelho, amarelo, azul e laranja. */
+const TRASTES = [BOTOES.LT, BOTOES.LB, BOTOES.RT, BOTOES.RB, BOTOES.A];
 const PALHETADAS = [BOTOES.CIMA, BOTOES.BAIXO];
 const SETAS: Record<number, string> = {
   [BOTOES.CIMA]: "ArrowUp",
