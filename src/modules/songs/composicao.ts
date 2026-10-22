@@ -1,4 +1,4 @@
-import { geradorAleatorio } from "./aleatorio";
+import { geradorAleatorio } from "@/shared/lib/aleatorio";
 import type { EstiloMusical } from "./tipos";
 
 export type Secao = "intro" | "verso" | "refrao" | "solo" | "final";

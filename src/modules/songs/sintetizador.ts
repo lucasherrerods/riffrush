@@ -1,4 +1,4 @@
-import { geradorAleatorio } from "./aleatorio";
+import { geradorAleatorio } from "@/shared/lib/aleatorio";
 import type { Composicao } from "./composicao";
 import type { EstiloMusical } from "./tipos";
 
