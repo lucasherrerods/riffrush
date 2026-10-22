@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { obterContextoDeAudio } from "@/modules/audio";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
@@ -191,5 +191,40 @@ describe("TelaDeJogo em rede", () => {
     carregarCom([nota(5)]);
     abrirEmRede(performance.now() + 5000);
     expect(await screen.findByText("painel dos adversários")).toBeInTheDocument();
+  });
+});
+
+describe("TelaDeJogo com toque", () => {
+  it("tem uma área de toque embaixo de cada traste, na ordem", async () => {
+    carregarCom([nota(5)]);
+    abrir();
+    await screen.findByRole("heading", { name: "Neon Highway" });
+    const areas = screen.getAllByRole("button", { name: /^Traste / });
+    expect(areas.map((a) => a.getAttribute("aria-label"))).toEqual(["Traste Verde", "Traste Vermelho", "Traste Amarelo", "Traste Azul", "Traste Laranja"]);
+  });
+
+  it("tocar na área do traste acerta a nota", async () => {
+    carregarCom([nota(0.5, 2)]);
+    abrir();
+    await screen.findByRole("heading", { name: "Neon Highway" });
+    irPara(0.55);
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Traste Amarelo" }));
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
+  });
+
+  it("tirar o dedo larga o sustain e para de somar pontos", async () => {
+    carregarCom([{ ...nota(0.5), duracao: 2 }]);
+    abrir();
+    await screen.findByRole("heading", { name: "Neon Highway" });
+    irPara(0.55);
+    const verde = screen.getByRole("button", { name: "Traste Verde" });
+    fireEvent.pointerDown(verde);
+    irPara(1);
+    await waitFor(() => expect(Number(screen.getByLabelText("Pontos").textContent!.replace(/\D/g, ""))).toBeGreaterThan(50));
+    fireEvent.pointerUp(verde);
+    const aoSoltar = screen.getByLabelText("Pontos").textContent;
+    irPara(2);
+    await new Promise((r) => setTimeout(r, 100));
+    expect(screen.getByLabelText("Pontos").textContent).toBe(aoSoltar);
   });
 });
