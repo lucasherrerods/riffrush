@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, Pause, Skull, Zap } from "lucide-react";
 import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, tocarEfeito } from "@/modules/audio";
@@ -14,6 +14,7 @@ import { ativarEstrela, avancar, criarPartida, multiplicador, retirarEventos, so
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { layoutDaPista } from "./pista/geometria";
 import { criarSprites } from "./pista/sprites";
+import type { EstadoDoJogador } from "./rede";
 import { resultadoDaPartida, type Resultado } from "./resultado";
 
 /** O que a partida precisa saber das configurações do jogador. */
@@ -49,6 +50,13 @@ interface Props {
   dificuldade: Dificuldade;
   opcoes: OpcoesDaPartida;
   personagem: Personagem;
+  /** Partida em rede: largada combinada, estado enviado à sala e o painel dos adversários. */
+  rede?: {
+    /** Instante (performance.now) em que a música começa para todos. */
+    inicio: number;
+    aoAtualizar: (estado: EstadoDoJogador) => void;
+    adversarios?: ReactNode;
+  };
   aoSair: () => void;
   aoTerminar: (resultado: Resultado) => void;
 }
@@ -70,17 +78,25 @@ const ENTRADA = 2.5;
 const HUD_INICIAL: Hud = { pontos: 0, sequencia: 0, multiplicador: 1, vida: 0.5, estrela: 0, estrelaAtiva: false, progresso: 0, contagem: 3, pulso: 0 };
 const MAXIMO_DE_EXPLOSOES = 20;
 const SINCRONIA_DO_VIDEO = 0.15;
+const INTERVALO_DO_ENVIO_MS = 125;
 const nada = () => {};
 
-export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, aoSair, aoTerminar }: Props) {
+export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSair, aoTerminar }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const video = useRef<HTMLVideoElement>(null);
-  const controles = useRef({ pausar: nada, continuar: nada });
+  const controles = useRef({ pausar: nada, continuar: nada, desistir: nada });
+  const emRede = !!rede;
+  // A rede chega como objeto novo a cada render; só o instante de largada reinicia a partida.
+  const inicioEmRede = rede?.inicio;
+  const redeAtual = useRef(rede);
+  redeAtual.current = rede;
   const [carregada, setCarregada] = useState<MusicaCarregada | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [urlDoVideo, setUrlDoVideo] = useState<string | null>(null);
   const [hud, setHud] = useState(HUD_INICIAL);
   const [pausado, setPausado] = useState(false);
+  const pausadoNaTela = useRef(false);
+  pausadoNaTela.current = pausado;
   const [derrota, setDerrota] = useState(false);
   const [rodada, setRodada] = useState(0);
   const [aviso, setAviso] = useState<{ id: number; texto: string; estrela: boolean } | null>(null);
@@ -119,8 +135,11 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, aoSair, ao
     const fonte = audio.createBufferSource();
     fonte.buffer = carregada.audio;
     fonte.connect(ganho);
-    const inicio = audio.currentTime + ENTRADA;
-    fonte.start(inicio);
+    // Em rede a música começa no instante combinado; quem carregou atrasado entra no meio.
+    const agora = audio.currentTime;
+    const inicio = inicioEmRede === undefined ? agora + ENTRADA : agora + (inicioEmRede - performance.now()) / 1000;
+    if (inicio > agora + 0.05) fonte.start(inicio);
+    else fonte.start(agora + 0.05, agora + 0.05 - inicio);
 
     const partida = criarPartida(carregada.notas, { semFalha: opcoes.semFalha });
     const bot = opcoes.bot ? criarBot() : null;
@@ -136,11 +155,22 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, aoSair, ao
     let ultimoHud = HUD_INICIAL;
     let ultimaSincroniaDoVideo = 0;
     let idDoAviso = 0;
+    let ultimoEnvio = 0;
+    const publicar = (terminouAgora: boolean) =>
+      redeAtual.current?.aoAtualizar({
+        pontos: Math.round(partida.pontos),
+        vida: partida.vida,
+        sequencia: partida.sequencia,
+        pulso: partida.acertos,
+        derrota: partida.derrota,
+        terminou: terminouAgora,
+      });
     const avisar = (texto: string, estrela = false) => setAviso({ id: ++idDoAviso, texto, estrela });
 
     const terminar = () => {
       if (terminou) return;
       terminou = true;
+      publicar(true);
       video.current?.pause();
       if (partida.derrota) {
         fonte.stop();
@@ -173,8 +203,11 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, aoSair, ao
       }
     };
 
+    // Em rede a música dos outros não para: a pausa só abre o menu.
     const pausar = () => {
-      if (terminou || pausadoAgora) return;
+      if (terminou) return;
+      if (inicioEmRede !== undefined) return setPausado(true);
+      if (pausadoAgora) return;
       pausadoAgora = true;
       void audio.suspend();
       video.current?.pause();
@@ -186,12 +219,18 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, aoSair, ao
       pausadoAgora = false;
       void audio.resume();
     };
-    controles.current = { pausar, continuar };
+    const desistir = () => {
+      partida.derrota = true;
+      terminou = true;
+      publicar(true);
+      aoTerminar(resultadoDaPartida(partida, musica.id, dificuldade));
+    };
+    controles.current = { pausar, continuar, desistir };
 
     const aoApertar = (evento: KeyboardEvent) => {
       if (evento.code === "Escape") {
         evento.preventDefault();
-        if (pausadoAgora) continuar();
+        if (pausadoAgora || (inicioEmRede !== undefined && pausadoNaTela.current)) continuar();
         else pausar();
         return;
       }
@@ -217,7 +256,8 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, aoSair, ao
     };
     window.addEventListener("keydown", aoApertar);
     window.addEventListener("keyup", aoSoltar);
-    window.addEventListener("blur", pausar);
+    const aoPerderFoco = () => inicioEmRede === undefined && pausar();
+    window.addEventListener("blur", aoPerderFoco);
 
     const desenhar = () => {
       quadro = requestAnimationFrame(desenhar);
@@ -228,6 +268,10 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, aoSair, ao
         avancar(partida, tempo);
         tratarEventos(tempo);
         if (!terminou && tempo >= carregada.duracao) terminar();
+        if (!terminou && performance.now() - ultimoEnvio > INTERVALO_DO_ENVIO_MS) {
+          ultimoEnvio = performance.now();
+          publicar(false);
+        }
       }
 
       const clipe = video.current;
@@ -291,7 +335,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, aoSair, ao
       cancelAnimationFrame(quadro);
       window.removeEventListener("keydown", aoApertar);
       window.removeEventListener("keyup", aoSoltar);
-      window.removeEventListener("blur", pausar);
+      window.removeEventListener("blur", aoPerderFoco);
       try {
         fonte.stop();
       } catch {
@@ -301,7 +345,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, aoSair, ao
       video.current?.pause();
       void audio.resume();
     };
-  }, [carregada, rodada, opcoes, musica.id, dificuldade, aoTerminar]);
+  }, [carregada, rodada, opcoes, musica.id, dificuldade, aoTerminar, inicioEmRede]);
 
   const recomecar = () => {
     setPausado(false);
@@ -355,6 +399,8 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, aoSair, ao
               <Pause />
             </Button>
           </header>
+
+          {rede?.adversarios}
 
           {urlDoVideo && (
             <motion.div
@@ -440,7 +486,14 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, aoSair, ao
 
       <AnimatePresence>
         {(pausado || derrota) && (
-          <MenuDePausa derrota={derrota} aoContinuar={() => controles.current.continuar()} aoRecomecar={recomecar} aoSair={aoSair} />
+          <MenuDePausa
+            derrota={derrota}
+            emRede={emRede}
+            aoContinuar={() => controles.current.continuar()}
+            aoRecomecar={recomecar}
+            aoSair={aoSair}
+            aoDesistir={() => controles.current.desistir()}
+          />
         )}
       </AnimatePresence>
     </div>

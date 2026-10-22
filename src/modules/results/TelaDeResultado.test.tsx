@@ -77,3 +77,19 @@ describe("TelaDeResultado", () => {
     expect(aoContinuar).toHaveBeenCalled();
   });
 });
+
+describe("TelaDeResultado em rede", () => {
+  it("mostra o placar da sala e volta para a sala", async () => {
+    const { aoContinuar, usuario } = abrir({ extra: <p>placar da sala</p>, rotuloDeContinuar: "Voltar para a sala" });
+    expect(screen.getByText("placar da sala")).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: /Voltar para a sala/ }));
+    expect(aoContinuar).toHaveBeenCalled();
+  });
+
+  it("em rede não dá para tocar de novo sozinho", async () => {
+    const { aoRepetir, usuario } = abrir({ rotuloDeContinuar: "Voltar para a sala" });
+    expect(screen.queryByRole("button", { name: /Tocar de novo/ })).toBeNull();
+    await usuario.keyboard("r");
+    expect(aoRepetir).not.toHaveBeenCalled();
+  });
+});
