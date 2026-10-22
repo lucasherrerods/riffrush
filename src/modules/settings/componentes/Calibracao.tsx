@@ -78,7 +78,7 @@ export function Calibracao({ aoMedir }: { aoMedir: (atrasoMs: number) => void })
           ))}
         </div>
       ) : (
-        <Button variant="secondary" onClick={() => setRodando(true)}>
+        <Button variant="outline" onClick={() => setRodando(true)}>
           <Crosshair className="opacity-70" /> Calibrar
         </Button>
       )}
