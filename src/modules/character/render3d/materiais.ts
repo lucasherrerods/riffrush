@@ -56,8 +56,3 @@ export function parte(geometria: THREE.BufferGeometry, cor: string, comContorno 
   if (comContorno) malha.add(new THREE.Mesh(geometria, materialDoContorno));
   return malha;
 }
-
-/** Escurece uma cor hex (0 a 1), para calças, solas e sombras pintadas. */
-export function escurecer(hex: string, quanto: number) {
-  return `#${new THREE.Color(hex).multiplyScalar(1 - quanto).getHexString()}`;
-}

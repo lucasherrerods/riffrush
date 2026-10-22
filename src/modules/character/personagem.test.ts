@@ -1,5 +1,5 @@
 import { geradorAleatorio } from "@/shared/lib/aleatorio";
-import { ACESSORIOS, BARBAS, CABELOS, CORES_DE_CABELO, CORES_DE_ROUPA, INSTRUMENTOS, ROUPAS, TONS_DE_PELE } from "./catalogo";
+import { BASES, EXPRESSOES, INSTRUMENTOS, PALETAS } from "./catalogo";
 import { PERSONAGEM_PADRAO, carregarPersonagem, migrarPersonagem, personagemAleatorio, salvarPersonagem } from "./personagem";
 
 beforeEach(() => localStorage.clear());
@@ -18,38 +18,39 @@ describe("carregarPersonagem", () => {
     localStorage.setItem("riffrush.personagem", "{quebrado");
     expect(carregarPersonagem()).toEqual(PERSONAGEM_PADRAO);
   });
-
-  it("converte o personagem chibi salvo antes da versão 3D", () => {
-    localStorage.setItem(
-      "riffrush.personagem",
-      JSON.stringify({ nome: "Lucas", pele: "#a86b45", cabelo: "espetado", corDoCabelo: "#ef4444", olhos: "fofo", roupa: "#7c3aed", acessorio: "coroa", instrumento: "baixo" }),
-    );
-    expect(carregarPersonagem()).toMatchObject({ versao: 2, nome: "Lucas", instrumento: "baixo", cabelo: "rebelde", acessorio: "nenhum" });
-  });
 });
 
 describe("migrarPersonagem", () => {
-  const chibi = { nome: "Ana", pele: "#ffe0c7", cabelo: "coquinhos", corDoCabelo: "#3b82f6", olhos: "estrela", roupa: "#16a34a", acessorio: "oculos", instrumento: "vocal" };
-
-  it("aproveita nome, instrumento, cores e acessório do chibi", () => {
-    const personagem = migrarPersonagem(chibi);
-    expect(personagem).toMatchObject({ nome: "Ana", instrumento: "vocal", acessorio: "oculos", cabelo: "rabo" });
-    expect(personagem.cores).toMatchObject({ pele: "#ffe0c7", cabelo: "#3b82f6", roupa: "#16a34a" });
+  it("aproveita nome, instrumento e pele do chibi (versão 1)", () => {
+    const chibi = { nome: "Ana", pele: "#ffe0c7", cabelo: "coquinhos", corDoCabelo: "#3b82f6", olhos: "estrela", roupa: "#16a34a", acessorio: "oculos", instrumento: "vocal" };
+    expect(migrarPersonagem(chibi)).toMatchObject({ versao: 3, nome: "Ana", instrumento: "vocal", cores: { pele: "#ffe0c7", cabelo: "#3b82f6" } });
   });
 
-  it("mapeia todos os cabelos antigos para cabelos novos", () => {
-    for (const cabelo of ["espetado", "chanel", "longo", "moicano", "coquinhos"]) {
-      expect(CABELOS.map((c) => c.id)).toContain(migrarPersonagem({ ...chibi, cabelo }).cabelo);
-    }
+  it("aproveita nome, instrumento, corpo e cores do boneco procedural (versão 2)", () => {
+    const v2 = {
+      versao: 2,
+      nome: "Bia",
+      instrumento: "baixo",
+      corpo: { altura: 0.8, porte: 0.2, ombros: 0.6 },
+      cores: { pele: "#9a6644", cabelo: "#8f1d1d", olhos: "#2f6b3a", roupa: "#2d3a4f", detalhe: "#c9a227" },
+    };
+    expect(migrarPersonagem(v2)).toMatchObject({
+      versao: 3,
+      nome: "Bia",
+      instrumento: "baixo",
+      corpo: { altura: 0.8, porte: 0.2, ombros: 0.6 },
+      cores: { pele: "#9a6644", cabelo: "#8f1d1d", olhos: "#2f6b3a", roupa: "#2d3a4f" },
+    });
   });
 
   it("completa campos que faltam e corrige valores inválidos", () => {
-    const personagem = migrarPersonagem({ versao: 2, nome: "Bia", corpo: { altura: 7 }, cabelo: "inexistente", cores: { pele: "vermelho" } });
-    expect(personagem.nome).toBe("Bia");
+    const personagem = migrarPersonagem({ versao: 3, nome: "Caio", base: "nao-existe", corpo: { altura: 7 }, expressao: "x", cores: { pele: "vermelho" }, pecas: ["nao-existe"] });
+    expect(personagem.base).toBe(PERSONAGEM_PADRAO.base);
     expect(personagem.corpo.altura).toBe(1);
-    expect(personagem.corpo.porte).toBe(PERSONAGEM_PADRAO.corpo.porte);
-    expect(personagem.cabelo).toBe(PERSONAGEM_PADRAO.cabelo);
-    expect(personagem.cores.pele).toBe(PERSONAGEM_PADRAO.cores.pele);
+    expect(personagem.corpo.porte).toBe(0.5);
+    expect(personagem.expressao).toBe(PERSONAGEM_PADRAO.expressao);
+    expect(personagem.cores.pele).toBeNull();
+    expect(personagem.pecas).toEqual([]);
   });
 
   it("devolve o padrão para o que não é um objeto", () => {
@@ -66,15 +67,13 @@ describe("personagemAleatorio", () => {
   it("mantém o nome e sorteia só opções que existem", () => {
     const personagem = personagemAleatorio("Lucas", geradorAleatorio(3));
     expect(personagem.nome).toBe("Lucas");
-    expect(TONS_DE_PELE).toContain(personagem.cores.pele);
-    expect(CORES_DE_CABELO).toContain(personagem.cores.cabelo);
-    expect(CORES_DE_ROUPA).toContain(personagem.cores.roupa);
-    expect(CABELOS.map((c) => c.id)).toContain(personagem.cabelo);
-    expect(BARBAS.map((b) => b.id)).toContain(personagem.barba);
-    expect(ROUPAS.map((r) => r.id)).toContain(personagem.roupa);
-    expect(ACESSORIOS.map((a) => a.id)).toContain(personagem.acessorio);
+    expect(BASES.map((b) => b.id)).toContain(personagem.base);
     expect(INSTRUMENTOS.map((i) => i.id)).toContain(personagem.instrumento);
-    for (const valor of [...Object.values(personagem.corpo), ...Object.values(personagem.rosto)]) {
+    expect(EXPRESSOES.map((e) => e.id)).toContain(personagem.expressao);
+    for (const [parte, cor] of Object.entries(personagem.cores)) {
+      if (cor) expect(PALETAS[parte as keyof typeof PALETAS]).toContain(cor);
+    }
+    for (const valor of Object.values(personagem.corpo)) {
       expect(valor).toBeGreaterThanOrEqual(0);
       expect(valor).toBeLessThanOrEqual(1);
     }

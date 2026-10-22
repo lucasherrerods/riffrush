@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { PALETAS } from "./catalogo";
 import { PERSONAGEM_PADRAO } from "./personagem";
 import { TelaDePersonagem } from "./TelaDePersonagem";
 
@@ -39,13 +40,21 @@ describe("TelaDePersonagem", () => {
     const { aoSalvar, usuario } = abrir();
     await usuario.clear(screen.getByLabelText("Nome"));
     await usuario.type(screen.getByLabelText("Nome"), "Vitor");
-    await usuario.click(screen.getByRole("tab", { name: /Cabelo/ }));
-    await usuario.click(screen.getByRole("radio", { name: "Moicano" }));
-    await usuario.click(screen.getByRole("radio", { name: "Cavanhaque" }));
+    await usuario.click(screen.getByRole("tab", { name: /Rosto/ }));
+    await usuario.click(screen.getByRole("radio", { name: "Alegre" }));
     await usuario.click(screen.getByRole("tab", { name: /Roupa/ }));
-    await usuario.click(screen.getByRole("radio", { name: "Sobretudo" }));
+    await usuario.click(screen.getByRole("radio", { name: "Roupa 2" }));
     await usuario.click(screen.getByRole("button", { name: /Salvar/ }));
-    expect(aoSalvar).toHaveBeenCalledWith({ ...PERSONAGEM_PADRAO, nome: "Vitor", cabelo: "moicano", barba: "cavanhaque", roupa: "sobretudo" });
+    expect(aoSalvar).toHaveBeenCalledWith({ ...PERSONAGEM_PADRAO, nome: "Vitor", expressao: "alegre", cores: { ...PERSONAGEM_PADRAO.cores, roupa: PALETAS.roupa[1] } });
+  });
+
+  it("volta uma cor para a original do modelo", async () => {
+    const { aoSalvar, usuario } = abrir();
+    await usuario.click(screen.getByRole("tab", { name: /Cabelo/ }));
+    await usuario.click(screen.getByRole("radio", { name: "Cor do cabelo 1" }));
+    await usuario.click(screen.getByRole("radio", { name: "Original" }));
+    await usuario.click(screen.getByRole("button", { name: /Salvar/ }));
+    expect(aoSalvar).toHaveBeenCalledWith(PERSONAGEM_PADRAO);
   });
 
   it("não deixa salvar sem nome", async () => {
@@ -59,7 +68,7 @@ describe("TelaDePersonagem", () => {
     const { aoSalvar, usuario } = abrir();
     await usuario.click(screen.getByRole("button", { name: /Aleatório/ }));
     await usuario.click(screen.getByRole("button", { name: /Salvar/ }));
-    expect(aoSalvar).toHaveBeenCalledWith(expect.objectContaining({ nome: "Rockstar", instrumento: "vocal", acessorio: "bandana" }));
+    expect(aoSalvar).toHaveBeenCalledWith(expect.objectContaining({ nome: "Rockstar", instrumento: "vocal", expressao: "alegre" }));
     sorteio.mockRestore();
   });
 

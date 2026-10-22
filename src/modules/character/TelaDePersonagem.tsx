@@ -8,20 +8,7 @@ import { Label } from "@/shared/ui/label";
 import { Slider } from "@/shared/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Avatar } from "./Avatar";
-import {
-  ACESSORIOS,
-  AJUSTES_DO_CORPO,
-  AJUSTES_DO_ROSTO,
-  BARBAS,
-  CABELOS,
-  CORES_DE_CABELO,
-  CORES_DE_DETALHE,
-  CORES_DE_ROUPA,
-  CORES_DOS_OLHOS,
-  INSTRUMENTOS,
-  ROUPAS,
-  TONS_DE_PELE,
-} from "./catalogo";
+import { AJUSTES_DO_CORPO, BASES, EXPRESSOES, INSTRUMENTOS, PALETAS, PECAS, type ParteColorivel } from "./catalogo";
 import { migrarPersonagem, personagemAleatorio, type Personagem } from "./personagem";
 
 interface Props {
@@ -30,7 +17,12 @@ interface Props {
   aoVoltar: () => void;
 }
 
-const comoCores = (cores: string[], nome: string) => cores.map((cor, i) => ({ id: cor, rotulo: `${nome} ${i + 1}`, cor }));
+const ORIGINAL = "original";
+/** A primeira opção mantém a cor da textura do modelo. */
+const comoCores = (parte: ParteColorivel, nome: string) => [
+  { id: ORIGINAL, rotulo: "Original" },
+  ...PALETAS[parte].map((cor, i) => ({ id: cor, rotulo: `${nome} ${i + 1}`, cor })),
+];
 const INTERVALO_DA_PALHETADA = 500;
 
 const ABAS = [
@@ -54,7 +46,11 @@ export function TelaDePersonagem({ personagem, aoSalvar, aoVoltar }: Props) {
   const [rascunho, setRascunho] = useState(() => migrarPersonagem(personagem));
   const [pulso, setPulso] = useState(0);
   const mudar = (parcial: Partial<Personagem>) => setRascunho((atual) => ({ ...atual, ...parcial }));
-  const mudarCores = (parcial: Partial<Personagem["cores"]>) => setRascunho((atual) => ({ ...atual, cores: { ...atual.cores, ...parcial } }));
+  const mudarCor = (parte: ParteColorivel, cor: string) =>
+    setRascunho((atual) => ({ ...atual, cores: { ...atual.cores, [parte]: cor === ORIGINAL ? null : cor } }));
+  const corDa = (parte: ParteColorivel, titulo: string) => (
+    <GrupoDeOpcoes titulo={titulo} opcoes={comoCores(parte, titulo)} valor={rascunho.cores[parte] ?? ORIGINAL} aoEscolher={(cor) => mudarCor(parte, cor)} />
+  );
   const nomeValido = rascunho.nome.trim().length > 0;
 
   // Palhetadas de demonstração na prévia.
@@ -109,30 +105,36 @@ export function TelaDePersonagem({ personagem, aoSalvar, aoVoltar }: Props) {
 
             <div className="min-h-0 flex-1 overflow-y-auto pt-4">
               <TabsContent value="corpo" className="flex flex-col gap-6">
+                {BASES.length > 1 && (
+                  <GrupoDeOpcoes titulo="Modelo" opcoes={BASES} valor={rascunho.base} aoEscolher={(base) => mudar({ base })} />
+                )}
                 {AJUSTES_DO_CORPO.map(({ id, rotulo }) => (
                   <Ajuste key={id} rotulo={rotulo} valor={rascunho.corpo[id]} aoMudar={(valor) => mudar({ corpo: { ...rascunho.corpo, [id]: valor } })} />
                 ))}
-                <GrupoDeOpcoes titulo="Pele" opcoes={comoCores(TONS_DE_PELE, "Pele")} valor={rascunho.cores.pele} aoEscolher={(pele) => mudarCores({ pele })} />
+                {corDa("pele", "Pele")}
               </TabsContent>
 
               <TabsContent value="rosto" className="flex flex-col gap-6">
-                {AJUSTES_DO_ROSTO.map(({ id, rotulo }) => (
-                  <Ajuste key={id} rotulo={rotulo} valor={rascunho.rosto[id]} aoMudar={(valor) => mudar({ rosto: { ...rascunho.rosto, [id]: valor } })} />
-                ))}
-                <GrupoDeOpcoes titulo="Cor dos olhos" opcoes={comoCores(CORES_DOS_OLHOS, "Olhos")} valor={rascunho.cores.olhos} aoEscolher={(olhos) => mudarCores({ olhos })} />
-                <GrupoDeOpcoes titulo="Acessório" opcoes={ACESSORIOS} valor={rascunho.acessorio} aoEscolher={(acessorio) => mudar({ acessorio })} />
+                <GrupoDeOpcoes titulo="Expressão" opcoes={EXPRESSOES} valor={rascunho.expressao} aoEscolher={(expressao) => mudar({ expressao })} />
+                {corDa("olhos", "Olhos")}
               </TabsContent>
 
               <TabsContent value="cabelo" className="flex flex-col gap-6">
-                <GrupoDeOpcoes titulo="Corte" opcoes={CABELOS} valor={rascunho.cabelo} aoEscolher={(cabelo) => mudar({ cabelo })} />
-                <GrupoDeOpcoes titulo="Barba" opcoes={BARBAS} valor={rascunho.barba} aoEscolher={(barba) => mudar({ barba })} />
-                <GrupoDeOpcoes titulo="Cor" opcoes={comoCores(CORES_DE_CABELO, "Cor do cabelo")} valor={rascunho.cores.cabelo} aoEscolher={(cabelo) => mudarCores({ cabelo })} />
+                {corDa("cabelo", "Cor do cabelo")}
               </TabsContent>
 
               <TabsContent value="roupa" className="flex flex-col gap-6">
-                <GrupoDeOpcoes titulo="Peça" opcoes={ROUPAS} valor={rascunho.roupa} aoEscolher={(roupa) => mudar({ roupa })} />
-                <GrupoDeOpcoes titulo="Cor principal" opcoes={comoCores(CORES_DE_ROUPA, "Roupa")} valor={rascunho.cores.roupa} aoEscolher={(roupa) => mudarCores({ roupa })} />
-                <GrupoDeOpcoes titulo="Detalhes" opcoes={comoCores(CORES_DE_DETALHE, "Detalhe")} valor={rascunho.cores.detalhe} aoEscolher={(detalhe) => mudarCores({ detalhe })} />
+                {PECAS.length > 0 && (
+                  <GrupoDeOpcoes
+                    titulo="Peças extras"
+                    opcoes={[{ id: "nenhuma", rotulo: "Nenhuma" }, ...PECAS]}
+                    valor={rascunho.pecas[0] ?? "nenhuma"}
+                    aoEscolher={(id) => mudar({ pecas: id === "nenhuma" ? [] : [id] })}
+                  />
+                )}
+                {corDa("roupa", "Roupa")}
+                {corDa("calca", "Calça")}
+                {corDa("calcados", "Calçados")}
               </TabsContent>
 
               <TabsContent value="instrumento" className="flex flex-col gap-6">
