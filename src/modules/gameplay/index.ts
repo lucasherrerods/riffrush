@@ -15,4 +15,5 @@ export {
 } from "./partida";
 export { desenharPista, type Cena, type Sprites } from "./pista/desenhar";
 export { layoutDaPista, type LayoutDaPista } from "./pista/geometria";
+export { resultadoDaPartida, type Resultado } from "./resultado";
 export { criarSprites } from "./pista/sprites";
