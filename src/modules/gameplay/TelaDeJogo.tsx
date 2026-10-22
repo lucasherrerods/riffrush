@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, Pause, Skull, Zap } from "lucide-react";
 import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, tocarEfeito } from "@/modules/audio";
-import { Avatar, type Personagem } from "@/modules/character";
+import { Avatar, suportaWebGL, type Personagem } from "@/modules/character";
+import { Palco, opacidadeDaPista, type EstadoDoPalco } from "@/modules/stage";
 import { DIFICULDADES, carregarMusica, type Dificuldade, type Musica, type MusicaCarregada } from "@/modules/songs";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
@@ -98,6 +99,22 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
     estrela: nada,
   });
   const estreita = useTelaEstreita();
+  const [comWebGL] = useState(suportaWebGL);
+  // No celular a GPU fica toda para a pista; sem efeitos, o palco também sai.
+  const comPalco = comWebGL && !estreita && opcoes.efeitos;
+  const comPalcoAgora = useRef(comPalco);
+  comPalcoAgora.current = comPalco;
+  const estadoDoPalco = useRef<EstadoDoPalco>({
+    personagem,
+    tocando: false,
+    bpm: musica.bpm || 120,
+    pulso: 0,
+    triste: false,
+    tempo: -ENTRADA,
+    entrada: ENTRADA,
+    estrelaAtiva: false,
+    desdeTrovao: Infinity,
+  });
   const emRede = !!rede;
   // A rede chega como objeto novo a cada render; só o instante de largada reinicia a partida.
   const inicioEmRede = rede?.inicio;
@@ -162,6 +179,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
     const explosoes: Cena["explosoes"] = [];
     const trovoes: Cena["trovoes"] = [];
     let estrelaDesde: number | null = null;
+    let ultimoTrovao = -Infinity;
     const atraso = opcoes.atrasoMs / 1000;
     const tempoDaMusica = (tempoDoAudio: number) => tempoDoAudio - inicio - atraso;
     let pausadoAgora = false;
@@ -203,6 +221,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
           if (explosoes.length > MAXIMO_DE_EXPLOSOES) explosoes.shift();
           const forca = forcaDoTrovao(partida.sequencia);
           if (forca) {
+            ultimoTrovao = tempo;
             trovoes.push({ tempo, forca, semente: partida.sequencia });
             if (trovoes.length > MAXIMO_DE_TROVOES) trovoes.shift();
           }
@@ -311,7 +330,21 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
         if (Math.abs(clipe.currentTime - tempo) > SINCRONIA_DO_VIDEO) clipe.currentTime = tempo;
       }
 
+      estadoDoPalco.current = {
+        personagem,
+        tocando: tempo >= 0 && !partida.derrota,
+        bpm: musica.bpm || 120,
+        pulso: partida.acertos,
+        triste: partida.vida < 0.25,
+        tempo,
+        entrada: ENTRADA,
+        estrelaAtiva: partida.estrelaAtiva,
+        desdeTrovao: tempo - ultimoTrovao,
+      };
+
       const elemento = canvas.current;
+      // Com palco, a pista some na abertura para a cena dominar e volta até a música começar.
+      if (elemento) elemento.style.opacity = comPalcoAgora.current ? String(opacidadeDaPista(tempo, ENTRADA)) : "1";
       if (contexto2d && elemento) {
         const escala = Math.min(2, window.devicePixelRatio || 1);
         const largura = elemento.clientWidth;
@@ -403,6 +436,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
 
   return (
     <div className="relative h-full w-full touch-none overflow-hidden select-none">
+      {comPalco && carregada && <Palco lerEstado={() => estadoDoPalco.current} />}
       <canvas ref={canvas} className="absolute inset-0 h-full w-full" />
 
       {!carregada && (
@@ -495,7 +529,10 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
             </div>
           ) : (
             <div data-parte="hud-lateral" className="absolute bottom-10 flex flex-col items-center" style={{ left: layout.centro + layout.largura / 2 + 24 }}>
-              <Avatar personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} className="mb-2 h-44 w-auto" />
+              {/* Com o palco, o personagem já está em cena atrás da pista. */}
+              {!comPalco && (
+                <Avatar personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} className="mb-2 h-44 w-auto" />
+              )}
               <div className="flex items-end gap-4">
                 <div className="flex flex-col items-center gap-2" aria-label="Star power">
                   <Zap className={cn("size-5", hud.estrela >= 0.5 ? "text-estrela" : "text-borda")} aria-hidden />
