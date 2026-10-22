@@ -8,6 +8,7 @@ import * as sala from "./sala";
 import { TelaDeMultijogador } from "./TelaDeMultijogador";
 
 vi.mock("./sala", () => ({
+  PORTA_DA_SALA: 7777,
   useConexao: vi.fn(),
   ehClienteWebDaSala: vi.fn(() => false),
   criarSala: vi.fn(),

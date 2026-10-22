@@ -1,0 +1,55 @@
+import { ArrowLeft, Loader2, LogOut } from "lucide-react";
+import type { Personagem } from "@/modules/character";
+import type { Musica } from "@/modules/songs";
+import { useTeclado } from "@/shared/hooks/useTeclado";
+import { Button } from "@/shared/ui/button";
+import { Lobby } from "./componentes/Lobby";
+import { ProcurarSala } from "./componentes/ProcurarSala";
+import { sairDaSala, useConexao } from "./sala";
+
+interface Props {
+  personagem: Personagem;
+  musicas: Musica[];
+  volumeDosEfeitos: number;
+  aoVoltar: () => void;
+  aoEditarPersonagem: () => void;
+}
+
+export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVoltar, aoEditarPersonagem }: Props) {
+  const { sala, info, erro } = useConexao();
+
+  useTeclado((evento) => {
+    if (evento.code === "Escape" && !(evento.target instanceof HTMLInputElement)) aoVoltar();
+  });
+
+  return (
+    <div className="flex h-full flex-col gap-6 p-8 max-md:p-4">
+      <header className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
+          <ArrowLeft />
+        </Button>
+        <h1 className="text-4xl leading-[1.1] font-black tracking-[-0.02em] max-md:text-2xl">Multijogador</h1>
+        <div className="flex-1" />
+        {sala && (
+          <Button variant="ghost" onClick={() => sairDaSala()}>
+            <LogOut className="opacity-70" /> Sair da sala
+          </Button>
+        )}
+      </header>
+
+      {erro && !sala && (
+        <p role="alert" className="rounded-2xl border border-perigo bg-superficie px-4 py-3 text-base">
+          {erro}
+        </p>
+      )}
+
+      {!sala && <ProcurarSala personagem={personagem} volumeDosEfeitos={volumeDosEfeitos} aoEditarPersonagem={aoEditarPersonagem} />}
+      {sala?.status === "conectando" && (
+        <p className="flex flex-1 items-center justify-center gap-2 text-base text-texto-suave">
+          <Loader2 className="animate-spin" aria-hidden /> Conectando na sala...
+        </p>
+      )}
+      {sala && sala.status !== "conectando" && <Lobby sala={sala} info={info} musicas={musicas} volumeDosEfeitos={volumeDosEfeitos} />}
+    </div>
+  );
+}
