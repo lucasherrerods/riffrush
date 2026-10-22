@@ -19,24 +19,28 @@ pub struct Anuncio {
 
 impl Anuncio {
     pub fn novo(nome: &str, jogadores: usize) -> Self {
-        todo!()
+        Self { riffrush: VERSAO_DO_ANUNCIO, nome: nome.to_string(), porta: PORTA_DA_SALA, jogadores }
     }
 }
 
 /// Lê um anúncio recebido na rede; ignora mensagens de outros programas.
 pub fn ler_anuncio(bytes: &[u8]) -> Option<Anuncio> {
-    todo!()
+    serde_json::from_slice::<Anuncio>(bytes).ok().filter(|a| a.riffrush == VERSAO_DO_ANUNCIO)
 }
 
 /// Embrulha a mensagem de um jogador para repassar a todos: `{"de": id, "msg": ...}`.
 /// Só repassa JSON válido.
 pub fn embrulhar(de: usize, mensagem: &str) -> Option<String> {
-    todo!()
+    serde_json::from_str::<serde_json::Value>(mensagem).ok()?;
+    Some(format!(r#"{{"de":{de},"msg":{mensagem}}}"#))
 }
 
 /// Caminho do arquivo do jogo pedido pelo navegador; a raiz e as rotas desconhecidas viram index.html.
 pub fn caminho_do_arquivo(caminho_da_url: &str) -> &str {
-    todo!()
+    match caminho_da_url.trim_start_matches('/') {
+        "" => "index.html",
+        caminho => caminho,
+    }
 }
 
 #[cfg(test)]
