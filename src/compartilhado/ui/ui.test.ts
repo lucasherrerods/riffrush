@@ -12,6 +12,12 @@ describe("componentes de ui", () => {
     expect(codigo).toMatch(/import \{ cn \} from "@\/compartilhado\/lib\/utils"/);
   });
 
+  // design.md, regra 11: sem sombras em interfaces escuras.
+  it.each(componentes)("%s não usa sombras", (arquivo: string) => {
+    const codigo = readFileSync(join(pasta, arquivo), "utf8");
+    expect(codigo).not.toMatch(/\bshadow-/);
+  });
+
   it("o pacote npm 'cn' não é dependência do projeto", () => {
     const pacote = JSON.parse(readFileSync(join(pasta, "../../../package.json"), "utf8"));
     expect({ ...pacote.dependencies, ...pacote.devDependencies }).not.toHaveProperty("cn");
