@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
+@import "@fontsource/bebas-neue";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -18,7 +19,12 @@ body {
 
 /* As cores vêm do tema ativo em temas.ts (aplicarTokens). Aqui só ligamos os nomes ao Tailwind e ao shadcn. */
 :root {
-  --radius: 0.75rem;
+  /* Cantos quase retos, como os cortes da guitarra da logo. */
+  --radius: 0.25rem;
+  /* Ruído que desgasta as formas, imitando a tinta gasta da logo. Opaco com falhas espalhadas. */
+  --textura-gasta: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -9 6.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23r)'/%3E%3C/svg%3E");
+  /* O inverso: só as falhas, para pintar por cima de áreas cheias. */
+  --textura-falhas: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9 -6.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23r)'/%3E%3C/svg%3E");
   --background: var(--cor-fundo);
   --foreground: var(--cor-texto);
   --card: var(--cor-superficie);
@@ -41,10 +47,13 @@ body {
 
 @theme inline {
   --font-sans: "Geist Variable", sans-serif;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --font-titulo: "Bebas Neue", "Geist Variable", sans-serif;
+  --radius-sm: 2px;
+  --radius-md: var(--radius);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 2px);
+  --radius-2xl: calc(var(--radius) + 4px);
+  --radius-3xl: calc(var(--radius) + 8px);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -84,13 +93,46 @@ body {
   color: var(--cor-texto);
 }
 
-/* ---------- Fundo dos menus ---------- */
-.sol-listrado {
-  background: linear-gradient(180deg, var(--cor-destaque) 0%, var(--cor-primaria) 55%, var(--cor-superficie) 100%);
-  mask-image: repeating-linear-gradient(180deg, #000 0 18px, transparent 18px 26px);
+/* Títulos na fonte condensada, em caixa alta, como letreiro de show. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-titulo);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
-/* A grade anda com transform (composto na GPU), não com background-position, que repinta a cada frame. */
+/* Quina cortada na diagonal, o desenho de ponta da guitarra da logo. */
+.corte {
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+}
+
+/* Tinta gasta: falhas da cor do fundo sobre a área pintada. */
+.gasto {
+  position: relative;
+  isolation: isolate;
+}
+
+.gasto::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--cor-fundo);
+  opacity: 0.6;
+  mask-image: var(--textura-falhas);
+  mask-mode: alpha;
+  mask-size: 240px;
+}
+
+.desgastado {
+  mask-image: var(--textura-gasta);
+  mask-size: 240px;
+}
+
+/* ---------- Fundo dos menus ---------- */
 .grade-perspectiva {
   perspective: 400px;
   overflow: hidden;
@@ -104,8 +146,8 @@ body {
   transform-origin: top;
   transform: rotateX(62deg);
   background-image:
-    linear-gradient(color-mix(in srgb, var(--cor-primaria) 55%, transparent) 2px, transparent 2px),
-    linear-gradient(90deg, color-mix(in srgb, var(--cor-primaria) 55%, transparent) 2px, transparent 2px);
+    linear-gradient(color-mix(in srgb, var(--cor-borda) 70%, transparent) 2px, transparent 2px),
+    linear-gradient(90deg, color-mix(in srgb, var(--cor-borda) 70%, transparent) 2px, transparent 2px);
   background-size: 70px 70px;
   will-change: transform;
   animation: grade-anda 1.6s linear infinite;
@@ -144,8 +186,7 @@ body {
 }
 
 .titulo-do-jogo {
-  background: linear-gradient(180deg, var(--cor-texto) 0%, var(--cor-texto) 35%, var(--cor-destaque) 60%, var(--cor-primaria) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--cor-texto);
+  mask-image: var(--textura-gasta);
+  mask-size: 240px;
 }

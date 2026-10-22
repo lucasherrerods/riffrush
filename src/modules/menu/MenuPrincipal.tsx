@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Guitar, Play, Power, Settings2, Shirt, Users, type LucideIcon } from "lucide-react";
+import { Play, Power, Settings2, Shirt, Users, Zap, type LucideIcon } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { fecharJanela } from "@/modules/platform";
 import { useTeclado } from "@/shared/hooks/useTeclado";
@@ -61,11 +61,14 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
         transition={{ type: "spring", stiffness: 120, damping: 12 }}
         className="flex flex-col items-center gap-2"
       >
-        <motion.div animate={{ rotate: [-8, 8, -8] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}>
-          <Guitar className="size-16 text-primaria" />
-        </motion.div>
-        <h1 className="titulo-do-jogo text-8xl leading-[1.1] font-black tracking-[-0.02em] uppercase italic max-md:text-5xl">Riff Rush</h1>
-        <p className="text-center text-base font-semibold tracking-[0.4em] text-texto-suave max-md:tracking-[0.15em]">TOQUE ATÉ OS DEDOS SANGRAREM</p>
+        <h1 aria-label="Riff Rush" className="titulo-do-jogo flex items-center gap-2 text-9xl leading-none tracking-[0.01em] max-md:text-7xl">
+          Riff
+          <motion.span animate={{ rotate: [-6, 6, -6] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}>
+            <Zap className="size-24 fill-primaria text-primaria max-md:size-14" />
+          </motion.span>
+          Rush
+        </h1>
+        <p className="bg-primaria px-4 py-1 text-center text-base font-bold tracking-[0.4em] text-texto -skew-x-12 max-md:tracking-[0.15em]">TOQUE ATÉ OS DEDOS SANGRAREM</p>
       </motion.div>
 
       <nav className="flex w-80 flex-col gap-2 max-md:w-[85vw]">
@@ -85,8 +88,8 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
               }}
               onClick={() => escolher(item)}
               className={cn(
-                "flex items-center gap-4 rounded-2xl border px-6 py-3 text-left text-xl font-bold transition-colors",
-                ativo ? "border-primaria bg-primaria text-texto" : "border-borda bg-superficie text-texto-suave",
+                "corte flex items-center gap-4 border px-6 py-3 text-left font-titulo text-3xl tracking-wide uppercase transition-colors",
+                ativo ? "gasto border-primaria bg-primaria text-texto" : "border-borda bg-superficie text-texto-suave",
               )}
             >
               <Icone className="size-6 opacity-70" />

@@ -42,6 +42,28 @@ const PISTA_CLASSICA: Tema["pista"] = {
 };
 
 export const TEMAS = {
+  /** Cores da logo: preto, creme gasto, vermelho dos raios e os trastes clássicos. Neutros quentes. */
+  riffRush: {
+    nome: "Riff Rush",
+    cores: {
+      fundo: "#0f0e0d",
+      superficie: "#1a1817",
+      superficieElevada: "#24211f",
+      borda: "#3a3633",
+      texto: "#e8e4dc",
+      textoSuave: "#a7a39b",
+      primaria: "#e3191f",
+      sucesso: "#16a34a",
+      perigo: "#b91c1c",
+      destaque: "#ff8a1f",
+      ouro: "#facc15",
+      estrela: "#38bdf8",
+    },
+    pista: {
+      ...PISTA_CLASSICA,
+      trastes: ["#22c55e", "#e3191f", "#facc15", "#3b9cf0", "#f7931e"],
+    },
+  },
   crimsonNoir: {
     nome: "Crimson Noir",
     cores: {
@@ -80,4 +102,4 @@ export const TEMAS = {
   },
 } satisfies Record<string, Tema>;
 
-export const temaAtivo: Tema = TEMAS.crimsonNoir;
+export const temaAtivo: Tema = TEMAS.riffRush;
