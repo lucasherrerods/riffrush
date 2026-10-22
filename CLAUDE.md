@@ -15,6 +15,7 @@ npm run tauri dev   # abre o app desktop
 npm test            # roda os testes uma vez
 npm run test:watch  # testes em modo watch
 npm run build       # typecheck + build web (também é a versão servida aos celulares)
+cargo test --manifest-path src-tauri/Cargo.toml   # testes do lado Rust
 ```
 
 ## Estrutura
