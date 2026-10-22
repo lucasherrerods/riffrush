@@ -1,0 +1,83 @@
+import { criarCanvasFalso } from "@/test/canvasFalso";
+import type { Nota } from "@/modules/songs";
+import { criarPartida } from "../partida";
+import { CORES_DAS_PISTAS, COR_DA_ESTRELA } from "../cores";
+import { desenharPista, type Cena, type Sprites } from "./desenhar";
+
+const sprites: Sprites = {
+  nota: (cor, estrela) => ({ tipo: "nota", cor, estrela }) as unknown as CanvasImageSource,
+  brilho: (cor) => ({ tipo: "brilho", cor }) as unknown as CanvasImageSource,
+};
+
+const nota = (tempo: number, pista = 0, extra: Partial<Nota> = {}): Nota => ({ tempo, pista, frase: -1, duracao: 0, ...extra });
+
+function cena(notas: Nota[], extra: Partial<Cena> = {}): Cena {
+  const partida = criarPartida(notas);
+  return {
+    notas: partida.notas,
+    primeira: 0,
+    batidas: [],
+    apertados: [false, false, false, false, false],
+    explosoes: [],
+    estrelaAtiva: false,
+    multiplicador: 1,
+    frasesFalhas: new Set(),
+    ...extra,
+  };
+}
+
+function desenhar(c: Cena, tempo = 0, efeitos = true) {
+  const canvas = criarCanvasFalso();
+  desenharPista(canvas.contexto, 1200, 800, tempo, 2, c, efeitos, sprites);
+  return canvas;
+}
+
+describe("desenharPista", () => {
+  it("desenha as notas que estão chegando, com a cor do traste", () => {
+    const desenhos = desenhar(cena([nota(0.5, 1), nota(1, 3)])).desenhos();
+    expect(desenhos).toEqual([
+      { tipo: "nota", cor: CORES_DAS_PISTAS[3], estrela: false },
+      { tipo: "nota", cor: CORES_DAS_PISTAS[1], estrela: false },
+    ]);
+  });
+
+  it("não desenha notas além do horizonte", () => {
+    expect(desenhar(cena([nota(5)])).desenhos()).toHaveLength(0);
+  });
+
+  it("não desenha notas já acertadas", () => {
+    const c = cena([nota(0.5)]);
+    c.notas[0].acertada = true;
+    expect(desenhar(c).desenhos()).toHaveLength(0);
+  });
+
+  it("notas de frase de star power usam o sprite de estrela, até a frase falhar", () => {
+    expect(desenhar(cena([nota(0.5, 0, { frase: 2 })])).desenhos()[0]).toMatchObject({ estrela: true });
+    expect(desenhar(cena([nota(0.5, 0, { frase: 2 })], { frasesFalhas: new Set([2]) })).desenhos()[0]).toMatchObject({ estrela: false });
+  });
+
+  it("com star power ativo todas as notas ficam azuis", () => {
+    expect(desenhar(cena([nota(0.5, 4)], { estrelaAtiva: true })).desenhos()[0]).toMatchObject({ cor: COR_DA_ESTRELA });
+  });
+
+  it("acende o brilho dos trastes apertados só com efeitos ligados", () => {
+    const apertado = cena([], { apertados: [true, false, false, false, false] });
+    expect(desenhar(apertado).desenhos()).toEqual([{ tipo: "brilho", cor: CORES_DAS_PISTAS[0] }]);
+    expect(desenhar(apertado, 0, false).desenhos()).toHaveLength(0);
+  });
+
+  it("desenha a explosão de acerto por 0,3 s", () => {
+    const comExplosao = cena([], { explosoes: [{ pista: 2, tempo: 1 }] });
+    expect(desenhar(comExplosao, 1.1).desenhos()).toHaveLength(1);
+    expect(desenhar(comExplosao, 1.4).desenhos()).toHaveLength(0);
+  });
+
+  it("desenha o rastro do sustain de uma nota sendo segurada", () => {
+    const c = cena([nota(0, 2, { duracao: 1 })]);
+    c.notas[0].acertada = true;
+    c.notas[0].segurando = true;
+    const preenchimentos = desenhar(c, 0.5).chamadas.filter((ch) => ch.metodo === "fill").length;
+    const semSustain = desenhar(cena([]), 0.5).chamadas.filter((ch) => ch.metodo === "fill").length;
+    expect(preenchimentos).toBeGreaterThan(semSustain);
+  });
+});
