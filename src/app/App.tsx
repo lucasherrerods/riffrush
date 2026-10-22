@@ -5,7 +5,7 @@ import { TelaDeJogo, type Resultado } from "@/modules/gameplay";
 import { TelaDeSelecao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
-import { Adversarios, Placar, TelaDeMultijogador, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
+import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { TelaDeResultado, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { MUSICAS_EMBUTIDAS, importarArquivo, type Dificuldade, type Musica } from "@/modules/songs";
@@ -122,6 +122,7 @@ export function App() {
           {tela === "menu" && (
             <MenuPrincipal
               volumeDosEfeitos={configuracoes.volumeDosEfeitos}
+              noCelular={ehClienteWebDaSala()}
               aoJogar={() => setTela("selecao")}
               aoMultijogador={() => setTela("multijogador")}
               aoPersonagem={() => {

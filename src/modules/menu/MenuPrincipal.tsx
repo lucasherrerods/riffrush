@@ -8,6 +8,8 @@ import { cn } from "@/shared/lib/utils";
 
 interface Props {
   volumeDosEfeitos: number;
+  /** Celular que entrou pelo QR code: o foco é a sala, e não existe "Sair" (é só fechar a aba). */
+  noCelular?: boolean;
   aoJogar: () => void;
   aoMultijogador: () => void;
   aoPersonagem: () => void;
@@ -20,15 +22,20 @@ interface Item {
   acao: () => void;
 }
 
-export function MenuPrincipal({ volumeDosEfeitos, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar }: Props) {
+export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar }: Props) {
   const [selecionado, setSelecionado] = useState(0);
-  const itens: Item[] = [
-    { rotulo: "Jogar", icone: Play, acao: aoJogar },
-    { rotulo: "Multijogador", icone: Users, acao: aoMultijogador },
+  const comuns: Item[] = [
     { rotulo: "Personagem", icone: Shirt, acao: aoPersonagem },
     { rotulo: "Configurações", icone: Settings2, acao: aoConfigurar },
-    { rotulo: "Sair", icone: Power, acao: () => void fecharJanela() },
   ];
+  const itens: Item[] = noCelular
+    ? [{ rotulo: "Entrar na sala", icone: Users, acao: aoMultijogador }, { rotulo: "Jogar sozinho", icone: Play, acao: aoJogar }, ...comuns]
+    : [
+        { rotulo: "Jogar", icone: Play, acao: aoJogar },
+        { rotulo: "Multijogador", icone: Users, acao: aoMultijogador },
+        ...comuns,
+        { rotulo: "Sair", icone: Power, acao: () => void fecharJanela() },
+      ];
 
   const escolher = (item: Item) => {
     tocarEfeito("selecionar", volumeDosEfeitos);
