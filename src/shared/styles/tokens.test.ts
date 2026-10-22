@@ -1,9 +1,12 @@
-import { aplicarTokens, brilho, croma, cores, paleta } from "./tokens";
+import { aplicarTokens, brilho, comAlfa, croma, cores, paleta } from "./tokens";
+import { TEMAS, temaAtivo } from "./temas";
 
-const neutros = [cores.fundo, cores.superficie, cores.superficieElevada, cores.borda, cores.texto, cores.textoSuave];
+describe.each(Object.values(TEMAS).map((tema) => [tema.nome, tema] as const))("tema %s (regras de docs/design.md)", (_, tema) => {
+  const { cores } = tema;
+  const neutros = [cores.fundo, cores.superficie, cores.superficieElevada, cores.borda, cores.texto, cores.textoSuave];
+  const paleta = [cores.primaria, cores.sucesso, cores.perigo, cores.destaque];
 
-describe("tokens de cor (regras de docs/design.md)", () => {
-  it("não usam preto nem branco puros", () => {
+  it("não usa preto nem branco puros", () => {
     for (const cor of Object.values(cores)) {
       expect(cor.toLowerCase()).not.toBe("#000000");
       expect(cor.toLowerCase()).not.toBe("#ffffff");
@@ -14,12 +17,9 @@ describe("tokens de cor (regras de docs/design.md)", () => {
     for (const cor of neutros) expect(croma(cor)).toBeLessThanOrEqual(0.05);
   });
 
-  it("neutros têm uma única temperatura (fria)", () => {
-    for (const cor of neutros) {
-      const azul = parseInt(cor.slice(5, 7), 16);
-      const vermelho = parseInt(cor.slice(1, 3), 16);
-      expect(azul).toBeGreaterThanOrEqual(vermelho);
-    }
+  it("neutros têm uma única temperatura (todos frios ou todos quentes)", () => {
+    const temperaturas = neutros.map((cor) => Math.sign(parseInt(cor.slice(1, 3), 16) - parseInt(cor.slice(5, 7), 16)));
+    expect(temperaturas.includes(1) && temperaturas.includes(-1)).toBe(false);
   });
 
   it("superfícies ficam mais claras conforme a elevação, até 12% acima do fundo", () => {
@@ -37,15 +37,44 @@ describe("tokens de cor (regras de docs/design.md)", () => {
   });
 
   it("as cores da paleta têm brilhos distintos", () => {
-    const brilhos = Object.values(paleta).map(brilho).sort((a, b) => a - b);
+    const brilhos = paleta.map(brilho).sort((a, b) => a - b);
     for (let i = 1; i < brilhos.length; i++) expect(brilhos[i] - brilhos[i - 1]).toBeGreaterThanOrEqual(0.06);
+  });
+
+  it("a skin da pista tem uma cor para cada um dos 5 trastes", () => {
+    expect(tema.pista.trastes).toHaveLength(5);
+  });
+});
+
+describe("tema ativo", () => {
+  it("é o Riff Rush, com as cores da logo", () => {
+    expect(temaAtivo.nome).toBe("Riff Rush");
+    expect(cores.texto).toBe("#e8e4dc");
+    expect(paleta.primaria).toBe("#e3191f");
+  });
+});
+
+describe("comAlfa", () => {
+  it("converte hex em rgba com transparência", () => {
+    expect(comAlfa("#0b0b0d", 0.5)).toBe("rgba(11,11,13,0.5)");
+  });
+
+  it("não deixa a transparência ficar negativa", () => {
+    expect(comAlfa("#ffffff", -1)).toBe("rgba(255,255,255,0)");
   });
 });
 
 describe("aplicarTokens", () => {
-  it("publica as cores como variáveis CSS na raiz", () => {
+  it("publica as cores do tema como variáveis CSS na raiz", () => {
     aplicarTokens(document.documentElement);
     expect(document.documentElement.style.getPropertyValue("--cor-fundo")).toBe(cores.fundo);
-    expect(document.documentElement.style.getPropertyValue("--cor-primaria")).toBe(cores.primaria);
+    expect(document.documentElement.style.getPropertyValue("--cor-superficie-elevada")).toBe(cores.superficieElevada);
+    expect(document.documentElement.style.getPropertyValue("--cor-ouro")).toBe(cores.ouro);
+  });
+
+  it("aceita outro tema", () => {
+    aplicarTokens(document.documentElement, TEMAS.synthwave);
+    expect(document.documentElement.style.getPropertyValue("--cor-primaria")).toBe(TEMAS.synthwave.cores.primaria);
+    aplicarTokens(document.documentElement);
   });
 });

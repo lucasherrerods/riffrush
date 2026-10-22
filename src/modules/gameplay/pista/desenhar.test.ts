@@ -22,6 +22,8 @@ function cena(notas: Nota[], extra: Partial<Cena> = {}): Cena {
     estrelaAtiva: false,
     multiplicador: 1,
     frasesFalhas: new Set(),
+    trovoes: [],
+    estrelaDesde: null,
     ...extra,
   };
 }
@@ -79,5 +81,22 @@ describe("desenharPista", () => {
     const preenchimentos = desenhar(c, 0.5).chamadas.filter((ch) => ch.metodo === "fill").length;
     const semSustain = desenhar(cena([]), 0.5).chamadas.filter((ch) => ch.metodo === "fill").length;
     expect(preenchimentos).toBeGreaterThan(semSustain);
+  });
+
+  it("desenha os raios de um trovão por meio segundo", () => {
+    const tracos = (c: Cena, tempo: number, efeitos = true) => desenhar(c, tempo, efeitos).chamadas.filter((ch) => ch.metodo === "stroke").length;
+    const semTrovao = tracos(cena([]), 1.05);
+    const comTrovao = cena([], { trovoes: [{ tempo: 1, forca: 2, semente: 9 }] });
+    expect(tracos(comTrovao, 1.05)).toBeGreaterThan(semTrovao);
+    expect(tracos(comTrovao, 1.8)).toBe(semTrovao);
+    expect(tracos(comTrovao, 1.05, false)).toBe(tracos(cena([]), 1.05, false));
+  });
+
+  it("treme a pista logo depois de soltar o star power, só com efeitos ligados", () => {
+    const tremendo = cena([], { estrelaAtiva: true, estrelaDesde: 1 });
+    const deslocamentos = (c: Cena, tempo: number, efeitos = true) => desenhar(c, tempo, efeitos).chamadas.filter((ch) => ch.metodo === "translate").length;
+    expect(deslocamentos(tremendo, 1.05)).toBeGreaterThan(0);
+    expect(deslocamentos(tremendo, 3)).toBe(0);
+    expect(deslocamentos(tremendo, 1.05, false)).toBe(0);
   });
 });

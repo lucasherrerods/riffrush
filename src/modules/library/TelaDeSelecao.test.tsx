@@ -89,7 +89,7 @@ describe("TelaDeSelecao", () => {
 
   it("mostra o personagem palhetando a guitarra ao lado da música", () => {
     abrir();
-    expect(screen.getByRole("img", { name: "Personagem Rockstar" }).querySelector('[data-parte="instrumento-guitarra"]')).not.toBeNull();
+    expect(screen.getByRole("img", { name: "Personagem Rockstar" })).toHaveAttribute("data-instrumento", "guitarra");
   });
 });
 
@@ -105,7 +105,7 @@ describe("TelaDeSelecao na tela estreita", () => {
 describe("TelaDeSelecao com estética arcade", () => {
   it("tem um header com o título da tela", () => {
     abrir();
-    expect(within(screen.getByRole("banner")).getByRole("heading", { name: "Selecione a música" })).toHaveClass("font-display");
+    expect(within(screen.getByRole("banner")).getByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
   });
 
   it("o painel mostra BPM, gênero e intensidade em cards", () => {

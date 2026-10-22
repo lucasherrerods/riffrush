@@ -65,10 +65,10 @@ export function TelaDeSelecao(props: Props) {
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
           <ArrowLeft />
         </Button>
-        <h1 className="font-display text-3xl leading-[1.1] font-bold tracking-[0.04em] text-destaque uppercase max-md:text-xl">Selecione a música</h1>
+        <h1 className="text-4xl leading-[1.1] text-destaque max-md:text-2xl">Selecione a música</h1>
         <div className="flex-1" />
         <Button variant="outline" asChild>
-          <label className="cursor-pointer font-display tracking-[0.04em] uppercase">
+          <label className="cursor-pointer">
             <FileAudio className="opacity-70" />
             <span className="max-md:sr-only">Importar música, clipe ou .sng</span>
             <input
@@ -103,11 +103,11 @@ export function TelaDeSelecao(props: Props) {
           </div>
 
           <div className="min-w-0">
-            <h2 className="truncate font-display text-3xl leading-[1.1] font-bold uppercase max-md:text-xl">{musica.titulo}</h2>
+            <h2 className="truncate text-4xl leading-[1.1] max-md:text-2xl">{musica.titulo}</h2>
             <p className="truncate text-lg text-texto-suave">{musica.artista}</p>
           </div>
 
-          <div className="flex items-end gap-4 rounded-md border border-borda bg-superficie p-4">
+          <div className="placa flex items-end gap-4 p-4">
             <AvatarPalhetando personagem={personagem} bpm={musica.bpm || 120} className="h-40 w-auto shrink-0 max-md:hidden" />
             <div role="radiogroup" aria-label="Dificuldade" className="flex flex-1 flex-col gap-2 max-md:flex-row">
               {DIFICULDADES.map((d) => {
@@ -123,12 +123,12 @@ export function TelaDeSelecao(props: Props) {
                       aoDificuldade(d.id);
                     }}
                     className={cn(
-                      "flex items-center gap-2 rounded-sm border px-4 py-1 text-left transition-colors max-md:flex-1 max-md:flex-col max-md:px-2",
+                      "chapa flex items-center gap-2 px-4 py-1 text-left transition-colors max-md:flex-1 max-md:flex-col max-md:px-2",
                       escolhida ? "border-destaque bg-destaque/15" : "border-transparent bg-superficie-elevada hover:border-borda",
                     )}
                   >
-                    <span className={cn("flex-1 font-display text-base font-semibold tracking-[0.04em] uppercase", escolhida && "text-destaque")}>{d.rotulo}</span>
-                    {recorde?.fullCombo && <span className="font-display text-base font-bold text-destaque">FC</span>}
+                    <span className={cn("flex-1 font-titulo text-xl tracking-wide uppercase", escolhida && "text-destaque")}>{d.rotulo}</span>
+                    {recorde?.fullCombo && <span className="font-titulo text-xl text-destaque">FC</span>}
                     <span className="font-mono text-base text-texto-suave">{recorde ? formatar(recorde.pontos) : "—"}</span>
                   </button>
                 );
@@ -138,7 +138,7 @@ export function TelaDeSelecao(props: Props) {
 
           {recordeAtual && (
             <p className="flex items-center gap-2 text-base text-texto-suave">
-              <Trophy className="size-4 text-[#facc15] opacity-70" /> Recorde:
+              <Trophy className="size-4 text-ouro opacity-70" /> Recorde:
               <span className="font-mono font-bold text-texto">{formatar(recordeAtual.pontos)}</span>
             </p>
           )}
@@ -146,7 +146,7 @@ export function TelaDeSelecao(props: Props) {
           <div className="flex-1" />
           <Button
             size="lg"
-            className="h-14 font-display text-xl font-bold tracking-[0.08em]"
+            className="h-14 font-titulo text-2xl tracking-widest"
             onClick={() => {
               efeito("selecionar");
               aoJogar();
@@ -170,19 +170,19 @@ export function TelaDeSelecao(props: Props) {
                     aoSelecionar(i);
                   }}
                   className={cn(
-                    "flex w-full items-center gap-4 rounded-md border-2 px-4 py-2 text-left transition-colors",
+                    "chapa flex w-full items-center gap-4 px-4 py-2 text-left transition-colors",
                     selecionada ? "border-destaque bg-destaque/15" : "border-transparent bg-superficie hover:bg-superficie-elevada",
                   )}
                 >
                   <Capa musica={m} decorativa className="size-12 rounded-sm" />
                   <span className="min-w-0 flex-1">
-                    <span className={cn("block truncate font-display text-xl leading-[1.2] font-bold", selecionada && "text-destaque")}>{m.titulo}</span>
+                    <span className={cn("block truncate font-titulo text-2xl leading-[1.1] tracking-wide", selecionada && "text-destaque")}>{m.titulo}</span>
                     <span className="block truncate text-base text-texto-suave">{m.artista}</span>
                   </span>
                   {recorde && (
                     <span className="flex gap-1" aria-label={`${recorde.estrelas} estrelas`}>
                       {Array.from({ length: 5 }, (_, k) => (
-                        <Star key={k} className={cn("size-3", k < recorde.estrelas ? "fill-[#facc15] text-[#facc15]" : "text-borda")} />
+                        <Star key={k} className={cn("size-3", k < recorde.estrelas ? "fill-ouro text-ouro" : "text-borda")} />
                       ))}
                     </span>
                   )}
@@ -205,8 +205,8 @@ export function TelaDeSelecao(props: Props) {
 
 function Dado({ rotulo, className, children }: { rotulo: string; className?: string; children: ReactNode }) {
   return (
-    <div className={cn("min-w-0 rounded-md border border-borda bg-superficie px-4 py-2 max-md:flex-1", className)}>
-      <span className="block font-display text-base font-semibold tracking-[0.04em] text-destaque uppercase">{rotulo}</span>
+    <div className={cn("chapa min-w-0 px-4 py-2 max-md:flex-1", className)}>
+      <span className="block font-titulo text-lg tracking-wide text-destaque uppercase">{rotulo}</span>
       <span className="block truncate text-xl font-semibold">{children}</span>
     </div>
   );
@@ -216,7 +216,7 @@ function Comando({ teclas, children }: { teclas: string; children: ReactNode }) 
   return (
     <span className="flex items-center gap-2 text-base">
       <kbd className="rounded-sm bg-superficie-elevada px-2 font-mono text-texto-suave">{teclas}</kbd>
-      <span className="font-display font-semibold tracking-[0.04em] uppercase">{children}</span>
+      <span className="font-titulo text-xl tracking-wide uppercase">{children}</span>
     </span>
   );
 }

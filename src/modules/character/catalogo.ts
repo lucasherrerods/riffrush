@@ -1,0 +1,78 @@
+/**
+ * Tudo que pode ser escolhido na criação do personagem.
+ * - Novo personagem: exporte um .vrm (VRoid Studio, Booth…), coloque em public/modelos/personagens e registre em BASES.
+ * - Nova animação: rode scripts/preparar-animacoes.mjs com o .fbx da Mixamo e registre em ANIMACOES_POR_INSTRUMENTO.
+ * - Nova peça: um .glb com malha presa ao esqueleto humanoide, em public/modelos/pecas, registrado em PECAS.
+ */
+export type Instrumento = "guitarra" | "baixo" | "keytar" | "bateria" | "vocal";
+export type Expressao = "neutra" | "determinada" | "confiante" | "alegre";
+export type ParteColorivel = "pele" | "cabelo" | "olhos" | "roupa" | "calca" | "calcados";
+
+export interface Opcao<T extends string> {
+  id: T;
+  rotulo: string;
+}
+
+export interface Base extends Opcao<string> {
+  arquivo: string;
+}
+
+export interface Peca extends Opcao<string> {
+  arquivo: string;
+  /** Partes do corpo base que a peça cobre e que ficam escondidas por baixo dela. */
+  cobre: ParteColorivel[];
+}
+
+export const BASES: Base[] = [{ id: "recruta", rotulo: "Recruta", arquivo: "/modelos/personagens/exemplo.vrm" }];
+export const PECAS: Peca[] = [];
+
+export const INSTRUMENTOS: Opcao<Instrumento>[] = [
+  { id: "guitarra", rotulo: "Guitarra" },
+  { id: "baixo", rotulo: "Baixo" },
+  { id: "keytar", rotulo: "Keytar" },
+  { id: "bateria", rotulo: "Bateria" },
+  { id: "vocal", rotulo: "Vocal" },
+];
+
+/** Animações compartilhadas por todos os personagens. Sem animação, o personagem fica no idle procedural. */
+export const ANIMACOES_POR_INSTRUMENTO: Record<Instrumento, string[]> = {
+  guitarra: ["guitarra-1", "guitarra-2"],
+  baixo: ["guitarra-2", "guitarra-1"],
+  keytar: ["teclado-1", "teclado-2"],
+  bateria: [],
+  vocal: [],
+};
+export const arquivoDaAnimacao = (id: string) => `/modelos/animacoes/${id}.glb`;
+
+export const EXPRESSOES: Opcao<Expressao>[] = [
+  { id: "neutra", rotulo: "Neutra" },
+  { id: "determinada", rotulo: "Determinada" },
+  { id: "confiante", rotulo: "Confiante" },
+  { id: "alegre", rotulo: "Alegre" },
+];
+
+/** Ajustes do corpo, de 0 a 1 (0,5 é o modelo original). */
+export const AJUSTES_DO_CORPO = [
+  { id: "altura", rotulo: "Altura" },
+  { id: "porte", rotulo: "Porte físico" },
+  { id: "ombros", rotulo: "Ombros" },
+] as const;
+
+export const PARTES_COLORIVEIS: Opcao<ParteColorivel>[] = [
+  { id: "pele", rotulo: "Pele" },
+  { id: "cabelo", rotulo: "Cabelo" },
+  { id: "olhos", rotulo: "Olhos" },
+  { id: "roupa", rotulo: "Roupa" },
+  { id: "calca", rotulo: "Calça" },
+  { id: "calcados", rotulo: "Calçados" },
+];
+
+/** Cores do conteúdo do personagem, não da interface: por isso ficam fora do tema. */
+export const PALETAS: Record<ParteColorivel, string[]> = {
+  pele: ["#f6dcc4", "#e8bf98", "#c99470", "#9a6644", "#5e3a24"],
+  cabelo: ["#1c1a19", "#4a2e1c", "#8a5a2b", "#d9b56a", "#b9b6b0", "#8f1d1d", "#2b4c8c"],
+  olhos: ["#3b2a1e", "#2f6b3a", "#2b5c9c", "#6b6b6b", "#a0482a"],
+  roupa: ["#1f1d1b", "#5a1a1a", "#2d3a4f", "#3d4a2c", "#6b4a2e", "#d8d2c4"],
+  calca: ["#1f1d1b", "#2d3a4f", "#4a3b2c", "#5a1a1a"],
+  calcados: ["#1f1d1b", "#4a2e1c", "#8a1c1c", "#d8d2c4"],
+};

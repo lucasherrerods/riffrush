@@ -42,6 +42,8 @@ export interface Partida {
   sequencia: number;
   maiorSequencia: number;
   acertos: number;
+  /** Notas que passaram sem ser tocadas. */
+  erros: number;
   vida: number;
   estrela: number;
   estrelaAtiva: boolean;
@@ -64,6 +66,7 @@ export function criarPartida(notas: Nota[], { semFalha = false } = {}): Partida 
     sequencia: 0,
     maiorSequencia: 0,
     acertos: 0,
+    erros: 0,
     vida: VIDA_INICIAL,
     estrela: 0,
     estrelaAtiva: false,
@@ -83,6 +86,12 @@ export function retirarEventos(partida: Partida) {
 
 export function multiplicador(partida: Partida) {
   return Math.min(4, 1 + Math.floor(partida.sequencia / 10)) * (partida.estrelaAtiva ? 2 : 1);
+}
+
+/** Acertos sobre todas as notas que já passaram (0 a 1). */
+export function precisao(partida: Partida) {
+  const tocadas = partida.acertos + partida.erros;
+  return tocadas ? partida.acertos / tocadas : 1;
 }
 
 function contarFrase(partida: Partida, nota: NotaEmJogo) {
@@ -113,6 +122,7 @@ export function acertar(partida: Partida, nota: NotaEmJogo, tempo: number) {
 
 function errar(partida: Partida, nota: NotaEmJogo) {
   nota.perdida = true;
+  partida.erros++;
   partida.sequencia = 0;
   partida.vida = Math.max(0, partida.vida - VIDA_POR_ERRO);
   if (nota.frase >= 0) partida.frasesFalhas.add(nota.frase);

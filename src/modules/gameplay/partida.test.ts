@@ -1,5 +1,5 @@
 import type { Nota } from "@/modules/songs";
-import { JANELA_DE_ACERTO, ativarEstrela, avancar, criarPartida, multiplicador, retirarEventos, soltar, tocar } from "./partida";
+import { JANELA_DE_ACERTO, ativarEstrela, avancar, criarPartida, multiplicador, precisao, retirarEventos, soltar, tocar } from "./partida";
 
 const nota = (tempo: number, pista = 0, extra: Partial<Nota> = {}): Nota => ({ tempo, pista, frase: -1, duracao: 0, ...extra });
 
@@ -201,5 +201,21 @@ describe("pontuação", () => {
     const partida = criarPartida(Array.from({ length: 11 }, (_, i) => nota(i)));
     for (let i = 0; i < 11; i++) tocar(partida, 0, i);
     expect(partida.pontos).toBe(9 * 50 + 2 * 100);
+  });
+});
+
+describe("precisao", () => {
+  it("é 100% antes de qualquer nota", () => {
+    expect(precisao(criarPartida([nota(1)]))).toBe(1);
+  });
+
+  it("divide os acertos por todas as notas que já passaram", () => {
+    const partida = criarPartida([nota(1), nota(2), nota(3), nota(4)]);
+    tocar(partida, 0, 1);
+    tocar(partida, 0, 2);
+    tocar(partida, 0, 3);
+    avancar(partida, 5);
+    expect(partida.erros).toBe(1);
+    expect(precisao(partida)).toBeCloseTo(0.75);
   });
 });

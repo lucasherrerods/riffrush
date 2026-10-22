@@ -87,7 +87,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
           </TabsTrigger>
         </TabsList>
 
-        <div className="mt-4 min-h-0 flex-1 overflow-y-auto rounded-3xl border border-borda bg-superficie p-4">
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto placa p-4">
           <TabsContent value="controles" className="flex flex-col gap-2">
             <p className="px-4 py-2 text-base text-texto-suave">Clique numa tecla e aperte a nova. Esc cancela.</p>
             {NOMES_DAS_PISTAS.map((nome, i) => (
