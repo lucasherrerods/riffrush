@@ -65,7 +65,8 @@ describe("TelaDeJogo", () => {
     carregarCom([nota(0.5)]);
     const { usuario } = abrir();
     await screen.findByRole("heading", { name: "Neon Highway" });
-    irPara(0.5);
+    // O relógio desconta até 100 ms de atraso do evento: tocar 50 ms depois deixa o toque no meio da janela de acerto.
+    irPara(0.55);
     await usuario.keyboard("a");
     await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
     expect(screen.getByLabelText("Sequência")).toHaveTextContent("1");
