@@ -4,6 +4,7 @@ import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { estadoInicial, type EstadoDaSala } from "./protocolo";
+import { resolverMusica } from "./musicaNaRede";
 import * as sala from "./sala";
 import { avisar } from "@/shared/ui/avisos";
 import { TelaDeMultijogador } from "./TelaDeMultijogador";
@@ -21,7 +22,10 @@ vi.mock("./sala", () => ({
   temModoOnline: vi.fn(() => true),
   criarSalaOnline: vi.fn(),
   entrarNaSalaOnline: vi.fn(),
+  marcarPronto: vi.fn(),
 }));
+
+vi.mock("./musicaNaRede", () => ({ resolverMusica: vi.fn(async () => ({})) }));
 
 vi.mock("@/shared/ui/avisos", () => ({ avisar: { error: vi.fn() } }));
 
@@ -167,21 +171,61 @@ describe("na sala", () => {
 
   it("avisa quando a partida não pode começar", async () => {
     vi.mocked(sala.comecar).mockRejectedValueOnce(new Error("No modo online só dá para tocar músicas do jogo."));
-    const { usuario } = abrir({ sala: naSala(true), endereco: "", online: true, codigo: "K7QXM" });
+    const { usuario } = abrir({ sala: naSala(true, { prontos: [2] }), endereco: "", online: true, codigo: "K7QXM" });
     await usuario.click(screen.getByRole("button", { name: /Começar partida/ }));
     await waitFor(() => expect(avisar.error).toHaveBeenCalledWith("No modo online só dá para tocar músicas do jogo."));
   });
 
   it("o host começa a partida com a música escolhida", async () => {
-    const { usuario } = abrir({ sala: naSala(true, { musica: { tipo: "embutida", id: "cosmic-riff" } }), endereco: "" });
+    const { usuario } = abrir({ sala: naSala(true, { musica: { tipo: "embutida", id: "cosmic-riff" }, prontos: [2] }), endereco: "" });
     await usuario.click(screen.getByRole("button", { name: /Começar partida/ }));
     await waitFor(() => expect(sala.comecar).toHaveBeenCalledWith(MUSICAS_EMBUTIDAS[2]));
+  });
+
+  describe("pronto", () => {
+    it("o host só começa quando todos os convidados estão prontos", () => {
+      abrir({ sala: naSala(true), endereco: "" });
+      expect(screen.getByRole("button", { name: /Começar partida/ })).toBeDisabled();
+      expect(screen.getByText("Esperando todos ficarem prontos (0 de 1)")).toBeInTheDocument();
+    });
+
+    it("mostra quem está pronto no cartão do jogador", () => {
+      abrir({ sala: naSala(true, { prontos: [2] }), endereco: "" });
+      const cartao = screen.getByText("Vitor").closest("li")!;
+      expect(within(cartao).getByText("Pronto")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Começar partida/ })).toBeEnabled();
+    });
+
+    it("o convidado baixa a música antes de poder dar pronto", async () => {
+      let terminar = () => {};
+      vi.mocked(resolverMusica).mockReturnValueOnce(new Promise((resolve) => (terminar = () => resolve(MUSICAS_EMBUTIDAS[0]))));
+      const { usuario } = abrir({ sala: naSala(false), endereco: "http://h:7777" });
+      expect(screen.getByText(/Baixando a música/)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Estou pronto" })).toBeNull();
+      terminar();
+      await usuario.click(await screen.findByRole("button", { name: "Estou pronto" }));
+      expect(sala.marcarPronto).toHaveBeenCalledWith(true);
+      expect(resolverMusica).toHaveBeenCalledWith(naSala(false).musica, MUSICAS_EMBUTIDAS, "http://h:7777");
+    });
+
+    it("o convidado pronto pode desmarcar", async () => {
+      const { usuario } = abrir({ sala: naSala(false, { prontos: [2] }), endereco: "" });
+      await usuario.click(await screen.findByRole("button", { name: "Cancelar pronto" }));
+      expect(sala.marcarPronto).toHaveBeenCalledWith(false);
+    });
+
+    it("avisa quando não consegue baixar a música", async () => {
+      vi.mocked(resolverMusica).mockRejectedValueOnce(new Error("O host ainda não compartilhou a música."));
+      abrir({ sala: naSala(false), endereco: "" });
+      expect(await screen.findByText("O host ainda não compartilhou a música.")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Estou pronto" })).toBeNull();
+    });
   });
 
   it("o convidado vê a música e espera o host", () => {
     abrir({ sala: naSala(false, { musica: { tipo: "embutida", id: "overdrive" } }), endereco: "" });
     expect(screen.getByText("Overdrive")).toBeInTheDocument();
-    expect(screen.getByText(/Esperando o host começar/)).toBeInTheDocument();
+    expect(screen.getByText(/Baixando a música|Estou pronto/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Começar partida/ })).toBeNull();
   });
 
