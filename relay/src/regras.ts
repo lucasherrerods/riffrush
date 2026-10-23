@@ -48,3 +48,26 @@ export function dentroDoLimite(janela: Janela, agora: number): { passa: boolean;
   if (janela.contagem >= LIMITE_DE_MENSAGENS_POR_SEGUNDO) return { passa: false, janela };
   return { passa: true, janela: { ...janela, contagem: janela.contagem + 1 } };
 }
+
+/** A sala renova a entrada a cada minuto; sem renovar, some da lista depois disso. */
+export const VALIDADE_DA_ENTRADA_MS = 3 * 60 * 1000;
+const TAMANHO_MAXIMO_DO_NOME = 24;
+
+export interface EntradaDaSala {
+  codigo: string;
+  nome: string;
+  jogadores: number;
+  atualizadaEm: number;
+}
+
+export type SalaListada = Omit<EntradaDaSala, "atualizadaEm">;
+
+export const nomeDoHost = (nome: string | null) => nome?.trim().slice(0, TAMANHO_MAXIMO_DO_NOME) || "Sala sem nome";
+
+/** As salas abertas para quem procura: com vaga primeiro, as mais recentes antes. */
+export function listarSalas(entradas: EntradaDaSala[], agora: number): SalaListada[] {
+  return entradas
+    .filter((e) => agora - e.atualizadaEm <= VALIDADE_DA_ENTRADA_MS)
+    .sort((a, b) => Number(a.jogadores >= MAXIMO_DE_JOGADORES) - Number(b.jogadores >= MAXIMO_DE_JOGADORES) || b.atualizadaEm - a.atualizadaEm)
+    .map(({ codigo, nome, jogadores }) => ({ codigo, nome, jogadores }));
+}

@@ -4,7 +4,7 @@ import type { Personagem } from "@/modules/character";
 import type { EstadoDoJogador } from "@/modules/gameplay";
 import type { Dificuldade, Musica } from "@/modules/songs";
 import { paraRede } from "./musicaNaRede";
-import { URL_DO_RELAY, deveEnviarEstado, normalizarCodigo, podeTocarOnline, urlParaCriarSala, urlParaEntrarNaSala } from "./online";
+import { URL_DO_RELAY, deveEnviarEstado, lerSalasOnline, normalizarCodigo, podeTocarOnline, urlDasSalas, urlParaCriarSala, urlParaEntrarNaSala, type SalaOnline } from "./online";
 import { comecarPartida, escolherMusica, estadoInicial, reduzir, type EstadoDaSala, type Mensagem } from "./protocolo";
 
 export const PORTA_DA_SALA = 7777;
@@ -109,7 +109,17 @@ export function entrarNaSala(endereco: string, personagem: Personagem) {
 export const temModoOnline = () => !!URL_DO_RELAY;
 
 export function criarSalaOnline(personagem: Personagem) {
-  conectar(urlParaCriarSala(URL_DO_RELAY), "", personagem, true, { online: true });
+  conectar(urlParaCriarSala(URL_DO_RELAY, personagem.nome), "", personagem, true, { online: true });
+}
+
+/** As salas online abertas agora. Sem resposta do relay, a lista fica vazia e o código continua funcionando. */
+export async function procurarSalasOnline(buscar: typeof fetch = fetch): Promise<SalaOnline[]> {
+  try {
+    const resposta = await buscar(urlDasSalas(URL_DO_RELAY));
+    return resposta.ok ? lerSalasOnline(await resposta.json()) : [];
+  } catch {
+    return [];
+  }
 }
 
 export function entrarNaSalaOnline(texto: string, personagem: Personagem) {

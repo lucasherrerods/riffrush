@@ -1,12 +1,28 @@
 import { MUSICAS_EMBUTIDAS, type Musica } from "@/modules/songs";
-import { INTERVALO_DO_ESTADO_ONLINE_MS, deveEnviarEstado, normalizarCodigo, podeTocarOnline, urlParaCriarSala, urlParaEntrarNaSala } from "./online";
+import { INTERVALO_DO_ESTADO_ONLINE_MS, deveEnviarEstado, lerSalasOnline, normalizarCodigo, podeTocarOnline, urlDasSalas, urlParaCriarSala, urlParaEntrarNaSala } from "./online";
 
 const estado = { pontos: 10, vida: 0.5, sequencia: 1, pulso: 1, derrota: false, terminou: false };
 
 describe("endereços do relay", () => {
   it("monta as rotas a partir da URL configurada, com ou sem barra no fim", () => {
-    expect(urlParaCriarSala("wss://relay.exemplo.dev/")).toBe("wss://relay.exemplo.dev/criar");
+    expect(urlParaCriarSala("wss://relay.exemplo.dev/", "Lucas & Cia")).toBe("wss://relay.exemplo.dev/criar?nome=Lucas%20%26%20Cia");
     expect(urlParaEntrarNaSala("wss://relay.exemplo.dev", "ABCDE")).toBe("wss://relay.exemplo.dev/sala/ABCDE");
+  });
+});
+
+describe("lista de salas", () => {
+  it("é buscada por HTTP no mesmo servidor do relay", () => {
+    expect(urlDasSalas("wss://relay.exemplo.dev/")).toBe("https://relay.exemplo.dev/salas");
+    expect(urlDasSalas("ws://127.0.0.1:8787")).toBe("http://127.0.0.1:8787/salas");
+  });
+
+  it("lê a resposta, descartando o que não tem a forma de uma sala", () => {
+    const lista = lerSalasOnline([{ codigo: "K7QXM", nome: "Lucas", jogadores: 2 }, { codigo: "x" }, "lixo", { codigo: "ABCDE", nome: 3, jogadores: 1 }]);
+    expect(lista).toEqual([{ codigo: "K7QXM", nome: "Lucas", jogadores: 2 }]);
+  });
+
+  it("resposta que não é lista vira lista vazia", () => {
+    expect(lerSalasOnline({ erro: true })).toEqual([]);
   });
 });
 

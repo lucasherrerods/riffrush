@@ -105,9 +105,21 @@ describe("sala", () => {
 
     it("criar a sala online conecta no relay como host e guarda o código", async () => {
       const sala = await criarOnline();
-      expect(socket().url).toBe("wss://relay.teste/criar");
+      expect(socket().url).toBe("wss://relay.teste/criar?nome=Rockstar");
       expect(invoke).not.toHaveBeenCalled();
       expect(sala.lerConexao()).toMatchObject({ codigo: "ABCDE", sala: { souHost: true, meuId: 1 } });
+    });
+
+    it("procura as salas abertas no relay", async () => {
+      const sala = await importar();
+      const buscar = vi.fn(async () => Response.json([{ codigo: "K7QXM", nome: "Lucas", jogadores: 2 }]));
+      expect(await sala.procurarSalasOnline(buscar)).toEqual([{ codigo: "K7QXM", nome: "Lucas", jogadores: 2 }]);
+      expect(buscar).toHaveBeenCalledWith("https://relay.teste/salas");
+    });
+
+    it("se o relay não responde, a lista fica vazia", async () => {
+      const sala = await importar();
+      expect(await sala.procurarSalasOnline(vi.fn(async () => Promise.reject(new TypeError("rede"))))).toEqual([]);
     });
 
     it("entrar com código conecta na sala do relay", async () => {

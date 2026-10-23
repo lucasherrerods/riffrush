@@ -21,6 +21,7 @@ vi.mock("./sala", () => ({
   temModoOnline: vi.fn(() => true),
   criarSalaOnline: vi.fn(),
   entrarNaSalaOnline: vi.fn(),
+  procurarSalasOnline: vi.fn(async () => []),
 }));
 
 vi.mock("@/shared/ui/avisos", () => ({ avisar: { error: vi.fn() } }));
@@ -56,6 +57,7 @@ beforeEach(() => {
   vi.mocked(sala.procurarSalas).mockResolvedValue([]);
   vi.mocked(sala.ehClienteWebDaSala).mockReturnValue(false);
   vi.mocked(sala.temModoOnline).mockReturnValue(true);
+  vi.mocked(sala.procurarSalasOnline).mockResolvedValue([]);
   vi.stubGlobal("AudioContext", AudioContextFalso);
 });
 
@@ -79,11 +81,25 @@ describe("fora de uma sala", () => {
     expect(sala.entrarNaSalaOnline).toHaveBeenCalledWith("k7qxm", lucas);
   });
 
+  it("lista as salas online abertas e entra numa delas pelo clique", async () => {
+    vi.mocked(sala.procurarSalasOnline).mockResolvedValue([{ codigo: "K7QXM", nome: "Ana", jogadores: 2 }]);
+    const { usuario } = abrir({ sala: null, endereco: "" });
+    await usuario.click(await screen.findByRole("button", { name: /Sala de Ana/ }));
+    expect(sala.entrarNaSalaOnline).toHaveBeenCalledWith("K7QXM", lucas);
+  });
+
+  it("sala online cheia aparece, mas não dá para entrar", async () => {
+    vi.mocked(sala.procurarSalasOnline).mockResolvedValue([{ codigo: "K7QXM", nome: "Ana", jogadores: 4 }]);
+    abrir({ sala: null, endereco: "" });
+    expect(await screen.findByRole("button", { name: /Sala de Ana/ })).toBeDisabled();
+  });
+
   it("sem servidor online configurado, o online não aparece", () => {
     vi.mocked(sala.temModoOnline).mockReturnValue(false);
     abrir({ sala: null, endereco: "" });
     expect(screen.queryByRole("button", { name: /Criar sala online/ })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Código da sala online")).not.toBeInTheDocument();
+    expect(sala.procurarSalasOnline).not.toHaveBeenCalled();
   });
 
   it("lista as salas da rede e entra numa delas", async () => {
