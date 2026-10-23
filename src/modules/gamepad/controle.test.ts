@@ -3,9 +3,26 @@ import { iniciarControle } from "./controle";
 
 function controleFalso() {
   const botoes = Array.from({ length: 17 }, () => ({ pressed: false }));
-  vi.stubGlobal("navigator", { ...navigator, getGamepads: () => [{ buttons: botoes }] });
-  return botoes;
+  const eixos = [0, 0, 0, 0];
+  vi.stubGlobal("navigator", { ...navigator, getGamepads: () => [{ buttons: botoes, axes: eixos }] });
+  return { botoes, eixos };
 }
+
+function ouvirTeclas() {
+  const teclas: string[] = [];
+  const ouvir = (e: KeyboardEvent) => teclas.push(`${e.type}:${e.code}`);
+  window.addEventListener("keydown", ouvir);
+  window.addEventListener("keyup", ouvir);
+  return {
+    teclas,
+    parar() {
+      window.removeEventListener("keydown", ouvir);
+      window.removeEventListener("keyup", ouvir);
+    },
+  };
+}
+
+const MAPA = { teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"], teclaDaEstrela: "Space" };
 
 const proximoQuadro = () => vi.advanceTimersByTime(5);
 
@@ -17,22 +34,61 @@ afterEach(() => {
 
 describe("iniciarControle", () => {
   it("transforma os botões do controle em teclas na janela", () => {
-    const botoes = controleFalso();
-    const teclas: string[] = [];
-    const ouvir = (e: KeyboardEvent) => teclas.push(`${e.type}:${e.code}`);
-    window.addEventListener("keydown", ouvir);
-    window.addEventListener("keyup", ouvir);
-    const parar = iniciarControle({ modo: () => "jogo", mapa: () => ({ teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"], teclaDaEstrela: "Space" }) });
+    const { botoes } = controleFalso();
+    const ouvinte = ouvirTeclas();
+    const parar = iniciarControle({ modo: () => "jogo", mapa: () => MAPA });
 
     botoes[BOTOES.RT].pressed = true;
     proximoQuadro();
     botoes[BOTOES.RT].pressed = false;
     proximoQuadro();
 
-    expect(teclas).toEqual(["keydown:KeyK", "keyup:KeyK"]);
+    expect(ouvinte.teclas).toEqual(["keydown:KeyK", "keyup:KeyK"]);
     parar();
-    window.removeEventListener("keydown", ouvir);
-    window.removeEventListener("keyup", ouvir);
+    ouvinte.parar();
+  });
+
+  it("o analógico navega nos menus e solta a seta ao voltar para o centro", () => {
+    const { eixos } = controleFalso();
+    const ouvinte = ouvirTeclas();
+    const parar = iniciarControle({ modo: () => "menu", mapa: () => MAPA });
+
+    eixos[1] = 0.9;
+    proximoQuadro();
+    eixos[1] = 0;
+    proximoQuadro();
+
+    expect(ouvinte.teclas).toEqual(["keydown:ArrowDown", "keyup:ArrowDown"]);
+    parar();
+    ouvinte.parar();
+  });
+
+  it("segurar uma direção no menu repete a seta, para correr pelas listas", () => {
+    const { eixos } = controleFalso();
+    const ouvinte = ouvirTeclas();
+    const parar = iniciarControle({ modo: () => "menu", mapa: () => MAPA });
+
+    eixos[1] = 0.9;
+    vi.advanceTimersByTime(1000);
+
+    const descidas = ouvinte.teclas.filter((t) => t === "keydown:ArrowDown").length;
+    expect(descidas).toBeGreaterThan(3);
+    expect(descidas).toBeLessThan(10);
+    parar();
+    ouvinte.parar();
+  });
+
+  it("no jogo, segurar o direcional não repete a palhetada", () => {
+    const { botoes } = controleFalso();
+    const ouvinte = ouvirTeclas();
+    const parar = iniciarControle({ modo: () => "jogo", mapa: () => MAPA });
+
+    botoes[BOTOES.BAIXO].pressed = true;
+    vi.advanceTimersByTime(1000);
+
+    expect(ouvinte.teclas.filter((t) => t === "keydown:ArrowDown")).toHaveLength(1);
+    parar();
+    ouvinte.parar();
   });
 
   it("funciona sem controle conectado", () => {

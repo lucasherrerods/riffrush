@@ -1,4 +1,4 @@
-import { BOTOES, traduzir, type Mapa } from "./mapeamento";
+import { BOTOES, direcoesDoAnalogico, juntarAnalogico, traduzir, type Mapa } from "./mapeamento";
 
 const mapa: Mapa = { teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"], teclaDaEstrela: "Space" };
 const solto = () => Array<boolean>(17).fill(false);
@@ -68,5 +68,53 @@ describe("traduzir nos menus", () => {
   it("solta a mesma tecla que apertou, mesmo se o modo mudou no meio", () => {
     const apertou = traduzir(solto(), com(BOTOES.A), vazio(), "menu", mapa);
     expect(traduzir(com(BOTOES.A), solto(), apertou.emitidos, "jogo", mapa).eventos).toEqual([{ tipo: "keyup", code: "Enter" }]);
+  });
+});
+
+describe("direcoesDoAnalogico", () => {
+  const nenhuma = [false, false, false, false];
+
+  it("vira cima, baixo, esquerda e direita quando passa do meio do curso", () => {
+    expect(direcoesDoAnalogico([0, -0.8], nenhuma)).toEqual([true, false, false, false]);
+    expect(direcoesDoAnalogico([0, 0.8], nenhuma)).toEqual([false, true, false, false]);
+    expect(direcoesDoAnalogico([-0.8, 0], nenhuma)).toEqual([false, false, true, false]);
+    expect(direcoesDoAnalogico([0.8, 0], nenhuma)).toEqual([false, false, false, true]);
+  });
+
+  it("ignora a folga do analógico parado", () => {
+    expect(direcoesDoAnalogico([0.2, -0.3], nenhuma)).toEqual(nenhuma);
+  });
+
+  it("na diagonal fica só com o eixo mais inclinado, para não pular duas coisas de uma vez", () => {
+    expect(direcoesDoAnalogico([0.6, 0.8], nenhuma)).toEqual([false, true, false, false]);
+  });
+
+  // Sem a diferença entre apertar e soltar, o analógico tremendo perto do limite apertaria várias vezes.
+  it("só solta quando volta bem para o centro", () => {
+    const cima = [true, false, false, false];
+    expect(direcoesDoAnalogico([0, -0.4], cima)).toEqual(cima);
+    expect(direcoesDoAnalogico([0, -0.4], nenhuma)).toEqual(nenhuma);
+    expect(direcoesDoAnalogico([0, -0.2], cima)).toEqual(nenhuma);
+  });
+
+  it("funciona com controle sem eixos", () => {
+    expect(direcoesDoAnalogico([], nenhuma)).toEqual(nenhuma);
+  });
+});
+
+describe("juntarAnalogico", () => {
+  it("nos menus, o analógico aperta o direcional", () => {
+    const botoes = juntarAnalogico(solto(), [true, false, false, true], "menu");
+    expect(botoes[BOTOES.CIMA]).toBe(true);
+    expect(botoes[BOTOES.DIREITA]).toBe(true);
+    expect(botoes[BOTOES.BAIXO]).toBe(false);
+  });
+
+  it("no jogo, o analógico não palheta", () => {
+    expect(juntarAnalogico(solto(), [false, true, false, false], "jogo")).toEqual(solto());
+  });
+
+  it("não perde o direcional apertado de verdade", () => {
+    expect(juntarAnalogico(com(BOTOES.ESQUERDA), [false, false, false, false], "menu")[BOTOES.ESQUERDA]).toBe(true);
   });
 });

@@ -30,6 +30,27 @@ const SETAS: Record<number, string> = {
 
 export type Modo = "jogo" | "menu";
 
+/** Cima, baixo, esquerda e direita: a mesma ordem dos botões do direcional. */
+export const DIRECIONAL = [BOTOES.CIMA, BOTOES.BAIXO, BOTOES.ESQUERDA, BOTOES.DIREITA];
+/** Aperta depois do meio do curso e só solta perto do centro, para o analógico tremendo não apertar de novo. */
+const LIMIAR_PARA_APERTAR = 0.5;
+const LIMIAR_PARA_SOLTAR = 0.3;
+
+/** Lê o analógico esquerdo (eixos 0 e 1) como o direcional. Na diagonal vale o eixo mais inclinado. */
+export function direcoesDoAnalogico(eixos: readonly number[], antes: readonly boolean[]): boolean[] {
+  const [x = 0, y = 0] = eixos;
+  const horizontal = Math.abs(x) > Math.abs(y);
+  const inclinacoes = [horizontal ? 0 : -y, horizontal ? 0 : y, horizontal ? -x : 0, horizontal ? x : 0];
+  return inclinacoes.map((inclinacao, i) => inclinacao > (antes[i] ? LIMIAR_PARA_SOLTAR : LIMIAR_PARA_APERTAR));
+}
+
+/** Nos menus o analógico vale como o direcional. No jogo, não: o direcional palheta. */
+export function juntarAnalogico(botoes: readonly boolean[], direcoes: readonly boolean[], modo: Modo): boolean[] {
+  const juntos = [...botoes];
+  if (modo === "menu") DIRECIONAL.forEach((botao, i) => (juntos[botao] = Boolean(botoes[botao]) || direcoes[i]));
+  return juntos;
+}
+
 export interface Mapa {
   teclas: string[];
   teclaDaEstrela: string;
