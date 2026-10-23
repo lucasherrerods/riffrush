@@ -28,7 +28,7 @@ export function Adversarios({ sala, compacto = false }: { sala: EstadoDaSala; co
                 <span className="truncate font-bold">{jogador.personagem.nome}</span>
                 <span className="font-mono text-texto-suave tabular-nums">{milhares(estado?.pontos ?? 0)}</span>
               </span>
-              <MedidorDeVida vida={estado?.vida ?? VIDA_INICIAL} horizontal rotulo={`Vida de ${jogador.personagem.nome}`} className="h-1 w-full" />
+              <MedidorDeVida vida={estado?.vida ?? VIDA_INICIAL} fantasma={estado?.fantasma} horizontal rotulo={`Vida de ${jogador.personagem.nome}`} className="h-1 w-full" />
             </li>
           );
         })}
@@ -52,7 +52,7 @@ export function Adversarios({ sala, compacto = false }: { sala: EstadoDaSala; co
             <div className="min-w-0 flex-1">
               <p className="truncate text-base font-bold">{jogador.personagem.nome}</p>
               <p className="font-mono text-base font-black tabular-nums">{(estado?.pontos ?? 0).toLocaleString("pt-BR")}</p>
-              <MedidorDeVida vida={vida} horizontal rotulo={`Vida de ${jogador.personagem.nome}`} className="mt-1 h-2 w-full" />
+              <MedidorDeVida vida={vida} fantasma={estado?.fantasma} horizontal rotulo={`Vida de ${jogador.personagem.nome}`} className="mt-1 h-2 w-full" />
               {estado?.derrota && <p className="text-base font-bold text-perigo">Vaiado</p>}
             </div>
           </motion.li>

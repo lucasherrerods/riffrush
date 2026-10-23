@@ -86,10 +86,11 @@ interface Hud {
   /** De 0 a 5: as estrelas conquistadas e o caminho até a próxima. */
   estrelas: number;
   estrelasDoRecorde: number;
+  fantasma: boolean;
 }
 
 const ENTRADA = 2.5;
-const HUD_INICIAL: Hud = { pontos: 0, sequencia: 0, multiplicador: 1, vida: 0.5, estrela: 0, estrelaAtiva: false, progresso: 0, precisao: 1, contagem: 3, pulso: 0, estrelas: 0, estrelasDoRecorde: 0 };
+const HUD_INICIAL: Hud = { pontos: 0, sequencia: 0, multiplicador: 1, vida: 0.5, estrela: 0, estrelaAtiva: false, progresso: 0, precisao: 1, contagem: 3, pulso: 0, estrelas: 0, estrelasDoRecorde: 0, fantasma: false };
 const MAXIMO_DE_EXPLOSOES = 20;
 const MAXIMO_DE_TROVOES = 4;
 const SINCRONIA_DO_VIDEO = 0.15;
@@ -182,7 +183,8 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
     if (inicio > agora + 0.05) fonte.start(inicio);
     else fonte.start(agora + 0.05, agora + 0.05 - inicio);
 
-    const partida = criarPartida(carregada.notas, { semFalha: opcoes.semFalha });
+    // Em rede ninguém sai da música: quem zera a vida vira fantasma e segue pontuando.
+    const partida = criarPartida(carregada.notas, { semFalha: opcoes.semFalha, fantasma: inicioEmRede !== undefined });
     const bot = opcoes.bot ? criarBot() : null;
     const sprites = criarSprites();
     const contexto2d = canvas.current?.getContext("2d") ?? null;
@@ -207,6 +209,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
         sequencia: partida.sequencia,
         pulso: partida.acertos,
         derrota: partida.derrota,
+        fantasma: partida.fantasma,
         terminou: terminouAgora,
       });
     const avisar = (texto: string, estrela = false) => setAviso({ id: ++idDoAviso, texto, estrela });
@@ -250,6 +253,9 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
           avisar("STAR POWER!", true);
         } else if (evento.tipo === "derrota") {
           terminar();
+        } else if (evento.tipo === "virouFantasma") {
+          tocarEfeito("erro", opcoes.volumeDosEfeitos);
+          avisar("Virou fantasma! Acerte as notas para voltar.");
         }
       }
     };
@@ -400,6 +406,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
         precisao: Math.round(precisao(partida) * 1000) / 1000,
         contagem: tempo < 0 ? Math.ceil(-tempo) : 0,
         pulso: partida.acertos,
+        fantasma: partida.fantasma,
         estrelas: Math.round(progressoDasEstrelas(partida.pontos, carregada.notas.length) * 100) / 100,
         estrelasDoRecorde: progressoDasEstrelas(recordeAtual.current ?? 0, carregada.notas.length),
       };
@@ -535,7 +542,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
           {estreita ? (
             <div data-parte="hud-compacto" className="absolute top-20 right-4 flex flex-col items-end gap-2">
               <Avatar personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} className="h-20 w-auto" />
-              <MedidorDeVida vida={hud.vida} horizontal className="h-2.5 w-24" />
+              <MedidorDeVida vida={hud.vida} fantasma={hud.fantasma} horizontal className="h-2.5 w-24" />
               <button
                 aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`}
                 onClick={() => controles.current.estrela()}
@@ -561,7 +568,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
                 </div>
                 <div className="flex flex-col items-center gap-2">
                   <span className="text-base font-bold text-texto-suave">ROCK</span>
-                  <MedidorDeVida vida={hud.vida} className="h-40 w-6" />
+                  <MedidorDeVida vida={hud.vida} fantasma={hud.fantasma} className="h-40 w-6" />
                 </div>
               </div>
             </div>

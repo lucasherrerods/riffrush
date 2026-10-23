@@ -40,6 +40,11 @@ describe("Adversarios", () => {
     expect(screen.getByText("Vaiado")).toBeInTheDocument();
   });
 
+  it("mostra o fantasma na barra de vida de quem zerou a vida", () => {
+    render(<Adversarios sala={sala({ adversarios: { 2: { pontos: 10, vida: 0.3, sequencia: 0, pulso: 0, derrota: false, terminou: false, fantasma: true } } })} />);
+    expect(screen.getByLabelText("Virou fantasma")).toBeInTheDocument();
+  });
+
   it("jogando sozinho na sala, não mostra nada", () => {
     const { container } = render(<Adversarios sala={sala({ jogadores: [{ id: 1, personagem: lucas }] })} />);
     expect(container).toBeEmptyDOMElement();

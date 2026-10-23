@@ -32,7 +32,8 @@ export function recordeDe(recordes: Recordes, musicaId: string, dificuldade: Dif
 
 /** Guarda o resultado se ele bater o recorde. Devolve true quando é recorde novo. */
 export function salvarRecorde(resultado: Resultado) {
-  if (resultado.derrota) return false;
+  // Fantasma conta no placar da sala, mas não é recorde: no solo a mesma partida teria acabado.
+  if (resultado.derrota || resultado.fantasma) return false;
   const recordes = carregarRecordes();
   const chave = chaveDoRecorde(resultado.musicaId, resultado.dificuldade);
   if (recordes[chave] && recordes[chave].pontos >= resultado.pontos) return false;

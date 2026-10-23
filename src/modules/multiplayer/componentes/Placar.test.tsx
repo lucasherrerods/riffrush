@@ -4,7 +4,7 @@ import { estadoInicial, type EstadoDaSala } from "../protocolo";
 import { Placar } from "./Placar";
 
 const nomes = ["Lucas", "Vitor", "Ana"];
-const jogada = (pontos: number, terminou = true, derrota = false) => ({ pontos, vida: 0.5, sequencia: 0, pulso: 0, derrota, terminou });
+const jogada = (pontos: number, terminou = true, derrota = false, fantasma = false) => ({ pontos, vida: 0.5, sequencia: 0, pulso: 0, derrota, terminou, fantasma });
 
 function sala(adversarios: EstadoDaSala["adversarios"]): EstadoDaSala {
   return {
@@ -20,6 +20,16 @@ describe("Placar", () => {
     render(<Placar sala={sala({ 2: jogada(900), 3: jogada(1500) })} meusPontos={1200} minhaDerrota={false} />);
     const linhas = screen.getAllByRole("listitem").map((l) => within(l).getByText(/Lucas|Vitor|Ana/).textContent);
     expect(linhas).toEqual(["Ana", "Lucas", "Vitor"]);
+  });
+
+  it("o fantasma aparece no placar, mas o ranking é só pelos pontos", () => {
+    render(<Placar sala={sala({ 2: jogada(2000, true, false, true), 3: jogada(100) })} meusPontos={1200} minhaDerrota={false} meuFantasma />);
+    const linhas = screen.getAllByRole("listitem");
+    expect(within(linhas[0]).getByText("Vitor")).toBeInTheDocument();
+    expect(within(linhas[0]).getByLabelText("Virou fantasma")).toBeInTheDocument();
+    expect(within(linhas[1]).getByText("Lucas")).toBeInTheDocument();
+    expect(within(linhas[1]).getByLabelText("Virou fantasma")).toBeInTheDocument();
+    expect(within(linhas[0]).getByLabelText("Vencedor")).toBeInTheDocument();
   });
 
   it("enquanto alguém ainda toca, espera e não coroa ninguém", () => {

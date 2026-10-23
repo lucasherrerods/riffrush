@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Crown, Loader2 } from "lucide-react";
+import { Crown, Ghost, Loader2 } from "lucide-react";
 import { Avatar } from "@/modules/character";
 import { cn } from "@/shared/lib/utils";
 import type { EstadoDaSala } from "../protocolo";
@@ -8,10 +8,11 @@ interface Props {
   sala: EstadoDaSala;
   meusPontos: number;
   minhaDerrota: boolean;
+  meuFantasma?: boolean;
 }
 
 /** O placar da sala no fim da partida, atualizado ao vivo enquanto os outros terminam. */
-export function Placar({ sala, meusPontos, minhaDerrota }: Props) {
+export function Placar({ sala, meusPontos, minhaDerrota, meuFantasma = false }: Props) {
   const linhas = sala.jogadores
     .map((jogador) => {
       const meu = jogador.id === sala.meuId;
@@ -22,6 +23,7 @@ export function Placar({ sala, meusPontos, minhaDerrota }: Props) {
         meu,
         pontos: meu ? meusPontos : (estado?.pontos ?? 0),
         derrota: meu ? minhaDerrota : !!estado?.derrota,
+        fantasma: meu ? meuFantasma : !!estado?.fantasma,
         terminou: meu || !!estado?.terminou,
       };
     })
@@ -43,6 +45,7 @@ export function Placar({ sala, meusPontos, minhaDerrota }: Props) {
               <span>{linha.personagem.nome}</span>
               {i === 0 && !esperando && <Crown aria-label="Vencedor" className="size-4 text-ouro" />}
             </span>
+            {linha.fantasma && <Ghost aria-label="Virou fantasma" className="size-4 text-texto-suave" />}
             {linha.derrota && <span className="text-base font-bold text-perigo">Vaiado</span>}
             {!linha.terminou && <Loader2 className="size-4 animate-spin text-texto-suave" aria-label="Ainda tocando" />}
             <span className="font-mono text-xl font-black tabular-nums">{linha.pontos.toLocaleString("pt-BR")}</span>

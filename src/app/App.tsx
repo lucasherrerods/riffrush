@@ -268,7 +268,7 @@ export function App() {
               rotuloDeContinuar={emRede ? "Voltar para a sala" : undefined}
               extra={
                 emRede && conexao.sala ? (
-                  <Placar sala={conexao.sala} meusPontos={resultado.resultado.pontos} minhaDerrota={resultado.resultado.derrota} />
+                  <Placar sala={conexao.sala} meusPontos={resultado.resultado.pontos} minhaDerrota={resultado.resultado.derrota} meuFantasma={resultado.resultado.fantasma} />
                 ) : undefined
               }
             />

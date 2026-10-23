@@ -9,6 +9,8 @@ export interface Resultado {
   total: number;
   maiorSequencia: number;
   derrota: boolean;
+  /** No multijogador a vida zerou no meio, mas a música foi até o fim. */
+  fantasma?: boolean;
 }
 
 export function resultadoDaPartida(partida: Partida, musicaId: string, dificuldade: Dificuldade): Resultado {
@@ -20,5 +22,6 @@ export function resultadoDaPartida(partida: Partida, musicaId: string, dificulda
     total: partida.notas.length,
     maiorSequencia: partida.maiorSequencia,
     derrota: partida.derrota,
+    fantasma: partida.fantasma,
   };
 }
