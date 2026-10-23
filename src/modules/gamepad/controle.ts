@@ -1,3 +1,4 @@
+import { marcarComoDoControle, registrarUso } from "./dispositivo";
 import { DIRECIONAL, direcoesDoAnalogico, juntarAnalogico, traduzir, type Mapa, type Modo } from "./mapeamento";
 
 interface Opcoes {
@@ -11,8 +12,12 @@ const INTERVALO_MS = 5;
 const ATRASO_DA_REPETICAO_MS = 400;
 const INTERVALO_DA_REPETICAO_MS = 120;
 
-const apertar = (tipo: "keydown" | "keyup", code: string, repeat = false) =>
-  window.dispatchEvent(new KeyboardEvent(tipo, { code, key: code, repeat, bubbles: true, cancelable: true }));
+const apertar = (tipo: "keydown" | "keyup", code: string, repeat = false) => {
+  const evento = new KeyboardEvent(tipo, { code, key: code, repeat, bubbles: true, cancelable: true });
+  marcarComoDoControle(evento);
+  registrarUso("controle");
+  window.dispatchEvent(evento);
+};
 
 /** Lê o controle e transforma os botões em teclas, então todo o jogo funciona sem mudar nada. */
 export function iniciarControle({ modo, mapa }: Opcoes) {

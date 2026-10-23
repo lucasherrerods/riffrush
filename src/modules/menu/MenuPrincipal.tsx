@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Play, Power, Settings2, Shirt, Users, Zap, type LucideIcon } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
+import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
 import { fecharJanela } from "@/modules/platform";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
@@ -24,6 +25,7 @@ interface Item {
 
 export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar }: Props) {
   const [selecionado, setSelecionado] = useState(0);
+  const dispositivo = useDispositivo();
   const comuns: Item[] = [
     { rotulo: "Personagem", icone: Shirt, acao: aoPersonagem },
     { rotulo: "Configurações", icone: Settings2, acao: aoConfigurar },
@@ -99,7 +101,9 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
         })}
       </nav>
 
-      <p className="absolute bottom-6 text-base text-texto-suave">↑ ↓ para navegar · Enter para escolher</p>
+      <p className="absolute bottom-6 text-base text-texto-suave">
+        {rotuloDoComando("vertical", dispositivo)} para navegar · {rotuloDoComando("confirmar", dispositivo)} para escolher
+      </p>
     </div>
   );
 }

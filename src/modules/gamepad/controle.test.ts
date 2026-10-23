@@ -1,5 +1,6 @@
 import { BOTOES } from "./mapeamento";
 import { iniciarControle } from "./controle";
+import { dispositivoAtual, registrarUso } from "./dispositivo";
 
 function controleFalso() {
   const botoes = Array.from({ length: 17 }, () => ({ pressed: false }));
@@ -89,6 +90,18 @@ describe("iniciarControle", () => {
     expect(ouvinte.teclas.filter((t) => t === "keydown:ArrowDown")).toHaveLength(1);
     parar();
     ouvinte.parar();
+  });
+
+  it("apertar um botão avisa que o jogador está usando o controle", () => {
+    registrarUso("teclado");
+    const { botoes } = controleFalso();
+    const parar = iniciarControle({ modo: () => "menu", mapa: () => ({ teclas: [], teclaDaEstrela: "Space" }) });
+
+    botoes[BOTOES.A].pressed = true;
+    proximoQuadro();
+
+    expect(dispositivoAtual()).toBe("controle");
+    parar();
   });
 
   it("funciona sem controle conectado", () => {

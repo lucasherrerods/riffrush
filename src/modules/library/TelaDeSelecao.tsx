@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { ArrowLeft, FileAudio, Flame, Play, Star, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/character";
+import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
 import { carregarRecordes, recordeDe } from "@/modules/results";
 import { DIFICULDADES, type Dificuldade, type Musica } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
@@ -33,6 +34,7 @@ export function TelaDeSelecao(props: Props) {
   const musica = musicas[indice];
   const recordeAtual = recordeDe(recordes, musica.id, dificuldade);
   const efeito = (nome: "mover" | "selecionar" | "voltar") => tocarEfeito(nome, volumeDosEfeitos);
+  const dispositivo = useDispositivo();
 
   useEffect(() => {
     lista.current?.querySelector(`[data-indice="${indice}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -194,10 +196,10 @@ export function TelaDeSelecao(props: Props) {
       </div>
 
       <footer className="flex items-center gap-8 bg-superficie px-8 py-2 max-md:hidden">
-        <Comando teclas="← →">Dificuldade</Comando>
-        <Comando teclas="↑ ↓">Música</Comando>
-        <Comando teclas="Enter">Confirmar</Comando>
-        <Comando teclas="Esc">Voltar</Comando>
+        <Comando teclas={rotuloDoComando("horizontal", dispositivo)}>Dificuldade</Comando>
+        <Comando teclas={rotuloDoComando("vertical", dispositivo)}>Música</Comando>
+        <Comando teclas={rotuloDoComando("confirmar", dispositivo)}>Confirmar</Comando>
+        <Comando teclas={rotuloDoComando("voltar", dispositivo)}>Voltar</Comando>
       </footer>
     </div>
   );
