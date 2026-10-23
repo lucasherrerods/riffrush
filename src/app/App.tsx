@@ -3,13 +3,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/character";
 import { ROTULOS_DOS_TRASTES, ROTULO_DA_ESTRELA, iniciarControle } from "@/modules/gamepad";
 import { TelaDeJogo, type Resultado } from "@/modules/gameplay";
-import { TelaDeSelecao } from "@/modules/library";
+import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, useImportacao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { TelaDeResultado, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
-import { MUSICAS_EMBUTIDAS, importarArquivo, type Dificuldade, type Musica } from "@/modules/songs";
+import { MUSICAS_EMBUTIDAS, type Dificuldade, type Musica } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -117,23 +117,16 @@ export function App() {
     [configuracoes.bot],
   );
 
-  const importar = async (arquivos: File[]) => {
-    const tentativas = await Promise.allSettled(arquivos.map(importarArquivo));
-    const importadas = tentativas.flatMap((t) => (t.status === "fulfilled" ? [t.value] : []));
-    for (const t of tentativas) if (t.status === "rejected") avisar.error(String(t.reason));
-    if (!importadas.length) return;
+  const { importar, progresso } = useImportacao((importadas) => {
     setMusicas((atuais) => {
       const novas = importadas.filter((m) => !atuais.some((a) => a.id === m.id));
       const todas = [...atuais, ...novas];
       setIndice(todas.findIndex((m) => m.id === importadas[importadas.length - 1].id));
       return todas;
     });
-    const comChart = importadas.every((m) => m.sng);
-    avisar.success(
-      `${importadas.length} ${importadas.length === 1 ? "música importada" : "músicas importadas"}! ` +
-        (comChart ? "Usando o chart do Clone Hero." : "O chart é gerado automaticamente."),
-    );
-  };
+    // Arrastou no menu: já mostra a música na seleção.
+    if (telaAtual.current === "menu") setTela("selecao");
+  });
 
   return (
     <main className="dark relative h-dvh w-screen overflow-hidden bg-fundo text-texto">
@@ -240,6 +233,8 @@ export function App() {
           )}
         </motion.div>
       </AnimatePresence>
+      <SoltarParaImportar ativo={tela !== "jogo"} aoSoltar={(arquivos) => void importar(arquivos)} />
+      <ProgressoDaImportacao progresso={progresso} />
       <Avisos />
     </main>
   );

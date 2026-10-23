@@ -80,6 +80,23 @@ describe("importarArquivo", () => {
     });
   });
 
+  it("avisa o progresso do .sng, sempre crescendo, até terminar", async () => {
+    const { importarArquivo } = await importar();
+    const arquivo = arquivoSng({}, { "notes.chart": new TextEncoder().encode(CHART), "song.wav": construirWav(1, 220), "guitar.wav": construirWav(1, 330) });
+    const progresso: number[] = [];
+    await importarArquivo(arquivo, (fracao) => progresso.push(fracao));
+    expect(progresso.length).toBeGreaterThan(2);
+    expect(progresso).toEqual([...progresso].sort((a, b) => a - b));
+    expect(progresso.at(-1)).toBe(1);
+  });
+
+  it("um áudio comum termina na hora", async () => {
+    const { importarArquivo } = await importar();
+    const aoProgredir = vi.fn();
+    await importarArquivo(new File([construirWav(1, 440)], "tom.wav"), aoProgredir);
+    expect(aoProgredir).toHaveBeenLastCalledWith(1);
+  });
+
   it("recusa .sng sem chart", async () => {
     const { importarArquivo } = await importar();
     await expect(importarArquivo(arquivoSng({}, { "song.wav": construirWav(1, 220) }))).rejects.toThrow("chart");

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { definirTelaCheia } from "@/modules/platform";
 import { carregarRecordes } from "@/modules/results";
@@ -104,6 +104,22 @@ describe("App", () => {
     await usuario.upload(await screen.findByLabelText(/Importar/), new File(["x"], "Banda X - Hit.wav", { type: "audio/wav" }));
     expect(await screen.findByRole("heading", { name: "Hit" })).toBeInTheDocument();
     expect(await screen.findByText(/1 música importada/)).toBeInTheDocument();
+  });
+
+  it("arrastar uma música para o menu importa e abre a seleção com ela", async () => {
+    abrir();
+    const arquivo = new File(["x"], "Banda X - Arrastada.wav", { type: "audio/wav" });
+    fireEvent.dragEnter(window, { dataTransfer: { types: ["Files"], files: [arquivo] } });
+    fireEvent.drop(window, { dataTransfer: { types: ["Files"], files: [arquivo] } });
+    expect(await screen.findByRole("heading", { name: "Arrastada" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
+  });
+
+  it("avisa quando o arquivo arrastado não é música", async () => {
+    abrir();
+    const foto = new File(["x"], "foto.png", { type: "image/png" });
+    fireEvent.drop(window, { dataTransfer: { types: ["Files"], files: [foto] } });
+    expect(await screen.findByText(/foto.png não é música/)).toBeInTheDocument();
   });
 
   it("o controle usa os trastes na partida e navega nos menus", async () => {
