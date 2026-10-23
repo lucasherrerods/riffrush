@@ -21,18 +21,6 @@ export interface Batida {
   forte: boolean;
 }
 
-export interface EstiloMusical {
-  bpm: number;
-  /** Nota MIDI da tônica. */
-  tonica: number;
-  escala: number[];
-  /** Grau da escala que vira o acorde de cada compasso, em ciclo. */
-  progressao: number[];
-  timbre: OscillatorType;
-  distorcao: number;
-  densidade: number;
-}
-
 export interface Musica {
   id: string;
   titulo: string;
@@ -42,8 +30,8 @@ export interface Musica {
   /** Gradiente usado quando não há imagem de capa. */
   capa: [string, string];
   intensidade: number;
-  estilo?: EstiloMusical;
-  semente?: number;
+  /** Música que vem com o jogo: o endereço do áudio dentro do projeto. */
+  audioEmbutido?: string;
   arquivo?: File;
   /** O arquivo importado é um clipe: o vídeo aparece durante a música. */
   video?: boolean;

@@ -2,9 +2,10 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { obterContextoDeAudio } from "@/modules/audio";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
-import { MUSICAS_EMBUTIDAS, carregarMusica, type Nota } from "@/modules/songs";
+import { carregarMusica, type Nota } from "@/modules/songs";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { OPCOES_PADRAO_DA_PARTIDA, TelaDeJogo, type OpcoesDaPartida } from "./TelaDeJogo";
+import { MUSICAS_DE_TESTE } from "@/test/musicas";
 
 vi.mock("@/modules/songs", async (original) => ({
   ...(await original<typeof import("@/modules/songs")>()),
@@ -23,7 +24,7 @@ function abrir(opcoes: Partial<OpcoesDaPartida> = {}, recorde?: number) {
   const aoTerminar = vi.fn();
   render(
     <TelaDeJogo
-      musica={MUSICAS_EMBUTIDAS[0]}
+      musica={MUSICAS_DE_TESTE[0]}
       dificuldade="medio"
       opcoes={{ ...OPCOES_PADRAO_DA_PARTIDA, ...opcoes }}
       personagem={PERSONAGEM_PADRAO}
@@ -188,7 +189,7 @@ describe("TelaDeJogo em rede", () => {
     const aoTerminar = vi.fn();
     render(
       <TelaDeJogo
-        musica={MUSICAS_EMBUTIDAS[0]}
+        musica={MUSICAS_DE_TESTE[0]}
         dificuldade="medio"
         opcoes={OPCOES_PADRAO_DA_PARTIDA}
         personagem={PERSONAGEM_PADRAO}

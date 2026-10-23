@@ -3,11 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { registrarUso } from "@/modules/gamepad";
 import { salvarRecorde } from "@/modules/results";
-import { MUSICAS_EMBUTIDAS, type Dificuldade, type Musica } from "@/modules/songs";
+import { type Dificuldade, type Musica } from "@/modules/songs";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { TelaDeSelecao } from "./TelaDeSelecao";
+import { MUSICAS_DE_TESTE } from "@/test/musicas";
 
-function abrir({ indice = 0, dificuldade = "medio" as Dificuldade, musicas = MUSICAS_EMBUTIDAS } = {}) {
+function abrir({ indice = 0, dificuldade = "medio" as Dificuldade, musicas = MUSICAS_DE_TESTE } = {}) {
   const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn() };
   render(
     <TelaDeSelecao
@@ -30,7 +31,7 @@ beforeEach(() => {
 describe("TelaDeSelecao", () => {
   it("lista as músicas e marca a selecionada", () => {
     abrir({ indice: 2 });
-    expect(screen.getAllByRole("listitem")).toHaveLength(MUSICAS_EMBUTIDAS.length);
+    expect(screen.getAllByRole("listitem")).toHaveLength(MUSICAS_DE_TESTE.length);
     expect(screen.getByRole("button", { name: /Cosmic Riff/ })).toHaveAttribute("aria-current", "true");
     expect(screen.getByRole("heading", { name: "Cosmic Riff" })).toBeInTheDocument();
   });
@@ -38,7 +39,7 @@ describe("TelaDeSelecao", () => {
   it("as setas para cima e para baixo trocam de música, dando a volta", async () => {
     const { aoSelecionar, usuario } = abrir({ indice: 0 });
     await usuario.keyboard("{ArrowUp}");
-    expect(aoSelecionar).toHaveBeenCalledWith(MUSICAS_EMBUTIDAS.length - 1);
+    expect(aoSelecionar).toHaveBeenCalledWith(MUSICAS_DE_TESTE.length - 1);
     await usuario.keyboard("{ArrowDown}");
     expect(aoSelecionar).toHaveBeenCalledWith(1);
   });
@@ -82,7 +83,7 @@ describe("TelaDeSelecao", () => {
   });
 
   it("usa a imagem de capa quando a música tem uma", () => {
-    const comCapa: Musica = { ...MUSICAS_EMBUTIDAS[0], imagemDeCapa: "blob:capa" };
+    const comCapa: Musica = { ...MUSICAS_DE_TESTE[0], imagemDeCapa: "blob:capa" };
     abrir({ musicas: [comCapa] });
     expect(screen.getByRole("img", { name: /Capa de Neon Highway/ })).toHaveAttribute("src", "blob:capa");
   });
@@ -118,7 +119,7 @@ describe("TelaDeSelecao com carrossel", () => {
     fireEvent.wheel(carrossel, { deltaY: 120 });
     expect(aoSelecionar).toHaveBeenLastCalledWith(1);
     fireEvent.wheel(carrossel, { deltaY: -120 });
-    expect(aoSelecionar).toHaveBeenLastCalledWith(MUSICAS_EMBUTIDAS.length - 1);
+    expect(aoSelecionar).toHaveBeenLastCalledWith(MUSICAS_DE_TESTE.length - 1);
   });
 
   it("um toque leve na roda não troca de música", () => {
@@ -146,8 +147,8 @@ describe("TelaDeSelecao com estética arcade", () => {
   it("o painel mostra BPM, gênero e intensidade em cards", () => {
     abrir({ indice: 0 });
     const painel = screen.getByRole("region", { name: "Informações da música" });
-    expect(within(painel).getByText("BPM").nextSibling).toHaveTextContent(String(MUSICAS_EMBUTIDAS[0].bpm));
-    expect(within(painel).getByText("Gênero").nextSibling).toHaveTextContent(MUSICAS_EMBUTIDAS[0].genero);
+    expect(within(painel).getByText("BPM").nextSibling).toHaveTextContent(String(MUSICAS_DE_TESTE[0].bpm));
+    expect(within(painel).getByText("Gênero").nextSibling).toHaveTextContent(MUSICAS_DE_TESTE[0].genero);
     expect(within(painel).getByLabelText(/Intensidade/)).toBeInTheDocument();
   });
 
@@ -177,7 +178,7 @@ describe("TelaDeSelecao com estética arcade", () => {
 });
 
 describe("TelaDeSelecao com música do histórico sem áudio", () => {
-  const semArquivo: Musica = { ...MUSICAS_EMBUTIDAS[0], id: "arquivo:Riff.mp3:10", titulo: "Riff" };
+  const semArquivo: Musica = { ...MUSICAS_DE_TESTE[0], id: "arquivo:Riff.mp3:10", titulo: "Riff" };
 
   it("troca o TOCAR por importar de novo", () => {
     abrir({ musicas: [semArquivo] });
@@ -201,7 +202,7 @@ describe("TelaDeSelecao com música do histórico sem áudio", () => {
 });
 
 describe("TelaDeSelecao removendo músicas", () => {
-  const importada: Musica = { ...MUSICAS_EMBUTIDAS[0], id: "arquivo:Riff.mp3:10", titulo: "Riff", arquivo: new File(["x"], "Riff.mp3") };
+  const importada: Musica = { ...MUSICAS_DE_TESTE[0], id: "arquivo:Riff.mp3:10", titulo: "Riff", arquivo: new File(["x"], "Riff.mp3") };
 
   it("música embutida não pode ser removida", () => {
     abrir();

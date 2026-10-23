@@ -131,7 +131,7 @@ describe("App", () => {
     await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
     await usuario.click(await screen.findByRole("button", { name: "terminar" }));
     expect(await screen.findByLabelText("777 pontos")).toBeInTheDocument();
-    expect(carregarRecordes()["neon-highway:medio"].pontos).toBe(777);
+    expect(carregarRecordes()["spektrem-shine:medio"].pontos).toBe(777);
   });
 
   it("a partida recebe o recorde da música para marcar na barra de estrelas", async () => {
@@ -273,7 +273,7 @@ describe("App em rede", () => {
     hostId: 1,
     personagem: vitor,
     jogadores: [{ id: 1, personagem: PERSONAGEM_PADRAO }, { id: 2, personagem: vitor }],
-    musica: { tipo: "embutida" as const, id: "overdrive" },
+    musica: { tipo: "embutida" as const, id: "spektrem-shine" },
     dificuldade: "expert" as const,
     prontos: [],
     adversarios: {},
@@ -290,7 +290,7 @@ describe("App em rede", () => {
   it("quando o host dá a largada, abre a partida em rede com os adversários", async () => {
     vi.mocked(useConexao).mockReturnValue({ sala: salaJogando, endereco: "http://h:7777" });
     abrir();
-    expect(await screen.findByRole("heading", { name: "Jogando Overdrive em rede" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Jogando Shine em rede" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Personagem Rockstar" })).toBeInTheDocument();
   });
 

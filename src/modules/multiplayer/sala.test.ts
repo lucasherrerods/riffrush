@@ -96,7 +96,7 @@ describe("sala", () => {
       socket().abrir();
       socket().receber(0, { tipo: "bemVindo", id: 2 });
       sala.marcarPronto(true);
-      expect(socket().enviadas.at(-1)).toEqual({ tipo: "pronto", musicaId: "neon-highway", pronto: true });
+      expect(socket().enviadas.at(-1)).toEqual({ tipo: "pronto", musicaId: "spektrem-shine", pronto: true });
     });
 
     it("na LAN, o host compartilha a música importada assim que escolhe, antes de avisar a sala", async () => {

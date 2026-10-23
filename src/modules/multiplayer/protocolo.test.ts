@@ -1,3 +1,4 @@
+import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
 import { PERSONAGEM_PADRAO, type Personagem } from "@/modules/character";
 import type { EstadoDoJogador } from "@/modules/gameplay";
 import {
@@ -26,6 +27,13 @@ function salaDoConvidado(): EstadoDaSala {
   const inicio = estadoInicial(vitor, false);
   return reduzir(inicio, 0, { tipo: "bemVindo", id: 2 }, 0).estado;
 }
+
+// Bug: a sala começava numa música que saiu do catálogo, e o convidado ficava sem música.
+describe("estadoInicial", () => {
+  it("a sala começa com a primeira música do catálogo", () => {
+    expect(estadoInicial(lucas, true).musica).toEqual({ tipo: "embutida", id: MUSICAS_EMBUTIDAS[0].id });
+  });
+});
 
 describe("reduzir", () => {
   it("ao entrar, guarda o próprio id e se apresenta para a sala", () => {

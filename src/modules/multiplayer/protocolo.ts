@@ -1,6 +1,6 @@
 import type { Personagem } from "@/modules/character";
 import type { EstadoDoJogador } from "@/modules/gameplay";
-import type { Dificuldade } from "@/modules/songs";
+import { MUSICAS_EMBUTIDAS, type Dificuldade } from "@/modules/songs";
 
 /*
  * A sala em rede como função pura: recebe o estado e uma mensagem, devolve o estado novo
@@ -72,7 +72,7 @@ export function estadoInicial(personagem: Personagem, souHost: boolean): EstadoD
     hostId: 0,
     personagem,
     jogadores: [],
-    musica: { tipo: "embutida", id: "neon-highway" },
+    musica: { tipo: "embutida", id: MUSICAS_EMBUTIDAS[0].id },
     dificuldade: "medio",
     prontos: [],
     adversarios: {},
