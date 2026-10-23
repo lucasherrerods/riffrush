@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight, Disc3, LoaderCircle, Search } from "lucide-react";
 import { useTeclado } from "@/shared/hooks/useTeclado";
+import { useValorAtrasado } from "@/shared/hooks/useValorAtrasado";
 import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { Input } from "@/shared/ui/input";
@@ -19,7 +20,7 @@ import {
 interface Props {
   aoVoltar: () => void;
   buscar?: (filtros: FiltrosDaBusca, pagina: number, opcoes: { sinal: AbortSignal }) => Promise<RespostaDaBusca>;
-  /** Espera o jogador parar de digitar antes de buscar, para não estourar o limite da API. */
+  /** Espera o jogador parar de digitar antes de buscar o texto, para não estourar o limite da API. */
   atrasoMs?: number;
 }
 
@@ -43,31 +44,30 @@ const OPCOES_DE_DIFICULDADE: { id: DificuldadeDaBusca | "todas"; rotulo: string 
 
 type Estado = { tipo: "carregando" } | { tipo: "pronto"; resposta: RespostaDaBusca } | { tipo: "erro"; mensagem: string };
 
-export function TelaDeBusca({ aoVoltar, buscar = buscarNoEncore, atrasoMs = 400 }: Props) {
-  const [filtros, setFiltros] = useState<FiltrosDaBusca>(FILTROS_PADRAO);
+export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atrasoMs = 500 }: Props) {
+  const [texto, setTexto] = useState(FILTROS_PADRAO.texto);
+  const [filtros, setFiltros] = useState<Omit<FiltrosDaBusca, "texto">>(FILTROS_PADRAO);
   const [pagina, setPagina] = useState(1);
   const [estado, setEstado] = useState<Estado>({ tipo: "carregando" });
+  const textoAtrasado = useValorAtrasado(texto, atrasoMs);
 
   const mudarFiltros = (parcial: Partial<FiltrosDaBusca>) => {
     setFiltros((atuais) => ({ ...atuais, ...parcial }));
     setPagina(1);
   };
 
+  useEffect(() => setPagina(1), [textoAtrasado]);
+
   useEffect(() => {
     const controle = new AbortController();
     setEstado({ tipo: "carregando" });
-    const espera = setTimeout(() => {
-      buscar(filtros, pagina, { sinal: controle.signal })
-        .then((resposta) => setEstado({ tipo: "pronto", resposta }))
-        .catch((erro: Error) => {
-          if (!controle.signal.aborted) setEstado({ tipo: "erro", mensagem: erro.message });
-        });
-    }, atrasoMs);
-    return () => {
-      clearTimeout(espera);
-      controle.abort();
-    };
-  }, [buscar, filtros, pagina, atrasoMs]);
+    buscar({ ...filtros, texto: textoAtrasado }, pagina, { sinal: controle.signal })
+      .then((resposta) => setEstado({ tipo: "pronto", resposta }))
+      .catch((erro: Error) => {
+        if (!controle.signal.aborted) setEstado({ tipo: "erro", mensagem: erro.message });
+      });
+    return () => controle.abort();
+  }, [buscar, filtros, textoAtrasado, pagina]);
 
   useTeclado((evento) => {
     if (evento.code === "Escape") aoVoltar();
@@ -81,7 +81,7 @@ export function TelaDeBusca({ aoVoltar, buscar = buscarNoEncore, atrasoMs = 400 
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
           <ArrowLeft />
         </Button>
-        <h1 className="text-4xl leading-[1.1] text-destaque max-md:text-2xl">Busca música</h1>
+        <h1 className="text-4xl leading-[1.1] text-destaque max-md:text-2xl">Busca músicas</h1>
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 p-8 max-md:p-4">
@@ -89,10 +89,10 @@ export function TelaDeBusca({ aoVoltar, buscar = buscarNoEncore, atrasoMs = 400 
           <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 opacity-70" aria-hidden />
           <Input
             type="search"
-            aria-label="Buscar música"
+            aria-label="Buscar músicas"
             placeholder="Nome da música, artista, álbum ou charter"
-            value={filtros.texto}
-            onChange={(evento) => mudarFiltros({ texto: evento.target.value })}
+            value={texto}
+            onChange={(evento) => setTexto(evento.target.value)}
             className="h-12 pl-12 text-base md:text-base"
             autoFocus
           />

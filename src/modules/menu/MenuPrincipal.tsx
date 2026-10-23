@@ -15,7 +15,7 @@ interface Props {
   aoMultijogador: () => void;
   aoPersonagem: () => void;
   aoConfigurar: () => void;
-  aoBuscarMusica: () => void;
+  aoBuscarMusicas: () => void;
 }
 
 interface Item {
@@ -24,11 +24,11 @@ interface Item {
   acao: () => void;
 }
 
-export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusica }: Props) {
+export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusicas }: Props) {
   const [selecionado, setSelecionado] = useState(0);
   const dispositivo = useDispositivo();
   const comuns: Item[] = [
-    { rotulo: "Busca música", icone: Search, acao: aoBuscarMusica },
+    { rotulo: "Busca músicas", icone: Search, acao: aoBuscarMusicas },
     { rotulo: "Personagem", icone: Shirt, acao: aoPersonagem },
     { rotulo: "Configurações", icone: Settings2, acao: aoConfigurar },
   ];

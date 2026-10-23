@@ -1,1 +1,1 @@
-export { TelaDeBusca } from "./TelaDeBusca";
+export { TelaDeBuscaDeMusicas } from "./TelaDeBuscaDeMusicas";

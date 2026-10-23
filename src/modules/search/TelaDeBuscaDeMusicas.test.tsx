@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { FiltrosDaBusca, RespostaDaBusca, ResultadoDaBusca } from "./encore";
-import { TelaDeBusca } from "./TelaDeBusca";
+import { TelaDeBuscaDeMusicas } from "./TelaDeBuscaDeMusicas";
 
 function resultado(titulo: string, extra: Partial<ResultadoDaBusca> = {}): ResultadoDaBusca {
   return { md5: titulo.padEnd(32, "0"), titulo, artista: "Banda", album: "", genero: "Rock", ano: "", charter: "Fulano", duracaoMs: 125000, instrumentos: ["guitarra"], ...extra };
@@ -9,16 +9,16 @@ function resultado(titulo: string, extra: Partial<ResultadoDaBusca> = {}): Resul
 
 function abrir(buscar = vi.fn(async (): Promise<RespostaDaBusca> => ({ total: 1, resultados: [resultado("Hit")] }))) {
   const aoVoltar = vi.fn();
-  render(<TelaDeBusca buscar={buscar} atrasoMs={0} aoVoltar={aoVoltar} />);
+  render(<TelaDeBuscaDeMusicas buscar={buscar} atrasoMs={0} aoVoltar={aoVoltar} />);
   return { buscar, aoVoltar, usuario: userEvent.setup() };
 }
 
 const ultimaChamada = (buscar: ReturnType<typeof vi.fn>) => buscar.mock.lastCall as unknown as [FiltrosDaBusca, number];
 
-describe("TelaDeBusca", () => {
+describe("TelaDeBuscaDeMusicas", () => {
   it("abre com o título e já lista músicas", async () => {
     abrir();
-    expect(screen.getByRole("heading", { name: "Busca música" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Busca músicas" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Hit" })).toBeInTheDocument();
     expect(screen.getByText(/Fulano/)).toBeInTheDocument();
     expect(screen.getByText("2:05")).toBeInTheDocument();
@@ -26,8 +26,16 @@ describe("TelaDeBusca", () => {
 
   it("busca pelo texto digitado", async () => {
     const { buscar, usuario } = abrir();
-    await usuario.type(screen.getByRole("searchbox", { name: "Buscar música" }), "sandman");
+    await usuario.type(screen.getByRole("searchbox", { name: "Buscar músicas" }), "sandman");
     await waitFor(() => expect(ultimaChamada(buscar)[0].texto).toBe("sandman"));
+  });
+
+  it("espera a digitação parar antes de buscar o texto", async () => {
+    const buscar = vi.fn(async (): Promise<RespostaDaBusca> => ({ total: 0, resultados: [] }));
+    render(<TelaDeBuscaDeMusicas buscar={buscar} atrasoMs={200} aoVoltar={vi.fn()} />);
+    await userEvent.setup().type(screen.getByRole("searchbox", { name: "Buscar músicas" }), "abc");
+    await waitFor(() => expect(ultimaChamada(buscar)[0].texto).toBe("abc"));
+    expect(buscar.mock.calls.map((c) => (c as unknown as [FiltrosDaBusca])[0].texto)).toEqual(["", "abc"]);
   });
 
   it("os filtros de instrumento e dificuldade entram na busca", async () => {

@@ -60,11 +60,11 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
   });
 
-  it("Busca música abre a tela de busca e Esc volta ao menu", async () => {
+  it("Busca músicas abre a tela de busca e Esc volta ao menu", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ found: 0, data: [] }))));
     const usuario = abrir();
-    await usuario.click(screen.getByRole("button", { name: "Busca música" }));
-    expect(await screen.findByRole("heading", { name: "Busca música" })).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Busca músicas" }));
+    expect(await screen.findByRole("heading", { name: "Busca músicas" })).toBeInTheDocument();
     await usuario.keyboard("{Escape}");
     expect(await screen.findByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
   });
