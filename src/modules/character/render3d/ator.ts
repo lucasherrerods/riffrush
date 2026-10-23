@@ -4,7 +4,7 @@ import { POSE_DE_DESCANSO, ajustesDaPose, animacaoDoInstrumento } from "../anima
 import { pesosDasExpressoes } from "../aparencia";
 import { BASES, PECAS } from "../catalogo";
 import { migrarPersonagem, type Personagem } from "../personagem";
-import { criarInstrumento } from "./instrumentos";
+import { criarInstrumento, encaixarNasMaos, type Montado } from "./instrumentos";
 import { animacaoParaVRM, aplicarCores, aplicarCorpo, carregarPeca, carregarVRM, vestirPeca } from "./vrm";
 
 export interface EstadoDoAvatar {
@@ -36,7 +36,7 @@ interface Modelo {
   acao: THREE.AnimationAction;
   /** Id da animação tocando agora (null é a pose de descanso), ou o id que está sendo carregado. */
   animacao: string | null;
-  instrumentos: THREE.Object3D[];
+  instrumentos: Montado[];
   /** O que exige recarregar o modelo inteiro quando muda. */
   chave: string;
   altura: number;
@@ -46,6 +46,12 @@ const TRANSICAO = 0.4;
 const EXPRESSOES_CONTROLADAS = ["happy", "sad", "angry", "relaxed", "blink"];
 const euler = new THREE.Euler();
 const ajuste = new THREE.Quaternion();
+const maoDireita = new THREE.Vector3();
+const maoEsquerda = new THREE.Vector3();
+const frente = new THREE.Vector3();
+const coxa = new THREE.Vector3();
+const tronco = new THREE.Vector3();
+const CIMA = new THREE.Vector3(0, 1, 0);
 
 const chaveDoModelo = (p: Personagem) => `${p.base}|${p.pecas.join(",")}`;
 const nomeDoOsso = (vrm: VRM, osso: string) => vrm.humanoid.getNormalizedBoneNode(osso as VRMHumanBoneName)?.name;
@@ -62,16 +68,37 @@ function clipeDeDescanso(vrm: VRM) {
 }
 
 function trocarInstrumento(modelo: Modelo, personagem: Personagem) {
-  for (const objeto of modelo.instrumentos) objeto.removeFromParent();
-  modelo.instrumentos = criarInstrumento(personagem.instrumento).map(({ objeto, osso }) => {
-    modelo.vrm.humanoid.getNormalizedBoneNode(osso)?.add(objeto);
-    return objeto;
-  });
+  for (const { objeto } of modelo.instrumentos) objeto.removeFromParent();
+  modelo.instrumentos = criarInstrumento(personagem.instrumento);
+  for (const { objeto, osso } of modelo.instrumentos) {
+    if (osso === "maos") modelo.vrm.scene.add(objeto);
+    else modelo.vrm.humanoid.getNormalizedBoneNode(osso)?.add(objeto);
+  }
+}
+
+/** Leva os instrumentos de duas mãos para onde as mãos estão depois da animação deste quadro. */
+function encaixarInstrumentos({ vrm, instrumentos }: Modelo) {
+  const { humanoid, scene } = vrm;
+  const direita = humanoid.getRawBoneNode("rightHand");
+  const esquerda = humanoid.getRawBoneNode("leftHand");
+  const coxaDireita = humanoid.getRawBoneNode("rightUpperLeg");
+  const coxaEsquerda = humanoid.getRawBoneNode("leftUpperLeg");
+  const coluna = humanoid.getRawBoneNode("spine");
+  if (!direita || !esquerda || !coxaDireita || !coxaEsquerda || !coluna) return;
+  scene.updateMatrixWorld(true);
+  const local = (osso: THREE.Object3D, destino: THREE.Vector3) => scene.worldToLocal(osso.getWorldPosition(destino));
+  local(direita, maoDireita);
+  local(esquerda, maoEsquerda);
+  local(coluna, tronco);
+  // A frente sai do esqueleto (da coxa direita para a esquerda, girado para cima), não do eixo da cena:
+  // o VRM 0 vem virado 180° e a animação ainda gira o corpo.
+  local(coxaEsquerda, frente).sub(local(coxaDireita, coxa)).cross(CIMA).normalize();
+  for (const { objeto, osso } of instrumentos) if (osso === "maos") encaixarNasMaos(objeto, maoDireita, maoEsquerda, frente, tronco);
 }
 
 function descartarModelo(modelo: Modelo) {
   // Os instrumentos usam materiais compartilhados entre atores: saem antes de liberar o resto.
-  for (const objeto of modelo.instrumentos) objeto.removeFromParent();
+  for (const { objeto } of modelo.instrumentos) objeto.removeFromParent();
   modelo.mixer.stopAllAction();
   modelo.vrm.scene.removeFromParent();
   VRMUtils.deepDispose(modelo.vrm.scene);
@@ -162,6 +189,7 @@ export function criarAtor(estadoInicial: EstadoDoAvatar): Ator {
       const pesos = pesosDasExpressoes({ expressao: personagem.expressao, triste: estado.triste, tempo, desdeOPulso: (agora - ultimoPulso) / 1000 });
       for (const nome of EXPRESSOES_CONTROLADAS) vrm.expressionManager?.setValue(nome, pesos[nome] ?? 0);
       vrm.update(dt);
+      encaixarInstrumentos(modelo);
     },
     descartar() {
       removido = true;
