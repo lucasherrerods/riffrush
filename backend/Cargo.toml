@@ -1,0 +1,23 @@
+[package]
+name = "riffrush-api"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+async-trait = "0.1"
+axum = "0.8"
+dotenvy = "0.15"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "macros", "migrate", "uuid", "chrono"] }
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+utoipa = { version = "5", features = ["axum_extras"] }
+
+[dev-dependencies]
+http-body-util = "0.1"
+tower = { version = "0.5", features = ["util"] }

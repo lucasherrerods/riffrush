@@ -50,3 +50,22 @@ jobs:
       # O Tauri exige que a pasta do frontend exista para compilar, mesmo vazia.
       - run: mkdir -p dist
       - run: cargo test --manifest-path src-tauri/Cargo.toml
+
+  backend:
+    name: Testes do backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
