@@ -64,6 +64,25 @@ describe("retargetMixamo", () => {
     expect(Math.abs(w)).toBeCloseTo(1);
   });
 
+  // Bug: a animação andava e girava o corpo, e a personagem rodava de um jeito estranho dentro do quadro fixo.
+  it("deixa a animação no lugar: o quadril sobe e desce, mas não anda para os lados nem para a frente", () => {
+    const andando = new THREE.AnimationClip("andando", 1, [new THREE.VectorKeyframeTrack("mixamorigHips.position", [0, 1], [0.3, 1, 0.5, -0.2, 1.2, 0.4])]);
+    const [posicao] = retargetMixamo(andando, esqueletoMixamo(), { nomeNoVRM, alturaDoQuadril: 1, vrm0: false }).tracks;
+    expect(Array.from(posicao.values).map((v) => Number(v.toFixed(4)))).toEqual([0, 1, 0, 0, 1.2, 0]);
+  });
+
+  it("o quadril não vira de lado, mas mantém a inclinação para frente", () => {
+    const virar = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 4);
+    const inclinar = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.2);
+    const giro = new THREE.AnimationClip("giro", 1, [
+      new THREE.QuaternionKeyframeTrack("mixamorigHips.quaternion", [0, 1], [...virar.toArray(), ...inclinar.toArray()]),
+    ]);
+    const [rotacao] = retargetMixamo(giro, esqueletoMixamo(), { nomeNoVRM, alturaDoQuadril: 1, vrm0: false }).tracks;
+    const quadro = (i: number) => new THREE.Quaternion().fromArray(rotacao.values, i * 4);
+    expect(quadro(0).angleTo(new THREE.Quaternion())).toBeLessThan(1e-4);
+    expect(quadro(1).angleTo(inclinar)).toBeLessThan(1e-4);
+  });
+
   it("espelha os eixos para modelos VRM 0.x, que olham para o outro lado", () => {
     const resultado = retargetMixamo(clipe, esqueletoMixamo(), { nomeNoVRM, alturaDoQuadril: 1, vrm0: true });
     const rotacao = resultado.tracks.find((t) => t.name === "vrm_spine.quaternion")!;
