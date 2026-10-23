@@ -10,6 +10,16 @@ describe("MedidorDeRock", () => {
     expect(screen.getByText("ROCK")).toBeInTheDocument();
   });
 
+  it("o mostrador também tem a camada de sujeira", () => {
+    render(<MedidorDeRock vida={0.5} />);
+    expect(screen.getByRole("meter", { name: "Vida" })).toHaveClass("sujeira");
+  });
+
+  it("tem as válvulas em cima, como um amplificador", () => {
+    render(<MedidorDeRock vida={0.5} />);
+    expect(screen.getAllByTestId("valvula")).toHaveLength(3);
+  });
+
   it.each([
     [0, -80],
     [0.5, 0],

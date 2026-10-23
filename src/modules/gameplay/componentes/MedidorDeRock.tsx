@@ -2,7 +2,8 @@ import { cn } from "@/shared/lib/utils";
 
 /** Até onde o ponteiro vai para cada lado, em graus a partir do meio. */
 const ABERTURA = 80;
-const CENTRO = { x: 60, y: 62 };
+const CENTRO = { x: 60, y: 84 };
+const VALVULAS = [42, 60, 78];
 const RAIO = 46;
 
 /** Um pedaço do arco do mostrador, entre dois ângulos (0 = topo). */
@@ -24,8 +25,16 @@ const FAIXAS = [
 export function MedidorDeRock({ vida, className }: { vida: number; className?: string }) {
   const angulo = Math.round(-ABERTURA + vida * ABERTURA * 2);
   return (
-    <div role="meter" aria-label="Vida" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(vida * 100)} className={cn("placa px-3 pt-2 pb-1", className)}>
-      <svg viewBox="0 0 120 76" className="w-full" aria-hidden>
+    <div role="meter" aria-label="Vida" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(vida * 100)} className={cn("placa sujeira px-3 pt-2 pb-1", className)}>
+      <svg viewBox="0 0 120 98" className="w-full" aria-hidden>
+        {/* Válvulas do amplificador: o filamento acende mais quanto maior a vida. */}
+        {VALVULAS.map((x) => (
+          <g key={x} data-testid="valvula">
+            <rect x={x - 6} y={2} width={12} height={20} rx={6} className="fill-superficie-elevada stroke-texto-suave" strokeWidth="1.5" />
+            <rect x={x - 2} y={8} width={4} height={10} rx={2} className="fill-ouro" opacity={0.25 + vida * 0.75} />
+          </g>
+        ))}
+        <path d={`M ${CENTRO.x - RAIO - 8} ${CENTRO.y} A ${RAIO + 8} ${RAIO + 8} 0 0 1 ${CENTRO.x + RAIO + 8} ${CENTRO.y} Z`} className="fill-superficie-elevada stroke-borda" strokeWidth="2" />
         {FAIXAS.map((faixa) => (
           <path key={faixa.cor} d={arco(faixa.de, faixa.ate)} fill="none" strokeWidth="12" className={faixa.cor} />
         ))}

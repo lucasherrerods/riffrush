@@ -26,6 +26,8 @@ body {
   --textura-gasta: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -9 6.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23r)'/%3E%3C/svg%3E");
   /* O inverso: só as falhas, para pintar por cima de áreas cheias. */
   --textura-falhas: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9 -6.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23r)'/%3E%3C/svg%3E");
+  /* Manchas de graxa e poeira na cor do fundo, para painéis com cara de muito uso. */
+  --textura-sujeira: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035 0.06' numOctaves='4' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 0.07 0 0 0 0 0.067 0 0 0 0 0.09 0 0 0 -4 2.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E");
   /* Metal escovado: riscos horizontais claros e finos, usados com pouca opacidade sobre as placas. */
   --textura-metal: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.003 0.8' numOctaves='2' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 2.4 -1.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E");
   --background: var(--cor-fundo);
@@ -235,6 +237,14 @@ h1 {
     background-image: var(--textura-metal);
     background-size: 300px;
     opacity: 0.05;
+  }
+
+  /* Sujeira por cima do metal: manchas grandes e o escovado, bem mais visíveis. */
+  .placa.sujeira::before,
+  .chapa.sujeira::before {
+    background-image: var(--textura-sujeira), var(--textura-metal);
+    background-size: 220px, 300px;
+    opacity: 0.45;
   }
 
   /* Rebites nos quatro cantos, logo depois do corte da quina. */

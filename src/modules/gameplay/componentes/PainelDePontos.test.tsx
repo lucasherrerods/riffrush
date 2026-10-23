@@ -17,9 +17,48 @@ describe("PainelDePontos", () => {
     expect(screen.getByLabelText("Pontos")).toHaveTextContent(/^000987$/);
   });
 
+  it("o visor tem os segmentos apagados ao fundo, como um display de fliperama", () => {
+    render(<PainelDePontos {...base} />);
+    expect(screen.getByTestId("segmentos-apagados")).toHaveTextContent("888888");
+    expect(screen.getByTestId("segmentos-apagados")).toHaveAttribute("aria-hidden", "true");
+  });
+
   it("pontuação maior que o visor aparece inteira", () => {
     render(<PainelDePontos {...base} pontos={1234567} />);
     expect(screen.getByLabelText("Pontos")).toHaveTextContent(/^1234567$/);
+  });
+
+  it("no desktop é um amplificador, com o multiplicador na grade do alto-falante", () => {
+    render(<PainelDePontos {...base} />);
+    expect(screen.getByTestId("grade")).toContainElement(screen.getByLabelText("Multiplicador"));
+  });
+
+  it("os pontos ficam num visor de LCD em cima do amplificador", () => {
+    render(<PainelDePontos {...base} />);
+    expect(screen.getByTestId("lcd")).toContainElement(screen.getByLabelText("Pontos"));
+    expect(screen.getByTestId("grade")).toContainElement(screen.getByTestId("lcd"));
+  });
+
+  it("o multiplicador fica num mostrador redondo, com o x pequeno ao lado do número", () => {
+    render(<PainelDePontos {...base} />);
+    const mostrador = screen.getByTestId("mostrador");
+    expect(mostrador).toContainElement(screen.getByLabelText("Multiplicador"));
+    expect(mostrador).toContainElement(screen.getByRole("progressbar", { name: "Próximo multiplicador" }));
+    expect(screen.getByTestId("numero-do-multiplicador")).toHaveTextContent(/^3$/);
+  });
+
+  it("combo e precisão ficam fora do amplificador, logo abaixo", () => {
+    render(<PainelDePontos {...base} />);
+    expect(screen.getByTestId("grade")).not.toContainElement(screen.getByLabelText("Sequência"));
+    expect(screen.getByTestId("grade")).not.toContainElement(screen.getByLabelText("Precisão"));
+  });
+
+  it("o amplificador é a imagem, decorativa, por trás do visor e do mostrador", () => {
+    const { container } = render(<PainelDePontos {...base} />);
+    const imagem = container.querySelector("img");
+    expect(imagem).toHaveAttribute("alt", "");
+    expect(imagem?.getAttribute("src")).toMatch(/amplificador.*\.png/);
+    expect(screen.getByTestId("grade")).toContainElement(imagem);
   });
 
   it("mostra quanto falta para o próximo multiplicador", () => {

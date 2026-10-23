@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/shared/lib/utils";
 import { CORES_DO_MULTIPLICADOR, COR_DA_ESTRELA } from "../cores";
 import { progressoDoMultiplicador } from "../pista/efeitos";
+import amplificador from "./amplificador.png";
 
 interface Props {
   pontos: number;
@@ -56,7 +57,7 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
         animate={{ scale: 1 }}
         transition={{ duration: 0.12 }}
         aria-label="Sequência"
-        className={cn("origin-left font-titulo tabular-nums", compacto ? "text-3xl" : "text-7xl", sequencia >= 25 ? "text-ouro" : "text-texto")}
+        className={cn("origin-left font-titulo tabular-nums", compacto ? "text-3xl" : "text-5xl", sequencia >= 25 ? "text-ouro" : "text-texto")}
       >
         {sequencia}
       </motion.span>
@@ -65,9 +66,15 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
   );
 
   const pontuacao = (
-    <p aria-label="Pontos" className={cn("rounded-sm bg-fundo font-mono leading-none tracking-[0.15em] text-sucesso tabular-nums", compacto ? "px-2 py-1 text-xl" : "px-4 py-2 text-4xl")}>
-      {String(Math.round(pontos)).padStart(DIGITOS_DO_VISOR, "0")}
-    </p>
+    <div className={cn("relative rounded-sm bg-fundo font-mono leading-none tracking-[0.15em] tabular-nums", compacto ? "px-2 py-1 text-xl" : "px-4 py-2 text-4xl")}>
+      {/* Os segmentos apagados ficam atrás dos acesos, como num display de 7 segmentos. */}
+      <span data-testid="segmentos-apagados" aria-hidden className="absolute text-sucesso/10">
+        {"8".repeat(Math.max(DIGITOS_DO_VISOR, String(Math.round(pontos)).length))}
+      </span>
+      <p aria-label="Pontos" className="relative text-sucesso">
+        {String(Math.round(pontos)).padStart(DIGITOS_DO_VISOR, "0")}
+      </p>
+    </div>
   );
 
   const acerto = (
@@ -92,14 +99,60 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
     );
   }
 
+  const digitos = String(Math.round(pontos));
+  const lcd = (
+    <div
+      data-testid="lcd"
+      className="absolute top-[43%] right-[20%] left-[20%] rounded-sm border-2 border-fundo px-2 py-1 text-center font-mono text-2xl leading-none tracking-[0.1em] tabular-nums"
+      style={{ backgroundColor: "color-mix(in srgb, var(--cor-sucesso) 40%, var(--cor-superficie-elevada))" }}
+    >
+      {/* LCD: dígitos escuros sobre o verde, com os segmentos apagados aparecendo de leve. */}
+      <span data-testid="segmentos-apagados" aria-hidden className="absolute inset-x-0 text-fundo/15">
+        {"8".repeat(Math.max(DIGITOS_DO_VISOR, digitos.length))}
+      </span>
+      <p aria-label="Pontos" className="relative text-fundo">
+        {digitos.padStart(DIGITOS_DO_VISOR, "0")}
+      </p>
+    </div>
+  );
+
+  // Mostrador redondo de aro dourado; o número brilha laranja como uma válvula nixie.
+  const mostrador = (
+    <motion.div
+      key={multiplicador}
+      data-testid="mostrador"
+      initial={{ scale: 1.25 }}
+      animate={{ scale: 1 }}
+      className="absolute top-[55%] left-1/2 grid aspect-square w-[42%] -translate-x-1/2 place-items-center rounded-full border-[5px] border-ouro"
+      style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--cor-destaque) 35%, var(--cor-fundo)) 0%, var(--cor-fundo) 72%)" }}
+    >
+      <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90" role="progressbar" aria-label="Próximo multiplicador" aria-valuenow={Math.round(progresso * 100)} aria-valuemin={0} aria-valuemax={100}>
+        <circle cx="50" cy="50" r={RAIO_DO_ANEL} fill="none" strokeWidth="5" className="stroke-borda" />
+        <circle cx="50" cy="50" r={RAIO_DO_ANEL} fill="none" strokeWidth="5" className="stroke-ouro transition-[stroke-dashoffset] duration-150" strokeDasharray={VOLTA} strokeDashoffset={VOLTA * (1 - progresso)} />
+      </svg>
+      <span aria-label="Multiplicador" className="relative leading-none">
+        <span className="absolute top-1/2 -left-10 grid size-6 -translate-y-1/2 place-items-center rounded-full border-2 border-borda bg-superficie-elevada font-titulo text-lg text-texto">
+          x
+        </span>
+        <span data-testid="numero-do-multiplicador" className="font-titulo text-6xl" style={{ color: estrelaAtiva ? COR_DA_ESTRELA : "var(--cor-destaque)" }}>
+          {multiplicador}
+        </span>
+      </span>
+    </motion.div>
+  );
+
   return (
-    <div className="placa flex flex-col items-center gap-4 p-4">
-      {pontuacao}
-      <div className="flex items-center gap-4">
-        {anel}
-        {combo}
+    <div className="flex flex-col items-center gap-3">
+      {/* A imagem é a moldura; o visor e o mostrador ficam por cima, na grade do alto-falante. */}
+      <div data-testid="grade" className="relative aspect-[352/467] w-56">
+        <img src={amplificador} alt="" draggable={false} className="absolute inset-0 size-full select-none" />
+        {lcd}
+        {mostrador}
       </div>
-      {acerto}
+      <div className="flex items-end gap-4">
+        {combo}
+        {acerto}
+      </div>
     </div>
   );
 }
