@@ -25,6 +25,7 @@ export class PlayerDeMusica {
   /** Cada pedido ganha um número; um carregamento que termina depois de outro pedido é descartado. */
   private pedido = 0;
   private suspenso = false;
+  private navegar: ((passos: number) => void) | null = null;
   private tocavaAntesDeSuspender = false;
 
   constructor(
@@ -48,6 +49,11 @@ export class PlayerDeMusica {
 
   definirFila(musicas: Musica[]) {
     this.fila = musicas;
+  }
+
+  /** Na seleção, avançar e voltar mexem no carrossel, e o carrossel pede a música de volta. */
+  definirNavegacao(navegar: ((passos: number) => void) | null) {
+    this.navegar = navegar;
   }
 
   definirVolume(volume: number) {
@@ -95,6 +101,7 @@ export class PlayerDeMusica {
   }
 
   private pular(passos: number) {
+    if (this.navegar) return this.navegar(passos);
     const atual = this.fila.findIndex((m) => m.id === this.estadoAtual.musica?.id);
     const vizinho = this.fila[indiceVizinho(this.fila.length, atual, passos)];
     if (vizinho) void this.abrir(vizinho);

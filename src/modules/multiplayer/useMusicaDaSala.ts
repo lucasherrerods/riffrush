@@ -3,23 +3,24 @@ import type { Musica } from "@/modules/songs";
 import { resolverMusica } from "./musicaNaRede";
 import type { EstadoDaSala } from "./protocolo";
 
-export type PreparoDaMusica = { tipo: "baixando" } | { tipo: "pronta" } | { tipo: "erro"; mensagem: string };
+/** Pronta sem música só no host, no instante antes de achar a dele na biblioteca. */
+export type PreparoDaMusica = { tipo: "baixando" } | { tipo: "pronta"; musica?: Musica } | { tipo: "erro"; mensagem: string };
 
 /**
  * O convidado baixa a música assim que o host escolhe, e não na largada: assim ele só dá pronto
  * quando já pode tocar. A música baixada fica guardada, e a largada usa a mesma.
+ * O host acha a dele na biblioteca, para o player de música tocar a escolhida.
  */
 export function useMusicaDaSala(sala: EstadoDaSala, musicas: Musica[], endereco: string): PreparoDaMusica {
   const [preparo, setPreparo] = useState<PreparoDaMusica>({ tipo: sala.souHost ? "pronta" : "baixando" });
   const chave = JSON.stringify(sala.musica);
 
   useEffect(() => {
-    if (sala.souHost) return;
     let valendo = true;
-    setPreparo({ tipo: "baixando" });
+    setPreparo({ tipo: sala.souHost ? "pronta" : "baixando" });
     resolverMusica(sala.musica, musicas, endereco)
-      .then(() => valendo && setPreparo({ tipo: "pronta" }))
-      .catch((erro) => valendo && setPreparo({ tipo: "erro", mensagem: erro instanceof Error ? erro.message : String(erro) }));
+      .then((musica) => valendo && setPreparo({ tipo: "pronta", musica }))
+      .catch((erro) => valendo && setPreparo(sala.souHost ? { tipo: "pronta" } : { tipo: "erro", mensagem: erro instanceof Error ? erro.message : String(erro) }));
     return () => {
       valendo = false;
     };
