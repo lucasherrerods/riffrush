@@ -1,5 +1,5 @@
 import { MUSICAS_EMBUTIDAS, type Musica } from "@/modules/songs";
-import { juntarMusicas, semAudio } from "./historico";
+import { ehImportada, juntarMusicas, semAudio } from "./historico";
 
 const [embutida] = MUSICAS_EMBUTIDAS;
 const arquivo = new File(["x"], "a.mp3");
@@ -27,5 +27,12 @@ describe("semAudio", () => {
 
   it("no PC, a música guardada no aparelho tem áudio mesmo sem o arquivo carregado", () => {
     expect(semAudio({ ...importada("arquivo:a", false), noAparelho: true })).toBe(false);
+  });
+});
+
+describe("ehImportada", () => {
+  it("só as músicas trazidas pelo jogador são importadas", () => {
+    expect(ehImportada(importada("arquivo:a"))).toBe(true);
+    expect(ehImportada(embutida)).toBe(false);
   });
 });

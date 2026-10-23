@@ -14,6 +14,7 @@ const biblioteca = vi.hoisted(() => ({
   salvas: [] as unknown[],
   guardar: vi.fn(async () => {}),
   usar: vi.fn(async () => {}),
+  remover: vi.fn(async () => {}),
   prepararParaTocar: vi.fn(async (musica: object) => musica),
 }));
 vi.mock("@/modules/library", async (original) => ({
@@ -163,6 +164,18 @@ describe("App", () => {
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     await usuario.upload(await screen.findByLabelText(/Importar música/), new File(["x"], "Banda X - Hit.wav", { type: "audio/wav" }));
     await waitFor(() => expect(biblioteca.guardar).toHaveBeenCalledWith([expect.objectContaining({ titulo: "Hit" })]));
+  });
+
+  it("remover uma música apaga do armazenamento e tira da lista", async () => {
+    biblioteca.salvas = [{ ...MUSICAS_EMBUTIDAS[0], id: "arquivo:salva", titulo: "Para Apagar", noAparelho: true }];
+    const usuario = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    await screen.findByRole("heading", { name: "Selecione a música" });
+    await usuario.keyboard("{ArrowUp}");
+    await usuario.click(await screen.findByRole("button", { name: /Remover Para Apagar/ }));
+    await usuario.click(screen.getByRole("button", { name: /Confirmar remoção/ }));
+    expect(biblioteca.remover).toHaveBeenCalledWith(expect.objectContaining({ id: "arquivo:salva" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: /Para Apagar/ })).not.toBeInTheDocument());
   });
 
   it("tocar uma música avisa a biblioteca, para ela ir ao começo da lista", async () => {

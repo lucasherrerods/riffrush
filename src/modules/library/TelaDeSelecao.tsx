@@ -1,6 +1,6 @@
-import { useRef, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, FileAudio, Flame, Play, RotateCcw, Trophy } from "lucide-react";
+import { ArrowLeft, FileAudio, Flame, Play, RotateCcw, Trash2, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
@@ -12,7 +12,7 @@ import { Button } from "@/shared/ui/button";
 import { AvatarPalhetando } from "./componentes/AvatarPalhetando";
 import { Capa } from "./componentes/Capa";
 import { Carrossel } from "./componentes/Carrossel";
-import { semAudio } from "./storage/historico";
+import { ehImportada, semAudio } from "./storage/historico";
 
 interface Props {
   musicas: Musica[];
@@ -25,13 +25,14 @@ interface Props {
   aoJogar: () => void;
   aoVoltar: () => void;
   aoImportar: (arquivos: File[]) => void;
+  aoRemover: (musica: Musica) => void;
 }
 
 const TIPOS_IMPORTAVEIS = "audio/*,video/*,.sng";
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 export function TelaDeSelecao(props: Props) {
-  const { musicas, indice, dificuldade, personagem, volumeDosEfeitos, aoSelecionar, aoDificuldade, aoJogar, aoVoltar, aoImportar } = props;
+  const { musicas, indice, dificuldade, personagem, volumeDosEfeitos, aoSelecionar, aoDificuldade, aoJogar, aoVoltar, aoImportar, aoRemover } = props;
   const recordes = carregarRecordes();
   const musica = musicas[indice];
   const recordeAtual = recordeDe(recordes, musica.id, dificuldade);
@@ -60,7 +61,20 @@ export function TelaDeSelecao(props: Props) {
     campo.value = "";
   };
 
+  // Guarda o id da música a confirmar: trocar de música cancela sozinho.
+  const [confirmandoRemocao, setConfirmandoRemocao] = useState<string | null>(null);
+  const podeRemover = ehImportada(musica);
+  const confirmando = confirmandoRemocao === musica.id;
+  const remover = () => {
+    if (!podeRemover) return;
+    if (!confirmando) return setConfirmandoRemocao(musica.id);
+    setConfirmandoRemocao(null);
+    aoRemover(musica);
+  };
+
   useTeclado((evento) => {
+    if (evento.code === "Delete") return remover();
+    setConfirmandoRemocao(null);
     const posicao = DIFICULDADES.findIndex((d) => d.id === dificuldade);
     if (evento.code === "ArrowDown" || evento.code === "ArrowUp") {
       evento.preventDefault();
@@ -123,6 +137,18 @@ export function TelaDeSelecao(props: Props) {
               <h2 className="truncate text-4xl leading-[1.1] max-md:text-2xl">{musica.titulo}</h2>
               <p className="truncate text-lg text-texto-suave">{musica.artista}</p>
             </div>
+            {podeRemover && (
+              <Button
+                variant={confirmando ? "destructive" : "ghost"}
+                size={confirmando ? "default" : "icon"}
+                onClick={remover}
+                aria-label={confirmando ? "Confirmar remoção" : `Remover ${musica.titulo}`}
+                className="shrink-0"
+              >
+                <Trash2 className="opacity-70" />
+                {confirmando && "Confirmar remoção"}
+              </Button>
+            )}
           </div>
 
           <div className="flex min-w-0 gap-2">

@@ -42,6 +42,13 @@ export function useBiblioteca(abrir: () => Promise<Biblioteca> = abrirBiblioteca
     }
   }, []);
 
+  /** Apaga do armazenamento: no PC, a linha da SQLite e a pasta com o arquivo e a capa. */
+  const remover = useCallback(async (musica: Musica) => {
+    await (await biblioteca.current)
+      ?.remover(musica.id)
+      .catch((erro) => avisar.error(`Não consegui remover ${musica.titulo}: ${erro instanceof Error ? erro.message : erro}`));
+  }, []);
+
   const usar = useCallback(async (id: string) => {
     await (await biblioteca.current)?.usar(id).catch(() => {});
   }, []);
@@ -58,5 +65,5 @@ export function useBiblioteca(abrir: () => Promise<Biblioteca> = abrirBiblioteca
     return { ...musica, arquivo, arquivoDeVideo };
   }, []);
 
-  return { salvas, guardar, usar, prepararParaTocar };
+  return { salvas, guardar, usar, remover, prepararParaTocar };
 }
