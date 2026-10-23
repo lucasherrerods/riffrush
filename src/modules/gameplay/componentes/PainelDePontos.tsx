@@ -17,12 +17,14 @@ interface Props {
 const RAIO_DO_ANEL = 44;
 const VOLTA = 2 * Math.PI * RAIO_DO_ANEL;
 
-/** Cor da precisão: verde acima de 95%, ouro acima de 80%, vermelho abaixo. */
-const corDaPrecisao = (precisao: number) => (precisao >= 0.95 ? "text-sucesso" : precisao >= 0.8 ? "text-ouro" : "text-perigo");
+/** Cor da precisão (0 a 1): verde acima de 95%, ouro acima de 80%, vermelho abaixo. */
+export const corDaPrecisao = (precisao: number) => (precisao >= 0.95 ? "text-sucesso" : precisao >= 0.8 ? "text-ouro" : "text-perigo");
+/** O visor de pontos tem 6 dígitos, como num fliperama; uma pontuação maior aparece inteira. */
+const DIGITOS_DO_VISOR = 6;
 
 /**
- * Números da partida feitos para ler de relance, colados na pista:
- * o anel do multiplicador mostra quanto falta para o próximo, e o combo cresce a cada acerto.
+ * Números da partida feitos para ler de relance, num painel de amplificador como no Guitar Hero:
+ * o visor digital com os pontos, o anel do multiplicador mostrando quanto falta para o próximo e o combo.
  */
 export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, estrelaAtiva, compacto = false }: Props) {
   const cor = estrelaAtiva ? COR_DA_ESTRELA : CORES_DO_MULTIPLICADOR[Math.min(3, Math.max(0, multiplicador - 1))];
@@ -41,7 +43,7 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
         <circle cx="50" cy="50" r={RAIO_DO_ANEL} fill="none" strokeWidth="8" stroke={cor} strokeDasharray={VOLTA} strokeDashoffset={VOLTA * (1 - progresso)} className="transition-[stroke-dashoffset] duration-150" />
       </svg>
       <span aria-label="Multiplicador" className={cn("font-titulo leading-none tabular-nums", compacto ? "text-2xl" : "text-5xl")} style={{ color: cor }}>
-        {multiplicador}x
+        x{multiplicador}
       </span>
     </motion.div>
   );
@@ -63,8 +65,8 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
   );
 
   const pontuacao = (
-    <p aria-label="Pontos" className={cn("font-titulo leading-none tabular-nums", compacto ? "text-2xl" : "text-5xl")}>
-      {pontos.toLocaleString("pt-BR")}
+    <p aria-label="Pontos" className={cn("rounded-sm bg-fundo font-mono leading-none tracking-[0.15em] text-sucesso tabular-nums", compacto ? "px-2 py-1 text-xl" : "px-4 py-2 text-4xl")}>
+      {String(Math.round(pontos)).padStart(DIGITOS_DO_VISOR, "0")}
     </p>
   );
 
@@ -91,12 +93,12 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
   }
 
   return (
-    <div className="flex flex-col items-end gap-4 text-right">
-      <div className="flex items-center gap-4">
-        {combo}
-        {anel}
-      </div>
+    <div className="placa flex flex-col items-center gap-4 p-4">
       {pontuacao}
+      <div className="flex items-center gap-4">
+        {anel}
+        {combo}
+      </div>
       {acerto}
     </div>
   );

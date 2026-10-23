@@ -6,10 +6,20 @@ const base = { pontos: 12345, sequencia: 27, multiplicador: 3, precisao: 0.968, 
 describe("PainelDePontos", () => {
   it("mostra pontos, combo, multiplicador e precisão", () => {
     render(<PainelDePontos {...base} />);
-    expect(screen.getByLabelText("Pontos")).toHaveTextContent("12.345");
+    expect(screen.getByLabelText("Pontos")).toHaveTextContent("012345");
     expect(screen.getByLabelText("Sequência")).toHaveTextContent("27");
-    expect(screen.getByLabelText("Multiplicador")).toHaveTextContent("3x");
+    expect(screen.getByLabelText("Multiplicador")).toHaveTextContent("x3");
     expect(screen.getByLabelText("Precisão")).toHaveTextContent("97%");
+  });
+
+  it("os pontos aparecem num visor digital de 6 dígitos, como no arcade", () => {
+    render(<PainelDePontos {...base} pontos={987} />);
+    expect(screen.getByLabelText("Pontos")).toHaveTextContent(/^000987$/);
+  });
+
+  it("pontuação maior que o visor aparece inteira", () => {
+    render(<PainelDePontos {...base} pontos={1234567} />);
+    expect(screen.getByLabelText("Pontos")).toHaveTextContent(/^1234567$/);
   });
 
   it("mostra quanto falta para o próximo multiplicador", () => {

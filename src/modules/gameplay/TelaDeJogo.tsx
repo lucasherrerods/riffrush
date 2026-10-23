@@ -9,6 +9,7 @@ import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { criarBot, jogarSozinho } from "./bot";
+import { MedidorDeRock } from "./componentes/MedidorDeRock";
 import { MedidorDeVida } from "./componentes/MedidorDeVida";
 import { MenuDePausa } from "./componentes/MenuDePausa";
 import { PainelDePontos } from "./componentes/PainelDePontos";
@@ -95,6 +96,10 @@ const MAXIMO_DE_TROVOES = 4;
 const SINCRONIA_DO_VIDEO = 0.15;
 const INTERVALO_DO_ENVIO_MS = 125;
 const nada = () => {};
+/** Em telas mais estreitas os painéis encostam na pista em vez de sair da tela. */
+const LARGURA_DO_PAINEL = 250;
+const LARGURA_DO_HUD_LATERAL = 240;
+const MARGEM_DO_HUD = 16;
 
 export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, rede, aoSair, aoTerminar }: Props) {
   const recordeAtual = useRef(recorde);
@@ -197,6 +202,8 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
     let terminou = false;
     let quadro = 0;
     let ultimoHud = HUD_INICIAL;
+    // Com o bot o recorde não vale, então também não tem festa.
+    let recordeBatido = opcoes.bot;
     let ultimaSincroniaDoVideo = 0;
     let idDoAviso = 0;
     let ultimoEnvio = 0;
@@ -389,6 +396,12 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
       }
 
       // O HUD é React: valores arredondados, e só re-renderiza quando algo visível mudou.
+      const recorde = recordeAtual.current;
+      if (!recordeBatido && recorde && partida.pontos > recorde) {
+        recordeBatido = true;
+        avisar("RECORDE BATIDO!", true);
+      }
+
       const proximo: Hud = {
         pontos: Math.round(partida.pontos),
         sequencia: partida.sequencia,
@@ -520,7 +533,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
           {/* Os números ficam colados à esquerda da pista; no celular a pista ocupa a largura toda e eles sobem para o topo. */}
           <div
             className={cn("absolute", estreita ? "top-20 left-4" : "bottom-10 -translate-x-full")}
-            style={estreita ? undefined : { left: layout.centro - layout.largura / 2 - 24 }}
+            style={estreita ? undefined : { left: Math.max(layout.centro - layout.largura / 2 - 24, LARGURA_DO_PAINEL + MARGEM_DO_HUD) }}
           >
             <PainelDePontos
               pontos={hud.pontos}
@@ -545,7 +558,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
               </button>
             </div>
           ) : (
-            <div data-parte="hud-lateral" className="absolute bottom-10 flex flex-col items-center" style={{ left: layout.centro + layout.largura / 2 + 24 }}>
+            <div data-parte="hud-lateral" className="absolute bottom-10 flex flex-col items-center" style={{ left: Math.min(layout.centro + layout.largura / 2 + 24, layout.centro * 2 - LARGURA_DO_HUD_LATERAL - MARGEM_DO_HUD) }}>
               {/* Com o palco, o personagem já está em cena atrás da pista. */}
               {!comPalco && (
                 <Avatar personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} className="mb-2 h-44 w-auto" />
@@ -559,10 +572,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
                     <div className="absolute bottom-1/2 h-px w-full bg-texto/60" />
                   </div>
                 </div>
-                <div className="flex flex-col items-center gap-2">
-                  <span className="text-base font-bold text-texto-suave">ROCK</span>
-                  <MedidorDeVida vida={hud.vida} className="h-40 w-6" />
-                </div>
+                <MedidorDeRock vida={hud.vida} className="w-36" />
               </div>
             </div>
           )}
