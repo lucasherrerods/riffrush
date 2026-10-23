@@ -7,5 +7,8 @@ export function juntarMusicas(atuais: Musica[], novas: Musica[]): Musica[] {
   return [...trocadas, ...novas.filter((m) => !atuais.some((a) => a.id === m.id))];
 }
 
+/** Trazida pelo jogador (arquivo ou .sng), ao contrário das embutidas no jogo. */
+export const ehImportada = (musica: Musica) => musica.id.startsWith("arquivo:");
+
 /** Música importada que ficou só no histórico: o navegador apagou o áudio e ele precisa ser importado de novo. */
-export const semAudio = (musica: Musica) => musica.id.startsWith("arquivo:") && !musica.arquivo && !musica.noAparelho;
+export const semAudio = (musica: Musica) => ehImportada(musica) && !musica.arquivo && !musica.noAparelho;

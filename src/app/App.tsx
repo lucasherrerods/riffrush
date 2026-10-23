@@ -194,6 +194,15 @@ export function App() {
               aoJogar={jogar}
               aoVoltar={() => setTela("menu")}
               aoImportar={(arquivos) => void importar(arquivos)}
+              aoRemover={(removida) => {
+                void biblioteca.remover(removida);
+                setMusicas((atuais) => {
+                  const restantes = atuais.filter((m) => m.id !== removida.id);
+                  setIndice((i) => Math.min(i, restantes.length - 1));
+                  return restantes;
+                });
+                avisar.success(`${removida.titulo} removida.`);
+              }}
             />
           )}
           {tela === "buscaDeMusicas" && (

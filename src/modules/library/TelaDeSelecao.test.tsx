@@ -8,7 +8,7 @@ import { AudioContextFalso } from "@/test/audioFalso";
 import { TelaDeSelecao } from "./TelaDeSelecao";
 
 function abrir({ indice = 0, dificuldade = "medio" as Dificuldade, musicas = MUSICAS_EMBUTIDAS } = {}) {
-  const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn() };
+  const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn() };
   render(
     <TelaDeSelecao
       musicas={musicas}
@@ -197,5 +197,38 @@ describe("TelaDeSelecao com música do histórico sem áudio", () => {
     const arquivo = new File(["x"], "Riff.mp3", { type: "audio/mpeg" });
     await usuario.upload(screen.getByLabelText(/Importar de novo/), arquivo);
     expect(aoImportar).toHaveBeenCalledWith([arquivo]);
+  });
+});
+
+describe("TelaDeSelecao removendo músicas", () => {
+  const importada: Musica = { ...MUSICAS_EMBUTIDAS[0], id: "arquivo:Riff.mp3:10", titulo: "Riff", arquivo: new File(["x"], "Riff.mp3") };
+
+  it("música embutida não pode ser removida", () => {
+    abrir();
+    expect(screen.queryByRole("button", { name: /Remover/ })).not.toBeInTheDocument();
+  });
+
+  it("pede confirmação antes de remover a música importada", async () => {
+    const { aoRemover, usuario } = abrir({ musicas: [importada] });
+    await usuario.click(screen.getByRole("button", { name: /Remover Riff/ }));
+    expect(aoRemover).not.toHaveBeenCalled();
+    await usuario.click(screen.getByRole("button", { name: /Confirmar remoção/ }));
+    expect(aoRemover).toHaveBeenCalledWith(importada);
+  });
+
+  it("Delete duas vezes também remove", async () => {
+    const { aoRemover, usuario } = abrir({ musicas: [importada] });
+    await usuario.keyboard("{Delete}");
+    expect(aoRemover).not.toHaveBeenCalled();
+    await usuario.keyboard("{Delete}");
+    expect(aoRemover).toHaveBeenCalledWith(importada);
+  });
+
+  it("qualquer outra tecla cancela a confirmação", async () => {
+    const outra: Musica = { ...importada, id: "arquivo:Outra.mp3:10", titulo: "Outra" };
+    const { aoRemover, usuario } = abrir({ musicas: [importada, outra] });
+    await usuario.keyboard("{Delete}{ArrowDown}");
+    expect(screen.queryByRole("button", { name: /Confirmar remoção/ })).not.toBeInTheDocument();
+    expect(aoRemover).not.toHaveBeenCalled();
   });
 });
