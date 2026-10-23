@@ -43,10 +43,18 @@ describe("TelaDeResultado", () => {
     expect(screen.getByRole("img", { name: "4 de 5 estrelas" })).toBeInTheDocument();
   });
 
+  it("mostra a precisão em destaque logo abaixo da pontuação", () => {
+    abrir();
+    const precisao = screen.getByLabelText("Precisão");
+    expect(precisao).toHaveTextContent("90%");
+    expect(precisao).toHaveClass("text-ouro");
+    expect(screen.getByLabelText("12.345 pontos").compareDocumentPosition(precisao) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("mostra as estatísticas da partida", () => {
     abrir();
     expect(screen.getByText("90 / 100")).toBeInTheDocument();
-    expect(screen.getByText("90%")).toBeInTheDocument();
+    expect(screen.getAllByText("90%")).toHaveLength(1);
     expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByText("Expert")).toBeInTheDocument();
   });

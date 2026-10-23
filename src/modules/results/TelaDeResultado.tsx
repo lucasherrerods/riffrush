@@ -3,9 +3,10 @@ import { animate, motion } from "framer-motion";
 import { ListMusic, RotateCcw, Star, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
-import type { Resultado } from "@/modules/gameplay";
+import { corDaPrecisao, type Resultado } from "@/modules/gameplay";
 import { DIFICULDADES } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { estrelasDoResultado } from "./recordes";
 
@@ -54,7 +55,6 @@ export function TelaDeResultado(props: Props) {
 
   const estatisticas = [
     { rotulo: "Notas acertadas", valor: `${resultado.acertos} / ${resultado.total}` },
-    { rotulo: "Precisão", valor: `${precisao}%` },
     { rotulo: "Maior sequência", valor: String(resultado.maiorSequencia) },
     { rotulo: "Dificuldade", valor: DIFICULDADES.find((d) => d.id === resultado.dificuldade)?.rotulo ?? "" },
   ];
@@ -83,6 +83,12 @@ export function TelaDeResultado(props: Props) {
       <div className="flex flex-col items-center gap-4">
         <p aria-label={`${formatar(resultado.pontos)} pontos`} className="font-mono text-7xl font-black tabular-nums">
           {formatar(pontosNaTela)}
+        </p>
+        <p className="text-base font-bold tracking-[0.2em] text-texto-suave">
+          PRECISÃO{" "}
+          <span aria-label="Precisão" className={cn("font-titulo text-4xl tracking-normal tabular-nums", corDaPrecisao(precisao / 100))}>
+            {precisao}%
+          </span>
         </p>
         {(recordeNovo || fullCombo) && (
           <div className="flex gap-2">
