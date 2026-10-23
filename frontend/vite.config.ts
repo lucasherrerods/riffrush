@@ -18,8 +18,7 @@ export default defineConfig({
     strictPort: true,
     host: host || false,
     hmr: host ? { protocol: "ws", host, port: 1421 } : undefined,
-    // O relay tem build próprio, e o wrangler dev grava o estado das salas dentro dele.
-    watch: { ignored: ["**/src-tauri/**", "**/relay/**"] },
+    watch: { ignored: ["**/src-tauri/**"] },
   },
   test: {
     environment: "jsdom",

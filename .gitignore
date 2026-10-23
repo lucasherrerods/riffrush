@@ -5,8 +5,9 @@ coverage/
 .env*
 !.env.example
 
-src-tauri/target/
-src-tauri/gen/schemas/
+frontend/src-tauri/target/
+frontend/src-tauri/gen/schemas/
+backend/target/
 
 .vscode/*
 !.vscode/extensions.json
@@ -14,6 +15,6 @@ src-tauri/gen/schemas/
 .DS_Store
 Thumbs.db
 *.log
-assets-fonte/
+frontend/assets-fonte/
 
-relay/.wrangler/
+backend/relay/.wrangler/
