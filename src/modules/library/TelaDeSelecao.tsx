@@ -9,6 +9,7 @@ import { DIFICULDADES, type Dificuldade, type Musica } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/shared/ui/dialog";
 import { AvatarPalhetando } from "./componentes/AvatarPalhetando";
 import { Capa } from "./componentes/Capa";
 import { Carrossel } from "./componentes/Carrossel";
@@ -61,20 +62,17 @@ export function TelaDeSelecao(props: Props) {
     campo.value = "";
   };
 
-  // Guarda o id da música a confirmar: trocar de música cancela sozinho.
-  const [confirmandoRemocao, setConfirmandoRemocao] = useState<string | null>(null);
+  const [removendo, setRemovendo] = useState(false);
   const podeRemover = ehImportada(musica);
-  const confirmando = confirmandoRemocao === musica.id;
-  const remover = () => {
-    if (!podeRemover) return;
-    if (!confirmando) return setConfirmandoRemocao(musica.id);
-    setConfirmandoRemocao(null);
+  const confirmarRemocao = () => {
+    setRemovendo(false);
     aoRemover(musica);
   };
 
   useTeclado((evento) => {
-    if (evento.code === "Delete") return remover();
-    setConfirmandoRemocao(null);
+    // Com o modal aberto, as teclas são dele: Esc o fecha, sem voltar ao menu.
+    if (removendo) return;
+    if (evento.code === "Delete" && podeRemover) return setRemovendo(true);
     const posicao = DIFICULDADES.findIndex((d) => d.id === dificuldade);
     if (evento.code === "ArrowDown" || evento.code === "ArrowUp") {
       evento.preventDefault();
@@ -138,15 +136,8 @@ export function TelaDeSelecao(props: Props) {
               <p className="truncate text-lg text-texto-suave">{musica.artista}</p>
             </div>
             {podeRemover && (
-              <Button
-                variant={confirmando ? "destructive" : "ghost"}
-                size={confirmando ? "default" : "icon"}
-                onClick={remover}
-                aria-label={confirmando ? "Confirmar remoção" : `Remover ${musica.titulo}`}
-                className="shrink-0"
-              >
+              <Button variant="ghost" size="icon" onClick={() => setRemovendo(true)} aria-label={`Remover ${musica.titulo}`} className="shrink-0">
                 <Trash2 className="opacity-70" />
-                {confirmando && "Confirmar remoção"}
               </Button>
             )}
           </div>
@@ -215,6 +206,20 @@ export function TelaDeSelecao(props: Props) {
         <Comando teclas={rotuloDoComando("confirmar", dispositivo)}>Confirmar</Comando>
         <Comando teclas={rotuloDoComando("voltar", dispositivo)}>Voltar</Comando>
       </footer>
+      <Dialog open={removendo} onOpenChange={setRemovendo}>
+        <DialogContent>
+          <DialogTitle>Remover {musica.titulo}?</DialogTitle>
+          <DialogDescription>A música e o arquivo salvo serão apagados deste aparelho. Os recordes continuam guardados. Isso não pode ser desfeito.</DialogDescription>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost">Cancelar</Button>
+            </DialogClose>
+            <Button variant="destructive" onClick={confirmarRemocao}>
+              <Trash2 className="opacity-70" /> Remover
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

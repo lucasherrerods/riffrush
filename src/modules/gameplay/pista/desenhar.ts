@@ -3,7 +3,7 @@ import { cores, comAlfa } from "@/shared/styles/tokens";
 import { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ESTRELA, COR_DA_NOTA_PERDIDA, TRILHO_DA_ESTRELA } from "../cores";
 import type { NotaEmJogo } from "../partida";
 import { pontosDoRaio, tremor } from "./efeitos";
-import { layoutDaPista, projetar, xDaPista } from "./geometria";
+import { cordasDaPista, layoutDaPista, projetar, xDaPista, type LayoutDaPista } from "./geometria";
 
 export interface Cena {
   notas: NotaEmJogo[];
@@ -24,6 +24,8 @@ export interface Cena {
 export interface Sprites {
   nota(cor: string, estrela: boolean, brilho: boolean): CanvasImageSource;
   brilho(cor: string): CanvasImageSource;
+  /** Ruído e arranhões que deixam o braço com cara de gasto. */
+  textura(): CanvasImageSource;
 }
 
 /** Tamanho do sprite de nota comparado com o raio da nota. */
@@ -31,8 +33,11 @@ export const SPRITE_DA_NOTA = { raio: 56, largura: 160, altura: 110 };
 const DURACAO_DA_EXPLOSAO = 0.3;
 const DURACAO_DO_TROVAO = 0.5;
 const ATRAS_DA_LINHA = -0.12;
+/** Parte final do braço (perto do horizonte) que vai sumindo. */
+const TAMANHO_DO_FADE = 0.35;
 
 let gradienteDaPista: { chave: string; valor: CanvasGradient } | null = null;
+let padraoDoBraco: { textura: CanvasImageSource; contexto: CanvasRenderingContext2D; valor: CanvasPattern | null } | null = null;
 
 /** Primeiro índice com tempo >= alvo, numa lista ordenada. */
 function primeiroAPartirDe(lista: { tempo: number }[], alvo: number) {
@@ -82,14 +87,38 @@ export function desenharPista(
     gradiente.addColorStop(1, comAlfa(cena.estrelaAtiva ? TRILHO_DA_ESTRELA[2] : cores.fundo, 0.98));
     gradienteDaPista = { chave, valor: gradiente };
   }
+  const contornoDoBraco = () => {
+    c.beginPath();
+    c.moveTo(centro - metade * longe.escala, longe.y);
+    c.lineTo(centro + metade * longe.escala, longe.y);
+    c.lineTo(centro + metade * perto.escala, perto.y);
+    c.lineTo(centro - metade * perto.escala, perto.y);
+    c.closePath();
+  };
   c.fillStyle = gradienteDaPista.valor;
-  c.beginPath();
-  c.moveTo(centro - metade * longe.escala, longe.y);
-  c.lineTo(centro + metade * longe.escala, longe.y);
-  c.lineTo(centro + metade * perto.escala, perto.y);
-  c.lineTo(centro - metade * perto.escala, perto.y);
-  c.closePath();
+  contornoDoBraco();
   c.fill();
+
+  // Textura gasta e a luz quente do palco batendo perto da linha de batida, só dentro do braço.
+  const textura = sprites.textura();
+  if (padraoDoBraco?.textura !== textura || padraoDoBraco.contexto !== c) {
+    padraoDoBraco = { textura, contexto: c, valor: c.createPattern(textura, "repeat") };
+  }
+  c.save();
+  contornoDoBraco();
+  c.clip();
+  if (padraoDoBraco.valor) {
+    c.globalAlpha = 0.6;
+    c.fillStyle = padraoDoBraco.valor;
+    c.fillRect(centro - metade * perto.escala, longe.y, metade * perto.escala * 2, perto.y - longe.y);
+    c.globalAlpha = 1;
+  }
+  const luz = c.createRadialGradient(centro, linhaDeBatida, 0, centro, linhaDeBatida, layout.largura * 0.9);
+  luz.addColorStop(0, comAlfa(cena.estrelaAtiva ? COR_DA_ESTRELA : cores.destaque, 0.16));
+  luz.addColorStop(1, comAlfa(cores.destaque, 0));
+  c.fillStyle = luz;
+  c.fillRect(centro - metade * perto.escala, longe.y, metade * perto.escala * 2, perto.y - longe.y);
+  c.restore();
 
   // Trilhos na cor do multiplicador. O brilho é uma linha larga e translúcida, mais leve que shadowBlur.
   const corDoTrilho = cena.estrelaAtiva ? COR_DA_ESTRELA : CORES_DO_MULTIPLICADOR[Math.min(3, cena.multiplicador - 1)];
@@ -103,35 +132,48 @@ export function desenharPista(
     }
     c.stroke();
   };
-  c.strokeStyle = corDoTrilho;
+  // Trilho de cromo com bisel; a cor do multiplicador fica num filete por cima.
   if (efeitos) {
-    trilhos(14, 0.12);
-    trilhos(7, 0.25);
+    c.strokeStyle = corDoTrilho;
+    trilhos(16, 0.1);
   }
-  trilhos(3, 1);
+  c.strokeStyle = cores.fundo;
+  trilhos(10, 0.9);
+  c.strokeStyle = cores.textoSuave;
+  trilhos(6, 1);
+  c.strokeStyle = corDoTrilho;
+  trilhos(2.5, 1);
   c.globalAlpha = 1;
 
-  c.strokeStyle = comAlfa(cores.texto, 0.07);
-  c.lineWidth = 1;
-  c.beginPath();
-  for (let i = 1; i < 5; i++) {
-    c.moveTo(centro + (i - 2.5) * larguraDoTraste * longe.escala, longe.y);
-    c.lineTo(centro + (i - 2.5) * larguraDoTraste * perto.escala, perto.y);
-  }
-  c.stroke();
-
+  // Trastes: cada batida é uma barra de metal, com a sombra embaixo e o brilho em cima.
   for (let b = primeiroAPartirDe(cena.batidas, tempo + antecedencia * ATRAS_DA_LINHA); b < cena.batidas.length; b++) {
     const batida = cena.batidas[b];
     const distancia = (batida.tempo - tempo) / antecedencia;
     if (distancia > 1) break;
     const p = projetar(layout, distancia);
-    c.strokeStyle = batida.forte ? comAlfa(cores.texto, 0.28) : comAlfa(cores.texto, 0.1);
-    c.lineWidth = batida.forte ? 2 * p.escala + 1 : 1;
-    c.beginPath();
-    c.moveTo(centro - metade * p.escala, p.y);
-    c.lineTo(centro + metade * p.escala, p.y);
-    c.stroke();
+    const grossura = (batida.forte ? 6 : 3) * p.escala + 1;
+    if (batida.forte) {
+      // Marcação de madrepérola no meio do braço, logo atrás do traste, como nas guitarras.
+      const atras = projetar(layout, distancia + 0.035);
+      c.beginPath();
+      c.ellipse(centro, atras.y, larguraDoTraste * 0.16 * atras.escala, larguraDoTraste * 0.07 * atras.escala, 0, 0, Math.PI * 2);
+      c.fillStyle = comAlfa(cores.texto, 0.18);
+      c.fill();
+    }
+    for (const [cor, deslocamento, fator] of [
+      [comAlfa(cores.fundo, 0.8), grossura * 0.6, 1],
+      [comAlfa(cores.texto, batida.forte ? 0.55 : 0.25), 0, 0.6],
+    ] as const) {
+      c.strokeStyle = cor;
+      c.lineWidth = grossura * fator;
+      c.beginPath();
+      c.moveTo(centro - metade * p.escala, p.y + deslocamento);
+      c.lineTo(centro + metade * p.escala, p.y + deslocamento);
+      c.stroke();
+    }
   }
+
+  desenharCordas(c, layout);
 
   // Botões da linha de batida
   for (let pista = 0; pista < 5; pista++) {
@@ -145,16 +187,23 @@ export function desenharPista(
       c.drawImage(sprites.brilho(cor), x - tamanho / 2, linhaDeBatida - tamanho / 2, tamanho, tamanho);
       c.globalAlpha = 1;
     }
+    // Aro prateado, anel na cor do traste e o miolo escuro, que acende ao apertar.
+    const cromo = c.createLinearGradient(0, linhaDeBatida - raio * 0.6, 0, linhaDeBatida + raio * 0.8);
+    cromo.addColorStop(0, cores.texto);
+    cromo.addColorStop(0.45, cores.textoSuave);
+    cromo.addColorStop(0.55, cores.borda);
+    cromo.addColorStop(1, cores.fundo);
+    c.beginPath();
+    c.ellipse(x, linhaDeBatida + raio * 0.12, raio * 1.12, raio * 0.62, 0, 0, Math.PI * 2);
+    c.fillStyle = cromo;
+    c.fill();
     c.beginPath();
     c.ellipse(x, linhaDeBatida, raio, raio * 0.55, 0, 0, Math.PI * 2);
-    c.fillStyle = apertado ? cor : comAlfa(cores.fundo, 0.6);
+    c.fillStyle = cor;
     c.fill();
-    c.lineWidth = 4;
-    c.strokeStyle = cor;
-    c.stroke();
     c.beginPath();
-    c.ellipse(x, linhaDeBatida, raio * 0.45, raio * 0.25, 0, 0, Math.PI * 2);
-    c.fillStyle = apertado ? comAlfa(cores.texto, 0.8) : comAlfa(cores.texto, 0.12);
+    c.ellipse(x, linhaDeBatida, raio * 0.68, raio * 0.36, 0, 0, Math.PI * 2);
+    c.fillStyle = apertado ? comAlfa(cores.texto, 0.85) : comAlfa(cores.fundo, 0.9);
     c.fill();
   }
 
@@ -213,6 +262,16 @@ export function desenharPista(
   }
   c.globalAlpha = 1;
 
+  // Fade no fim do braço: apaga aos poucos tudo o que chega perto do horizonte, e o fundo da tela aparece.
+  const fimDoFade = longe.y + (perto.y - longe.y) * TAMANHO_DO_FADE;
+  const fade = c.createLinearGradient(0, longe.y, 0, fimDoFade);
+  fade.addColorStop(0, comAlfa(cores.fundo, 1));
+  fade.addColorStop(1, comAlfa(cores.fundo, 0));
+  c.globalCompositeOperation = "destination-out";
+  c.fillStyle = fade;
+  c.fillRect(0, 0, largura, fimDoFade);
+  c.globalCompositeOperation = "source-over";
+
   // Sem efeitos não há tremor, então não há transformação para desfazer.
   if (!efeitos) return;
   for (const explosao of cena.explosoes) {
@@ -238,6 +297,54 @@ export function desenharPista(
     desenharTrovao(c, largura, altura, layout, longe.y, trovao, idade / DURACAO_DO_TROVAO);
   }
   if (tremendo) c.restore();
+}
+
+/** Camadas de cada corda, de fora para dentro: largura relativa, deslocamento lateral e cor. */
+const CAMADAS_DA_CORDA = [
+  { largura: 1.3, desvio: 0.15, cor: comAlfa(cores.fundo, 0.7) },
+  { largura: 1, desvio: 0, cor: comAlfa(cores.borda, 1) },
+  { largura: 0.72, desvio: -0.05, cor: comAlfa(cores.textoSuave, 0.6) },
+  { largura: 0.28, desvio: -0.2, cor: comAlfa(cores.textoSuave, 0.85) },
+];
+/** Voltas do fio enrolado ao longo do braço; a perspectiva aperta as do fundo. */
+const VOLTAS_DO_ENROLAMENTO = 160;
+
+/**
+ * Cordas de metal: borda escura, corpo prateado e um brilho de um lado, que dão volume de cilindro.
+ * O fio enrolado aparece como riscos diagonais, todos num stroke só.
+ */
+function desenharCordas(c: CanvasRenderingContext2D, layout: LayoutDaPista) {
+  const cordas = cordasDaPista(layout, ATRAS_DA_LINHA);
+  for (const corda of cordas) {
+    for (const camada of CAMADAS_DA_CORDA) {
+      const meia = (corda.espessura * camada.largura) / 2;
+      const meiaNoFim = meia * corda.escalaDoFim;
+      const desvio = corda.espessura * camada.desvio;
+      c.fillStyle = camada.cor;
+      c.beginPath();
+      c.moveTo(corda.perto.x + desvio - meia, corda.perto.y);
+      c.lineTo(corda.perto.x + desvio + meia, corda.perto.y);
+      c.lineTo(corda.longe.x + desvio * corda.escalaDoFim + meiaNoFim, corda.longe.y);
+      c.lineTo(corda.longe.x + desvio * corda.escalaDoFim - meiaNoFim, corda.longe.y);
+      c.closePath();
+      c.fill();
+    }
+  }
+
+  c.strokeStyle = comAlfa(cores.fundo, 0.85);
+  c.lineWidth = 1.5;
+  c.beginPath();
+  for (const corda of cordas) {
+    if (!corda.enrolada) continue;
+    for (let volta = 0; volta < VOLTAS_DO_ENROLAMENTO; volta++) {
+      const p = projetar(layout, ATRAS_DA_LINHA + ((1 - ATRAS_DA_LINHA) * volta) / VOLTAS_DO_ENROLAMENTO);
+      const x = xDaPista(layout, corda.pista, p.escala);
+      const meia = (corda.espessura * p.escala) / 2;
+      c.moveTo(x - meia, p.y + meia * 0.6);
+      c.lineTo(x + meia, p.y - meia * 0.6);
+    }
+  }
+  c.stroke();
 }
 
 /**

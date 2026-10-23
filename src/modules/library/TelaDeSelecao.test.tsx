@@ -208,27 +208,39 @@ describe("TelaDeSelecao removendo músicas", () => {
     expect(screen.queryByRole("button", { name: /Remover/ })).not.toBeInTheDocument();
   });
 
-  it("pede confirmação antes de remover a música importada", async () => {
+  it("abre um modal de confirmação antes de remover a música importada", async () => {
     const { aoRemover, usuario } = abrir({ musicas: [importada] });
     await usuario.click(screen.getByRole("button", { name: /Remover Riff/ }));
+    const modal = screen.getByRole("dialog", { name: /Remover Riff/ });
     expect(aoRemover).not.toHaveBeenCalled();
-    await usuario.click(screen.getByRole("button", { name: /Confirmar remoção/ }));
+    await usuario.click(within(modal).getByRole("button", { name: "Remover" }));
     expect(aoRemover).toHaveBeenCalledWith(importada);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("Delete duas vezes também remove", async () => {
+  it("Cancelar fecha o modal sem remover", async () => {
     const { aoRemover, usuario } = abrir({ musicas: [importada] });
-    await usuario.keyboard("{Delete}");
+    await usuario.click(screen.getByRole("button", { name: /Remover Riff/ }));
+    await usuario.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(aoRemover).not.toHaveBeenCalled();
-    await usuario.keyboard("{Delete}");
-    expect(aoRemover).toHaveBeenCalledWith(importada);
   });
 
-  it("qualquer outra tecla cancela a confirmação", async () => {
-    const outra: Musica = { ...importada, id: "arquivo:Outra.mp3:10", titulo: "Outra" };
-    const { aoRemover, usuario } = abrir({ musicas: [importada, outra] });
-    await usuario.keyboard("{Delete}{ArrowDown}");
-    expect(screen.queryByRole("button", { name: /Confirmar remoção/ })).not.toBeInTheDocument();
-    expect(aoRemover).not.toHaveBeenCalled();
+  it("Delete abre o modal", async () => {
+    const { usuario } = abrir({ musicas: [importada] });
+    await usuario.keyboard("{Delete}");
+    expect(screen.getByRole("dialog", { name: /Remover Riff/ })).toBeInTheDocument();
+  });
+
+  // Com o modal aberto, as teclas não podem vazar para a seleção: Esc voltaria ao menu e as setas trocariam a música.
+  it("com o modal aberto, Esc só fecha o modal e as setas não mexem na seleção", async () => {
+    const { aoVoltar, aoJogar, aoSelecionar, usuario } = abrir({ musicas: [importada] });
+    await usuario.keyboard("{Delete}");
+    await usuario.keyboard("{ArrowDown}");
+    await usuario.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(aoVoltar).not.toHaveBeenCalled();
+    expect(aoSelecionar).not.toHaveBeenCalled();
+    expect(aoJogar).not.toHaveBeenCalled();
   });
 });

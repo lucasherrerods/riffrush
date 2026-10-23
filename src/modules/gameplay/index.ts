@@ -19,5 +19,6 @@ export { resultadoDaPartida, type Resultado } from "./resultado";
 export type { EstadoDoJogador } from "./rede";
 export { OPCOES_PADRAO_DA_PARTIDA, TelaDeJogo, type OpcoesDaPartida } from "./TelaDeJogo";
 export { MedidorDeVida } from "./componentes/MedidorDeVida";
+export { corDaPrecisao } from "./componentes/PainelDePontos";
 export { estrelasPorPontos, progressoDasEstrelas } from "./estrelas";
 export { criarSprites } from "./pista/sprites";
