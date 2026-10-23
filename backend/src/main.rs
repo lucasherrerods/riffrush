@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use riffrush_api::modules::conta::{ContasPostgres, GeradorAleatorio, Google, RelogioDoSistema, ServicosDaConta};
+use riffrush_api::modules::conta::{ContasPostgres, CredenciaisDoGoogle, GeradorAleatorio, Google, RelogioDoSistema, ServicosDaConta};
 use riffrush_api::modules::saude::BancoPostgres;
 use riffrush_api::shared::config::Config;
 use riffrush_api::shared::estado::EstadoDoApp;
@@ -23,8 +23,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         contas: contas.clone(),
         sessoes: contas,
         login: Arc::new(Google {
-            client_id: config.google_client_id.clone(),
-            client_secret: config.google_client_secret.clone(),
+            web: CredenciaisDoGoogle {
+                client_id: config.google_client_id.clone(),
+                client_secret: config.google_client_secret.clone(),
+            },
+            desktop: config
+                .google_desktop
+                .clone()
+                .map(|(client_id, client_secret)| CredenciaisDoGoogle { client_id, client_secret }),
             http: reqwest::Client::new(),
         }),
         relogio: Arc::new(RelogioDoSistema),

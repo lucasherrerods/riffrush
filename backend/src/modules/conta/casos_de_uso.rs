@@ -128,6 +128,7 @@ pub mod fakes {
 
     use super::*;
     use crate::modules::conta::dominio::PerfilDoGoogle;
+    use crate::modules::conta::portas::ClienteDoGoogle;
 
     #[derive(Default)]
     pub struct Banco {
@@ -268,6 +269,7 @@ pub mod fakes {
             codigo: codigo.into(),
             verificador: "v".into(),
             redirect_uri: "http://localhost".into(),
+            cliente: ClienteDoGoogle::Web,
         }
     }
 }

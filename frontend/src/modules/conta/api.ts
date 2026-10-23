@@ -29,6 +29,9 @@ export interface PartidaParaAApi {
   fantasma: boolean;
 }
 
+/** O Google tem um client id para a web e outro para o desktop (que aceita qualquer porta no loopback). */
+export type ClienteDoGoogle = "web" | "desktop";
+
 export class ErroDaApi extends Error {
   constructor(
     public status: number,
@@ -53,8 +56,8 @@ export function criarApi(base: string, buscar: typeof fetch = (...args) => fetch
   }
 
   return {
-    entrar: (codigo: string, verificador: string, redirect_uri: string) =>
-      chamar<{ token: string; conta: ContaDaApi }>("POST", "/auth/google", undefined, { codigo, verificador, redirect_uri }),
+    entrar: (codigo: string, verificador: string, redirect_uri: string, cliente: ClienteDoGoogle) =>
+      chamar<{ token: string; conta: ContaDaApi }>("POST", "/auth/google", undefined, { codigo, verificador, redirect_uri, cliente }),
     eu: (token: string) => chamar<ContaDaApi>("GET", "/eu", token),
     sair: (token: string) => chamar<void>("POST", "/auth/sair", token),
     registrarPartida: (token: string, partida: PartidaParaAApi) => chamar<XpDaPartida>("POST", "/partidas", token, partida),

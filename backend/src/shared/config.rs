@@ -8,6 +8,8 @@ pub struct Config {
     pub origens_permitidas: Vec<String>,
     pub google_client_id: String,
     pub google_client_secret: String,
+    /// Client do tipo "App para computador"; opcional, sem ele o login no desktop fica desligado.
+    pub google_desktop: Option<(String, String)>,
 }
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -39,12 +41,14 @@ impl Config {
             .collect();
         let google_client_id = variavel("GOOGLE_CLIENT_ID").ok_or(ErroDeConfig::Faltando("GOOGLE_CLIENT_ID"))?;
         let google_client_secret = variavel("GOOGLE_CLIENT_SECRET").ok_or(ErroDeConfig::Faltando("GOOGLE_CLIENT_SECRET"))?;
+        let google_desktop = variavel("GOOGLE_DESKTOP_CLIENT_ID").zip(variavel("GOOGLE_DESKTOP_CLIENT_SECRET"));
         Ok(Self {
             endereco,
             url_do_banco,
             origens_permitidas,
             google_client_id,
             google_client_secret,
+            google_desktop,
         })
     }
 }
@@ -67,6 +71,7 @@ mod tests {
         .unwrap();
         assert_eq!(config.endereco.to_string(), "0.0.0.0:8080");
         assert!(config.origens_permitidas.is_empty());
+        assert!(config.google_desktop.is_none());
     }
 
     #[test]

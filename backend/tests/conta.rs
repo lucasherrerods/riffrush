@@ -140,3 +140,14 @@ async fn sair_derruba_a_sessao() {
     assert_eq!(chamar(&app, "POST", "/auth/sair", Some(&token), None).await.0, StatusCode::NO_CONTENT);
     assert_eq!(chamar(&app, "GET", "/eu", Some(&token), None).await.0, StatusCode::UNAUTHORIZED);
 }
+
+#[tokio::test]
+async fn login_aceita_o_cliente_desktop_e_recusa_cliente_desconhecido() {
+    let app = app();
+    let corpo = |cliente: &str| Some(json!({ "codigo": "bom", "verificador": "v", "redirect_uri": "http://127.0.0.1:5000/", "cliente": cliente }));
+    assert_eq!(chamar(&app, "POST", "/auth/google", None, corpo("desktop")).await.0, StatusCode::OK);
+    assert_eq!(
+        chamar(&app, "POST", "/auth/google", None, corpo("celular")).await.0,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+}

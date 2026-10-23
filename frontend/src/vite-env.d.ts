@@ -7,4 +7,6 @@ interface ImportMetaEnv {
   readonly VITE_URL_DA_API?: string;
   /** Client ID OAuth do Google, o mesmo configurado na API. */
   readonly VITE_GOOGLE_CLIENT_ID?: string;
+  /** Client ID do tipo "App para computador", usado pelo app desktop. */
+  readonly VITE_GOOGLE_CLIENT_ID_DESKTOP?: string;
 }

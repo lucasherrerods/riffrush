@@ -1,5 +1,6 @@
 import type { Resultado } from "@/modules/gameplay";
-import { ErroDaApi, criarApi, type ApiDaConta, type ContaDaApi, type XpDaPartida } from "./api";
+import { invoke } from "@tauri-apps/api/core";
+import { ErroDaApi, criarApi, type ApiDaConta, type ClienteDoGoogle, type ContaDaApi, type XpDaPartida } from "./api";
 import { desafioDoVerificador, gerarVerificador, lerRetornoDoGoogle, urlDoLoginDoGoogle } from "./pkce";
 
 export interface EstadoDaConta {
@@ -23,6 +24,8 @@ export interface Ambiente {
   temporario: Armazenamento;
   /** O endereço para onde o Google volta: a própria página. */
   redirectUri: () => string;
+  /** No desktop: abre o navegador do sistema e devolve a volta do Google. */
+  loginPeloNavegador?: (url: string) => Promise<{ busca: string; redirectUri: string }>;
   irPara: (url: string) => void;
   busca: () => string;
   limparBusca: () => void;
@@ -57,7 +60,7 @@ export class SessaoDaConta {
       const verificador = temporario.getItem(CHAVE_DO_VERIFICADOR);
       temporario.removeItem(CHAVE_DO_VERIFICADOR);
       temporario.removeItem(CHAVE_DO_ESTADO);
-      if (retorno.tipo === "codigo" && verificador) return this.trocarCodigo(retorno.codigo, verificador);
+      if (retorno.tipo === "codigo" && verificador) return this.trocarCodigo(retorno.codigo, verificador, this.ambiente.redirectUri(), "web");
       throw new Error("O login com o Google foi cancelado.");
     }
     const token = local.getItem(CHAVE_DO_TOKEN);
@@ -75,6 +78,14 @@ export class SessaoDaConta {
   async entrar() {
     const verificador = gerarVerificador();
     const estado = gerarVerificador();
+    const { loginPeloNavegador } = this.ambiente;
+    if (loginPeloNavegador) {
+      const url = urlDoLoginDoGoogle({ clientId: this.ambiente.clientId, desafio: await desafioDoVerificador(verificador), estado });
+      const volta = await loginPeloNavegador(url);
+      const retorno = lerRetornoDoGoogle(volta.busca, estado);
+      if (retorno.tipo !== "codigo") throw new Error("O login com o Google foi cancelado.");
+      return this.trocarCodigo(retorno.codigo, verificador, volta.redirectUri, "desktop");
+    }
     this.ambiente.temporario.setItem(CHAVE_DO_VERIFICADOR, verificador);
     this.ambiente.temporario.setItem(CHAVE_DO_ESTADO, estado);
     const desafio = await desafioDoVerificador(verificador);
@@ -106,10 +117,10 @@ export class SessaoDaConta {
     return xp;
   }
 
-  private async trocarCodigo(codigo: string, verificador: string) {
+  private async trocarCodigo(codigo: string, verificador: string, redirectUri: string, cliente: ClienteDoGoogle) {
     this.mudar({ carregando: true });
     try {
-      const { token, conta } = await this.ambiente.api.entrar(codigo, verificador, this.ambiente.redirectUri());
+      const { token, conta } = await this.ambiente.api.entrar(codigo, verificador, redirectUri, cliente);
       this.ambiente.local.setItem(CHAVE_DO_TOKEN, token);
       this.mudar({ conta, carregando: false });
     } catch (erro) {
@@ -125,7 +136,8 @@ export class SessaoDaConta {
 }
 
 const URL_DA_API = import.meta.env.VITE_URL_DA_API ?? "";
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
+const noDesktop = "__TAURI_INTERNALS__" in window;
+const CLIENT_ID = (noDesktop ? import.meta.env.VITE_GOOGLE_CLIENT_ID_DESKTOP : import.meta.env.VITE_GOOGLE_CLIENT_ID) ?? "";
 
 /** Sem API ou sem client id configurados, o app segue sem contas. */
 export const contasLigadas = !!URL_DA_API && !!CLIENT_ID;
@@ -139,4 +151,5 @@ export const sessaoDaConta = new SessaoDaConta({
   irPara: (url) => location.assign(url),
   busca: () => location.search,
   limparBusca: () => history.replaceState(null, "", location.pathname),
+  loginPeloNavegador: noDesktop ? (url) => invoke("login_pelo_navegador", { url }) : undefined,
 });

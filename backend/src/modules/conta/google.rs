@@ -4,14 +4,30 @@ use base64::Engine;
 use serde::Deserialize;
 
 use super::dominio::PerfilDoGoogle;
-use super::portas::{ErroDeLogin, FalhaExterna, PedidoDeLogin, ProvedorDeLogin};
+use super::portas::{ClienteDoGoogle, ErroDeLogin, FalhaExterna, PedidoDeLogin, ProvedorDeLogin};
 
 const ENDERECO_DO_TOKEN: &str = "https://oauth2.googleapis.com/token";
 
-pub struct Google {
+#[derive(Clone)]
+pub struct CredenciaisDoGoogle {
     pub client_id: String,
     pub client_secret: String,
+}
+
+pub struct Google {
+    pub web: CredenciaisDoGoogle,
+    /// Sem credenciais de desktop, o login pelo app desktop é recusado.
+    pub desktop: Option<CredenciaisDoGoogle>,
     pub http: reqwest::Client,
+}
+
+impl Google {
+    fn credenciais(&self, cliente: ClienteDoGoogle) -> Option<&CredenciaisDoGoogle> {
+        match cliente {
+            ClienteDoGoogle::Web => Some(&self.web),
+            ClienteDoGoogle::Desktop => self.desktop.as_ref(),
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -42,6 +58,7 @@ fn perfil_do_id_token(id_token: &str, client_id: &str) -> Option<PerfilDoGoogle>
 #[async_trait]
 impl ProvedorDeLogin for Google {
     async fn trocar_codigo(&self, pedido: &PedidoDeLogin) -> Result<PerfilDoGoogle, ErroDeLogin> {
+        let credenciais = self.credenciais(pedido.cliente).ok_or(ErroDeLogin::Recusado)?;
         let resposta = self
             .http
             .post(ENDERECO_DO_TOKEN)
@@ -49,8 +66,8 @@ impl ProvedorDeLogin for Google {
                 ("code", pedido.codigo.as_str()),
                 ("code_verifier", pedido.verificador.as_str()),
                 ("redirect_uri", pedido.redirect_uri.as_str()),
-                ("client_id", self.client_id.as_str()),
-                ("client_secret", self.client_secret.as_str()),
+                ("client_id", credenciais.client_id.as_str()),
+                ("client_secret", credenciais.client_secret.as_str()),
                 ("grant_type", "authorization_code"),
             ])
             .send()
@@ -65,7 +82,7 @@ impl ProvedorDeLogin for Google {
             .json()
             .await
             .map_err(|e| FalhaExterna(format!("google: {e}")))?;
-        perfil_do_id_token(&token.id_token, &self.client_id).ok_or(ErroDeLogin::Recusado)
+        perfil_do_id_token(&token.id_token, &credenciais.client_id).ok_or(ErroDeLogin::Recusado)
     }
 }
 
@@ -100,6 +117,23 @@ mod tests {
     fn sem_nome_usa_um_padrao() {
         let token = id_token(serde_json::json!({ "sub": "123", "aud": "nosso" }));
         assert_eq!(perfil_do_id_token(&token, "nosso").unwrap().nome, "Jogador");
+    }
+
+    #[test]
+    fn cada_cliente_usa_suas_credenciais() {
+        let credenciais = |id: &str| CredenciaisDoGoogle {
+            client_id: id.into(),
+            client_secret: "s".into(),
+        };
+        let google = Google {
+            web: credenciais("web"),
+            desktop: Some(credenciais("desktop")),
+            http: reqwest::Client::new(),
+        };
+        assert_eq!(google.credenciais(ClienteDoGoogle::Web).unwrap().client_id, "web");
+        assert_eq!(google.credenciais(ClienteDoGoogle::Desktop).unwrap().client_id, "desktop");
+        let so_web = Google { desktop: None, ..google };
+        assert!(so_web.credenciais(ClienteDoGoogle::Desktop).is_none());
     }
 
     #[test]
