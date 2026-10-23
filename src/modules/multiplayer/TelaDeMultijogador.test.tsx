@@ -16,7 +16,8 @@ vi.mock("./sala", () => ({
   criarSala: vi.fn(),
   entrarNaSala: vi.fn(),
   sairDaSala: vi.fn(),
-  escolher: vi.fn(),
+  // Como o de verdade, devolve uma Promise: o Lobby trata a falha com .catch.
+  escolher: vi.fn(async () => {}),
   comecar: vi.fn(),
   procurarSalas: vi.fn(async () => []),
   temModoOnline: vi.fn(() => true),
