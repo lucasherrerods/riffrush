@@ -51,6 +51,8 @@ export interface Musica {
   /** Pacote do Clone Hero, com chart feito à mão. */
   sng?: boolean;
   imagemDeCapa?: string;
+  /** O arquivo está salvo no PC e só é lido na hora de tocar. */
+  noAparelho?: boolean;
 }
 
 export interface MusicaCarregada {

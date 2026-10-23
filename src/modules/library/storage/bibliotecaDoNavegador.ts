@@ -1,10 +1,6 @@
 import { openDB, type DBSchema } from "idb";
-import type { Musica } from "@/modules/songs";
-import type { Biblioteca } from "./biblioteca";
+import { dadosDa, type Biblioteca, type DadosDaMusica } from "./biblioteca";
 import { quemPerdeOAudio } from "./fila";
-
-/** O que fica no histórico: os dados da música, sem os arquivos, que não sobrevivem fora da sessão. */
-type DadosDaMusica = Omit<Musica, "arquivo" | "imagemDeCapa" | "arquivoDeVideo">;
 
 interface Registro {
   id: string;
@@ -48,13 +44,13 @@ export async function abrirBibliotecaDoNavegador({ nome = "riffrush", relogio = 
 
     async guardar(musica, capa) {
       if (!musica.arquivo) return;
-      const { arquivo, imagemDeCapa: _capa, arquivoDeVideo: _video, ...dados } = musica;
+      const { arquivo } = musica;
       const transacao = banco.transaction(["musicas", "audios"], "readwrite");
       const musicas = transacao.objectStore("musicas");
       const anterior = await musicas.get(musica.id);
       await musicas.put({
         id: musica.id,
-        dados,
+        dados: dadosDa(musica),
         usadaEm: relogio(),
         tamanho: arquivo.size,
         nomeDoArquivo: arquivo.name,
@@ -74,6 +70,12 @@ export async function abrirBibliotecaDoNavegador({ nome = "riffrush", relogio = 
       const registro = await transacao.store.get(id);
       if (registro) await transacao.store.put({ ...registro, usadaEm: relogio() });
       await transacao.done;
+    },
+
+    async abrir(id) {
+      const transacao = banco.transaction(["musicas", "audios"]);
+      const [registro, audio] = await Promise.all([transacao.objectStore("musicas").get(id), transacao.objectStore("audios").get(id)]);
+      return registro && audio ? new File([audio], registro.nomeDoArquivo, { type: registro.tipoDoArquivo }) : undefined;
     },
 
     async remover(id) {

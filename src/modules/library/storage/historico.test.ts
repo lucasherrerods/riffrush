@@ -24,4 +24,8 @@ describe("semAudio", () => {
     expect(semAudio(importada("arquivo:a"))).toBe(false);
     expect(semAudio(embutida)).toBe(false);
   });
+
+  it("no PC, a música guardada no aparelho tem áudio mesmo sem o arquivo carregado", () => {
+    expect(semAudio({ ...importada("arquivo:a", false), noAparelho: true })).toBe(false);
+  });
 });

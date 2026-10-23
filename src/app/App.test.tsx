@@ -9,7 +9,12 @@ import { iniciarControle } from "@/modules/gamepad";
 import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
 import { App } from "./App";
 
-const biblioteca = vi.hoisted(() => ({ salvas: [] as unknown[], guardar: vi.fn(async () => {}), usar: vi.fn(async () => {}) }));
+const biblioteca = vi.hoisted(() => ({
+  salvas: [] as unknown[],
+  guardar: vi.fn(async () => {}),
+  usar: vi.fn(async () => {}),
+  prepararParaTocar: vi.fn(async (musica: object) => musica),
+}));
 vi.mock("@/modules/library", async (original) => ({
   ...(await original<typeof import("@/modules/library")>()),
   useBiblioteca: () => biblioteca,
@@ -54,6 +59,7 @@ beforeEach(() => {
   biblioteca.salvas = [];
   biblioteca.guardar.mockClear();
   biblioteca.usar.mockClear();
+  biblioteca.prepararParaTocar.mockClear();
 });
 
 describe("App", () => {
@@ -143,6 +149,16 @@ describe("App", () => {
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
     expect(biblioteca.usar).toHaveBeenCalledWith(MUSICAS_EMBUTIDAS[0].id);
+  });
+
+  it("a música guardada no PC é lida do disco antes da partida", async () => {
+    biblioteca.salvas = [{ ...MUSICAS_EMBUTIDAS[0], id: "arquivo:salva", titulo: "No Disco", noAparelho: true }];
+    biblioteca.prepararParaTocar.mockImplementationOnce(async (musica) => ({ ...musica, titulo: "No Disco Carregada" }));
+    const usuario = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    await usuario.keyboard("{ArrowUp}");
+    await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
+    expect(await screen.findByRole("heading", { name: "Jogando No Disco Carregada" })).toBeInTheDocument();
   });
 
   it("arrastar uma música para o menu importa e abre a seleção com ela", async () => {

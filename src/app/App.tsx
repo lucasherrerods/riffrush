@@ -110,8 +110,11 @@ export function App() {
     salvarConfiguracoes(novas);
   };
 
-  const jogar = () => {
-    void biblioteca.usar(musicas[indice].id);
+  const jogar = async () => {
+    const escolhida = musicas[indice];
+    void biblioteca.usar(escolhida.id);
+    const pronta = await biblioteca.prepararParaTocar(escolhida);
+    if (pronta !== escolhida) setMusicas((atuais) => juntarMusicas(atuais, [pronta]));
     setEmRede(null);
     setPartida((p) => p + 1);
     setTela("jogo");
