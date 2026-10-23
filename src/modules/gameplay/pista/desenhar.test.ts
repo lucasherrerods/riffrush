@@ -83,6 +83,29 @@ describe("desenharPista", () => {
     expect(preenchimentos).toBeGreaterThan(semSustain);
   });
 
+  it("as cordas são de metal: sombra, borda, corpo e brilho em cada uma, e o enrolamento nas graves num traço só", () => {
+    const vazia = desenhar(cena([])).chamadas;
+    const preenchimentos = vazia.filter((ch) => ch.metodo === "fill").length;
+    const cordas = 5 * 4;
+    expect(preenchimentos).toBeGreaterThanOrEqual(cordas);
+    // Cada volta do enrolamento é um segmento; todas saem num stroke só, para não pesar.
+    expect(vazia.filter((ch) => ch.metodo === "moveTo").length).toBeGreaterThan(100);
+  });
+
+  it("cada batida vira um traste de metal, com brilho e sombra", () => {
+    const tracos = (c: Cena) => desenhar(c, 0).chamadas.filter((ch) => ch.metodo === "stroke").length;
+    expect(tracos(cena([], { batidas: [{ tempo: 0.5, forte: true }] })) - tracos(cena([]))).toBe(2);
+  });
+
+  it("o fim do braço some num fade, apagando o que está desenhado perto do horizonte", () => {
+    const chamadas = desenhar(cena([nota(1.9)])).chamadas;
+    const apagar = chamadas.findIndex((ch) => ch.metodo === "=globalCompositeOperation" && ch.args[0] === "destination-out");
+    const desenhoDaNota = chamadas.findIndex((ch) => ch.metodo === "drawImage");
+    expect(apagar).toBeGreaterThan(desenhoDaNota);
+    expect(chamadas.at(-1)).not.toEqual({ metodo: "=globalCompositeOperation", args: ["destination-out"] });
+    expect(chamadas.filter((ch) => ch.metodo === "=globalCompositeOperation").at(-1)?.args[0]).toBe("source-over");
+  });
+
   it("desenha os raios de um trovão por meio segundo", () => {
     const tracos = (c: Cena, tempo: number, efeitos = true) => desenhar(c, tempo, efeitos).chamadas.filter((ch) => ch.metodo === "stroke").length;
     const semTrovao = tracos(cena([]), 1.05);
