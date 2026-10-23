@@ -5,8 +5,16 @@ import { useBiblioteca } from "./useBiblioteca";
 
 const salva: Musica = { ...MUSICAS_EMBUTIDAS[0], id: "arquivo:salva", titulo: "Salva" };
 
+const arquivo = new File(["x"], "Salva.mp3", { type: "audio/mpeg" });
+
 function bibliotecaFalsa(): Biblioteca {
-  return { listar: vi.fn(async () => [salva]), guardar: vi.fn(async () => {}), usar: vi.fn(async () => {}), remover: vi.fn(async () => {}) };
+  return {
+    listar: vi.fn(async () => [salva]),
+    guardar: vi.fn(async () => {}),
+    usar: vi.fn(async () => {}),
+    remover: vi.fn(async () => {}),
+    abrir: vi.fn(async () => arquivo),
+  };
 }
 
 describe("useBiblioteca", () => {
@@ -30,6 +38,23 @@ describe("useBiblioteca", () => {
     await act(() => result.current.usar("arquivo:salva"));
     expect(biblioteca.usar).toHaveBeenCalledWith("arquivo:salva");
     vi.unstubAllGlobals();
+  });
+
+  it("antes de tocar, lê o arquivo da música guardada no aparelho", async () => {
+    const biblioteca = bibliotecaFalsa();
+    const { result } = renderHook(() => useBiblioteca(async () => biblioteca));
+    await waitFor(() => expect(result.current.salvas).toHaveLength(1));
+    const pronta = await result.current.prepararParaTocar({ ...salva, noAparelho: true });
+    expect(biblioteca.abrir).toHaveBeenCalledWith("arquivo:salva");
+    expect(pronta.arquivo).toBe(arquivo);
+  });
+
+  it("música embutida ou já carregada vai direto para o jogo", async () => {
+    const biblioteca = bibliotecaFalsa();
+    const { result } = renderHook(() => useBiblioteca(async () => biblioteca));
+    await waitFor(() => expect(result.current.salvas).toHaveLength(1));
+    expect(await result.current.prepararParaTocar(MUSICAS_EMBUTIDAS[0])).toBe(MUSICAS_EMBUTIDAS[0]);
+    expect(biblioteca.abrir).not.toHaveBeenCalled();
   });
 
   it("sem IndexedDB (aba anônima), o jogo continua sem salvar nada", async () => {

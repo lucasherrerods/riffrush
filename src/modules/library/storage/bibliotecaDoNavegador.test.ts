@@ -77,6 +77,13 @@ describe("abrirBibliotecaDoNavegador", () => {
     expect(await biblioteca.listar()).toEqual([]);
   });
 
+  it("abre o arquivo guardado de uma música", async () => {
+    const biblioteca = await abrir();
+    await biblioteca.guardar(importada("a", "bytes"));
+    expect(await (await biblioteca.abrir("arquivo:a"))?.text()).toBe("bytes");
+    expect(await biblioteca.abrir("arquivo:nada")).toBeUndefined();
+  });
+
   it("remover apaga a música do histórico e o áudio", async () => {
     const biblioteca = await abrir();
     await biblioteca.guardar(importada("a"));

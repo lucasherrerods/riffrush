@@ -8,4 +8,4 @@ export function juntarMusicas(atuais: Musica[], novas: Musica[]): Musica[] {
 }
 
 /** Música importada que ficou só no histórico: o áudio saiu da fila e precisa ser importado de novo. */
-export const semAudio = (musica: Musica) => musica.id.startsWith("arquivo:") && !musica.arquivo;
+export const semAudio = (musica: Musica) => musica.id.startsWith("arquivo:") && !musica.arquivo && !musica.noAparelho;

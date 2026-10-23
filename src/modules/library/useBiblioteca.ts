@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Musica } from "@/modules/songs";
+import { importarArquivo, type Musica } from "@/modules/songs";
 import type { Biblioteca } from "./storage/biblioteca";
 import { abrirBibliotecaDoNavegador } from "./storage/bibliotecaDoNavegador";
+import { abrirBibliotecaDoPc } from "./storage/bibliotecaDoPc";
+
+/** No app do PC as músicas vão para o disco; no navegador (e no celular da sala), para o IndexedDB. */
+const abrirBibliotecaPadrao = () => ("__TAURI_INTERNALS__" in window ? abrirBibliotecaDoPc() : abrirBibliotecaDoNavegador());
 
 /** A capa vem como blob: URL, que morre ao fechar o jogo; a biblioteca guarda o arquivo da imagem. */
 async function capaDe(musica: Musica) {
@@ -14,7 +18,7 @@ async function capaDe(musica: Musica) {
 }
 
 /** As músicas salvas de outras sessões. Sem armazenamento (aba anônima, cota cheia), o jogo segue sem salvar. */
-export function useBiblioteca(abrir: () => Promise<Biblioteca> = abrirBibliotecaDoNavegador) {
+export function useBiblioteca(abrir: () => Promise<Biblioteca> = abrirBibliotecaPadrao) {
   const [salvas, setSalvas] = useState<Musica[] | null>(null);
   const biblioteca = useRef<Promise<Biblioteca | null>>(null);
 
@@ -37,5 +41,17 @@ export function useBiblioteca(abrir: () => Promise<Biblioteca> = abrirBiblioteca
     await (await biblioteca.current)?.usar(id).catch(() => {});
   }, []);
 
-  return { salvas, guardar, usar };
+  /**
+   * Deixa a música pronta para a partida: lê o arquivo guardado no PC e, num .sng salvo,
+   * extrai de novo o clipe, que não fica guardado separado.
+   */
+  const prepararParaTocar = useCallback(async (musica: Musica): Promise<Musica> => {
+    const arquivo = musica.arquivo ?? (musica.noAparelho ? await (await biblioteca.current)?.abrir(musica.id).catch(() => undefined) : undefined);
+    const faltaOClipe = musica.sng && musica.video && !musica.arquivoDeVideo;
+    if (!arquivo || (arquivo === musica.arquivo && !faltaOClipe)) return musica;
+    const arquivoDeVideo = faltaOClipe ? (await importarArquivo(arquivo).catch(() => undefined))?.arquivoDeVideo : musica.arquivoDeVideo;
+    return { ...musica, arquivo, arquivoDeVideo };
+  }, []);
+
+  return { salvas, guardar, usar, prepararParaTocar };
 }
