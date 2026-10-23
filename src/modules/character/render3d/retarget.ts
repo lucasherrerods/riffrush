@@ -56,6 +56,15 @@ export const MIXAMO_PARA_VRM: Record<string, string> = {
   mixamorigRightToeBase: "rightToes",
 };
 
+const giroVertical = new THREE.Quaternion();
+
+/** Tira da rotação o giro em volta do eixo vertical (virar de lado), mantendo as inclinações. */
+function semGiroNoEixoVertical(q: THREE.Quaternion) {
+  giroVertical.set(0, q.y, 0, q.w);
+  if (giroVertical.lengthSq() < 1e-12) return q;
+  return q.multiply(giroVertical.normalize().invert());
+}
+
 interface Destino {
   /** Nome do nó normalizado do VRM para um osso humanoide, ou undefined se o modelo não tem esse osso. */
   nomeNoVRM: (osso: string) => string | undefined;
@@ -92,7 +101,9 @@ export function retargetMixamo(clipe: THREE.AnimationClip, esqueletoMixamo: THRE
       else repousoDoPai.identity();
       const valores = Float32Array.from(trilha.values);
       for (let i = 0; i < valores.length; i += 4) {
-        q.fromArray(valores, i).premultiply(repousoDoPai).multiply(repousoInverso).toArray(valores, i);
+        q.fromArray(valores, i).premultiply(repousoDoPai).multiply(repousoInverso);
+        if (osso === "hips") semGiroNoEixoVertical(q);
+        q.toArray(valores, i);
         if (vrm0) {
           valores[i] *= -1;
           valores[i + 2] *= -1;
@@ -100,8 +111,9 @@ export function retargetMixamo(clipe: THREE.AnimationClip, esqueletoMixamo: THRE
       }
       trilhas.push(new THREE.QuaternionKeyframeTrack(`${nome}.${propriedade}`, Array.from(trilha.times), Array.from(valores)));
     } else if (trilha instanceof THREE.VectorKeyframeTrack && osso === "hips" && propriedade === "position") {
-      // Só o quadril anda; nos outros ossos a posição vem do próprio modelo.
-      const valores = Array.from(trilha.values, (v, i) => (vrm0 && i % 3 !== 1 ? -v : v) * escalaDoQuadril);
+      // Só o quadril se mexe, e só para cima e para baixo: o avatar fica no lugar, dentro do quadro.
+      // Nos outros ossos a posição vem do próprio modelo.
+      const valores = Array.from(trilha.values, (v, i) => (i % 3 === 1 ? v * escalaDoQuadril : 0));
       trilhas.push(new THREE.VectorKeyframeTrack(`${nome}.${propriedade}`, Array.from(trilha.times), valores));
     }
   }
