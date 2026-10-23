@@ -9,7 +9,7 @@ export interface Biblioteca {
   listar(): Promise<Musica[]>;
   /** Guarda a música e o arquivo dela. Músicas sem arquivo (as embutidas) são ignoradas. */
   guardar(musica: Musica, capa?: Blob): Promise<void>;
-  /** A música foi tocada: vai para o começo da fila. */
+  /** A música foi tocada: vai para o começo da lista. */
   usar(id: string): Promise<void>;
   remover(id: string): Promise<void>;
   /** O arquivo guardado da música, ou nada se ele não está mais salvo. */

@@ -1,12 +1,10 @@
 import { openDB, type DBSchema } from "idb";
 import { dadosDa, type Biblioteca, type DadosDaMusica } from "./biblioteca";
-import { quemPerdeOAudio } from "./fila";
 
 interface Registro {
   id: string;
   dados: DadosDaMusica;
   usadaEm: number;
-  tamanho: number;
   nomeDoArquivo: string;
   tipoDoArquivo: string;
   capa?: Blob;
@@ -20,6 +18,8 @@ interface Esquema extends DBSchema {
 const VERSAO = 1;
 
 export async function abrirBibliotecaDoNavegador({ nome = "riffrush", relogio = Date.now } = {}): Promise<Biblioteca> {
+  // Sem limite de músicas, o navegador pode apagar tudo quando faltar espaço; pedir persistência evita isso.
+  void navigator.storage?.persist?.().catch(() => false);
   const banco = await openDB<Esquema>(nome, VERSAO, {
     upgrade(db) {
       db.createObjectStore("musicas", { keyPath: "id" });
@@ -52,16 +52,11 @@ export async function abrirBibliotecaDoNavegador({ nome = "riffrush", relogio = 
         id: musica.id,
         dados: dadosDa(musica),
         usadaEm: relogio(),
-        tamanho: arquivo.size,
         nomeDoArquivo: arquivo.name,
         tipoDoArquivo: arquivo.type,
         capa: capa ?? anterior?.capa,
       });
       await transacao.objectStore("audios").put(arquivo, musica.id);
-
-      const idsComAudio = new Set(await transacao.objectStore("audios").getAllKeys());
-      const comAudio = (await musicas.getAll()).filter((r) => idsComAudio.has(r.id));
-      for (const id of quemPerdeOAudio(comAudio)) await transacao.objectStore("audios").delete(id);
       await transacao.done;
     },
 

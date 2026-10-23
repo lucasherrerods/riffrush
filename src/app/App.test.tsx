@@ -144,7 +144,7 @@ describe("App", () => {
     await waitFor(() => expect(biblioteca.guardar).toHaveBeenCalledWith([expect.objectContaining({ titulo: "Hit" })]));
   });
 
-  it("tocar uma música avisa a biblioteca, para ela ir ao começo da fila", async () => {
+  it("tocar uma música avisa a biblioteca, para ela ir ao começo da lista", async () => {
     const usuario = abrir();
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
