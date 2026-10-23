@@ -86,6 +86,43 @@ describe("avancar", () => {
     expect(partida.derrota).toBe(false);
   });
 
+  describe("fantasma (multijogador)", () => {
+    const comFantasma = () => criarPartida([...Array.from({ length: 30 }, (_, i) => nota(i)), nota(50), nota(51)], { fantasma: true });
+
+    it("zerar a vida vira fantasma em vez de perder", () => {
+      const partida = comFantasma();
+      avancar(partida, 40);
+      expect(partida.derrota).toBe(false);
+      expect(partida.fantasma).toBe(true);
+      expect(retirarEventos(partida).filter((e) => e.tipo === "virouFantasma")).toHaveLength(1);
+    });
+
+    it("o fantasma continua tocando, pontuando e recupera a vida acertando", () => {
+      const partida = comFantasma();
+      avancar(partida, 40);
+      const pontos = partida.pontos;
+      expect(tocar(partida, 0, 50)).toBe(true);
+      expect(partida.pontos).toBeGreaterThan(pontos);
+      expect(partida.vida).toBeGreaterThan(0);
+    });
+
+    it("a marca de fantasma fica até o fim, mesmo depois de recuperar a vida", () => {
+      const partida = comFantasma();
+      avancar(partida, 40);
+      tocar(partida, 0, 50);
+      tocar(partida, 0, 51);
+      expect(partida.fantasma).toBe(true);
+    });
+
+    it("zerar a vida de novo não repete o aviso", () => {
+      const partida = criarPartida([...Array.from({ length: 30 }, (_, i) => nota(i)), nota(50), ...Array.from({ length: 30 }, (_, i) => nota(60 + i))], { fantasma: true });
+      avancar(partida, 40);
+      tocar(partida, 0, 50);
+      avancar(partida, 100);
+      expect(retirarEventos(partida).filter((e) => e.tipo === "virouFantasma")).toHaveLength(1);
+    });
+  });
+
   it("não aceita mais toques depois da derrota", () => {
     const partida = criarPartida([...Array.from({ length: 30 }, (_, i) => nota(i)), nota(50)]);
     avancar(partida, 40);

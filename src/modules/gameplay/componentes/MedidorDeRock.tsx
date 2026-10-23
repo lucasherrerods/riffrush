@@ -1,3 +1,4 @@
+import { Ghost } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 
 /** Até onde o ponteiro vai para cada lado, em graus a partir do meio. */
@@ -22,7 +23,7 @@ const FAIXAS = [
 ];
 
 /** O medidor de rock do Guitar Hero: um mostrador com ponteiro, do vermelho (vaia) ao verde (a galera pirando). */
-export function MedidorDeRock({ vida, className }: { vida: number; className?: string }) {
+export function MedidorDeRock({ vida, fantasma = false, className }: { vida: number; /** Multijogador: a vida já zerou nesta música. */ fantasma?: boolean; className?: string }) {
   const angulo = Math.round(-ABERTURA + vida * ABERTURA * 2);
   return (
     <div role="meter" aria-label="Vida" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(vida * 100)} className={cn("placa sujeira px-3 pt-2 pb-1", className)}>
@@ -46,6 +47,7 @@ export function MedidorDeRock({ vida, className }: { vida: number; className?: s
         </g>
         <circle cx={CENTRO.x} cy={CENTRO.y} r="6" className="fill-superficie-elevada stroke-texto" strokeWidth="2" />
       </svg>
+      {fantasma && <Ghost aria-label="Virou fantasma" className="absolute top-2 right-3 size-5 text-texto opacity-70" />}
     </div>
   );
 }

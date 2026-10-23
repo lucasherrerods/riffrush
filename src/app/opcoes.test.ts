@@ -12,4 +12,9 @@ describe("opcoesDaPartida", () => {
     });
     expect(opcoes.antecedencia).toBeCloseTo(0.7);
   });
+
+  it("leva para a partida se o personagem aparece e se o FPS é mostrado", () => {
+    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, personagem3d: false, mostrarFps: true })).toMatchObject({ personagem: false, mostrarFps: true });
+    expect(opcoesDaPartida(CONFIGURACOES_PADRAO)).toMatchObject({ personagem: true, mostrarFps: false });
+  });
 });

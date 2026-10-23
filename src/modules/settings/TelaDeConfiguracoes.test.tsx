@@ -68,6 +68,16 @@ describe("TelaDeConfiguracoes", () => {
     expect(definirTelaCheia).toHaveBeenCalledWith(true);
   });
 
+  it("desliga o personagem 3D e liga o contador de FPS, para comparar o desempenho", async () => {
+    const { aoMudar, usuario } = abrir();
+    await usuario.click(screen.getByRole("tab", { name: /Vídeo/ }));
+    expect(screen.getByRole("switch", { name: "Personagem 3D" })).toBeChecked();
+    await usuario.click(screen.getByRole("switch", { name: "Personagem 3D" }));
+    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ personagem3d: false }));
+    await usuario.click(screen.getByRole("switch", { name: "Mostrar FPS" }));
+    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ mostrarFps: true }));
+  });
+
   it("começa a calibração com o metrônomo", async () => {
     const { usuario } = abrir();
     await usuario.click(screen.getByRole("tab", { name: /Gameplay/ }));

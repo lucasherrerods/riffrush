@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVoltar, aoEditarPersonagem }: Props) {
-  const { sala, info, erro, online, codigo } = useConexao();
+  const { sala, info, erro, online, codigo, endereco } = useConexao();
   const musicasDaSala = online ? musicas.filter(podeTocarOnline) : musicas;
 
   useTeclado((evento) => {
@@ -51,7 +51,7 @@ export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVo
           <Loader2 className="animate-spin" aria-hidden /> Conectando na sala...
         </p>
       )}
-      {sala && sala.status !== "conectando" && <Lobby sala={sala} info={info} codigo={codigo} musicas={musicasDaSala} volumeDosEfeitos={volumeDosEfeitos} />}
+      {sala && sala.status !== "conectando" && <Lobby sala={sala} info={info} codigo={codigo} endereco={endereco} musicas={musicasDaSala} volumeDosEfeitos={volumeDosEfeitos} />}
     </div>
   );
 }

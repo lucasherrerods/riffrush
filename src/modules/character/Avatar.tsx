@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/shared/lib/utils";
 import type { Personagem } from "./personagem";
+import type { Reacao } from "./reacao";
 import { registrarAvatar, suportaWebGL } from "./render3d/renderizador";
 
 interface Props {
@@ -13,14 +14,16 @@ interface Props {
   pulso?: number;
   /** Vida baixa deixa o personagem abatido. */
   triste?: boolean;
+  /** Reação ao momento da partida; um contador novo dispara de novo. */
+  reacao?: Reacao | null;
 }
 
 /** Personagem 3D em cel-shading. Sem WebGL (ou nos testes) fica só a moldura vazia com o nome. */
-export function Avatar({ personagem, className, tocando = false, bpm = 120, pulso = 0, triste = false }: Props) {
+export function Avatar({ personagem, className, tocando = false, bpm = 120, pulso = 0, triste = false, reacao = null }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const registro = useRef<ReturnType<typeof registrarAvatar>>(null);
   const [comWebGL] = useState(suportaWebGL);
-  const estado = { personagem, tocando, bpm, pulso, triste };
+  const estado = { personagem, tocando, bpm, pulso, triste, reacao };
 
   useEffect(() => {
     if (!comWebGL || !canvas.current) return;
@@ -34,5 +37,5 @@ export function Avatar({ personagem, className, tocando = false, bpm = 120, puls
   });
 
   // width/height dão a proporção 3:4, para "w-auto" funcionar com a altura vinda da classe.
-  return <canvas ref={canvas} role="img" aria-label={`Personagem ${personagem.nome}`} data-instrumento={personagem.instrumento} width={300} height={400} className={cn("aspect-[3/4]", className)} />;
+  return <canvas ref={canvas} role="img" aria-label={`Personagem ${personagem.nome}`} data-instrumento={personagem.instrumento} data-reacao={reacao?.tipo} width={300} height={400} className={cn("aspect-[3/4]", className)} />;
 }

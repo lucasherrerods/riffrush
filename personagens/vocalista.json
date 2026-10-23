@@ -1,0 +1,9 @@
+{
+  "nome": "Vocalista",
+  "altura": 1.58,
+  "proporcoes": { "ombros": 0.95, "quadril": 1.05 },
+  "cabelo": "franja",
+  "manga": "curta",
+  "acessorios": ["munhequeira"],
+  "cores": { "pele": "#f6dcc4", "cabelo": "#2b4c8c", "olhos": "#6b6b6b", "roupa": "#8a1c1c", "calca": "#1f1d1b", "calcados": "#1f1d1b", "detalhe": "#1f1d1b" }
+}

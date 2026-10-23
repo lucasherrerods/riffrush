@@ -1,0 +1,9 @@
+{
+  "nome": "Tecladista",
+  "altura": 1.54,
+  "proporcoes": { "cabeca": 1.06, "ombros": 0.94, "pernas": 0.96 },
+  "cabelo": "black",
+  "manga": "longa",
+  "acessorios": ["bandana"],
+  "cores": { "pele": "#5e3a24", "cabelo": "#2b1a12", "olhos": "#2f6b3a", "roupa": "#2b4c8c", "calca": "#1f1d1b", "calcados": "#d9b56a", "detalhe": "#d9b56a" }
+}

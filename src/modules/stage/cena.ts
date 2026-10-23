@@ -137,7 +137,7 @@ function criarHolofote(cena: THREE.Scene, x: number, cor: string) {
  * Palco 3D atrás da pista: o personagem, telão, treliça, caixas de som e holofotes que
  * pulsam no ritmo, clareiam nos trovões de combo e ficam azuis no star power.
  */
-export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoPalco) {
+export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoPalco, { comPersonagem = true } = {}) {
   const renderizador = new THREE.WebGLRenderer({ canvas, antialias: false });
   renderizador.setPixelRatio(RESOLUCAO);
   const cena = new THREE.Scene();
@@ -152,8 +152,8 @@ export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoP
   const corDaEstrela = new THREE.Color(cores.estrela);
   const branco = new THREE.Color(cores.texto);
 
-  const ator = criarAtor(lerEstado());
-  cena.add(ator.raiz);
+  const ator = comPersonagem ? criarAtor(lerEstado()) : null;
+  if (ator) cena.add(ator.raiz);
   const camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 60);
 
   let quadro = 0;
@@ -171,10 +171,10 @@ export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoP
     const tamanho = renderizador.getSize(new THREE.Vector2());
     if (tamanho.x !== largura || tamanho.y !== altura) renderizador.setSize(largura, altura, false);
 
-    ator.atualizar(estado);
-    ator.animar(agora, dt);
+    ator?.atualizar(estado);
+    ator?.animar(agora, dt);
 
-    const plano = planoDaCamera(estado.tempo, estado.entrada, ator.altura() ?? 1.6);
+    const plano = planoDaCamera(estado.tempo, estado.entrada, ator?.altura() ?? 1.6);
     camera.aspect = largura / altura;
     camera.position.set(...plano.posicao);
     camera.lookAt(...plano.alvo);
@@ -204,7 +204,7 @@ export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoP
   return {
     descartar() {
       cancelAnimationFrame(quadro);
-      ator.descartar();
+      ator?.descartar();
       cena.traverse((objeto) => {
         if (objeto instanceof THREE.Mesh) {
           objeto.geometry.dispose();

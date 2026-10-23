@@ -61,3 +61,12 @@ describe("antecedenciaDasNotas", () => {
     expect(antecedenciaDasNotas(10)).toBeCloseTo(0.7);
   });
 });
+
+describe("personagem e FPS", () => {
+  it("por padrão o personagem 3D aparece e o FPS fica escondido, inclusive em configurações salvas antes", () => {
+    expect(CONFIGURACOES_PADRAO.personagem3d).toBe(true);
+    expect(CONFIGURACOES_PADRAO.mostrarFps).toBe(false);
+    localStorage.setItem("riffrush.configuracoes", JSON.stringify({ velocidade: 3 }));
+    expect(carregarConfiguracoes()).toMatchObject({ velocidade: 3, personagem3d: true, mostrarFps: false });
+  });
+});

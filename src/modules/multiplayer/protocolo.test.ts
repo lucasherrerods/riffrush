@@ -7,6 +7,7 @@ import {
   escolherMusica,
   estadoInicial,
   reduzir,
+  todosProntos,
   type EstadoDaSala,
 } from "./protocolo";
 
@@ -40,7 +41,7 @@ describe("reduzir", () => {
   it("o host registra quem chega e manda a sala atualizada para todos", () => {
     const { estado, enviar } = reduzir(salaDoHost(), 2, { tipo: "oi", personagem: vitor }, 0);
     expect(estado.jogadores).toEqual([{ id: 2, personagem: vitor }]);
-    expect(enviar).toEqual([{ tipo: "sala", jogadores: estado.jogadores, musica: estado.musica, dificuldade: estado.dificuldade }]);
+    expect(enviar).toEqual([{ tipo: "sala", jogadores: estado.jogadores, musica: estado.musica, dificuldade: estado.dificuldade, prontos: [] }]);
   });
 
   it("um jogador que muda o personagem não aparece duas vezes", () => {
@@ -62,7 +63,7 @@ describe("reduzir", () => {
 
   it("o convidado adota a sala enviada pelo host", () => {
     const jogadores = [{ id: 1, personagem: lucas }, { id: 2, personagem: vitor }];
-    const { estado } = reduzir(salaDoConvidado(), 1, { tipo: "sala", jogadores, musica: { tipo: "embutida", id: "overdrive" }, dificuldade: "expert" }, 0);
+    const { estado } = reduzir(salaDoConvidado(), 1, { tipo: "sala", jogadores, musica: { tipo: "embutida", id: "overdrive" }, dificuldade: "expert", prontos: [] }, 0);
     expect(estado).toMatchObject({ hostId: 1, jogadores, musica: { id: "overdrive" }, dificuldade: "expert" });
   });
 
@@ -75,7 +76,7 @@ describe("reduzir", () => {
   });
 
   it("se o host sai, o convidado sai da sala com um aviso", () => {
-    const comHost = reduzir(salaDoConvidado(), 1, { tipo: "sala", jogadores: [], musica: { tipo: "embutida", id: "x" }, dificuldade: "medio" }, 0).estado;
+    const comHost = reduzir(salaDoConvidado(), 1, { tipo: "sala", jogadores: [], musica: { tipo: "embutida", id: "x" }, dificuldade: "medio", prontos: [] }, 0).estado;
     expect(reduzir(comHost, 1, { tipo: "saiu" }, 0).sair).toBe("O host fechou a sala.");
   });
 
@@ -113,6 +114,66 @@ describe("ações do host", () => {
 
   it("só o host escolhe a música", () => {
     expect(escolherMusica(salaDoConvidado(), { tipo: "embutida", id: "overdrive" }, "expert").enviar).toEqual([]);
+  });
+
+  describe("pronto", () => {
+    const overdrive = { tipo: "embutida", id: "overdrive" } as const;
+    /** Host com dois convidados (2 e 3) na sala, tocando a overdrive. */
+    function salaCheia(): EstadoDaSala {
+      let estado = escolherMusica(salaDoHost(), overdrive, "medio").estado;
+      for (const [id, personagem] of [[1, lucas], [2, vitor], [3, vitor]] as const) estado = reduzir(estado, id, { tipo: "oi", personagem }, 0).estado;
+      return estado;
+    }
+    const pronto = (estado: EstadoDaSala, de: number, valor = true, musicaId = "overdrive") => reduzir(estado, de, { tipo: "pronto", musicaId, pronto: valor }, 0);
+
+    it("o host marca quem ficou pronto e avisa todos", () => {
+      const { estado, enviar } = pronto(salaCheia(), 2);
+      expect(estado.prontos).toEqual([2]);
+      expect(enviar[0]).toMatchObject({ tipo: "sala", prontos: [2] });
+    });
+
+    it("pronto para outra música não conta: o jogador ainda não baixou a atual", () => {
+      expect(pronto(salaCheia(), 2, true, "outra").estado.prontos).toEqual([]);
+    });
+
+    it("dá para desmarcar", () => {
+      expect(pronto(pronto(salaCheia(), 2).estado, 2, false).estado.prontos).toEqual([]);
+    });
+
+    it("o convidado adota a lista de prontos do host", () => {
+      const { estado } = reduzir(salaDoConvidado(), 1, { tipo: "sala", jogadores: [], musica: overdrive, dificuldade: "medio", prontos: [2, 3] }, 0);
+      expect(estado.prontos).toEqual([2, 3]);
+    });
+
+    it("só começa com todos os convidados prontos (o host não precisa)", () => {
+      const umPronto = pronto(salaCheia(), 2).estado;
+      expect(todosProntos(umPronto)).toBe(false);
+      expect(comecarPartida(umPronto)).toEqual([]);
+      const todos = pronto(umPronto, 3).estado;
+      expect(todosProntos(todos)).toBe(true);
+      expect(comecarPartida(todos)).toEqual([{ tipo: "comecar", musica: overdrive, dificuldade: "medio" }]);
+    });
+
+    it("trocar a música zera os prontos, porque todos precisam baixar a nova", () => {
+      const { estado, enviar } = escolherMusica(pronto(salaCheia(), 2).estado, { tipo: "embutida", id: "cosmic-riff" }, "medio");
+      expect(estado.prontos).toEqual([]);
+      expect(enviar[0]).toMatchObject({ prontos: [] });
+    });
+
+    it("trocar só a dificuldade mantém os prontos", () => {
+      expect(escolherMusica(pronto(salaCheia(), 2).estado, overdrive, "expert").estado.prontos).toEqual([2]);
+    });
+
+    it("quem sai deixa de contar", () => {
+      const { estado } = reduzir(pronto(pronto(salaCheia(), 2).estado, 3).estado, 3, { tipo: "saiu" }, 0);
+      expect(estado.prontos).toEqual([2]);
+      expect(todosProntos(estado)).toBe(true);
+    });
+
+    it("depois da largada, todos precisam ficar prontos de novo para a próxima", () => {
+      const { estado } = reduzir(pronto(salaCheia(), 2).estado, 1, { tipo: "comecar", musica: overdrive, dificuldade: "medio" }, 0);
+      expect(estado.prontos).toEqual([]);
+    });
   });
 
   it("começar a partida avisa todos com a música e a dificuldade", () => {

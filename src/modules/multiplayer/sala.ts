@@ -4,8 +4,8 @@ import type { Personagem } from "@/modules/character";
 import type { EstadoDoJogador } from "@/modules/gameplay";
 import type { Dificuldade, Musica } from "@/modules/songs";
 import { paraRede } from "./musicaNaRede";
-import { URL_DO_RELAY, deveEnviarEstado, normalizarCodigo, podeTocarOnline, urlParaCriarSala, urlParaEntrarNaSala } from "./online";
-import { comecarPartida, escolherMusica, estadoInicial, reduzir, type EstadoDaSala, type Mensagem } from "./protocolo";
+import { URL_DO_RELAY, deveEnviarEstado, lerSalasOnline, normalizarCodigo, podeTocarOnline, urlDasSalas, urlParaCriarSala, urlParaEntrarNaSala, type SalaOnline } from "./online";
+import { comecarPartida, escolherMusica, estadoInicial, reduzir, todosProntos, type EstadoDaSala, type Mensagem } from "./protocolo";
 
 export const PORTA_DA_SALA = 7777;
 
@@ -109,7 +109,17 @@ export function entrarNaSala(endereco: string, personagem: Personagem) {
 export const temModoOnline = () => !!URL_DO_RELAY;
 
 export function criarSalaOnline(personagem: Personagem) {
-  conectar(urlParaCriarSala(URL_DO_RELAY), "", personagem, true, { online: true });
+  conectar(urlParaCriarSala(URL_DO_RELAY, personagem.nome), "", personagem, true, { online: true });
+}
+
+/** As salas online abertas agora. Sem resposta do relay, a lista fica vazia e o código continua funcionando. */
+export async function procurarSalasOnline(buscar: typeof fetch = fetch): Promise<SalaOnline[]> {
+  try {
+    const resposta = await buscar(urlDasSalas(URL_DO_RELAY));
+    return resposta.ok ? lerSalasOnline(await resposta.json()) : [];
+  } catch {
+    return [];
+  }
 }
 
 export function entrarNaSalaOnline(texto: string, personagem: Personagem) {
@@ -127,23 +137,33 @@ export function sairDaSala(erro?: string) {
   atualizar({ sala: null, info: undefined, online: undefined, codigo: undefined, erro });
 }
 
-export function escolher(musica: Musica, dificuldade: Dificuldade) {
+/** Só o host: troca a música ou a dificuldade da sala. */
+export async function escolher(musica: Musica, dificuldade: Dificuldade) {
+  if (!conexao.sala?.souHost) return;
+  // Na LAN o arquivo importado sai do host: compartilha antes de avisar, para os convidados já poderem baixar.
+  if (!conexao.online && musica.arquivo && musica.id !== conexao.sala.musica.id) {
+    const bytes = new Uint8Array(await musica.arquivo.arrayBuffer());
+    await invoke("lan_compartilhar_musica", bytes, { headers: { "x-tipo": musica.arquivo.type || "application/octet-stream" } });
+  }
   if (!conexao.sala) return;
   const reacao = escolherMusica(conexao.sala, paraRede(musica, { online: conexao.online }), dificuldade);
   atualizar({ sala: reacao.estado });
   enviar(reacao.enviar);
 }
 
+/** O convidado já tem a música da sala e está (ou não) pronto para começar. */
+export function marcarPronto(pronto: boolean) {
+  if (!conexao.sala) return;
+  enviar([{ tipo: "pronto", musicaId: conexao.sala.musica.id, pronto }]);
+}
+
 /** Só o host: compartilha a música importada (se for o caso) e dá a largada para todos. */
 export async function comecar(musica: Musica) {
   if (!conexao.sala?.souHost) return;
-  if (conexao.online) {
-    if (!podeTocarOnline(musica)) throw new Error("No modo online só dá para tocar músicas do jogo ou baixadas pela Busca músicas.");
-  } else if (musica.arquivo) {
-    const bytes = new Uint8Array(await musica.arquivo.arrayBuffer());
-    await invoke("lan_compartilhar_musica", bytes, { headers: { "x-tipo": musica.arquivo.type || "application/octet-stream" } });
-  }
-  escolher(musica, conexao.sala.dificuldade);
+  if (conexao.online && !podeTocarOnline(musica)) throw new Error("No modo online só dá para tocar músicas do jogo ou baixadas pela Busca músicas.");
+  await escolher(musica, conexao.sala.dificuldade);
+  if (!conexao.sala) return;
+  if (!todosProntos(conexao.sala)) throw new Error("Espere todos ficarem prontos para começar.");
   enviar(comecarPartida(conexao.sala));
 }
 

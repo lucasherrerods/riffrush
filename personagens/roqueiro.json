@@ -1,0 +1,10 @@
+{
+  "id": "roqueiro",
+  "nome": "Roqueiro",
+  "altura": 1.62,
+  "cabelo": "moicano",
+  "manga": "curta",
+  "jaqueta": true,
+  "acessorios": ["corrente", "munhequeira", "brinco"],
+  "cores": { "pele": "#e8bf98", "cabelo": "#c8322b", "olhos": "#2b5c9c", "roupa": "#1f1d1b", "camiseta": "#d8d2c4", "calca": "#2d3a4f", "calcados": "#1f1d1b", "detalhe": "#c8322b" }
+}

@@ -1,4 +1,4 @@
-import { HOST, LIMITE_DE_MENSAGENS_POR_SEGUNDO, TAMANHO_MAXIMO_DA_MENSAGEM, codigoValido, dentroDoLimite, embrulhar, gerarCodigo, mensagemDoServidor } from "./regras";
+import { HOST, LIMITE_DE_MENSAGENS_POR_SEGUNDO, MAXIMO_DE_JOGADORES, TAMANHO_MAXIMO_DA_MENSAGEM, VALIDADE_DA_ENTRADA_MS, codigoValido, dentroDoLimite, embrulhar, gerarCodigo, listarSalas, mensagemDoServidor, nomeDoHost, type EntradaDaSala } from "./regras";
 
 describe("gerarCodigo", () => {
   it("gera 5 caracteres sem letras que se confundem", () => {
@@ -59,5 +59,34 @@ describe("dentroDoLimite", () => {
   it("a contagem recomeça no segundo seguinte", () => {
     const cheia = { inicio: 0, contagem: LIMITE_DE_MENSAGENS_POR_SEGUNDO };
     expect(dentroDoLimite(cheia, 1000)).toEqual({ passa: true, janela: { inicio: 1000, contagem: 1 } });
+  });
+});
+
+describe("listarSalas", () => {
+  const agora = 1_000_000;
+  const sala = (codigo: string, extra: Partial<EntradaDaSala> = {}): EntradaDaSala => ({ codigo, nome: "Lucas", jogadores: 1, atualizadaEm: agora, ...extra });
+
+  it("mostra as salas com vaga primeiro, as mais novas antes", () => {
+    const lista = listarSalas([sala("AAAAA", { atualizadaEm: agora - 1000 }), sala("BBBBB"), sala("CCCCC", { jogadores: MAXIMO_DE_JOGADORES })], agora);
+    expect(lista.map((s) => s.codigo)).toEqual(["BBBBB", "AAAAA", "CCCCC"]);
+  });
+
+  it("esconde salas que pararam de se renovar: o host sumiu sem avisar", () => {
+    expect(listarSalas([sala("AAAAA", { atualizadaEm: agora - VALIDADE_DA_ENTRADA_MS - 1 })], agora)).toEqual([]);
+  });
+
+  it("não entrega a hora interna da entrada", () => {
+    expect(listarSalas([sala("AAAAA")], agora)[0]).toEqual({ codigo: "AAAAA", nome: "Lucas", jogadores: 1 });
+  });
+});
+
+describe("nomeDoHost", () => {
+  it("limita o tamanho e tira espaços", () => {
+    expect(nomeDoHost("  Lucas  ")).toBe("Lucas");
+    expect(nomeDoHost("x".repeat(100))).toHaveLength(24);
+  });
+
+  it("sem nome, usa um padrão", () => {
+    expect(nomeDoHost(null)).toBe("Sala sem nome");
   });
 });

@@ -15,6 +15,13 @@ describe("MedidorDeRock", () => {
     expect(screen.getByRole("meter", { name: "Vida" })).toHaveClass("sujeira");
   });
 
+  it("no multijogador, mostra quando a vida zerou e o jogador virou fantasma", () => {
+    const { rerender } = render(<MedidorDeRock vida={0} />);
+    expect(screen.queryByLabelText("Virou fantasma")).not.toBeInTheDocument();
+    rerender(<MedidorDeRock vida={0} fantasma />);
+    expect(screen.getByLabelText("Virou fantasma")).toBeInTheDocument();
+  });
+
   it("tem as válvulas em cima, como um amplificador", () => {
     render(<MedidorDeRock vida={0.5} />);
     expect(screen.getAllByTestId("valvula")).toHaveLength(3);

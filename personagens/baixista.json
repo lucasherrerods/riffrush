@@ -1,0 +1,10 @@
+{
+  "nome": "Baixista",
+  "altura": 1.68,
+  "proporcoes": { "ombros": 1.1, "barriga": 1.12, "pernas": 1.04 },
+  "cabelo": "longo",
+  "manga": "regata",
+  "calca": "bermuda",
+  "acessorios": ["oculos", "barba"],
+  "cores": { "pele": "#9a6644", "cabelo": "#1c1a19", "olhos": "#3b2a1e", "roupa": "#5a1a1a", "calca": "#3d4a2c", "calcados": "#d8d2c4", "detalhe": "#16110f" }
+}

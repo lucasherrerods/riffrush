@@ -56,3 +56,29 @@ describe("criarInstrumento", () => {
     expect(criarInstrumento("vocal")[0].osso).toBe("rightHand");
   });
 });
+
+describe("guitarra e baixo", () => {
+  const pecas = (instrumento: "guitarra" | "baixo") => {
+    const nomes: string[] = [];
+    criarInstrumento(instrumento)[0].objeto.traverse((o) => o.name && nomes.push(o.name));
+    return nomes;
+  };
+  const contar = (nomes: string[], nome: string) => nomes.filter((n) => n === nome).length;
+
+  it("a guitarra tem 6 cordas e 6 tarraxas; o baixo, 4 de cada", () => {
+    expect(contar(pecas("guitarra"), "corda")).toBe(6);
+    expect(contar(pecas("guitarra"), "tarraxa")).toBe(6);
+    expect(contar(pecas("baixo"), "corda")).toBe(4);
+    expect(contar(pecas("baixo"), "tarraxa")).toBe(4);
+  });
+
+  it("tem as peças de uma guitarra de verdade", () => {
+    const nomes = pecas("guitarra");
+    for (const peca of ["corpo", "escudo", "captador", "ponte", "escala", "traste", "mao"]) expect(nomes).toContain(peca);
+  });
+
+  it("o braço do baixo é mais comprido que o da guitarra", () => {
+    const comprimento = (instrumento: "guitarra" | "baixo") => new THREE.Box3().setFromObject(criarInstrumento(instrumento)[0].objeto).getSize(new THREE.Vector3()).y;
+    expect(comprimento("baixo")).toBeGreaterThan(comprimento("guitarra") + 0.1);
+  });
+});

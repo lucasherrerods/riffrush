@@ -89,6 +89,43 @@ describe("sala", () => {
     expect(socket().enviadas.at(-1)).toMatchObject({ tipo: "comecar" });
   });
 
+  describe("pronto", () => {
+    it("o convidado marca pronto para a música atual da sala", async () => {
+      const sala = await importar();
+      sala.entrarNaSala("http://h:7777", PERSONAGEM_PADRAO);
+      socket().abrir();
+      socket().receber(0, { tipo: "bemVindo", id: 2 });
+      sala.marcarPronto(true);
+      expect(socket().enviadas.at(-1)).toEqual({ tipo: "pronto", musicaId: "neon-highway", pronto: true });
+    });
+
+    it("na LAN, o host compartilha a música importada assim que escolhe, antes de avisar a sala", async () => {
+      const sala = await importar();
+      await sala.criarSala(PERSONAGEM_PADRAO);
+      socket().abrir();
+      socket().receber(0, { tipo: "bemVindo", id: 1 });
+      const enviadasAntes = socket().enviadas.length;
+      let enviadasNaHoraDoCompartilhamento = -1;
+      vi.mocked(invoke).mockImplementation(async (comando) => {
+        if (comando === "lan_compartilhar_musica") enviadasNaHoraDoCompartilhamento = socket().enviadas.length;
+      });
+      const importada = { ...MUSICAS_EMBUTIDAS[0], id: "arquivo:x", arquivo: new File(["abc"], "x.wav", { type: "audio/wav" }) };
+      await sala.escolher(importada, "medio");
+      expect(enviadasNaHoraDoCompartilhamento).toBe(enviadasAntes);
+      expect(socket().enviadas.at(-1)).toMatchObject({ tipo: "sala", musica: { tipo: "importada", id: "arquivo:x" } });
+    });
+
+    it("o host não começa enquanto algum convidado não está pronto", async () => {
+      const sala = await importar();
+      await sala.criarSala(PERSONAGEM_PADRAO);
+      socket().abrir();
+      socket().receber(0, { tipo: "bemVindo", id: 1 });
+      socket().receber(2, { tipo: "oi", personagem: PERSONAGEM_PADRAO });
+      await expect(sala.comecar(MUSICAS_EMBUTIDAS[0])).rejects.toThrow(/prontos/);
+      expect((socket().enviadas as { tipo: string }[]).some((m) => m.tipo === "comecar")).toBe(false);
+    });
+  });
+
   describe("online", () => {
     const estado = { pontos: 10, vida: 0.5, sequencia: 1, pulso: 1, derrota: false, terminou: false };
 
@@ -105,9 +142,21 @@ describe("sala", () => {
 
     it("criar a sala online conecta no relay como host e guarda o código", async () => {
       const sala = await criarOnline();
-      expect(socket().url).toBe("wss://relay.teste/criar");
+      expect(socket().url).toBe("wss://relay.teste/criar?nome=Rockstar");
       expect(invoke).not.toHaveBeenCalled();
       expect(sala.lerConexao()).toMatchObject({ codigo: "ABCDE", sala: { souHost: true, meuId: 1 } });
+    });
+
+    it("procura as salas abertas no relay", async () => {
+      const sala = await importar();
+      const buscar = vi.fn(async () => Response.json([{ codigo: "K7QXM", nome: "Lucas", jogadores: 2 }]));
+      expect(await sala.procurarSalasOnline(buscar)).toEqual([{ codigo: "K7QXM", nome: "Lucas", jogadores: 2 }]);
+      expect(buscar).toHaveBeenCalledWith("https://relay.teste/salas");
+    });
+
+    it("se o relay não responde, a lista fica vazia", async () => {
+      const sala = await importar();
+      expect(await sala.procurarSalasOnline(vi.fn(async () => Promise.reject(new TypeError("rede"))))).toEqual([]);
     });
 
     it("entrar com código conecta na sala do relay", async () => {

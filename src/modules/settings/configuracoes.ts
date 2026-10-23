@@ -10,6 +10,9 @@ export interface Configuracoes {
   semFalha: boolean;
   bot: boolean;
   efeitos: boolean;
+  /** Desligado, o personagem 3D some do palco e do HUD (bom para comparar o desempenho). */
+  personagem3d: boolean;
+  mostrarFps: boolean;
 }
 
 export const CONFIGURACOES_PADRAO: Configuracoes = {
@@ -22,6 +25,8 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   semFalha: false,
   bot: false,
   efeitos: true,
+  personagem3d: true,
+  mostrarFps: false,
 };
 
 const CHAVE = "riffrush.configuracoes";

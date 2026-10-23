@@ -7,6 +7,7 @@ import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { iniciarControle } from "@/modules/gamepad";
 import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
+import { useSeguirMusica } from "@/modules/player";
 import { avisar } from "@/shared/ui/avisos";
 import { App } from "./App";
 
@@ -56,6 +57,14 @@ vi.mock("@/modules/multiplayer", async (original) => ({
   voltarParaASala: vi.fn(),
 }));
 
+// Sem isso o player sintetizaria a primeira música a cada teste.
+vi.mock("@/modules/player", () => ({
+  CabecalhoDoPlayerDeMusica: () => null,
+  indiceVizinho: vi.fn(),
+  useSeguirMusica: vi.fn(),
+  playerDeMusica: { definirFila: vi.fn(), definirNavegacao: vi.fn(), seguir: vi.fn(), definirVolume: vi.fn(), suspender: vi.fn(), estado: () => ({ musica: null }) },
+}));
+
 vi.stubGlobal("AudioContext", AudioContextFalso);
 
 function abrir() {
@@ -77,6 +86,14 @@ describe("App", () => {
   it("começa no menu principal", () => {
     abrir();
     expect(screen.getByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
+  });
+
+  it("na seleção o player segue a música escolhida, e fora dela não", async () => {
+    const usuario = abrir();
+    expect(vi.mocked(useSeguirMusica)).toHaveBeenLastCalledWith(null);
+    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    await screen.findByRole("heading", { name: "Selecione a música" });
+    expect(vi.mocked(useSeguirMusica)).toHaveBeenLastCalledWith(MUSICAS_EMBUTIDAS[0]);
   });
 
   it("Jogar abre a seleção e Esc volta ao menu", async () => {
@@ -258,6 +275,7 @@ describe("App em rede", () => {
     jogadores: [{ id: 1, personagem: PERSONAGEM_PADRAO }, { id: 2, personagem: vitor }],
     musica: { tipo: "embutida" as const, id: "overdrive" },
     dificuldade: "expert" as const,
+    prontos: [],
     adversarios: {},
     partidas: 1,
     inicio: performance.now() + 5000,

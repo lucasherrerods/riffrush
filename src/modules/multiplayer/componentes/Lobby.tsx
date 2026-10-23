@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { ChevronDown, ChevronUp, Globe, Loader2, Play, Smartphone, Users } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Globe, Loader2, Play, Smartphone, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar } from "@/modules/character";
-import { DIFICULDADES, type Musica } from "@/modules/songs";
+import { useSeguirMusica } from "@/modules/player";
+import { DIFICULDADES, type Dificuldade, type Musica } from "@/modules/songs";
 import { janelaEmVolta } from "@/shared/lib/janela";
 import { cn } from "@/shared/lib/utils";
 import { avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { MAXIMO_DE_JOGADORES, type EstadoDaSala } from "../protocolo";
-import { comecar, escolher, type InfoDaSala } from "../sala";
+import { todosProntos } from "../protocolo";
+import { comecar, escolher, marcarPronto, type InfoDaSala } from "../sala";
+import { useMusicaDaSala } from "../useMusicaDaSala";
 
 const MUSICAS_VISIVEIS = 3;
 
@@ -19,11 +22,20 @@ interface Props {
   info?: InfoDaSala;
   /** Sala online: o código que os amigos digitam. */
   codigo?: string;
+  /** Endereço do host, de onde o convidado baixa a música importada na LAN. */
+  endereco: string;
   musicas: Musica[];
   volumeDosEfeitos: number;
 }
 
-export function Lobby({ sala, info, codigo, musicas, volumeDosEfeitos }: Props) {
+export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos }: Props) {
+  const preparo = useMusicaDaSala(sala, musicas, endereco);
+  useSeguirMusica(preparo.tipo === "pronta" ? (preparo.musica ?? null) : null);
+  // Na LAN, escolher uma música importada envia o arquivo, e isso pode falhar.
+  const escolherNaSala = (m: Musica, d: Dificuldade) => void escolher(m, d).catch((erro) => avisar.error(erro instanceof Error ? erro.message : String(erro)));
+  const convidados = sala.jogadores.filter((j) => j.id !== sala.hostId);
+  const prontos = convidados.filter((j) => sala.prontos.includes(j.id)).length;
+  const estouPronto = sala.prontos.includes(sala.meuId);
   const [qr, setQr] = useState("");
   const [comecando, setComecando] = useState(false);
   const musica = musicas.find((m) => m.id === sala.musica.id);
@@ -35,7 +47,7 @@ export function Lobby({ sala, info, codigo, musicas, volumeDosEfeitos }: Props) 
     const vizinha = musicas[posicao + passo];
     if (!vizinha) return;
     tocarEfeito("mover", volumeDosEfeitos);
-    escolher(vizinha, sala.dificuldade);
+    escolherNaSala(vizinha, sala.dificuldade);
   };
 
   useEffect(() => {
@@ -76,6 +88,11 @@ export function Lobby({ sala, info, codigo, musicas, volumeDosEfeitos }: Props) 
                     <div className="flex gap-1">
                       {jogador.id === sala.hostId && <span className="rounded-full bg-ouro px-2 text-base font-bold text-fundo">Host</span>}
                       {jogador.id === sala.meuId && <span className="rounded-full bg-superficie-elevada px-2 text-base">Você</span>}
+                      {sala.prontos.includes(jogador.id) && (
+                        <span className="flex items-center gap-1 rounded-full bg-sucesso px-2 text-base font-bold text-fundo">
+                          <Check className="size-4 opacity-70" aria-hidden /> Pronto
+                        </span>
+                      )}
                     </div>
                   </>
                 ) : (
@@ -117,7 +134,7 @@ export function Lobby({ sala, info, codigo, musicas, volumeDosEfeitos }: Props) 
                         aria-label={`${m.titulo} - ${m.artista}`}
                         onClick={() => {
                           tocarEfeito("mover", volumeDosEfeitos);
-                          escolher(m, sala.dificuldade);
+                          escolherNaSala(m, sala.dificuldade);
                         }}
                         className={cn("flex items-center gap-4 rounded-lg px-4 py-2 text-left text-base", escolhida ? "bg-primaria" : "hover:bg-superficie-elevada")}
                       >
@@ -139,20 +156,51 @@ export function Lobby({ sala, info, codigo, musicas, volumeDosEfeitos }: Props) 
                 titulo="Dificuldade"
                 opcoes={DIFICULDADES.map((d) => ({ id: d.id, rotulo: d.rotulo }))}
                 valor={sala.dificuldade}
-                aoEscolher={(dificuldade) => musica && escolher(musica, dificuldade)}
+                aoEscolher={(dificuldade) => musica && escolherNaSala(musica, dificuldade)}
               />
             ) : (
               <p className="text-base text-texto-suave">Dificuldade: {DIFICULDADES.find((d) => d.id === sala.dificuldade)?.rotulo}</p>
             )}
 
             {sala.souHost ? (
-              <Button size="lg" disabled={comecando || !musica} className="h-14 text-lg font-black" onClick={() => void darLargada()}>
-                {comecando ? <Loader2 className="animate-spin" /> : <Play className="fill-current opacity-70" />} Começar partida
-              </Button>
-            ) : (
+              <div className="flex flex-col gap-2">
+                <Button size="lg" disabled={comecando || !musica || !todosProntos(sala)} className="h-14 text-lg font-black" onClick={() => void darLargada()}>
+                  {comecando ? <Loader2 className="animate-spin" /> : <Play className="fill-current opacity-70" />} Começar partida
+                </Button>
+                {!todosProntos(sala) && (
+                  <p className="text-center text-base text-texto-suave">
+                    Esperando todos ficarem prontos ({prontos} de {convidados.length})
+                  </p>
+                )}
+              </div>
+            ) : preparo.tipo === "baixando" ? (
               <p className="flex items-center justify-center gap-2 py-4 text-base text-texto-suave">
-                <Loader2 className="size-4 animate-spin" aria-hidden /> Esperando o host começar...
+                <Loader2 className="size-4 animate-spin" aria-hidden /> Baixando a música...
               </p>
+            ) : preparo.tipo === "erro" ? (
+              <p role="alert" className="py-4 text-center text-base text-texto-suave">
+                {preparo.mensagem}
+              </p>
+            ) : estouPronto ? (
+              <div className="flex flex-col gap-2">
+                <p className="flex items-center justify-center gap-2 text-base text-texto-suave">
+                  <Loader2 className="size-4 animate-spin" aria-hidden /> Pronto! Esperando o host começar...
+                </p>
+                <Button variant="outline" onClick={() => marcarPronto(false)}>
+                  Cancelar pronto
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="lg"
+                className="h-14 text-lg font-black"
+                onClick={() => {
+                  tocarEfeito("selecionar", volumeDosEfeitos);
+                  marcarPronto(true);
+                }}
+              >
+                <Check className="opacity-70" /> Estou pronto
+              </Button>
             )}
           </div>
         </section>
