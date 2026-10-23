@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { Loader2, Play, Smartphone, Users } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, Play, Smartphone, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar } from "@/modules/character";
 import { DIFICULDADES, type Musica } from "@/modules/songs";
+import { janelaEmVolta } from "@/shared/lib/janela";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { MAXIMO_DE_JOGADORES, type EstadoDaSala } from "../protocolo";
 import { comecar, escolher, type InfoDaSala } from "../sala";
+
+const MUSICAS_VISIVEIS = 3;
 
 interface Props {
   sala: EstadoDaSala;
@@ -22,6 +25,15 @@ export function Lobby({ sala, info, musicas, volumeDosEfeitos }: Props) {
   const [comecando, setComecando] = useState(false);
   const musica = musicas.find((m) => m.id === sala.musica.id);
   const tituloDaMusica = musica?.titulo ?? (sala.musica.tipo === "importada" ? sala.musica.titulo : sala.musica.id);
+  const posicao = musicas.findIndex((m) => m.id === sala.musica.id);
+  // Sem rolagem: só as músicas em volta da escolhida aparecem, e as setas andam pela lista.
+  const visiveis = janelaEmVolta(musicas.length, Math.max(0, posicao), MUSICAS_VISIVEIS);
+  const escolherVizinha = (passo: number) => {
+    const vizinha = musicas[posicao + passo];
+    if (!vizinha) return;
+    tocarEfeito("mover", volumeDosEfeitos);
+    escolher(vizinha, sala.dificuldade);
+  };
 
   useEffect(() => {
     if (info) void QRCode.toDataURL(info.endereco, { margin: 1, width: 220 }).then(setQr);
@@ -39,7 +51,7 @@ export function Lobby({ sala, info, musicas, volumeDosEfeitos }: Props) {
   };
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1 max-md:overflow-y-auto">
+    <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1">
       <div className={cn("flex min-h-0 flex-col gap-4", info ? "col-span-8" : "col-span-12")}>
         <ul className="grid grid-cols-4 gap-4 max-md:grid-cols-2">
           {Array.from({ length: MAXIMO_DE_JOGADORES }, (_, i) => {
@@ -54,7 +66,7 @@ export function Lobby({ sala, info, musicas, volumeDosEfeitos }: Props) {
               >
                 {jogador ? (
                   <>
-                    <Avatar personagem={jogador.personagem} className="h-36 w-auto" />
+                    <Avatar personagem={jogador.personagem} className="h-24 w-auto" />
                     <p className="mt-2 truncate text-base font-bold">{jogador.personagem.nome}</p>
                     <div className="flex gap-1">
                       {jogador.id === sala.hostId && <span className="rounded-full bg-ouro px-2 text-base font-bold text-fundo">Host</span>}
@@ -62,7 +74,7 @@ export function Lobby({ sala, info, musicas, volumeDosEfeitos }: Props) {
                     </div>
                   </>
                 ) : (
-                  <div className="flex h-44 flex-col items-center justify-center gap-2 text-texto-suave">
+                  <div className="flex h-32 flex-col items-center justify-center gap-2 text-texto-suave">
                     <Users className="opacity-50" aria-hidden />
                     <p className="text-base">Esperando...</p>
                   </div>
@@ -72,54 +84,72 @@ export function Lobby({ sala, info, musicas, volumeDosEfeitos }: Props) {
           })}
         </ul>
 
-        <section className="flex flex-col gap-4 placa p-6">
-          <p className="text-base font-semibold text-texto-suave">Música</p>
-          {sala.souHost ? (
-            <div role="radiogroup" aria-label="Música" className="flex max-h-48 flex-col gap-1 overflow-y-auto pr-1">
-              {musicas.map((m) => {
-                const escolhida = m.id === sala.musica.id;
-                return (
-                  <button
-                    key={m.id}
-                    role="radio"
-                    aria-checked={escolhida}
-                    aria-label={`${m.titulo} - ${m.artista}`}
-                    onClick={() => {
-                      tocarEfeito("mover", volumeDosEfeitos);
-                      escolher(m, sala.dificuldade);
-                    }}
-                    className={cn("flex items-center gap-4 rounded-lg px-4 py-2 text-left text-base", escolhida ? "bg-primaria" : "hover:bg-superficie-elevada")}
-                  >
-                    <span className="flex-1 truncate font-semibold">{m.titulo}</span>
-                    <span className="truncate text-texto-suave">{m.artista}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-2xl font-black">{tituloDaMusica}</p>
-          )}
+        {/* Música à esquerda, dificuldade e largada à direita: lado a lado, tudo cabe sem rolagem. */}
+        <section className="grid grid-cols-2 gap-6 placa p-6 max-md:grid-cols-1">
+          <div className="flex min-w-0 flex-col gap-2">
+            <p className="text-base font-semibold text-texto-suave">Música</p>
+            {sala.souHost ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="icon" aria-label="Música anterior" disabled={posicao <= 0} onClick={() => escolherVizinha(-1)}>
+                    <ChevronUp />
+                  </Button>
+                  <span className="flex-1 text-center text-base text-texto-suave">
+                    {posicao + 1} de {musicas.length}
+                  </span>
+                  <Button variant="ghost" size="icon" aria-label="Próxima música" disabled={posicao >= musicas.length - 1} onClick={() => escolherVizinha(1)}>
+                    <ChevronDown />
+                  </Button>
+                </div>
+                <div role="radiogroup" aria-label="Música" className="flex flex-col gap-1">
+                  {musicas.slice(visiveis.inicio, visiveis.fim).map((m) => {
+                    const escolhida = m.id === sala.musica.id;
+                    return (
+                      <button
+                        key={m.id}
+                        role="radio"
+                        aria-checked={escolhida}
+                        aria-label={`${m.titulo} - ${m.artista}`}
+                        onClick={() => {
+                          tocarEfeito("mover", volumeDosEfeitos);
+                          escolher(m, sala.dificuldade);
+                        }}
+                        className={cn("flex items-center gap-4 rounded-lg px-4 py-2 text-left text-base", escolhida ? "bg-primaria" : "hover:bg-superficie-elevada")}
+                      >
+                        <span className="flex-1 truncate font-semibold">{m.titulo}</span>
+                        <span className="truncate text-texto-suave">{m.artista}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <p className="text-2xl font-black">{tituloDaMusica}</p>
+            )}
+          </div>
 
-          {sala.souHost ? (
-            <GrupoDeOpcoes
-              titulo="Dificuldade"
-              opcoes={DIFICULDADES.map((d) => ({ id: d.id, rotulo: d.rotulo }))}
-              valor={sala.dificuldade}
-              aoEscolher={(dificuldade) => musica && escolher(musica, dificuldade)}
-            />
-          ) : (
-            <p className="text-base text-texto-suave">Dificuldade: {DIFICULDADES.find((d) => d.id === sala.dificuldade)?.rotulo}</p>
-          )}
+          <div className="flex min-w-0 flex-col justify-end gap-4">
+            {sala.souHost ? (
+              <GrupoDeOpcoes
+                titulo="Dificuldade"
+                opcoes={DIFICULDADES.map((d) => ({ id: d.id, rotulo: d.rotulo }))}
+                valor={sala.dificuldade}
+                aoEscolher={(dificuldade) => musica && escolher(musica, dificuldade)}
+              />
+            ) : (
+              <p className="text-base text-texto-suave">Dificuldade: {DIFICULDADES.find((d) => d.id === sala.dificuldade)?.rotulo}</p>
+            )}
 
-          {sala.souHost ? (
-            <Button size="lg" disabled={comecando || !musica} className="h-14 text-lg font-black" onClick={() => void darLargada()}>
-              {comecando ? <Loader2 className="animate-spin" /> : <Play className="fill-current opacity-70" />} Começar partida
-            </Button>
-          ) : (
-            <p className="flex items-center justify-center gap-2 py-4 text-base text-texto-suave">
-              <Loader2 className="size-4 animate-spin" aria-hidden /> Esperando o host começar...
-            </p>
-          )}
+            {sala.souHost ? (
+              <Button size="lg" disabled={comecando || !musica} className="h-14 text-lg font-black" onClick={() => void darLargada()}>
+                {comecando ? <Loader2 className="animate-spin" /> : <Play className="fill-current opacity-70" />} Começar partida
+              </Button>
+            ) : (
+              <p className="flex items-center justify-center gap-2 py-4 text-base text-texto-suave">
+                <Loader2 className="size-4 animate-spin" aria-hidden /> Esperando o host começar...
+              </p>
+            )}
+          </div>
         </section>
       </div>
 

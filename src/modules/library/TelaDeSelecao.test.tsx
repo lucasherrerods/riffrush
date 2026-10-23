@@ -25,7 +25,6 @@ function abrir({ indice = 0, dificuldade = "medio" as Dificuldade, musicas = MUS
 beforeEach(() => {
   localStorage.clear();
   vi.stubGlobal("AudioContext", AudioContextFalso);
-  Element.prototype.scrollIntoView = vi.fn();
 });
 
 describe("TelaDeSelecao", () => {

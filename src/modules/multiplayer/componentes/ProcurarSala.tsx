@@ -48,7 +48,7 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
   };
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1 max-md:overflow-y-auto">
+    <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1">
       <section className="col-span-4 flex flex-col items-center gap-4 placa p-6">
         <Avatar personagem={personagem} className="h-48 w-auto" />
         <p className="text-xl font-black">{personagem.nome}</p>
@@ -84,7 +84,7 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
               <RefreshCw className={procurando ? "animate-spin opacity-70" : "opacity-70"} /> Procurar
             </Button>
           </div>
-          <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+          <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
             {salas.length === 0 && (
               <li className="py-12 text-center text-base text-texto-suave">
                 {procurando ? "Procurando salas..." : "Nenhuma sala encontrada. Crie a sua ou peça para alguém criar."}

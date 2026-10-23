@@ -110,29 +110,30 @@ export function TelaDeSelecao(props: Props) {
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-8 p-8 max-md:grid-cols-1 max-md:gap-4 max-md:p-4">
-        <section aria-label="Informações da música" className="col-span-5 flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto max-md:col-span-1">
-          <div className="flex gap-4">
-            <Capa musica={musica} girando className="aspect-square w-1/2 rounded-md border border-borda max-md:hidden" />
-            <div className="flex min-w-0 flex-1 flex-col gap-2 max-md:flex-row">
-              {musica.bpm > 0 && <Dado rotulo="BPM">{musica.bpm}</Dado>}
-              <Dado rotulo="Gênero">{musica.genero}</Dado>
-              <Dado rotulo="Intensidade" className="max-md:hidden">
-                <span className="flex gap-1 py-1" aria-label={`Intensidade ${musica.intensidade} de 5`}>
-                  {Array.from({ length: 5 }, (_, k) => (
-                    <Flame key={k} className={cn("size-4", k < musica.intensidade ? "text-destaque" : "text-borda")} />
-                  ))}
-                </span>
-              </Dado>
+        <section aria-label="Informações da música" className="col-span-5 flex min-h-0 min-w-0 flex-col gap-4 max-md:col-span-1">
+          {/* Tudo cabe sem rolagem: capa pequena ao lado do título e os dados numa linha só. */}
+          <div className="flex items-center gap-4">
+            <Capa musica={musica} girando className="size-28 rounded-md border border-borda max-md:hidden" />
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-4xl leading-[1.1] max-md:text-2xl">{musica.titulo}</h2>
+              <p className="truncate text-lg text-texto-suave">{musica.artista}</p>
             </div>
           </div>
 
-          <div className="min-w-0">
-            <h2 className="truncate text-4xl leading-[1.1] max-md:text-2xl">{musica.titulo}</h2>
-            <p className="truncate text-lg text-texto-suave">{musica.artista}</p>
+          <div className="flex min-w-0 gap-2">
+            {musica.bpm > 0 && <Dado rotulo="BPM" className="flex-1">{musica.bpm}</Dado>}
+            <Dado rotulo="Gênero" className="flex-1">{musica.genero}</Dado>
+            <Dado rotulo="Intensidade" className="flex-1 max-md:hidden">
+              <span className="flex gap-1 py-1" aria-label={`Intensidade ${musica.intensidade} de 5`}>
+                {Array.from({ length: 5 }, (_, k) => (
+                  <Flame key={k} className={cn("size-4", k < musica.intensidade ? "text-destaque" : "text-borda")} />
+                ))}
+              </span>
+            </Dado>
           </div>
 
-          <div className="placa flex items-end gap-4 p-4">
-            <AvatarPalhetando personagem={personagem} bpm={musica.bpm || 120} className="h-40 w-auto shrink-0 max-md:hidden" />
+          <div className="placa flex min-h-0 items-end gap-4 p-4">
+            <AvatarPalhetando personagem={personagem} bpm={musica.bpm || 120} className="h-40 w-auto shrink-0 max-md:hidden [@media(max-height:680px)]:h-24" />
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               <Dado rotulo="Dificuldade">{rotuloDaDificuldade}</Dado>
               {recordeAtual && (

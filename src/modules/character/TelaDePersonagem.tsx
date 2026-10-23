@@ -79,7 +79,7 @@ export function TelaDePersonagem({ personagem, aoSalvar, aoVoltar }: Props) {
         </Button>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1 max-md:overflow-y-auto">
+      <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1">
         <section className="col-span-5 flex min-h-0 flex-col items-center justify-center gap-2 placa p-6">
           <Avatar personagem={rascunho} tocando pulso={pulso} className="h-[min(60vh,480px)] w-auto" />
           <p className="font-titulo text-3xl uppercase">{rascunho.nome.trim() || "Sem nome"}</p>
@@ -103,7 +103,7 @@ export function TelaDePersonagem({ personagem, aoSalvar, aoVoltar }: Props) {
               ))}
             </TabsList>
 
-            <div className="min-h-0 flex-1 overflow-y-auto pt-4">
+            <div className="min-h-0 flex-1 pt-4">
               <TabsContent value="corpo" className="flex flex-col gap-6">
                 {BASES.length > 1 && (
                   <GrupoDeOpcoes titulo="Modelo" opcoes={BASES} valor={rascunho.base} aoEscolher={(base) => mudar({ base })} />

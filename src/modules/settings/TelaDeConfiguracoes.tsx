@@ -59,7 +59,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
   );
 
   return (
-    <div className="flex h-full flex-col gap-6 p-8">
+    <div className="flex h-full flex-col gap-4 p-6">
       <header className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
           <ArrowLeft />
@@ -87,7 +87,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
           </TabsTrigger>
         </TabsList>
 
-        <div className="mt-4 min-h-0 flex-1 overflow-y-auto placa p-4">
+        <div className="mt-2 min-h-0 flex-1 placa p-2">
           <TabsContent value="controles" className="flex flex-col gap-2">
             <p className="px-4 py-2 text-base text-texto-suave">Clique numa tecla e aperte a nova. Esc cancela.</p>
             {NOMES_DAS_PISTAS.map((nome, i) => (

@@ -60,7 +60,7 @@ export function TelaDeResultado(props: Props) {
   ];
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-8 overflow-y-auto p-8">
+    <div className="flex h-full flex-col items-center justify-center gap-8 p-8">
       <div className="text-center">
         <p className="text-base font-semibold tracking-[0.3em] text-texto-suave">RESULTADO</p>
         <h1 className="mt-2 text-5xl leading-[1.1] font-black tracking-[-0.02em]">{titulo}</h1>
