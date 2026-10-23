@@ -1,4 +1,4 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { registrarUso } from "@/modules/gamepad";
@@ -91,6 +91,41 @@ describe("TelaDeSelecao", () => {
   it("mostra o personagem palhetando a guitarra ao lado da música", () => {
     abrir();
     expect(screen.getByRole("img", { name: "Personagem Rockstar" })).toHaveAttribute("data-instrumento", "guitarra");
+  });
+});
+
+describe("TelaDeSelecao com carrossel", () => {
+  it("abre as dificuldades embaixo da música selecionada, e só nela", () => {
+    abrir({ indice: 2, dificuldade: "dificil" });
+    const [selecionada] = screen.getAllByRole("listitem").filter((li) => within(li).queryByRole("radiogroup"));
+    expect(within(selecionada).getByRole("button", { name: /Cosmic Riff/ })).toBeInTheDocument();
+    expect(within(selecionada).getAllByRole("radio")).toHaveLength(4);
+    expect(within(selecionada).getByRole("radio", { name: /Difícil/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getAllByRole("radiogroup")).toHaveLength(1);
+  });
+
+  it("clicar numa dificuldade escolhe; clicar de novo na escolhida toca", async () => {
+    const { aoDificuldade, aoJogar, usuario } = abrir({ dificuldade: "medio" });
+    await usuario.click(screen.getByRole("radio", { name: /Expert/ }));
+    expect(aoDificuldade).toHaveBeenCalledWith("expert");
+    expect(aoJogar).not.toHaveBeenCalled();
+    await usuario.click(screen.getByRole("radio", { name: /Médio/ }));
+    expect(aoJogar).toHaveBeenCalled();
+  });
+
+  it("a roda do mouse anda pelas músicas, dando a volta", () => {
+    const { aoSelecionar } = abrir({ indice: 0 });
+    const carrossel = screen.getByRole("list", { name: "Músicas" });
+    fireEvent.wheel(carrossel, { deltaY: 120 });
+    expect(aoSelecionar).toHaveBeenLastCalledWith(1);
+    fireEvent.wheel(carrossel, { deltaY: -120 });
+    expect(aoSelecionar).toHaveBeenLastCalledWith(MUSICAS_EMBUTIDAS.length - 1);
+  });
+
+  it("um toque leve na roda não troca de música", () => {
+    const { aoSelecionar } = abrir({ indice: 0 });
+    fireEvent.wheel(screen.getByRole("list", { name: "Músicas" }), { deltaY: 30 });
+    expect(aoSelecionar).not.toHaveBeenCalled();
   });
 });
 

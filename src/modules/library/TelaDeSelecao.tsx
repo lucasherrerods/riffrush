@@ -1,5 +1,6 @@
-import { useEffect, useRef, type ReactNode } from "react";
-import { ArrowLeft, FileAudio, Flame, Play, Star, Trophy } from "lucide-react";
+import { type ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowLeft, FileAudio, Flame, Play, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
@@ -10,6 +11,7 @@ import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { AvatarPalhetando } from "./componentes/AvatarPalhetando";
 import { Capa } from "./componentes/Capa";
+import { Carrossel } from "./componentes/Carrossel";
 
 interface Props {
   musicas: Musica[];
@@ -29,32 +31,37 @@ const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 export function TelaDeSelecao(props: Props) {
   const { musicas, indice, dificuldade, personagem, volumeDosEfeitos, aoSelecionar, aoDificuldade, aoJogar, aoVoltar, aoImportar } = props;
-  const lista = useRef<HTMLUListElement>(null);
   const recordes = carregarRecordes();
   const musica = musicas[indice];
   const recordeAtual = recordeDe(recordes, musica.id, dificuldade);
+  const rotuloDaDificuldade = DIFICULDADES.find((d) => d.id === dificuldade)?.rotulo;
   const efeito = (nome: "mover" | "selecionar" | "voltar") => tocarEfeito(nome, volumeDosEfeitos);
   const dispositivo = useDispositivo();
 
-  useEffect(() => {
-    lista.current?.querySelector(`[data-indice="${indice}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [indice]);
+  /** Anda pelas músicas dando a volta no fim da lista. */
+  const andar = (passos: number) => {
+    efeito("mover");
+    aoSelecionar((((indice + passos) % musicas.length) + musicas.length) % musicas.length);
+  };
+  const escolherDificuldade = (id: Dificuldade) => {
+    efeito("mover");
+    aoDificuldade(id);
+  };
+  const jogar = () => {
+    efeito("selecionar");
+    aoJogar();
+  };
 
   useTeclado((evento) => {
     const posicao = DIFICULDADES.findIndex((d) => d.id === dificuldade);
     if (evento.code === "ArrowDown" || evento.code === "ArrowUp") {
       evento.preventDefault();
-      efeito("mover");
-      aoSelecionar((indice + (evento.code === "ArrowDown" ? 1 : musicas.length - 1)) % musicas.length);
+      andar(evento.code === "ArrowDown" ? 1 : -1);
     } else if (evento.code === "ArrowLeft" || evento.code === "ArrowRight") {
       const proxima = DIFICULDADES[posicao + (evento.code === "ArrowRight" ? 1 : -1)];
-      if (proxima) {
-        efeito("mover");
-        aoDificuldade(proxima.id);
-      }
+      if (proxima) escolherDificuldade(proxima.id);
     } else if (evento.code === "Enter") {
-      efeito("selecionar");
-      aoJogar();
+      jogar();
     } else if (evento.code === "Escape" || evento.code === "Backspace") {
       efeito("voltar");
       aoVoltar();
@@ -62,7 +69,22 @@ export function TelaDeSelecao(props: Props) {
   });
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative isolate flex h-full flex-col">
+      {/* A capa da música, borrada, pinta o fundo da tela e troca junto com a seleção. */}
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={musica.id}
+          aria-hidden
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.2 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+          className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+        >
+          <Capa musica={musica} decorativa className="size-full scale-110 blur-3xl" />
+        </motion.div>
+      </AnimatePresence>
+
       <header className="flex items-center gap-4 bg-superficie px-8 py-4 max-md:px-4 max-md:py-2">
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
           <ArrowLeft />
@@ -111,88 +133,36 @@ export function TelaDeSelecao(props: Props) {
 
           <div className="placa flex items-end gap-4 p-4">
             <AvatarPalhetando personagem={personagem} bpm={musica.bpm || 120} className="h-40 w-auto shrink-0 max-md:hidden" />
-            <div role="radiogroup" aria-label="Dificuldade" className="flex flex-1 flex-col gap-2 max-md:flex-row">
-              {DIFICULDADES.map((d) => {
-                const recorde = recordeDe(recordes, musica.id, d.id);
-                const escolhida = d.id === dificuldade;
-                return (
-                  <button
-                    key={d.id}
-                    role="radio"
-                    aria-checked={escolhida}
-                    onClick={() => {
-                      efeito("mover");
-                      aoDificuldade(d.id);
-                    }}
-                    className={cn(
-                      "chapa flex items-center gap-2 px-4 py-1 text-left transition-colors max-md:flex-1 max-md:flex-col max-md:px-2",
-                      escolhida ? "border-destaque bg-destaque/15" : "border-transparent bg-superficie-elevada hover:border-borda",
-                    )}
-                  >
-                    <span className={cn("flex-1 font-titulo text-xl tracking-wide uppercase", escolhida && "text-destaque")}>{d.rotulo}</span>
-                    {recorde?.fullCombo && <span className="font-titulo text-xl text-destaque">FC</span>}
-                    <span className="font-mono text-base text-texto-suave">{recorde ? formatar(recorde.pontos) : "—"}</span>
-                  </button>
-                );
-              })}
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <Dado rotulo="Dificuldade">{rotuloDaDificuldade}</Dado>
+              {recordeAtual && (
+                <p className="flex items-center gap-2 px-4 text-base text-texto-suave">
+                  <Trophy className="size-4 text-ouro opacity-70" /> Recorde:
+                  <span className="font-mono font-bold text-texto">{formatar(recordeAtual.pontos)}</span>
+                </p>
+              )}
             </div>
           </div>
 
-          {recordeAtual && (
-            <p className="flex items-center gap-2 text-base text-texto-suave">
-              <Trophy className="size-4 text-ouro opacity-70" /> Recorde:
-              <span className="font-mono font-bold text-texto">{formatar(recordeAtual.pontos)}</span>
-            </p>
-          )}
-
           <div className="flex-1" />
-          <Button
-            size="lg"
-            className="h-14 font-titulo text-2xl tracking-widest"
-            onClick={() => {
-              efeito("selecionar");
-              aoJogar();
-            }}
-          >
+          <Button size="lg" className="h-14 font-titulo text-2xl tracking-widest" onClick={jogar}>
             <Play className="fill-current opacity-70" /> TOCAR
           </Button>
         </section>
 
-        <ul ref={lista} aria-label="Músicas" className="col-span-7 flex min-h-0 min-w-0 flex-col gap-2 overflow-y-auto pr-2 max-md:col-span-1">
-          {musicas.map((m, i) => {
-            const selecionada = i === indice;
-            const recorde = recordeDe(recordes, m.id, dificuldade);
-            return (
-              <li key={m.id} data-indice={i}>
-                <button
-                  aria-current={selecionada}
-                  onClick={() => {
-                    if (selecionada) return aoJogar();
-                    efeito("mover");
-                    aoSelecionar(i);
-                  }}
-                  className={cn(
-                    "chapa flex w-full items-center gap-4 px-4 py-2 text-left transition-colors",
-                    selecionada ? "border-destaque bg-destaque/15" : "border-transparent bg-superficie hover:bg-superficie-elevada",
-                  )}
-                >
-                  <Capa musica={m} decorativa className="size-12 rounded-sm" />
-                  <span className="min-w-0 flex-1">
-                    <span className={cn("block truncate font-titulo text-2xl leading-[1.1] tracking-wide", selecionada && "text-destaque")}>{m.titulo}</span>
-                    <span className="block truncate text-base text-texto-suave">{m.artista}</span>
-                  </span>
-                  {recorde && (
-                    <span className="flex gap-1" aria-label={`${recorde.estrelas} estrelas`}>
-                      {Array.from({ length: 5 }, (_, k) => (
-                        <Star key={k} className={cn("size-3", k < recorde.estrelas ? "fill-ouro text-ouro" : "text-borda")} />
-                      ))}
-                    </span>
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <Carrossel
+          musicas={musicas}
+          indice={indice}
+          dificuldade={dificuldade}
+          recordes={recordes}
+          aoEscolherMusica={(i) => {
+            efeito("mover");
+            aoSelecionar(i);
+          }}
+          aoEscolherDificuldade={escolherDificuldade}
+          aoJogar={jogar}
+          aoGirar={andar}
+        />
       </div>
 
       <footer className="flex items-center gap-8 bg-superficie px-8 py-2 max-md:hidden">
