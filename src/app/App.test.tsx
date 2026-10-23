@@ -258,6 +258,7 @@ describe("App em rede", () => {
     jogadores: [{ id: 1, personagem: PERSONAGEM_PADRAO }, { id: 2, personagem: vitor }],
     musica: { tipo: "embutida" as const, id: "overdrive" },
     dificuldade: "expert" as const,
+    prontos: [],
     adversarios: {},
     partidas: 1,
     inicio: performance.now() + 5000,

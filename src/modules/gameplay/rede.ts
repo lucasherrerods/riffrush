@@ -6,5 +6,7 @@ export interface EstadoDoJogador {
   /** Quantidade de acertos; o chibi do adversário palheta quando muda. */
   pulso: number;
   derrota: boolean;
+  /** A vida zerou em algum momento: segue tocando, mas com a marca de fantasma. */
+  fantasma?: boolean;
   terminou: boolean;
 }

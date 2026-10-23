@@ -182,6 +182,17 @@ describe("TelaDeJogo em rede", () => {
     expect((await fonteNova(antes)).deslocamento).toBeGreaterThan(1.9);
   });
 
+  it("quando a vida acaba, vira fantasma e continua tocando, sem vaia", async () => {
+    carregarCom(Array.from({ length: 30 }, (_, i) => nota(i * 0.1)), 20);
+    const { aoAtualizar, aoTerminar } = abrirEmRede(performance.now());
+    await partidaPronta();
+    irPara(5);
+    expect(await screen.findByLabelText("Virou fantasma")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /A galera vaiou/ })).toBeNull();
+    expect(aoTerminar).not.toHaveBeenCalled();
+    await waitFor(() => expect(aoAtualizar).toHaveBeenCalledWith(expect.objectContaining({ fantasma: true, derrota: false })));
+  });
+
   it("manda o estado do jogador para a sala", async () => {
     carregarCom([nota(5)]);
     const { aoAtualizar } = abrirEmRede(performance.now() + 5000);
