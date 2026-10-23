@@ -4,6 +4,7 @@ import type { Personagem } from "@/modules/character";
 import type { EstadoDoJogador } from "@/modules/gameplay";
 import type { Dificuldade, Musica } from "@/modules/songs";
 import { paraRede } from "./musicaNaRede";
+import { URL_DO_RELAY, deveEnviarEstado, normalizarCodigo, podeTocarOnline, urlParaCriarSala, urlParaEntrarNaSala } from "./online";
 import { comecarPartida, escolherMusica, estadoInicial, reduzir, type EstadoDaSala, type Mensagem } from "./protocolo";
 
 export const PORTA_DA_SALA = 7777;
@@ -26,13 +27,17 @@ export interface Conexao {
   sala: EstadoDaSala | null;
   /** Endereço HTTP do host (para baixar a música compartilhada). */
   endereco: string;
-  /** Só para o host: onde os outros entram. */
+  /** Só para o host da LAN: onde os outros entram. */
   info?: InfoDaSala;
+  /** Sala pela internet (relay): o código que os amigos digitam. */
+  online?: boolean;
+  codigo?: string;
   erro?: string;
 }
 
 let conexao: Conexao = { sala: null, endereco: "" };
 let socket: WebSocket | null = null;
+let ultimoEstado = -Infinity;
 const ouvintes = new Set<() => void>();
 
 function atualizar(parcial: Partial<Conexao>) {
@@ -57,10 +62,15 @@ function enviar(mensagens: Mensagem[]) {
   for (const mensagem of mensagens) socket.send(JSON.stringify(mensagem));
 }
 
-function conectar(endereco: string, personagem: Personagem, souHost: boolean, info?: InfoDaSala) {
-  const atual = new WebSocket(`${endereco.replace(/^http/, "ws")}/ws`);
+/**
+ * Abre a conexão com a sala. LAN e online falam o mesmo protocolo com o mesmo envelope
+ * ({de, msg}); muda só o endereço do WebSocket.
+ */
+function conectar(urlDoSocket: string, endereco: string, personagem: Personagem, souHost: boolean, extra: Pick<Conexao, "info" | "online"> = {}) {
+  const atual = new WebSocket(urlDoSocket);
   socket = atual;
-  atualizar({ sala: estadoInicial(personagem, souHost), endereco, info, erro: undefined });
+  ultimoEstado = -Infinity;
+  atualizar({ sala: estadoInicial(personagem, souHost), endereco, info: extra.info, online: extra.online, codigo: undefined, erro: undefined });
 
   atual.onmessage = (evento) => {
     if (socket !== atual || !conexao.sala) return;
@@ -68,14 +78,14 @@ function conectar(endereco: string, personagem: Personagem, souHost: boolean, in
       const { de, msg } = JSON.parse(evento.data) as { de: number; msg: Mensagem };
       const reacao = reduzir(conexao.sala, de, msg, performance.now());
       if (reacao.sair) return sairDaSala(reacao.sair);
-      atualizar({ sala: reacao.estado });
+      atualizar({ sala: reacao.estado, ...(msg.tipo === "bemVindo" && msg.codigo && { codigo: msg.codigo }) });
       enviar(reacao.enviar);
     } catch {
       // Mensagem estragada: ignora.
     }
   };
   atual.onerror = () => {
-    if (socket === atual && conexao.sala?.status === "conectando") sairDaSala(`Não consegui conectar em ${endereco}.`);
+    if (socket === atual && conexao.sala?.status === "conectando") sairDaSala(extra.online ? "Não consegui conectar no servidor online." : `Não consegui conectar em ${endereco}.`);
   };
   atual.onclose = () => {
     if (socket === atual && conexao.sala) sairDaSala("A conexão com a sala caiu.");
@@ -85,14 +95,27 @@ function conectar(endereco: string, personagem: Personagem, souHost: boolean, in
 export async function criarSala(personagem: Personagem) {
   try {
     const info = await invoke<InfoDaSala>("lan_criar_sala", { nome: personagem.nome });
-    conectar(`http://127.0.0.1:${info.porta}`, personagem, true, info);
+    const endereco = `http://127.0.0.1:${info.porta}`;
+    conectar(`ws://127.0.0.1:${info.porta}/ws`, endereco, personagem, true, { info });
   } catch (erro) {
     atualizar({ sala: null, erro: String(erro) });
   }
 }
 
 export function entrarNaSala(endereco: string, personagem: Personagem) {
-  conectar(endereco, personagem, false);
+  conectar(`${endereco.replace(/^http/, "ws")}/ws`, endereco, personagem, false);
+}
+
+export const temModoOnline = () => !!URL_DO_RELAY;
+
+export function criarSalaOnline(personagem: Personagem) {
+  conectar(urlParaCriarSala(URL_DO_RELAY), "", personagem, true, { online: true });
+}
+
+export function entrarNaSalaOnline(texto: string, personagem: Personagem) {
+  const codigo = normalizarCodigo(texto);
+  if (!codigo) return atualizar({ sala: null, erro: "Esse código não existe. Ele tem 5 letras e números, como K7QXM." });
+  conectar(urlParaEntrarNaSala(URL_DO_RELAY, codigo), "", personagem, false, { online: true });
 }
 
 export function sairDaSala(erro?: string) {
@@ -100,13 +123,13 @@ export function sairDaSala(erro?: string) {
   const antigo = socket;
   socket = null;
   antigo?.close();
-  if (eraHost) void invoke("lan_fechar_sala").catch(() => {});
-  atualizar({ sala: null, info: undefined, erro });
+  if (eraHost && !conexao.online) void invoke("lan_fechar_sala").catch(() => {});
+  atualizar({ sala: null, info: undefined, online: undefined, codigo: undefined, erro });
 }
 
 export function escolher(musica: Musica, dificuldade: Dificuldade) {
   if (!conexao.sala) return;
-  const reacao = escolherMusica(conexao.sala, paraRede(musica), dificuldade);
+  const reacao = escolherMusica(conexao.sala, paraRede(musica, { online: conexao.online }), dificuldade);
   atualizar({ sala: reacao.estado });
   enviar(reacao.enviar);
 }
@@ -114,7 +137,9 @@ export function escolher(musica: Musica, dificuldade: Dificuldade) {
 /** Só o host: compartilha a música importada (se for o caso) e dá a largada para todos. */
 export async function comecar(musica: Musica) {
   if (!conexao.sala?.souHost) return;
-  if (musica.arquivo) {
+  if (conexao.online) {
+    if (!podeTocarOnline(musica)) throw new Error("No modo online só dá para tocar músicas do jogo ou baixadas pela Busca músicas.");
+  } else if (musica.arquivo) {
     const bytes = new Uint8Array(await musica.arquivo.arrayBuffer());
     await invoke("lan_compartilhar_musica", bytes, { headers: { "x-tipo": musica.arquivo.type || "application/octet-stream" } });
   }
@@ -123,6 +148,11 @@ export async function comecar(musica: Musica) {
 }
 
 export function enviarEstado(estado: EstadoDoJogador) {
+  if (conexao.online) {
+    const agora = performance.now();
+    if (!deveEnviarEstado(ultimoEstado, agora, estado)) return;
+    ultimoEstado = agora;
+  }
   enviar([{ tipo: "estado", ...estado }]);
 }
 

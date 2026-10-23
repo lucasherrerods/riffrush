@@ -1,4 +1,4 @@
-import { montarUrlDoChart, nomeDoArquivo, type ResultadoDaBusca } from "./encore";
+import { ehUrlDoEncore, montarUrlDoChart, nomeDoArquivo, type ResultadoDaBusca } from "./encore";
 
 /** Acima disso o jogador confirma antes: packs com vídeo passam de 1 GB e pesam no celular. */
 export const LIMITE_PARA_AVISAR = 300 * 1024 * 1024;
@@ -17,10 +17,16 @@ export interface OpcoesDoDownload {
 const ehSng = (bytes: Uint8Array) => ASSINATURA_DO_SNG.every((byte, i) => bytes[i] === byte);
 
 /** Baixa o .sng do chart. Devolve null se o jogador desistiu de um arquivo grande. */
-export async function baixarDoEncore(resultado: ResultadoDaBusca, { comVideo, aoProgredir = () => {}, confirmarTamanho, sinal, buscar = fetch }: OpcoesDoDownload = {}): Promise<File | null> {
+export function baixarDoEncore(resultado: ResultadoDaBusca, { comVideo, ...opcoes }: OpcoesDoDownload = {}): Promise<File | null> {
+  return baixarSng(montarUrlDoChart(resultado, { comVideo }), nomeDoArquivo(resultado), opcoes);
+}
+
+/** Baixa um .sng do Encore por uma URL já montada (no online, a que veio do host). */
+export async function baixarSng(url: string, nome: string, { aoProgredir = () => {}, confirmarTamanho, sinal, buscar = fetch }: Omit<OpcoesDoDownload, "comVideo"> = {}): Promise<File | null> {
+  if (!ehUrlDoEncore(url)) throw new Error("Esse endereço não é do Encore.");
   let resposta: Response;
   try {
-    resposta = await buscar(montarUrlDoChart(resultado, { comVideo }), { signal: sinal });
+    resposta = await buscar(url, { signal: sinal });
   } catch (erro) {
     if (sinal?.aborted) throw erro;
     throw new Error("Sem conexão com o Encore. Confira a internet e tente de novo.");
@@ -46,7 +52,7 @@ export async function baixarDoEncore(resultado: ResultadoDaBusca, { comVideo, ao
   }
 
   if (!ehSng(pedacos[0] ?? new Uint8Array())) throw new Error("O arquivo baixado não é um .sng válido.");
-  return new File(pedacos as BlobPart[], nomeDoArquivo(resultado), { type: "application/octet-stream" });
+  return new File(pedacos as BlobPart[], nome, { type: "application/octet-stream" });
 }
 
 export function formatarTamanho(bytes: number): string {

@@ -1,0 +1,12 @@
+name = "riffrush-relay"
+main = "src/index.ts"
+compatibility_date = "2025-06-01"
+
+[[durable_objects.bindings]]
+name = "SALAS"
+class_name = "Sala"
+
+# Durable Objects com SQLite são os que entram no plano gratuito.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Sala"]

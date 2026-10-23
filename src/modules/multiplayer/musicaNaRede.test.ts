@@ -1,5 +1,9 @@
 import { MUSICAS_EMBUTIDAS, type Musica } from "@/modules/songs";
+import { baixarSng } from "@/modules/search";
 import { paraRede, resolverMusica } from "./musicaNaRede";
+
+vi.mock("@/modules/search", () => ({ baixarSng: vi.fn() }));
+beforeEach(() => vi.mocked(baixarSng).mockClear());
 
 const importada: Musica = {
   ...MUSICAS_EMBUTIDAS[0],
@@ -39,5 +43,30 @@ describe("resolverMusica", () => {
   it("avisa quando o host ainda não compartilhou a música", async () => {
     const baixar = vi.fn(async () => new Response("", { status: 404 }));
     await expect(resolverMusica({ ...paraRede(importada), id: "outra" } as never, [], "http://h", baixar)).rejects.toThrow(/ainda não compartilhou/);
+  });
+
+  describe("online", () => {
+    const doEncore: Musica = { ...importada, id: "arquivo:Banda - Hit.sng:99", arquivo: new File(["x"], "Banda - Hit.sng"), urlDoEncore: "https://files.enchor.us/abc.sng" };
+
+    it("a música do Encore vai pela URL, para cada um baixar direto", () => {
+      expect(paraRede(doEncore, { online: true })).toEqual({ tipo: "encore", id: doEncore.id, titulo: "Hit", artista: "Banda", nomeDoArquivo: "Banda - Hit.sng", url: "https://files.enchor.us/abc.sng" });
+    });
+
+    it("na LAN a mesma música continua indo pelo host", () => {
+      expect(paraRede(doEncore).tipo).toBe("importada");
+    });
+
+    it("quem não tem a música baixa do Encore", async () => {
+      vi.mocked(baixarSng).mockResolvedValueOnce(new File(["x"], "Banda - Hit.wav", { type: "audio/wav" }));
+      const musica = await resolverMusica(paraRede(doEncore, { online: true }), [], "");
+      expect(baixarSng).toHaveBeenCalledWith("https://files.enchor.us/abc.sng", "Banda - Hit.sng", expect.anything());
+      expect(musica).toMatchObject({ id: doEncore.id, titulo: "Hit", urlDoEncore: "https://files.enchor.us/abc.sng" });
+    });
+
+    it("quem já baixou a mesma música usa a dela", async () => {
+      const musica = await resolverMusica(paraRede(doEncore, { online: true }), [doEncore], "");
+      expect(musica).toBe(doEncore);
+      expect(baixarSng).not.toHaveBeenCalled();
+    });
   });
 });

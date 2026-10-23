@@ -142,3 +142,13 @@ export function nomeDoArquivo(resultado: ResultadoDaBusca): string {
   const partes = [resultado.artista, resultado.titulo].map(limparNome).filter(Boolean);
   return `${partes.join(" - ") || resultado.md5}.sng`;
 }
+
+/** No online o host manda a URL do chart: só baixamos se ela for mesmo um .sng do Encore. */
+export function ehUrlDoEncore(texto: string): boolean {
+  try {
+    const url = new URL(texto);
+    return url.origin === URL_DOS_ARQUIVOS && url.pathname.endsWith(".sng");
+  } catch {
+    return false;
+  }
+}

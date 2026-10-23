@@ -83,6 +83,15 @@ describe("reduzir", () => {
     expect(reduzir(estadoInicial(vitor, false), 0, { tipo: "cheia" }, 0).sair).toMatch(/4 jogadores/);
   });
 
+  it("código de sala online que não existe avisa e sai", () => {
+    expect(reduzir(estadoInicial(vitor, false), 0, { tipo: "semSala" }, 0).sair).toMatch(/Sala não encontrada/);
+  });
+
+  it("o relay manda o código junto do bem-vindo, e a sala segue igual", () => {
+    const { estado } = reduzir(estadoInicial(vitor, true), 0, { tipo: "bemVindo", id: 1, codigo: "ABCDE" }, 0);
+    expect(estado).toMatchObject({ status: "naSala", meuId: 1, hostId: 1 });
+  });
+
   it("o começo da partida marca o mesmo instante de largada para todos", () => {
     const { estado } = reduzir(salaDoConvidado(), 1, { tipo: "comecar", musica: { tipo: "embutida", id: "overdrive" }, dificuldade: "dificil" }, 1000);
     expect(estado).toMatchObject({ status: "jogando", partidas: 1, inicio: 1000 + ATRASO_DO_INICIO_MS, dificuldade: "dificil", adversarios: {} });

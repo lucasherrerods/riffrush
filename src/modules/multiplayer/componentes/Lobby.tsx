@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { ChevronDown, ChevronUp, Loader2, Play, Smartphone, Users } from "lucide-react";
+import { ChevronDown, ChevronUp, Globe, Loader2, Play, Smartphone, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar } from "@/modules/character";
 import { DIFICULDADES, type Musica } from "@/modules/songs";
 import { janelaEmVolta } from "@/shared/lib/janela";
 import { cn } from "@/shared/lib/utils";
+import { avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { MAXIMO_DE_JOGADORES, type EstadoDaSala } from "../protocolo";
@@ -16,15 +17,17 @@ const MUSICAS_VISIVEIS = 3;
 interface Props {
   sala: EstadoDaSala;
   info?: InfoDaSala;
+  /** Sala online: o código que os amigos digitam. */
+  codigo?: string;
   musicas: Musica[];
   volumeDosEfeitos: number;
 }
 
-export function Lobby({ sala, info, musicas, volumeDosEfeitos }: Props) {
+export function Lobby({ sala, info, codigo, musicas, volumeDosEfeitos }: Props) {
   const [qr, setQr] = useState("");
   const [comecando, setComecando] = useState(false);
   const musica = musicas.find((m) => m.id === sala.musica.id);
-  const tituloDaMusica = musica?.titulo ?? (sala.musica.tipo === "importada" ? sala.musica.titulo : sala.musica.id);
+  const tituloDaMusica = musica?.titulo ?? ("titulo" in sala.musica ? sala.musica.titulo : sala.musica.id);
   const posicao = musicas.findIndex((m) => m.id === sala.musica.id);
   // Sem rolagem: só as músicas em volta da escolhida aparecem, e as setas andam pela lista.
   const visiveis = janelaEmVolta(musicas.length, Math.max(0, posicao), MUSICAS_VISIVEIS);
@@ -45,6 +48,8 @@ export function Lobby({ sala, info, musicas, volumeDosEfeitos }: Props) {
     tocarEfeito("selecionar", volumeDosEfeitos);
     try {
       await comecar(musica);
+    } catch (erro) {
+      avisar.error(erro instanceof Error ? erro.message : String(erro));
     } finally {
       setComecando(false);
     }
@@ -52,7 +57,7 @@ export function Lobby({ sala, info, musicas, volumeDosEfeitos }: Props) {
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1">
-      <div className={cn("flex min-h-0 flex-col gap-4", info ? "col-span-8" : "col-span-12")}>
+      <div className={cn("flex min-h-0 flex-col gap-4", info || codigo ? "col-span-8" : "col-span-12")}>
         <ul className="grid grid-cols-4 gap-4 max-md:grid-cols-2">
           {Array.from({ length: MAXIMO_DE_JOGADORES }, (_, i) => {
             const jogador = sala.jogadores[i];
@@ -153,6 +158,15 @@ export function Lobby({ sala, info, musicas, volumeDosEfeitos }: Props) {
         </section>
       </div>
 
+      {codigo && (
+        <section className="col-span-4 flex flex-col items-center gap-4 placa p-6 text-center">
+          <Globe className="text-primaria opacity-70" aria-hidden />
+          <p className="text-base font-bold">Sala online</p>
+          <p className="text-base text-texto-suave">Passe o código para os amigos:</p>
+          <p className="font-mono text-5xl font-bold tracking-[0.2em] text-destaque">{codigo}</p>
+          <p className="text-base text-texto-suave">Eles entram em Multijogador, no campo &quot;Código da sala online&quot;.</p>
+        </section>
+      )}
       {info && (
         <section className="col-span-4 flex flex-col items-center gap-4 placa p-6 text-center">
           <Smartphone className="text-primaria opacity-70" aria-hidden />

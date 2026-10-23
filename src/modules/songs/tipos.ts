@@ -55,6 +55,8 @@ export interface Musica {
   noAparelho?: boolean;
   /** Veio da Busca músicas: o md5 do chart no Encore, para saber que ele já foi baixado. */
   md5DoEncore?: string;
+  /** De onde o chart foi baixado: no modo online, os outros jogadores baixam do mesmo lugar. */
+  urlDoEncore?: string;
 }
 
 export interface MusicaCarregada {

@@ -13,10 +13,14 @@ export const ATRASO_DO_INICIO_MS = 5000;
 /** O servidor usa o id 0 para as mensagens dele. */
 const SERVIDOR = 0;
 
-/** Como uma música viaja na rede: as embutidas pelo id, as importadas pelo arquivo que o host compartilha. */
+/**
+ * Como uma música viaja na rede: as embutidas pelo id, as importadas pelo arquivo que o host compartilha
+ * na LAN, e no online as do Encore pelo endereço de onde cada jogador baixa.
+ */
 export type MusicaNaRede =
   | { tipo: "embutida"; id: string }
-  | { tipo: "importada"; id: string; titulo: string; artista: string; nomeDoArquivo: string };
+  | { tipo: "importada"; id: string; titulo: string; artista: string; nomeDoArquivo: string }
+  | { tipo: "encore"; id: string; titulo: string; artista: string; nomeDoArquivo: string; url: string };
 
 export interface Jogador {
   id: number;
@@ -24,8 +28,9 @@ export interface Jogador {
 }
 
 export type Mensagem =
-  | { tipo: "bemVindo"; id: number }
+  | { tipo: "bemVindo"; id: number; /** Só no online: o código para os amigos entrarem. */ codigo?: string }
   | { tipo: "cheia" }
+  | { tipo: "semSala" }
   | { tipo: "saiu" }
   | { tipo: "oi"; personagem: Personagem }
   | { tipo: "sala"; jogadores: Jogador[]; musica: MusicaNaRede; dificuldade: Dificuldade }
@@ -89,6 +94,8 @@ export function reduzir(estado: EstadoDaSala, de: number, mensagem: Mensagem, ag
       };
     case "cheia":
       return { ...nada, sair: `A sala já tem ${MAXIMO_DE_JOGADORES} jogadores.` };
+    case "semSala":
+      return { ...nada, sair: "Sala não encontrada. Confira o código ou peça um novo ao host." };
     case "oi": {
       if (!estado.souHost) return nada;
       const jogadores = [...estado.jogadores.filter((j) => j.id !== de), { id: de, personagem: mensagem.personagem }].sort((a, b) => a.id - b.id);

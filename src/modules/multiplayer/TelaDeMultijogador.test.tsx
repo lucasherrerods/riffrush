@@ -5,6 +5,7 @@ import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { estadoInicial, type EstadoDaSala } from "./protocolo";
 import * as sala from "./sala";
+import { avisar } from "@/shared/ui/avisos";
 import { TelaDeMultijogador } from "./TelaDeMultijogador";
 
 vi.mock("./sala", () => ({
@@ -17,7 +18,12 @@ vi.mock("./sala", () => ({
   escolher: vi.fn(),
   comecar: vi.fn(),
   procurarSalas: vi.fn(async () => []),
+  temModoOnline: vi.fn(() => true),
+  criarSalaOnline: vi.fn(),
+  entrarNaSalaOnline: vi.fn(),
 }));
+
+vi.mock("@/shared/ui/avisos", () => ({ avisar: { error: vi.fn() } }));
 
 vi.mock("qrcode", () => ({ default: { toDataURL: vi.fn(async () => "data:image/png;base64,qr") } }));
 
@@ -38,10 +44,10 @@ function naSala(souHost: boolean, extra: Partial<EstadoDaSala> = {}): EstadoDaSa
   };
 }
 
-function abrir(conexao: sala.Conexao) {
+function abrir(conexao: sala.Conexao, musicas = MUSICAS_EMBUTIDAS) {
   vi.mocked(sala.useConexao).mockReturnValue(conexao);
   const aoVoltar = vi.fn();
-  render(<TelaDeMultijogador personagem={lucas} musicas={MUSICAS_EMBUTIDAS} volumeDosEfeitos={0} aoVoltar={aoVoltar} aoEditarPersonagem={vi.fn()} />);
+  render(<TelaDeMultijogador personagem={lucas} musicas={musicas} volumeDosEfeitos={0} aoVoltar={aoVoltar} aoEditarPersonagem={vi.fn()} />);
   return { aoVoltar, usuario: userEvent.setup() };
 }
 
@@ -49,14 +55,35 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(sala.procurarSalas).mockResolvedValue([]);
   vi.mocked(sala.ehClienteWebDaSala).mockReturnValue(false);
+  vi.mocked(sala.temModoOnline).mockReturnValue(true);
   vi.stubGlobal("AudioContext", AudioContextFalso);
 });
 
 describe("fora de uma sala", () => {
   it("cria uma sala com o personagem do jogador", async () => {
     const { usuario } = abrir({ sala: null, endereco: "" });
-    await usuario.click(screen.getByRole("button", { name: /Criar sala/ }));
+    await usuario.click(screen.getByRole("button", { name: /Criar sala na rede/ }));
     expect(sala.criarSala).toHaveBeenCalledWith(lucas);
+  });
+
+  it("cria uma sala online", async () => {
+    const { usuario } = abrir({ sala: null, endereco: "" });
+    await usuario.click(screen.getByRole("button", { name: /Criar sala online/ }));
+    expect(sala.criarSalaOnline).toHaveBeenCalledWith(lucas);
+  });
+
+  it("entra numa sala online pelo código", async () => {
+    const { usuario } = abrir({ sala: null, endereco: "" });
+    await usuario.type(screen.getByLabelText("Código da sala online"), "k7qxm");
+    await usuario.click(screen.getByRole("button", { name: "Entrar online" }));
+    expect(sala.entrarNaSalaOnline).toHaveBeenCalledWith("k7qxm", lucas);
+  });
+
+  it("sem servidor online configurado, o online não aparece", () => {
+    vi.mocked(sala.temModoOnline).mockReturnValue(false);
+    abrir({ sala: null, endereco: "" });
+    expect(screen.queryByRole("button", { name: /Criar sala online/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Código da sala online")).not.toBeInTheDocument();
   });
 
   it("lista as salas da rede e entra numa delas", async () => {
@@ -124,6 +151,25 @@ describe("na sala", () => {
     expect(sala.escolher).toHaveBeenCalledWith(muitas[7], "medio");
     await usuario.click(screen.getByRole("button", { name: "Música anterior" }));
     expect(sala.escolher).toHaveBeenCalledWith(muitas[5], "medio");
+  });
+
+  it("o host online vê o código para os amigos, sem QR code", () => {
+    abrir({ sala: naSala(true), endereco: "", online: true, codigo: "K7QXM" });
+    expect(screen.getByText("K7QXM")).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: /QR code/ })).not.toBeInTheDocument();
+  });
+
+  it("no online, a lista só tem músicas que todo mundo consegue tocar", () => {
+    const importada = { ...MUSICAS_EMBUTIDAS[0], id: "arquivo:gravacao.wav:1", titulo: "Minha Gravação", arquivo: new File(["x"], "gravacao.wav") };
+    abrir({ sala: naSala(true), endereco: "", online: true, codigo: "K7QXM" }, [importada, ...MUSICAS_EMBUTIDAS]);
+    expect(screen.queryByText("Minha Gravação")).not.toBeInTheDocument();
+  });
+
+  it("avisa quando a partida não pode começar", async () => {
+    vi.mocked(sala.comecar).mockRejectedValueOnce(new Error("No modo online só dá para tocar músicas do jogo."));
+    const { usuario } = abrir({ sala: naSala(true), endereco: "", online: true, codigo: "K7QXM" });
+    await usuario.click(screen.getByRole("button", { name: /Começar partida/ }));
+    await waitFor(() => expect(avisar.error).toHaveBeenCalledWith("No modo online só dá para tocar músicas do jogo."));
   });
 
   it("o host começa a partida com a música escolhida", async () => {
