@@ -29,9 +29,12 @@ describe("sintetizar", () => {
   });
 
   // Bug do projeto antigo: com OfflineAudioContext a música levava mais de 15 s para carregar.
-  it("sintetiza uma música inteira em menos de 3 segundos", () => {
-    const inicio = performance.now();
+  // Mede o tempo de CPU deste processo, e não o do relógio: na suíte inteira os outros testes
+  // disputam a CPU e o relógio chegava perto de 3 s, mesmo com o sintetizador levando menos de 1 s.
+  it("sintetiza uma música inteira em menos de 3 segundos de CPU", () => {
+    const inicio = process.cpuUsage();
     sintetizar(MUSICAS_EMBUTIDAS[4].estilo!, compor(MUSICAS_EMBUTIDAS[4].estilo!, MUSICAS_EMBUTIDAS[4].semente!));
-    expect(performance.now() - inicio).toBeLessThan(3000);
+    const { user, system } = process.cpuUsage(inicio);
+    expect((user + system) / 1000).toBeLessThan(3000);
   });
 });
