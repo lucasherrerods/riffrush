@@ -12,6 +12,8 @@ pub enum ErroDaApi {
     NaoAutorizado,
     #[error("não encontrado")]
     NaoEncontrado,
+    #[error("muitas requisições, tente de novo em instantes")]
+    MuitasRequisicoes,
     #[error("serviço indisponível")]
     Indisponivel,
     #[error("erro interno")]
@@ -24,6 +26,7 @@ impl ErroDaApi {
             Self::Invalido(_) => StatusCode::BAD_REQUEST,
             Self::NaoAutorizado => StatusCode::UNAUTHORIZED,
             Self::NaoEncontrado => StatusCode::NOT_FOUND,
+            Self::MuitasRequisicoes => StatusCode::TOO_MANY_REQUESTS,
             Self::Indisponivel => StatusCode::SERVICE_UNAVAILABLE,
             Self::Interno(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }

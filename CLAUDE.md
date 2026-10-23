@@ -100,7 +100,7 @@ frontend/
 ```bash
 cd backend
 cargo run                      # sobe a API (lê o .env)
-cargo test -q                  # testes unitários e de integração
+cargo test -q                  # testes unitários e de integração (os do Postgres só com DATABASE_URL)
 cargo clippy -- -D warnings    # lint; o CI falha com qualquer aviso
 cargo fmt                      # formatação
 sqlx migrate add <nome>        # cria uma migração nova

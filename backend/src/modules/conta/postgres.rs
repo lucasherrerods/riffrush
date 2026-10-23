@@ -1,0 +1,135 @@
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use sqlx::{FromRow, PgPool};
+use uuid::Uuid;
+
+use super::dominio::{Conta, PerfilDoGoogle};
+use super::portas::{FalhaExterna, PartidaRegistrada, RepositorioDeContas, RepositorioDeSessoes};
+
+pub struct ContasPostgres(pub PgPool);
+
+#[derive(FromRow)]
+struct LinhaDaConta {
+    id: Uuid,
+    nome: String,
+    avatar: Option<String>,
+    xp_total: i64,
+}
+
+impl From<LinhaDaConta> for Conta {
+    fn from(linha: LinhaDaConta) -> Self {
+        Conta {
+            id: linha.id,
+            nome: linha.nome,
+            avatar: linha.avatar,
+            xp_total: linha.xp_total.max(0) as u64,
+        }
+    }
+}
+
+fn falha(erro: sqlx::Error) -> FalhaExterna {
+    FalhaExterna(format!("banco: {erro}"))
+}
+
+#[async_trait]
+impl RepositorioDeContas for ContasPostgres {
+    async fn entrar(&self, perfil: &PerfilDoGoogle, novo_id: Uuid) -> Result<Conta, FalhaExterna> {
+        sqlx::query_as::<_, LinhaDaConta>(
+            "INSERT INTO contas (id, google_sub, nome, avatar) VALUES ($1, $2, $3, $4)
+             ON CONFLICT (google_sub) DO UPDATE SET nome = EXCLUDED.nome, avatar = EXCLUDED.avatar
+             RETURNING id, nome, avatar, xp_total",
+        )
+        .bind(novo_id)
+        .bind(&perfil.sub)
+        .bind(&perfil.nome)
+        .bind(&perfil.avatar)
+        .fetch_one(&self.0)
+        .await
+        .map(Conta::from)
+        .map_err(falha)
+    }
+
+    async fn buscar(&self, id: Uuid) -> Result<Option<Conta>, FalhaExterna> {
+        sqlx::query_as::<_, LinhaDaConta>("SELECT id, nome, avatar, xp_total FROM contas WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&self.0)
+            .await
+            .map(|linha| linha.map(Conta::from))
+            .map_err(falha)
+    }
+
+    async fn ultima_partida(&self, conta_id: Uuid) -> Result<Option<DateTime<Utc>>, FalhaExterna> {
+        sqlx::query_scalar("SELECT max(jogada_em) FROM partidas WHERE conta_id = $1")
+            .bind(conta_id)
+            .fetch_one(&self.0)
+            .await
+            .map_err(falha)
+    }
+
+    async fn registrar_partida(&self, partida: &PartidaRegistrada) -> Result<Conta, FalhaExterna> {
+        let mut transacao = self.0.begin().await.map_err(falha)?;
+        let resumo = &partida.resumo;
+        let dificuldade = serde_json::to_value(resumo.dificuldade)
+            .ok()
+            .and_then(|v| v.as_str().map(String::from))
+            .unwrap_or_default();
+        sqlx::query(
+            "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+        )
+        .bind(Uuid::new_v4())
+        .bind(partida.conta_id)
+        .bind(&partida.musica_id)
+        .bind(dificuldade)
+        .bind(i64::try_from(partida.pontos).unwrap_or(i64::MAX))
+        .bind(resumo.acertos as i32)
+        .bind(resumo.total as i32)
+        .bind(resumo.derrota)
+        .bind(resumo.fantasma)
+        .bind(partida.xp_ganho as i64)
+        .bind(partida.jogada_em)
+        .execute(&mut *transacao)
+        .await
+        .map_err(falha)?;
+        let conta = sqlx::query_as::<_, LinhaDaConta>("UPDATE contas SET xp_total = xp_total + $2 WHERE id = $1 RETURNING id, nome, avatar, xp_total")
+            .bind(partida.conta_id)
+            .bind(partida.xp_ganho as i64)
+            .fetch_one(&mut *transacao)
+            .await
+            .map_err(falha)?;
+        transacao.commit().await.map_err(falha)?;
+        Ok(conta.into())
+    }
+}
+
+#[async_trait]
+impl RepositorioDeSessoes for ContasPostgres {
+    async fn criar(&self, token_hash: &str, conta_id: Uuid, expira_em: DateTime<Utc>) -> Result<(), FalhaExterna> {
+        sqlx::query("INSERT INTO sessoes (token_hash, conta_id, expira_em) VALUES ($1, $2, $3)")
+            .bind(token_hash)
+            .bind(conta_id)
+            .bind(expira_em)
+            .execute(&self.0)
+            .await
+            .map(|_| ())
+            .map_err(falha)
+    }
+
+    async fn conta_da_sessao(&self, token_hash: &str, agora: DateTime<Utc>) -> Result<Option<Uuid>, FalhaExterna> {
+        sqlx::query_scalar("SELECT conta_id FROM sessoes WHERE token_hash = $1 AND expira_em > $2")
+            .bind(token_hash)
+            .bind(agora)
+            .fetch_optional(&self.0)
+            .await
+            .map_err(falha)
+    }
+
+    async fn apagar(&self, token_hash: &str) -> Result<(), FalhaExterna> {
+        sqlx::query("DELETE FROM sessoes WHERE token_hash = $1")
+            .bind(token_hash)
+            .execute(&self.0)
+            .await
+            .map(|_| ())
+            .map_err(falha)
+    }
+}
