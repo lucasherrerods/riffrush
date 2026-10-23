@@ -40,6 +40,16 @@ describe("Adversarios", () => {
     expect(screen.getByText("Vaiado")).toBeInTheDocument();
   });
 
+  it("quem terminou a música comemora, quem foi vaiado desaba, e quem ainda toca não reage", () => {
+    const fim = { pontos: 0, vida: 0.5, sequencia: 0, pulso: 0, derrota: false, terminou: true, fantasma: false };
+    const { rerender } = render(<Adversarios sala={sala({ adversarios: { 2: fim } })} />);
+    expect(screen.getByRole("img", { name: "Personagem Vitor" })).toHaveAttribute("data-reacao", "vitoria");
+    rerender(<Adversarios sala={sala({ adversarios: { 2: { ...fim, vida: 0, derrota: true } } })} />);
+    expect(screen.getByRole("img", { name: "Personagem Vitor" })).toHaveAttribute("data-reacao", "derrota");
+    rerender(<Adversarios sala={sala({ adversarios: { 2: { ...fim, terminou: false } } })} />);
+    expect(screen.getByRole("img", { name: "Personagem Vitor" })).not.toHaveAttribute("data-reacao");
+  });
+
   it("mostra o fantasma na barra de vida de quem zerou a vida", () => {
     render(<Adversarios sala={sala({ adversarios: { 2: { pontos: 10, vida: 0.3, sequencia: 0, pulso: 0, derrota: false, terminou: false, fantasma: true } } })} />);
     expect(screen.getByLabelText("Virou fantasma")).toBeInTheDocument();

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, Pause, Skull, Zap } from "lucide-react";
 import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, tocarEfeito } from "@/modules/audio";
-import { Avatar, suportaWebGL, type Personagem } from "@/modules/character";
+import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "@/modules/character";
 import { Palco, opacidadeDaPista, type EstadoDoPalco } from "@/modules/stage";
 import { DIFICULDADES, carregarMusica, type Dificuldade, type Musica, type MusicaCarregada } from "@/modules/songs";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
@@ -18,6 +18,7 @@ import { NOMES_DAS_PISTAS } from "./cores";
 import { ativarEstrela, avancar, criarPartida, multiplicador, precisao, retirarEventos, soltar, tocar } from "./partida";
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { forcaDoTrovao } from "./pista/efeitos";
+import { criarContadorDeFps } from "./fps";
 import { layoutDaPista } from "./pista/geometria";
 import { criarSprites } from "./pista/sprites";
 import type { EstadoDoJogador } from "./rede";
@@ -38,6 +39,9 @@ export interface OpcoesDaPartida {
   semFalha: boolean;
   bot: boolean;
   efeitos: boolean;
+  /** Mostra o personagem 3D no palco e no HUD. */
+  personagem: boolean;
+  mostrarFps: boolean;
 }
 
 export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
@@ -51,6 +55,8 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   semFalha: false,
   bot: false,
   efeitos: true,
+  personagem: true,
+  mostrarFps: false,
 };
 
 interface Props {
@@ -86,11 +92,13 @@ interface Hud {
   /** De 0 a 5: as estrelas conquistadas e o caminho até a próxima. */
   estrelas: number;
   estrelasDoRecorde: number;
+  /** Última reação do personagem (erro, star power, derrota). */
+  reacao: Reacao | null;
   fantasma: boolean;
 }
 
 const ENTRADA = 2.5;
-const HUD_INICIAL: Hud = { pontos: 0, sequencia: 0, multiplicador: 1, vida: 0.5, estrela: 0, estrelaAtiva: false, progresso: 0, precisao: 1, contagem: 3, pulso: 0, estrelas: 0, estrelasDoRecorde: 0, fantasma: false };
+const HUD_INICIAL: Hud = { pontos: 0, sequencia: 0, multiplicador: 1, vida: 0.5, estrela: 0, estrelaAtiva: false, progresso: 0, precisao: 1, contagem: 3, pulso: 0, estrelas: 0, estrelasDoRecorde: 0, reacao: null, fantasma: false };
 const MAXIMO_DE_EXPLOSOES = 20;
 const MAXIMO_DE_TROVOES = 4;
 const SINCRONIA_DO_VIDEO = 0.15;
@@ -142,6 +150,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
   const [derrota, setDerrota] = useState(false);
   const [rodada, setRodada] = useState(0);
   const [aviso, setAviso] = useState<{ id: number; texto: string; estrela: boolean } | null>(null);
+  const [fps, setFps] = useState<number | null>(null);
   const [tamanho, setTamanho] = useState({ largura: window.innerWidth, altura: window.innerHeight });
 
   useEffect(() => {
@@ -192,6 +201,8 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
     const explosoes: Cena["explosoes"] = [];
     const trovoes: Cena["trovoes"] = [];
     let estrelaDesde: number | null = null;
+    let reacao: Reacao | null = null;
+    const reagir = (tipo: Reacao["tipo"]) => (reacao = novaReacao(reacao, tipo));
     let ultimoTrovao = -Infinity;
     const atraso = opcoes.atrasoMs / 1000;
     const tempoDaMusica = (tempoDoAudio: number) => tempoDoAudio - inicio - atraso;
@@ -239,8 +250,9 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
             trovoes.push({ tempo, forca, semente: partida.sequencia });
             if (trovoes.length > MAXIMO_DE_TROVOES) trovoes.shift();
           }
-        } else if (evento.tipo === "erro" && ultimoHud.sequencia >= 10) {
-          tocarEfeito("erro", opcoes.volumeDosEfeitos * 0.6);
+        } else if (evento.tipo === "erro") {
+          reagir("errou");
+          if (ultimoHud.sequencia >= 10) tocarEfeito("erro", opcoes.volumeDosEfeitos * 0.6);
         } else if (evento.tipo === "sequencia") {
           avisar(`${evento.valor} notas seguidas!`);
         } else if (evento.tipo === "fraseCompleta") {
@@ -249,9 +261,11 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
           avisar(`Star Power pronto! [${opcoes.rotuloDaTeclaDaEstrela}]`, true);
         } else if (evento.tipo === "estrelaAtivada") {
           estrelaDesde = tempo;
+          reagir("nitro");
           tocarEfeito("estrela", opcoes.volumeDosEfeitos);
           avisar("STAR POWER!", true);
         } else if (evento.tipo === "derrota") {
+          reagir("derrota");
           terminar();
         } else if (evento.tipo === "virouFantasma") {
           tocarEfeito("erro", opcoes.volumeDosEfeitos);
@@ -325,8 +339,11 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
     const aoPerderFoco = () => inicioEmRede === undefined && pausar();
     window.addEventListener("blur", aoPerderFoco);
 
+    const contadorDeFps = criarContadorDeFps();
     const desenhar = () => {
       quadro = requestAnimationFrame(desenhar);
+      const novoFps = contadorDeFps.quadro(performance.now());
+      if (opcoes.mostrarFps && novoFps !== null) setFps(Math.round(novoFps));
       const tempo = tempoDaMusica(agoraNoAudio(audio));
 
       if (!pausadoAgora && !terminou) {
@@ -357,6 +374,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
         entrada: ENTRADA,
         estrelaAtiva: partida.estrelaAtiva,
         desdeTrovao: tempo - ultimoTrovao,
+        reacao,
       };
 
       const elemento = canvas.current;
@@ -409,6 +427,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
         fantasma: partida.fantasma,
         estrelas: Math.round(progressoDasEstrelas(partida.pontos, carregada.notas.length) * 100) / 100,
         estrelasDoRecorde: progressoDasEstrelas(recordeAtual.current ?? 0, carregada.notas.length),
+        reacao,
       };
       if ((Object.keys(proximo) as (keyof Hud)[]).some((chave) => proximo[chave] !== ultimoHud[chave])) {
         ultimoHud = proximo;
@@ -454,9 +473,13 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
     );
   }
 
+
+  const avatarDoJogador = (className: string) =>
+    opcoes.personagem && <Avatar personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} reacao={hud.reacao} className={className} />;
+
   return (
     <div className="relative h-full w-full touch-none overflow-hidden select-none">
-      {comPalco && carregada && <Palco lerEstado={() => estadoDoPalco.current} />}
+      {comPalco && carregada && <Palco lerEstado={() => estadoDoPalco.current} comPersonagem={opcoes.personagem} />}
       <canvas ref={canvas} className="absolute inset-0 h-full w-full" />
 
       {!carregada && (
@@ -477,6 +500,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
               <p className="truncate text-base text-texto-suave">
                 {musica.artista} · {rotuloDaDificuldade}
                 {opcoes.bot && <span className="ml-2 rounded bg-estrela px-2 font-black text-fundo">BOT</span>}
+                {opcoes.mostrarFps && <span className="ml-2 font-mono tabular-nums">{fps ?? "–"} FPS</span>}
               </p>
             </div>
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-superficie-elevada" aria-label="Progresso da música">
@@ -541,7 +565,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
 
           {estreita ? (
             <div data-parte="hud-compacto" className="absolute top-20 right-4 flex flex-col items-end gap-2">
-              <Avatar personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} className="h-20 w-auto" />
+              {avatarDoJogador("h-20 w-auto")}
               <MedidorDeVida vida={hud.vida} fantasma={hud.fantasma} horizontal className="h-2.5 w-24" />
               <button
                 aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`}
@@ -554,9 +578,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
           ) : (
             <div data-parte="hud-lateral" className="absolute bottom-10 flex flex-col items-center" style={{ left: layout.centro + layout.largura / 2 + 24 }}>
               {/* Com o palco, o personagem já está em cena atrás da pista. */}
-              {!comPalco && (
-                <Avatar personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} className="mb-2 h-44 w-auto" />
-              )}
+              {!comPalco && avatarDoJogador("mb-2 h-44 w-auto")}
               <div className="flex items-end gap-4">
                 <BarraDeEstrelas progresso={hud.estrelas} recorde={hud.estrelasDoRecorde} />
                 <div className="flex flex-col items-center gap-2" aria-label="Star power">

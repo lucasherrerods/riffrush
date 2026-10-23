@@ -1,6 +1,6 @@
 /**
  * Tudo que pode ser escolhido na criação do personagem.
- * - Novo personagem: exporte um .vrm (VRoid Studio, Booth…), coloque em public/modelos/personagens e registre em BASES.
+ * - Novo personagem: gere um com scripts/gerar-personagem.mjs (docs/personagens.md) ou exporte um .vrm (VRoid Studio, Booth…), coloque em public/modelos/personagens e registre em BASES.
  * - Nova animação: rode scripts/preparar-animacoes.mjs com o .fbx da Mixamo e registre em ANIMACOES_POR_INSTRUMENTO.
  * - Nova peça: um .glb com malha presa ao esqueleto humanoide, em public/modelos/pecas, registrado em PECAS.
  */
@@ -23,7 +23,14 @@ export interface Peca extends Opcao<string> {
   cobre: ParteColorivel[];
 }
 
-export const BASES: Base[] = [{ id: "recruta", rotulo: "Recruta", arquivo: "/modelos/personagens/exemplo.vrm" }];
+export const BASES: Base[] = [
+  // Gerados por scripts/gerar-personagem.mjs a partir de personagens/*.json (veja docs/personagens.md). O primeiro é o padrão.
+  { id: "roqueiro", rotulo: "Roqueiro", arquivo: "/modelos/personagens/roqueiro.vrm" },
+  { id: "baixista", rotulo: "Baixista", arquivo: "/modelos/personagens/baixista.vrm" },
+  { id: "tecladista", rotulo: "Tecladista", arquivo: "/modelos/personagens/tecladista.vrm" },
+  { id: "vocalista", rotulo: "Vocalista", arquivo: "/modelos/personagens/vocalista.vrm" },
+  { id: "baterista", rotulo: "Baterista", arquivo: "/modelos/personagens/baterista.vrm" },
+];
 export const PECAS: Peca[] = [];
 
 export const INSTRUMENTOS: Opcao<Instrumento>[] = [

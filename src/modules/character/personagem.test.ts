@@ -85,3 +85,12 @@ describe("personagemAleatorio", () => {
     expect(sorteios.size).toBeGreaterThan(1);
   });
 });
+
+describe("modelo removido", () => {
+  it("quem tinha o Recruta salvo passa para o modelo padrão, sem perder o resto", () => {
+    const salvo = migrarPersonagem({ ...PERSONAGEM_PADRAO, nome: "Lucas", base: "recruta", instrumento: "baixo" });
+    expect(salvo.base).toBe("roqueiro");
+    expect(salvo.nome).toBe("Lucas");
+    expect(salvo.instrumento).toBe("baixo");
+  });
+});

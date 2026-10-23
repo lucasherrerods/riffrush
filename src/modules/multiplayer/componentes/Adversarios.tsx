@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Avatar } from "@/modules/character";
+import { Avatar, reacaoDoFimDaPartida } from "@/modules/character";
 import { MedidorDeVida } from "@/modules/gameplay";
 import { cn } from "@/shared/lib/utils";
 import type { EstadoDaSala } from "../protocolo";
@@ -48,7 +48,7 @@ export function Adversarios({ sala, compacto = false }: { sala: EstadoDaSala; co
             animate={{ opacity: 1, x: 0 }}
             className={cn("chapa flex w-56 items-center gap-2 p-2", estado?.derrota && "opacity-60")}
           >
-            <Avatar personagem={jogador.personagem} tocando={!!estado && !estado.terminou} pulso={estado?.pulso ?? 0} triste={vida < VIDA_BAIXA} className="h-16 w-auto" />
+            <Avatar personagem={jogador.personagem} tocando={!!estado && !estado.terminou} pulso={estado?.pulso ?? 0} triste={vida < VIDA_BAIXA} reacao={estado ? reacaoDoFimDaPartida(estado) : null} className="h-16 w-auto" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-base font-bold">{jogador.personagem.nome}</p>
               <p className="font-mono text-base font-black tabular-nums">{(estado?.pontos ?? 0).toLocaleString("pt-BR")}</p>

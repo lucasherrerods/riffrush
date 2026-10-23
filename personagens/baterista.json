@@ -1,0 +1,9 @@
+{
+  "nome": "Baterista",
+  "altura": 1.64,
+  "proporcoes": { "ombros": 1.12, "bracos": 1.04, "barriga": 1.05 },
+  "cabelo": "rabo",
+  "manga": "regata",
+  "acessorios": ["bone", "munhequeira"],
+  "cores": { "pele": "#c99470", "cabelo": "#4a2e1c", "olhos": "#3b2a1e", "roupa": "#d8d2c4", "calca": "#4a3b2c", "calcados": "#c8322b", "detalhe": "#2d3a4f" }
+}

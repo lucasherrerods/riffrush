@@ -140,6 +140,46 @@ describe("TelaDeJogo", () => {
     abrir();
     expect(await screen.findByRole("img", { name: "Personagem Rockstar" })).toBeInTheDocument();
   });
+
+  it("sem o personagem 3D, a partida roda sem ele", async () => {
+    carregarCom([nota(1)]);
+    abrir({ personagem: false });
+    await partidaPronta();
+    expect(screen.queryByRole("img", { name: "Personagem Rockstar" })).toBeNull();
+  });
+
+  it("mostra o contador de FPS quando pedido, e esconde por padrão", async () => {
+    carregarCom([nota(1)]);
+    abrir({ mostrarFps: true });
+    await partidaPronta();
+    expect(screen.getByText(/FPS/)).toBeInTheDocument();
+  });
+
+  it("não mostra FPS por padrão", async () => {
+    carregarCom([nota(1)]);
+    abrir();
+    await partidaPronta();
+    expect(screen.queryByText(/FPS/)).toBeNull();
+  });
+
+  it("o personagem reage quando o jogador erra uma nota", async () => {
+    carregarCom([nota(0.5), nota(5)]);
+    abrir();
+    await partidaPronta();
+    const personagem = screen.getByRole("img", { name: "Personagem Rockstar" });
+    expect(personagem).not.toHaveAttribute("data-reacao");
+    irPara(1);
+    await waitFor(() => expect(personagem).toHaveAttribute("data-reacao", "errou"));
+  });
+
+  it("o personagem desaba quando a galera vaia", async () => {
+    carregarCom(Array.from({ length: 30 }, (_, i) => nota(i * 0.1)), 20);
+    abrir();
+    await partidaPronta();
+    irPara(5);
+    await screen.findByRole("heading", { name: /A galera vaiou/ });
+    expect(screen.getByRole("img", { name: "Personagem Rockstar" })).toHaveAttribute("data-reacao", "derrota");
+  });
 });
 
 describe("TelaDeJogo em rede", () => {

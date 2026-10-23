@@ -3,6 +3,7 @@ import { VRMUtils, type VRM, type VRMHumanBoneName } from "@pixiv/three-vrm";
 import { POSE_DE_DESCANSO, ajustesDaPose, animacaoDoInstrumento } from "../animacao";
 import { pesosDasExpressoes } from "../aparencia";
 import { BASES, PECAS } from "../catalogo";
+import { combinarAjustes, expressoesComReacao, novaReacao, reacaoDoAtor, type Reacao, type TipoDeReacao } from "../reacao";
 import { migrarPersonagem, type Personagem } from "../personagem";
 import { criarAjustador } from "./ajustes";
 import { criarInstrumento, encaixarNasMaos, type Montado } from "./instrumentos";
@@ -14,6 +15,8 @@ export interface EstadoDoAvatar {
   bpm: number;
   pulso: number;
   triste: boolean;
+  /** Reação ao momento da partida (erro, nitro, vitória, derrota). Muda o contador para disparar de novo. */
+  reacao?: Reacao | null;
 }
 
 /**
@@ -24,6 +27,8 @@ export interface EstadoDoAvatar {
 export interface Ator {
   raiz: THREE.Group;
   atualizar(estado: EstadoDoAvatar): void;
+  /** Dispara uma reação na hora, sem passar pelo estado. */
+  reagir(tipo: TipoDeReacao): void;
   animar(agora: number, dt: number): void;
   /** Altura do modelo carregado, em metros (null enquanto carrega). */
   altura(): number | null;
@@ -45,7 +50,7 @@ interface Modelo {
 }
 
 const TRANSICAO = 0.4;
-const EXPRESSOES_CONTROLADAS = ["happy", "sad", "angry", "relaxed", "blink"];
+const EXPRESSOES_CONTROLADAS = ["happy", "sad", "angry", "relaxed", "surprised", "blink"];
 const euler = new THREE.Euler();
 const maoDireita = new THREE.Vector3();
 const maoEsquerda = new THREE.Vector3();
@@ -115,6 +120,9 @@ export function criarAtor(estadoInicial: EstadoDoAvatar): Ator {
   const nascimento = performance.now();
   let ultimoPulso = -Infinity;
   const semente = Math.floor(Math.random() * 1000);
+  let reacao: { tipo: TipoDeReacao; inicio: number; contador: number } | null = null;
+  const comecarReacao = ({ tipo, contador }: Reacao) => (reacao = { tipo, contador, inicio: performance.now() });
+  if (estadoInicial.reacao) comecarReacao(estadoInicial.reacao);
 
   async function carregar() {
     const chave = chaveDoModelo(personagem);
@@ -166,6 +174,8 @@ export function criarAtor(estadoInicial: EstadoDoAvatar): Ator {
     altura: () => modelo?.altura ?? null,
     atualizar(novo) {
       if (novo.pulso !== estado.pulso) ultimoPulso = performance.now();
+      if (novo.reacao && (novo.reacao.contador !== reacao?.contador || novo.reacao.tipo !== reacao?.tipo)) comecarReacao(novo.reacao);
+      else if (!novo.reacao && reacao && estado.reacao) reacao = null;
       estado = novo;
       const anterior = personagem;
       const atual = migrarPersonagem(novo.personagem);
@@ -177,6 +187,9 @@ export function criarAtor(estadoInicial: EstadoDoAvatar): Ator {
       aplicarCorpo(modelo.vrm, atual.corpo);
       if (atual.instrumento !== anterior.instrumento) trocarInstrumento(modelo, atual);
     },
+    reagir(tipo) {
+      comecarReacao(novaReacao(reacao, tipo));
+    },
     animar(agora, dt) {
       if (!modelo) return;
       const { vrm } = modelo;
@@ -184,12 +197,13 @@ export function criarAtor(estadoInicial: EstadoDoAvatar): Ator {
       escolherAnimacao(modelo);
       modelo.ajustador.desfazer();
       modelo.mixer.update(dt);
-      const ajustes = ajustesDaPose({ tempo, bpm: estado.bpm, tocando: estado.tocando, triste: estado.triste, comAnimacao: modelo.acao !== modelo.descanso });
+      const momento = reacaoDoAtor(reacao?.tipo ?? null, reacao ? (agora - reacao.inicio) / 1000 : 0);
+      const ajustes = combinarAjustes(ajustesDaPose({ tempo, bpm: estado.bpm, tocando: estado.tocando, triste: estado.triste, comAnimacao: modelo.acao !== modelo.descanso }), momento.ossos);
       for (const [osso, rotacao] of Object.entries(ajustes)) {
         const no = vrm.humanoid.getNormalizedBoneNode(osso as VRMHumanBoneName);
         if (no) modelo.ajustador.aplicar(no, rotacao);
       }
-      const pesos = pesosDasExpressoes({ expressao: personagem.expressao, triste: estado.triste, tempo, desdeOPulso: (agora - ultimoPulso) / 1000 });
+      const pesos = expressoesComReacao(pesosDasExpressoes({ expressao: personagem.expressao, triste: estado.triste, tempo, desdeOPulso: (agora - ultimoPulso) / 1000 }), momento.expressoes);
       for (const nome of EXPRESSOES_CONTROLADAS) vrm.expressionManager?.setValue(nome, pesos[nome] ?? 0);
       vrm.update(dt);
       encaixarInstrumentos(modelo);
