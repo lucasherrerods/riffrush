@@ -19,7 +19,8 @@ export function layoutDaPista(largura: number, altura: number): LayoutDaPista {
   return {
     centro: largura / 2,
     linhaDeBatida: altura * (estreita ? 0.8 : 0.86),
-    horizonte: altura * (estreita ? 0.16 : 0.08),
+    // O braço acaba antes do topo da tela e some num fade, como no Guitar Hero.
+    horizonte: altura * (estreita ? 0.2 : 0.16),
     largura: larguraDaPista,
     larguraDoTraste: larguraDaPista / 5,
   };
@@ -34,4 +35,23 @@ export function projetar(layout: LayoutDaPista, distancia: number) {
 
 export function xDaPista(layout: LayoutDaPista, pista: number, escala: number) {
   return layout.centro + (pista - 2) * layout.larguraDoTraste * escala;
+}
+
+/** Grossura das cordas na linha de batida, da mais grave (esquerda) para a mais aguda. */
+const ESPESSURA_DAS_CORDAS = [0.11, 0.095, 0.08, 0.06, 0.048];
+/** Todas as cordas têm o fio enrolado por fora: lisas, as finas pareciam linhas soltas no braço. */
+const CORDAS_ENROLADAS = 5;
+
+/** As cordas passam no meio de cada pista, da linha de batida (ou um pouco antes) até o fim do braço. */
+export function cordasDaPista(layout: LayoutDaPista, inicio: number) {
+  const perto = projetar(layout, inicio);
+  const longe = projetar(layout, 1);
+  return ESPESSURA_DAS_CORDAS.map((espessura, pista) => ({
+    pista,
+    enrolada: pista < CORDAS_ENROLADAS,
+    perto: { x: xDaPista(layout, pista, perto.escala), y: perto.y },
+    longe: { x: xDaPista(layout, pista, longe.escala), y: longe.y },
+    espessura: layout.larguraDoTraste * espessura,
+    escalaDoFim: longe.escala / perto.escala,
+  }));
 }

@@ -7,6 +7,7 @@ import { desenharPista, type Cena, type Sprites } from "./desenhar";
 const sprites: Sprites = {
   nota: (cor, estrela) => ({ tipo: "nota", cor, estrela }) as unknown as CanvasImageSource,
   brilho: (cor) => ({ tipo: "brilho", cor }) as unknown as CanvasImageSource,
+  textura: () => ({ tipo: "textura" }) as unknown as CanvasImageSource,
 };
 
 const nota = (tempo: number, pista = 0, extra: Partial<Nota> = {}): Nota => ({ tempo, pista, frase: -1, duracao: 0, ...extra });
@@ -81,6 +82,44 @@ describe("desenharPista", () => {
     const preenchimentos = desenhar(c, 0.5).chamadas.filter((ch) => ch.metodo === "fill").length;
     const semSustain = desenhar(cena([]), 0.5).chamadas.filter((ch) => ch.metodo === "fill").length;
     expect(preenchimentos).toBeGreaterThan(semSustain);
+  });
+
+  it("as cordas são de metal: sombra, borda, corpo e brilho em cada uma, e o enrolamento num traço só", () => {
+    const vazia = desenhar(cena([])).chamadas;
+    const preenchimentos = vazia.filter((ch) => ch.metodo === "fill").length;
+    const cordas = 5 * 4;
+    expect(preenchimentos).toBeGreaterThanOrEqual(cordas);
+    // Cada volta do enrolamento é um segmento; todas saem num stroke só, para não pesar.
+    expect(vazia.filter((ch) => ch.metodo === "moveTo").length).toBeGreaterThan(100);
+  });
+
+  it("cada batida vira um traste de metal, com brilho e sombra", () => {
+    const tracos = (c: Cena) => desenhar(c, 0).chamadas.filter((ch) => ch.metodo === "stroke").length;
+    expect(tracos(cena([], { batidas: [{ tempo: 0.5, forte: true }] })) - tracos(cena([]))).toBe(2);
+  });
+
+  it("as batidas fortes ganham uma marcação de madrepérola no braço, como numa guitarra", () => {
+    const preenchimentos = (c: Cena) => desenhar(c, 0).chamadas.filter((ch) => ch.metodo === "fill").length;
+    expect(preenchimentos(cena([], { batidas: [{ tempo: 0.5, forte: true }] }))).toBeGreaterThan(preenchimentos(cena([])));
+    expect(preenchimentos(cena([], { batidas: [{ tempo: 0.5, forte: false }] }))).toBe(preenchimentos(cena([])));
+  });
+
+  it("o braço ganha a textura gasta, presa dentro do contorno da pista", () => {
+    const chamadas = desenhar(cena([])).chamadas;
+    const padrao = chamadas.find((ch) => ch.metodo === "createPattern");
+    expect(padrao?.args).toEqual([{ tipo: "textura" }, "repeat"]);
+    const recorte = chamadas.findIndex((ch) => ch.metodo === "clip");
+    expect(recorte).toBeGreaterThan(-1);
+    expect(chamadas.findIndex((ch) => ch.metodo === "restore")).toBeGreaterThan(recorte);
+  });
+
+  it("o fim do braço some num fade, apagando o que está desenhado perto do horizonte", () => {
+    const chamadas = desenhar(cena([nota(1.9)])).chamadas;
+    const apagar = chamadas.findIndex((ch) => ch.metodo === "=globalCompositeOperation" && ch.args[0] === "destination-out");
+    const desenhoDaNota = chamadas.findIndex((ch) => ch.metodo === "drawImage");
+    expect(apagar).toBeGreaterThan(desenhoDaNota);
+    expect(chamadas.at(-1)).not.toEqual({ metodo: "=globalCompositeOperation", args: ["destination-out"] });
+    expect(chamadas.filter((ch) => ch.metodo === "=globalCompositeOperation").at(-1)?.args[0]).toBe("source-over");
   });
 
   it("desenha os raios de um trovão por meio segundo", () => {

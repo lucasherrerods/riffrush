@@ -16,6 +16,7 @@ export function criarCanvasFalso() {
       };
     },
     set(alvo, nome, valor) {
+      chamadas.push({ metodo: `=${String(nome)}`, args: [valor] });
       alvo[nome] = valor;
       return true;
     },

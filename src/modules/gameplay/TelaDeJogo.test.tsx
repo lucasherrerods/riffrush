@@ -325,6 +325,13 @@ describe("TelaDeJogo no celular", () => {
 });
 
 describe("TelaDeJogo e as estrelas", () => {
+  it("escurece as bordas da tela com uma vinheta, como luz de palco", async () => {
+    carregarCom([nota(1)]);
+    abrir();
+    await partidaPronta();
+    expect(document.querySelector('[data-parte="vinheta"]')).toHaveClass("pointer-events-none");
+  });
+
   it("mostra a barra de estrelas, que começa vazia", async () => {
     carregarCom([nota(1), nota(2)]);
     abrir();
@@ -338,5 +345,33 @@ describe("TelaDeJogo e as estrelas", () => {
     abrir({}, 280);
     await partidaPronta();
     expect(await screen.findByLabelText("Recorde: 5 estrelas")).toBeInTheDocument();
+  });
+
+  it("avisa na tela quando o jogador passa o recorde", async () => {
+    carregarCom([nota(0.5)]);
+    const { usuario } = abrir({}, 40);
+    await partidaPronta();
+    irPara(0.5);
+    await usuario.keyboard("a");
+    expect(await screen.findByText("RECORDE BATIDO!")).toBeInTheDocument();
+  });
+
+  it("com o bot tocando, o recorde não vale e não tem aviso", async () => {
+    carregarCom([nota(0.5)]);
+    abrir({ bot: true }, 40);
+    await partidaPronta();
+    irPara(0.6);
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
+    expect(screen.queryByText("RECORDE BATIDO!")).not.toBeInTheDocument();
+  });
+
+  it("sem recorde, não avisa", async () => {
+    carregarCom([nota(0.5)]);
+    const { usuario } = abrir();
+    await partidaPronta();
+    irPara(0.5);
+    await usuario.keyboard("a");
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
+    expect(screen.queryByText("RECORDE BATIDO!")).not.toBeInTheDocument();
   });
 });
