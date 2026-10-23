@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { VRMUtils, type VRM, type VRMHumanBoneName } from "@pixiv/three-vrm";
 import { POSE_DE_DESCANSO, ajustesDaPose, animacaoDoInstrumento } from "../animacao";
 import { pesosDasExpressoes } from "../aparencia";
-import { BASES, PECAS } from "../catalogo";
+import { BASES, PECAS, tipoDoModelo } from "../catalogo";
+import { criarAtorDeVideo } from "./atorDeVideo";
 import { combinarAjustes, expressoesComReacao, novaReacao, reacaoDoAtor, type Reacao, type TipoDeReacao } from "../reacao";
 import { migrarPersonagem, type Personagem } from "../personagem";
 import { criarAjustador } from "./ajustes";
@@ -110,7 +111,7 @@ function descartarModelo(modelo: Modelo) {
   VRMUtils.deepDispose(modelo.vrm.scene);
 }
 
-export function criarAtor(estadoInicial: EstadoDoAvatar): Ator {
+function criarAtorVrm(estadoInicial: EstadoDoAvatar): Ator {
   const raiz = new THREE.Group();
   let estado = estadoInicial;
   let personagem = migrarPersonagem(estadoInicial.personagem);
@@ -213,5 +214,38 @@ export function criarAtor(estadoInicial: EstadoDoAvatar): Ator {
       if (modelo) descartarModelo(modelo);
       modelo = undefined;
     },
+  };
+}
+
+/**
+ * O personagem em cena: um VRM 3D ou uma pessoa filmada, conforme o modelo escolhido.
+ * Trocar entre os dois tipos (na tela de Personagem) monta o ator certo no lugar.
+ */
+export function criarAtor(estadoInicial: EstadoDoAvatar): Ator {
+  const raiz = new THREE.Group();
+  let atual: Ator;
+  let chave = "";
+  const chaveDe = (estado: EstadoDoAvatar) => {
+    const base = migrarPersonagem(estado.personagem).base;
+    return tipoDoModelo(base) === "video" ? `video:${base}` : "vrm";
+  };
+  const montar = (estado: EstadoDoAvatar) => {
+    atual?.descartar();
+    atual?.raiz.removeFromParent();
+    chave = chaveDe(estado);
+    atual = chave === "vrm" ? criarAtorVrm(estado) : criarAtorDeVideo(estado);
+    raiz.add(atual.raiz);
+  };
+  montar(estadoInicial);
+  return {
+    raiz,
+    altura: () => atual.altura(),
+    atualizar(novo) {
+      if (chaveDe(novo) !== chave) montar(novo);
+      else atual.atualizar(novo);
+    },
+    reagir: (tipo) => atual.reagir(tipo),
+    animar: (agora, dt) => atual.animar(agora, dt),
+    descartar: () => atual.descartar(),
   };
 }
