@@ -92,7 +92,7 @@ frontend/
 
 ### Stack
 - Rust + axum + tokio + tower-http
-- PostgreSQL + sqlx (consultas checadas na compilação e migrações)
+- PostgreSQL + sqlx (migrações e consultas com `query_as`, cobertas pelos testes de integração)
 - oauth2 + jsonwebtoken (login Google), thiserror, tracing, utoipa (OpenAPI)
 
 ### Comandos
