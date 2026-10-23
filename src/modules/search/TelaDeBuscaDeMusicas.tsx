@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, Disc3, LoaderCircle, Search } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Disc3, Download, LoaderCircle, Play, Search } from "lucide-react";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useValorAtrasado } from "@/shared/hooks/useValorAtrasado";
 import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { Input } from "@/shared/ui/input";
+import { Switch } from "@/shared/ui/switch";
+import { avisar } from "@/shared/ui/avisos";
 import {
   FILTROS_PADRAO,
   TAMANHO_DA_PAGINA,
@@ -22,6 +24,16 @@ interface Props {
   buscar?: (filtros: FiltrosDaBusca, pagina: number, opcoes: { sinal: AbortSignal }) => Promise<RespostaDaBusca>;
   /** Espera o jogador parar de digitar antes de buscar o texto, para não estourar o limite da API. */
   atrasoMs?: number;
+  /** Baixa e importa o chart. Resolve false quando o jogador desistiu. Sem ela, a tela só lista. */
+  aoBaixar?: (resultado: ResultadoDaBusca, opcoes: { comVideo: boolean; aoProgredir: (fracao: number) => void }) => Promise<boolean>;
+  /** md5 dos charts que já estão na biblioteca. */
+  baixadas?: ReadonlySet<string>;
+  aoJogar?: (md5: string) => void;
+}
+
+interface Download {
+  md5: string;
+  fracao: number;
 }
 
 const OPCOES_DE_INSTRUMENTO: { id: Instrumento | "todos"; rotulo: string }[] = [
@@ -44,7 +56,10 @@ const OPCOES_DE_DIFICULDADE: { id: DificuldadeDaBusca | "todas"; rotulo: string 
 
 type Estado = { tipo: "carregando" } | { tipo: "pronto"; resposta: RespostaDaBusca } | { tipo: "erro"; mensagem: string };
 
-export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atrasoMs = 500 }: Props) {
+export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atrasoMs = 500, aoBaixar, baixadas = new Set(), aoJogar }: Props) {
+  const [comVideo, setComVideo] = useState(false);
+  // Um download por vez: poupa o Encore e a memória do celular.
+  const [baixando, setBaixando] = useState<Download | null>(null);
   const [texto, setTexto] = useState(FILTROS_PADRAO.texto);
   const [filtros, setFiltros] = useState<Omit<FiltrosDaBusca, "texto">>(FILTROS_PADRAO);
   const [pagina, setPagina] = useState(1);
@@ -68,6 +83,18 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
       });
     return () => controle.abort();
   }, [buscar, filtros, textoAtrasado, pagina]);
+
+  const baixar = async (resultado: ResultadoDaBusca) => {
+    if (!aoBaixar) return;
+    setBaixando({ md5: resultado.md5, fracao: 0 });
+    try {
+      await aoBaixar(resultado, { comVideo, aoProgredir: (fracao) => setBaixando({ md5: resultado.md5, fracao }) });
+    } catch (erro) {
+      avisar.error(erro instanceof Error ? erro.message : String(erro));
+    } finally {
+      setBaixando(null);
+    }
+  };
 
   useTeclado((evento) => {
     if (evento.code === "Escape") aoVoltar();
@@ -100,6 +127,12 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
         <div className="flex flex-wrap gap-8 max-md:gap-4">
           <GrupoDeOpcoes titulo="Instrumento" opcoes={OPCOES_DE_INSTRUMENTO} valor={filtros.instrumento} aoEscolher={(instrumento) => mudarFiltros({ instrumento })} />
           <GrupoDeOpcoes titulo="Dificuldade" opcoes={OPCOES_DE_DIFICULDADE} valor={filtros.dificuldade} aoEscolher={(dificuldade) => mudarFiltros({ dificuldade })} />
+          {aoBaixar && (
+            <label className="flex items-center gap-2 self-end py-2 text-base text-texto-suave">
+              <Switch aria-label="Baixar com vídeo de fundo" checked={comVideo} onCheckedChange={setComVideo} />
+              Baixar com vídeo de fundo
+            </label>
+          )}
         </div>
 
         <section aria-label="Resultados" aria-busy={estado.tipo === "carregando"} className="min-h-0 flex-1 overflow-y-auto">
@@ -120,14 +153,25 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
           {estado.tipo === "pronto" && (
             <ul className="flex flex-col gap-2">
               {estado.resposta.resultados.map((r) => (
-                <ItemDoResultado key={r.md5} resultado={r} />
+                <ItemDoResultado key={r.md5} resultado={r}>
+                  {aoBaixar && (
+                    <AcaoDoResultado
+                      resultado={r}
+                      baixada={baixadas.has(r.md5)}
+                      baixando={baixando?.md5 === r.md5 ? baixando.fracao : undefined}
+                      ocupado={!!baixando}
+                      aoBaixar={() => void baixar(r)}
+                      aoJogar={() => aoJogar?.(r.md5)}
+                    />
+                  )}
+                </ItemDoResultado>
               ))}
             </ul>
           )}
         </section>
 
         <footer className="flex items-center justify-between gap-4 text-base text-texto-suave">
-          <span>Resultados do Chorus Encore (enchor.us). Download em breve.</span>
+          <span>Resultados do Chorus Encore (enchor.us).</span>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" aria-label="Página anterior" disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)}>
               <ChevronLeft />
@@ -145,7 +189,7 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
   );
 }
 
-function ItemDoResultado({ resultado }: { resultado: ResultadoDaBusca }) {
+function ItemDoResultado({ resultado, children }: { resultado: ResultadoDaBusca; children?: React.ReactNode }) {
   const detalhes = [resultado.album, resultado.ano, resultado.genero].filter(Boolean).join(" · ");
   return (
     <li className="chapa flex items-center gap-4 border-borda bg-superficie p-2 pr-4">
@@ -165,6 +209,42 @@ function ItemDoResultado({ resultado }: { resultado: ResultadoDaBusca }) {
         {resultado.charter && <p className="truncate text-base text-texto-suave">Chart por {resultado.charter}</p>}
       </div>
       <span className="font-titulo text-xl text-texto-suave">{formatarDuracao(resultado.duracaoMs)}</span>
+      {children}
     </li>
+  );
+}
+
+interface PropsDaAcao {
+  resultado: ResultadoDaBusca;
+  baixada: boolean;
+  /** Fração já baixada, quando este é o download em andamento. */
+  baixando?: number;
+  ocupado: boolean;
+  aoBaixar: () => void;
+  aoJogar: () => void;
+}
+
+function AcaoDoResultado({ resultado, baixada, baixando, ocupado, aoBaixar, aoJogar }: PropsDaAcao) {
+  if (baixando !== undefined) {
+    return (
+      <Button variant="outline" disabled className="w-36">
+        <LoaderCircle className="animate-spin opacity-70" aria-hidden />
+        Baixando {Math.round(baixando * 100)}%
+      </Button>
+    );
+  }
+  if (baixada) {
+    return (
+      <Button aria-label={`Jogar ${resultado.titulo}`} onClick={aoJogar} className="w-36">
+        <Play className="opacity-70" aria-hidden />
+        Jogar
+      </Button>
+    );
+  }
+  return (
+    <Button variant="outline" aria-label={`Baixar ${resultado.titulo}`} disabled={ocupado} onClick={aoBaixar} className="w-36">
+      <Download className="opacity-70" aria-hidden />
+      Baixar
+    </Button>
   );
 }

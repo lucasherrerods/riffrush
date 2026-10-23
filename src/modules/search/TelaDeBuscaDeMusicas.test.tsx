@@ -1,19 +1,25 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { avisar } from "@/shared/ui/avisos";
 import type { FiltrosDaBusca, RespostaDaBusca, ResultadoDaBusca } from "./encore";
 import { TelaDeBuscaDeMusicas } from "./TelaDeBuscaDeMusicas";
 
 function resultado(titulo: string, extra: Partial<ResultadoDaBusca> = {}): ResultadoDaBusca {
-  return { md5: titulo.padEnd(32, "0"), titulo, artista: "Banda", album: "", genero: "Rock", ano: "", charter: "Fulano", duracaoMs: 125000, instrumentos: ["guitarra"], ...extra };
+  return { md5: titulo.padEnd(32, "0"), titulo, artista: "Banda", album: "", genero: "Rock", ano: "", charter: "Fulano", duracaoMs: 125000, instrumentos: ["guitarra"], versaoDoEncoder: 0, temVideo: false, ...extra };
 }
 
-function abrir(buscar = vi.fn(async (): Promise<RespostaDaBusca> => ({ total: 1, resultados: [resultado("Hit")] }))) {
+function abrir(
+  buscar = vi.fn(async (): Promise<RespostaDaBusca> => ({ total: 1, resultados: [resultado("Hit")] })),
+  extra: Partial<React.ComponentProps<typeof TelaDeBuscaDeMusicas>> = {},
+) {
   const aoVoltar = vi.fn();
-  render(<TelaDeBuscaDeMusicas buscar={buscar} atrasoMs={0} aoVoltar={aoVoltar} />);
+  render(<TelaDeBuscaDeMusicas buscar={buscar} atrasoMs={0} aoVoltar={aoVoltar} {...extra} />);
   return { buscar, aoVoltar, usuario: userEvent.setup() };
 }
 
 const ultimaChamada = (buscar: ReturnType<typeof vi.fn>) => buscar.mock.lastCall as unknown as [FiltrosDaBusca, number];
+
+vi.mock("@/shared/ui/avisos", () => ({ avisar: { error: vi.fn() } }));
 
 describe("TelaDeBuscaDeMusicas", () => {
   it("abre com o título e já lista músicas", async () => {
@@ -69,5 +75,60 @@ describe("TelaDeBuscaDeMusicas", () => {
     await screen.findByRole("heading", { name: "Hit" });
     await usuario.keyboard("{Escape}");
     expect(aoVoltar).toHaveBeenCalled();
+  });
+
+  describe("download", () => {
+    const hit = resultado("Hit");
+
+    it("Baixar chama o download e mostra o progresso", async () => {
+      let terminar = (_ok: boolean) => {};
+      const aoBaixar = vi.fn((_r: ResultadoDaBusca, { aoProgredir }: { aoProgredir: (f: number) => void }) => {
+        aoProgredir(0.42);
+        return new Promise<boolean>((resolve) => (terminar = resolve));
+      });
+      const { usuario } = abrir(undefined, { aoBaixar });
+      await usuario.click(await screen.findByRole("button", { name: "Baixar Hit" }));
+      expect(aoBaixar).toHaveBeenCalledWith(hit, expect.objectContaining({ comVideo: false }));
+      expect(await screen.findByText("Baixando 42%")).toBeInTheDocument();
+      terminar(true);
+      await waitFor(() => expect(screen.queryByText(/Baixando/)).not.toBeInTheDocument());
+    });
+
+    it("baixa um por vez", async () => {
+      const aoBaixar = vi.fn(() => new Promise<boolean>(() => {}));
+      const buscar = vi.fn(async () => ({ total: 2, resultados: [hit, resultado("Outra")] }));
+      const { usuario } = abrir(buscar, { aoBaixar });
+      await usuario.click(await screen.findByRole("button", { name: "Baixar Hit" }));
+      expect(screen.getByRole("button", { name: "Baixar Outra" })).toBeDisabled();
+    });
+
+    it("a opção de vídeo de fundo vai para o download", async () => {
+      const aoBaixar = vi.fn(async () => true);
+      const { usuario } = abrir(undefined, { aoBaixar });
+      await usuario.click(screen.getByRole("switch", { name: "Baixar com vídeo de fundo" }));
+      await usuario.click(await screen.findByRole("button", { name: "Baixar Hit" }));
+      expect(aoBaixar).toHaveBeenCalledWith(hit, expect.objectContaining({ comVideo: true }));
+    });
+
+    it("música já baixada mostra Jogar", async () => {
+      const aoJogar = vi.fn();
+      const { usuario } = abrir(undefined, { aoBaixar: vi.fn(), aoJogar, baixadas: new Set([hit.md5]) });
+      await usuario.click(await screen.findByRole("button", { name: "Jogar Hit" }));
+      expect(aoJogar).toHaveBeenCalledWith(hit.md5);
+      expect(screen.queryByRole("button", { name: "Baixar Hit" })).not.toBeInTheDocument();
+    });
+
+    it("avisa quando o download falha e libera o botão", async () => {
+      const { usuario } = abrir(undefined, { aoBaixar: vi.fn(async () => Promise.reject(new Error("Esse chart não está mais no Encore."))) });
+      await usuario.click(await screen.findByRole("button", { name: "Baixar Hit" }));
+      await waitFor(() => expect(avisar.error).toHaveBeenCalledWith("Esse chart não está mais no Encore."));
+      expect(screen.getByRole("button", { name: "Baixar Hit" })).toBeEnabled();
+    });
+
+    it("sem download disponível, não mostra o botão", async () => {
+      abrir();
+      await screen.findByRole("heading", { name: "Hit" });
+      expect(screen.queryByRole("button", { name: "Baixar Hit" })).not.toBeInTheDocument();
+    });
   });
 });

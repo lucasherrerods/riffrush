@@ -44,6 +44,10 @@ export interface ResultadoDaBusca {
   duracaoMs: number;
   capa?: string;
   instrumentos: Instrumento[];
+  /** Define a pasta do arquivo no servidor: charts mais novos ficam em `charts/v{N}/`. */
+  versaoDoEncoder: number;
+  /** O chart tem vídeo de fundo, e o Encore guarda também uma versão sem ele. */
+  temVideo: boolean;
 }
 
 export interface RespostaDaBusca {
@@ -86,6 +90,8 @@ function lerItem(item: Record<string, unknown>): ResultadoDaBusca | null {
     duracaoMs: typeof item.song_length === "number" && item.song_length > 0 ? item.song_length : 0,
     capa: urlDaCapa(item.albumArtMd5),
     instrumentos: instrumentos.map((i) => INSTRUMENTO_DA_API[i as string]).filter(Boolean),
+    versaoDoEncoder: Number.isSafeInteger(item.encoderVersion) && (item.encoderVersion as number) > 0 ? (item.encoderVersion as number) : 0,
+    temVideo: item.hasVideoBackground === true,
   };
 }
 
@@ -120,4 +126,19 @@ export async function buscarNoEncore(
   if (resposta.status === 429) throw new Error("Muitas buscas seguidas. Espere um pouco e tente de novo.");
   if (!resposta.ok) throw new Error("O Encore está indisponível agora. Tente de novo mais tarde.");
   return lerRespostaDaBusca(await resposta.json());
+}
+
+/** Mesmo caminho que o site monta. Por padrão baixa a versão sem vídeo, que é bem menor. */
+export function montarUrlDoChart(resultado: ResultadoDaBusca, { comVideo = false } = {}): string {
+  const pasta = resultado.versaoDoEncoder > 0 ? `charts/v${resultado.versaoDoEncoder}/` : "";
+  const semVideo = resultado.temVideo && !comVideo ? "_novideo" : "";
+  return `${URL_DOS_ARQUIVOS}/${pasta}${resultado.md5}${semVideo}.sng`;
+}
+
+const limparNome = (nome: string) => nome.replace(/[\/:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
+
+/** "Artista - Título.sng": a importação tira artista e título do nome quando o .sng não tem metadados. */
+export function nomeDoArquivo(resultado: ResultadoDaBusca): string {
+  const partes = [resultado.artista, resultado.titulo].map(limparNome).filter(Boolean);
+  return `${partes.join(" - ") || resultado.md5}.sng`;
 }

@@ -7,6 +7,7 @@ import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { iniciarControle } from "@/modules/gamepad";
 import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
+import { avisar } from "@/shared/ui/avisos";
 import { App } from "./App";
 
 const biblioteca = vi.hoisted(() => ({
@@ -18,6 +19,12 @@ const biblioteca = vi.hoisted(() => ({
 vi.mock("@/modules/library", async (original) => ({
   ...(await original<typeof import("@/modules/library")>()),
   useBiblioteca: () => biblioteca,
+}));
+
+// O download de verdade é testado no módulo search; aqui chega um arquivo de áudio comum.
+vi.mock("@/modules/search", async (original) => ({
+  ...(await original<typeof import("@/modules/search")>()),
+  baixarDoEncore: vi.fn(async () => new File(["x"], "Banda - Do Encore.wav", { type: "audio/wav" })),
 }));
 
 vi.mock("@/modules/platform", () => ({
@@ -58,6 +65,8 @@ beforeEach(() => {
   localStorage.clear();
   biblioteca.salvas = [];
   biblioteca.guardar.mockClear();
+  // Os avisos do sonner ficam num estado global e passariam de um teste para o outro.
+  avisar.dismiss();
   biblioteca.usar.mockClear();
   biblioteca.prepararParaTocar.mockClear();
 });
@@ -83,6 +92,18 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { name: "Busca músicas" })).toBeInTheDocument();
     await usuario.keyboard("{Escape}");
     expect(await screen.findByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
+  });
+
+  it("baixar na Busca músicas importa, salva e deixa jogar a música", async () => {
+    const md5 = "8d633d2940da9b3acda9074c2385e672";
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ found: 1, data: [{ md5, name: "Do Encore", artist: "Banda" }] }))));
+    const usuario = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Busca músicas" }));
+    await usuario.click(await screen.findByRole("button", { name: "Baixar Do Encore" }));
+    await usuario.click(await screen.findByRole("button", { name: "Jogar Do Encore" }));
+    expect(await screen.findByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Do Encore" })).toBeInTheDocument();
+    expect(biblioteca.guardar).toHaveBeenCalledWith([expect.objectContaining({ titulo: "Do Encore", md5DoEncore: md5 })]);
   });
 
   it("toca a música escolhida e mostra o resultado, salvando o recorde", async () => {

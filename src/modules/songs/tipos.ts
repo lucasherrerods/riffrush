@@ -53,6 +53,8 @@ export interface Musica {
   imagemDeCapa?: string;
   /** O arquivo está salvo no PC e só é lido na hora de tocar. */
   noAparelho?: boolean;
+  /** Veio da Busca músicas: o md5 do chart no Encore, para saber que ele já foi baixado. */
+  md5DoEncore?: string;
 }
 
 export interface MusicaCarregada {
