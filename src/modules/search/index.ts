@@ -1,0 +1,1 @@
+export { TelaDeBuscaDeMusicas } from "./TelaDeBuscaDeMusicas";

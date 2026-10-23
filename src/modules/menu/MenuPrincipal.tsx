@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Play, Power, Settings2, Shirt, Users, Zap, type LucideIcon } from "lucide-react";
+import { Play, Power, Search, Settings2, Shirt, Users, Zap, type LucideIcon } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
 import { fecharJanela } from "@/modules/platform";
@@ -15,6 +15,7 @@ interface Props {
   aoMultijogador: () => void;
   aoPersonagem: () => void;
   aoConfigurar: () => void;
+  aoBuscarMusicas: () => void;
 }
 
 interface Item {
@@ -23,10 +24,11 @@ interface Item {
   acao: () => void;
 }
 
-export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar }: Props) {
+export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusicas }: Props) {
   const [selecionado, setSelecionado] = useState(0);
   const dispositivo = useDispositivo();
   const comuns: Item[] = [
+    { rotulo: "Busca músicas", icone: Search, acao: aoBuscarMusicas },
     { rotulo: "Personagem", icone: Shirt, acao: aoPersonagem },
     { rotulo: "Configurações", icone: Settings2, acao: aoConfigurar },
   ];

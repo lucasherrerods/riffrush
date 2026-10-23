@@ -8,7 +8,7 @@ import { MenuPrincipal } from "./MenuPrincipal";
 vi.mock("@/modules/platform", () => ({ fecharJanela: vi.fn() }));
 
 function abrir({ noCelular = false } = {}) {
-  const acoes = { aoJogar: vi.fn(), aoMultijogador: vi.fn(), aoPersonagem: vi.fn(), aoConfigurar: vi.fn() };
+  const acoes = { aoJogar: vi.fn(), aoMultijogador: vi.fn(), aoPersonagem: vi.fn(), aoConfigurar: vi.fn(), aoBuscarMusicas: vi.fn() };
   render(<MenuPrincipal volumeDosEfeitos={0} noCelular={noCelular} {...acoes} />);
   return { ...acoes, usuario: userEvent.setup() };
 }
@@ -19,7 +19,7 @@ describe("MenuPrincipal", () => {
   it("mostra o nome do jogo e as opções", () => {
     abrir();
     expect(screen.getByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Multijogador", "Personagem", "Configurações", "Sair"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Multijogador", "Busca músicas", "Personagem", "Configurações", "Sair"]);
   });
 
   it("Enter abre a opção selecionada, que começa em Jogar", async () => {
@@ -74,7 +74,7 @@ describe("MenuPrincipal com controle", () => {
 describe("MenuPrincipal no celular que entrou pelo QR code", () => {
   it("começa por entrar na sala e não tem Sair (é só fechar a aba)", () => {
     abrir({ noCelular: true });
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Entrar na sala", "Jogar sozinho", "Personagem", "Configurações"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Entrar na sala", "Jogar sozinho", "Busca músicas", "Personagem", "Configurações"]);
   });
 
   it("Enter já leva para a sala", async () => {
