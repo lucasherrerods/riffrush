@@ -3,11 +3,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/character";
 import { ROTULOS_DOS_TRASTES, ROTULO_DA_ESTRELA, iniciarControle } from "@/modules/gamepad";
 import { TelaDeJogo, type Resultado } from "@/modules/gameplay";
-import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, useBiblioteca, useImportacao } from "@/modules/library";
+import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
-import { TelaDeBuscaDeMusicas } from "@/modules/search";
+import { TelaDeBuscaDeMusicas, baixarDoEncore, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { MUSICAS_EMBUTIDAS, type Dificuldade, type Musica } from "@/modules/songs";
@@ -140,6 +140,22 @@ export function App() {
     if (telaAtual.current === "menu") setTela("selecao");
   });
 
+  // Música do Encore que perdeu o áudio (o navegador apagou) volta a mostrar "Baixar".
+  const baixadasDoEncore = useMemo(() => new Set(musicas.flatMap((m) => (m.md5DoEncore && !semAudio(m) ? [m.md5DoEncore] : []))), [musicas]);
+
+  const baixarMusica = async (resultado: ResultadoDaBusca, opcoes: OpcoesDeBaixar) => {
+    const arquivo = await baixarDoEncore(resultado, opcoes);
+    if (!arquivo) return false;
+    await importar([arquivo], { md5DoEncore: resultado.md5 });
+    return true;
+  };
+
+  const jogarBaixada = (md5: string) => {
+    const posicao = musicas.findIndex((m) => m.md5DoEncore === md5);
+    if (posicao >= 0) setIndice(posicao);
+    setTela("selecao");
+  };
+
   return (
     <main className="dark relative h-dvh w-screen overflow-hidden bg-fundo text-texto">
       <Fundo tocando={tela === "jogo"} />
@@ -180,7 +196,9 @@ export function App() {
               aoImportar={(arquivos) => void importar(arquivos)}
             />
           )}
-          {tela === "buscaDeMusicas" && <TelaDeBuscaDeMusicas aoVoltar={() => setTela("menu")} />}
+          {tela === "buscaDeMusicas" && (
+            <TelaDeBuscaDeMusicas aoVoltar={() => setTela("menu")} aoBaixar={baixarMusica} baixadas={baixadasDoEncore} aoJogar={jogarBaixada} />
+          )}
           {tela === "configuracoes" && (
             <TelaDeConfiguracoes configuracoes={configuracoes} aoMudar={mudarConfiguracoes} aoVoltar={() => setTela("menu")} />
           )}

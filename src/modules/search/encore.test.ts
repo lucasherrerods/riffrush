@@ -1,4 +1,4 @@
-import { FILTROS_PADRAO, buscarNoEncore, formatarDuracao, lerRespostaDaBusca, montarCorpoDaBusca, urlDaCapa } from "./encore";
+import { FILTROS_PADRAO, buscarNoEncore, formatarDuracao, lerRespostaDaBusca, montarCorpoDaBusca, montarUrlDoChart, nomeDoArquivo, urlDaCapa, type ResultadoDaBusca } from "./encore";
 
 const itemDaApi = {
   name: "Enter Sandman",
@@ -12,6 +12,8 @@ const itemDaApi = {
   albumArtMd5: "b10343f168e302c8e3a79a3911b6291f",
   diff_guitar: 4,
   notesData: { instruments: ["guitar", "drums"] },
+  encoderVersion: 0,
+  hasVideoBackground: true,
 };
 
 describe("montarCorpoDaBusca", () => {
@@ -49,12 +51,14 @@ describe("lerRespostaDaBusca", () => {
       duracaoMs: 331000,
       capa: "https://files.enchor.us/b10343f168e302c8e3a79a3911b6291f.jpg",
       instrumentos: ["guitarra", "bateria"],
+      versaoDoEncoder: 0,
+      temVideo: true,
     });
   });
 
   it("campos faltando viram valores vazios", () => {
     const [r] = lerRespostaDaBusca({ found: 1, data: [{ md5: itemDaApi.md5, name: "X", artist: null }] }).resultados;
-    expect(r).toMatchObject({ artista: "", charter: "", duracaoMs: 0, capa: undefined, instrumentos: [] });
+    expect(r).toMatchObject({ artista: "", charter: "", duracaoMs: 0, capa: undefined, instrumentos: [], versaoDoEncoder: 0, temVideo: false });
   });
 
   it("descarta itens sem md5 válido", () => {
@@ -97,5 +101,39 @@ describe("buscarNoEncore", () => {
   it("avisa quando a API responde com erro", async () => {
     const buscar = vi.fn(async () => new Response("", { status: 500 }));
     await expect(buscarNoEncore(FILTROS_PADRAO, 1, { buscar })).rejects.toThrow(/indisponível/);
+  });
+});
+
+const md5 = "8d633d2940da9b3acda9074c2385e672";
+const chart = (extra: Partial<ResultadoDaBusca> = {}): ResultadoDaBusca => ({
+  md5, titulo: "Enter Sandman", artista: "Metallica", album: "", genero: "", ano: "", charter: "", duracaoMs: 0, instrumentos: [], versaoDoEncoder: 0, temVideo: false, ...extra,
+});
+
+describe("montarUrlDoChart", () => {
+  it("chart antigo fica na raiz", () => {
+    expect(montarUrlDoChart(chart())).toBe(`https://files.enchor.us/${md5}.sng`);
+  });
+
+  it("versões novas do encoder ficam na pasta da versão", () => {
+    expect(montarUrlDoChart(chart({ versaoDoEncoder: 2 }))).toBe(`https://files.enchor.us/charts/v2/${md5}.sng`);
+  });
+
+  it("com vídeo de fundo, baixa a versão sem vídeo, a menos que peça o vídeo", () => {
+    expect(montarUrlDoChart(chart({ temVideo: true }))).toBe(`https://files.enchor.us/${md5}_novideo.sng`);
+    expect(montarUrlDoChart(chart({ temVideo: true }), { comVideo: true })).toBe(`https://files.enchor.us/${md5}.sng`);
+  });
+});
+
+describe("nomeDoArquivo", () => {
+  it("usa artista e título, como a importação espera", () => {
+    expect(nomeDoArquivo(chart())).toBe("Metallica - Enter Sandman.sng");
+  });
+
+  it("tira caracteres que não podem ir no nome de arquivo", () => {
+    expect(nomeDoArquivo(chart({ artista: "AC/DC", titulo: 'T.N.T: "Live"?' }))).toBe("AC DC - T.N.T Live.sng");
+  });
+
+  it("sem artista, usa só o título", () => {
+    expect(nomeDoArquivo(chart({ artista: "" }))).toBe("Enter Sandman.sng");
   });
 });
