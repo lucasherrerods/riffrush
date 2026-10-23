@@ -56,6 +56,17 @@ describe("abrirBibliotecaDoPc", () => {
     expect(chamar).toHaveBeenCalledWith("biblioteca_guardar_capa", expect.any(Uint8Array), { headers: { "x-id": "arquivo%3Ax" } });
   });
 
+  // Bug: o WebView2 descarta cabeçalho vazio, e o .sng (que chega sem tipo) nunca era salvo.
+  it("arquivo sem tipo, como o .sng, vai com um tipo genérico em vez de cabeçalho vazio", async () => {
+    const chamar = invokeFalso();
+    const musica: Musica = { ...MUSICAS_EMBUTIDAS[0], id: "arquivo:x", arquivo: new File(["abc"], "musica.sng") };
+    await (await abrirBibliotecaDoPc(chamar)).guardar(musica);
+    const [, , opcoes] = chamar.mock.calls.find(([c]) => c === "biblioteca_guardar")!;
+    const { headers } = opcoes as { headers: Record<string, string> };
+    expect(Object.values(headers)).not.toContain("");
+    expect(decodeURIComponent(headers["x-tipo"])).toBe("application/octet-stream");
+  });
+
   it("não guarda música sem arquivo", async () => {
     const chamar = invokeFalso();
     await (await abrirBibliotecaDoPc(chamar)).guardar(MUSICAS_EMBUTIDAS[0]);
