@@ -15,3 +15,5 @@ src-tauri/gen/schemas/
 Thumbs.db
 *.log
 assets-fonte/
+
+relay/.wrangler/

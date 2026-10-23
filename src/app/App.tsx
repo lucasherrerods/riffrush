@@ -7,7 +7,7 @@ import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas
 import { Fundo, MenuPrincipal } from "@/modules/menu";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
-import { TelaDeBuscaDeMusicas, baixarDoEncore, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
+import { TelaDeBuscaDeMusicas, baixarDoEncore, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { MUSICAS_EMBUTIDAS, type Dificuldade, type Musica } from "@/modules/songs";
@@ -146,7 +146,7 @@ export function App() {
   const baixarMusica = async (resultado: ResultadoDaBusca, opcoes: OpcoesDeBaixar) => {
     const arquivo = await baixarDoEncore(resultado, opcoes);
     if (!arquivo) return false;
-    await importar([arquivo], { md5DoEncore: resultado.md5 });
+    await importar([arquivo], { md5DoEncore: resultado.md5, urlDoEncore: montarUrlDoChart(resultado, { comVideo: opcoes.comVideo }) });
     return true;
   };
 

@@ -5,6 +5,7 @@ import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
 import { Lobby } from "./componentes/Lobby";
 import { ProcurarSala } from "./componentes/ProcurarSala";
+import { podeTocarOnline } from "./online";
 import { sairDaSala, useConexao } from "./sala";
 
 interface Props {
@@ -16,7 +17,8 @@ interface Props {
 }
 
 export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVoltar, aoEditarPersonagem }: Props) {
-  const { sala, info, erro } = useConexao();
+  const { sala, info, erro, online, codigo } = useConexao();
+  const musicasDaSala = online ? musicas.filter(podeTocarOnline) : musicas;
 
   useTeclado((evento) => {
     if (evento.code === "Escape" && !(evento.target instanceof HTMLInputElement)) aoVoltar();
@@ -49,7 +51,7 @@ export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVo
           <Loader2 className="animate-spin" aria-hidden /> Conectando na sala...
         </p>
       )}
-      {sala && sala.status !== "conectando" && <Lobby sala={sala} info={info} musicas={musicas} volumeDosEfeitos={volumeDosEfeitos} />}
+      {sala && sala.status !== "conectando" && <Lobby sala={sala} info={info} codigo={codigo} musicas={musicasDaSala} volumeDosEfeitos={volumeDosEfeitos} />}
     </div>
   );
 }

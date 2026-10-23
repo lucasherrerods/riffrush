@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { Crown, Plus, RefreshCw, Users, Wifi } from "lucide-react";
+import { Crown, Globe, Plus, RefreshCw, Users, Wifi } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar, type Personagem } from "@/modules/character";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { cn } from "@/shared/lib/utils";
 import { MAXIMO_DE_JOGADORES } from "../protocolo";
-import { PORTA_DA_SALA, criarSala, ehClienteWebDaSala, entrarNaSala, procurarSalas, type SalaEncontrada } from "../sala";
+import { PORTA_DA_SALA, criarSala, criarSalaOnline, ehClienteWebDaSala, entrarNaSala, entrarNaSalaOnline, procurarSalas, temModoOnline, type SalaEncontrada } from "../sala";
 
 const INTERVALO_DA_BUSCA = 5000;
 
@@ -20,7 +21,10 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
   const [salas, setSalas] = useState<SalaEncontrada[]>([]);
   const [procurando, setProcurando] = useState(false);
   const [ip, setIp] = useState("");
+  const [codigo, setCodigo] = useState("");
   const noCelular = ehClienteWebDaSala();
+  // O celular que entrou pelo QR code só entra na sala de quem serviu a página.
+  const online = temModoOnline() && !noCelular;
 
   const procurar = async () => {
     setProcurando(true);
@@ -72,6 +76,19 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
             <Plus className="opacity-70" /> Criar sala na rede
           </Button>
         )}
+        {online && (
+          <Button
+              size="lg"
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                tocarEfeito("selecionar", volumeDosEfeitos);
+                criarSalaOnline(personagem);
+              }}
+            >
+              <Globe className="opacity-70" /> Criar sala online
+            </Button>
+        )}
       </section>
 
       {!noCelular && (
@@ -108,24 +125,54 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
               </li>
             ))}
           </ul>
-          <form
-            className="flex items-end gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const limpo = ip.trim().replace(/^https?:\/\//, "").replace(/:\d+$/, "");
-              if (limpo) entrar(`http://${limpo}:${PORTA_DA_SALA}`);
-            }}
-          >
-            <div className="flex-1">
-              <Label htmlFor="ip-do-host" className="mb-2 text-base text-texto-suave">
-                Ou digite o IP do host
-              </Label>
-              <Input id="ip-do-host" placeholder="192.168.0.10" value={ip} onChange={(e) => setIp(e.target.value)} className="text-base" />
-            </div>
-            <Button type="submit" variant="outline">
-              Entrar
-            </Button>
-          </form>
+          <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+            {online && (
+              <form
+                className="flex items-end gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  tocarEfeito("selecionar", volumeDosEfeitos);
+                  entrarNaSalaOnline(codigo, personagem);
+                }}
+              >
+                <div className="flex-1">
+                  <Label htmlFor="codigo-da-sala" className="mb-2 text-base text-texto-suave">
+                    Código da sala online
+                  </Label>
+                  <Input
+                    id="codigo-da-sala"
+                    placeholder="K7QXM"
+                    autoComplete="off"
+                    maxLength={7}
+                    value={codigo}
+                    onChange={(e) => setCodigo(e.target.value)}
+                    className="font-mono text-base uppercase"
+                  />
+                </div>
+                <Button type="submit" variant="outline">
+                  Entrar online
+                </Button>
+              </form>
+            )}
+            <form
+              className={cn("flex items-end gap-2", !online && "col-span-2")}
+              onSubmit={(e) => {
+                e.preventDefault();
+                const limpo = ip.trim().replace(/^https?:\/\//, "").replace(/:\d+$/, "");
+                if (limpo) entrar(`http://${limpo}:${PORTA_DA_SALA}`);
+              }}
+            >
+              <div className="flex-1">
+                <Label htmlFor="ip-do-host" className="mb-2 text-base text-texto-suave">
+                  Ou digite o IP do host
+                </Label>
+                <Input id="ip-do-host" placeholder="192.168.0.10" value={ip} onChange={(e) => setIp(e.target.value)} className="text-base" />
+              </div>
+              <Button type="submit" variant="outline">
+                Entrar
+              </Button>
+            </form>
+          </div>
         </section>
       )}
     </div>

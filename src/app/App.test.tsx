@@ -105,7 +105,7 @@ describe("App", () => {
     await usuario.click(await screen.findByRole("button", { name: "Jogar Do Encore" }));
     expect(await screen.findByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Do Encore" })).toBeInTheDocument();
-    expect(biblioteca.guardar).toHaveBeenCalledWith([expect.objectContaining({ titulo: "Do Encore", md5DoEncore: md5 })]);
+    expect(biblioteca.guardar).toHaveBeenCalledWith([expect.objectContaining({ titulo: "Do Encore", md5DoEncore: md5, urlDoEncore: `https://files.enchor.us/${md5}.sng` })]);
   });
 
   it("toca a música escolhida e mostra o resultado, salvando o recorde", async () => {

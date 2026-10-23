@@ -1,4 +1,4 @@
-import { LIMITE_PARA_AVISAR, baixarDoEncore, formatarTamanho } from "./download";
+import { LIMITE_PARA_AVISAR, baixarDoEncore, baixarSng, formatarTamanho } from "./download";
 import type { ResultadoDaBusca } from "./encore";
 
 const resultado: ResultadoDaBusca = {
@@ -74,5 +74,20 @@ describe("formatarTamanho", () => {
   it("mostra em MB, e em GB a partir de 1 GB", () => {
     expect(formatarTamanho(420 * 1024 * 1024)).toBe("420 MB");
     expect(formatarTamanho(1.5 * 1024 * 1024 * 1024)).toBe("1,5 GB");
+  });
+});
+
+describe("baixarSng", () => {
+  it("baixa de uma URL do Encore já montada, com o nome pedido", async () => {
+    const buscar = vi.fn(async () => respostaEmPedacos([SNG]));
+    const arquivo = await baixarSng("https://files.enchor.us/charts/v2/abc.sng", "Banda - Hit.sng", { buscar });
+    expect(buscar).toHaveBeenCalledWith("https://files.enchor.us/charts/v2/abc.sng", expect.anything());
+    expect(arquivo?.name).toBe("Banda - Hit.sng");
+  });
+
+  it("recusa URL que não é do Encore", async () => {
+    const buscar = vi.fn();
+    await expect(baixarSng("https://malicioso.com/a.sng", "a.sng", { buscar })).rejects.toThrow(/não é do Encore/);
+    expect(buscar).not.toHaveBeenCalled();
   });
 });

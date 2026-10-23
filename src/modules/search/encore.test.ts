@@ -1,4 +1,4 @@
-import { FILTROS_PADRAO, buscarNoEncore, formatarDuracao, lerRespostaDaBusca, montarCorpoDaBusca, montarUrlDoChart, nomeDoArquivo, urlDaCapa, type ResultadoDaBusca } from "./encore";
+import { FILTROS_PADRAO, buscarNoEncore, formatarDuracao, lerRespostaDaBusca, montarCorpoDaBusca, montarUrlDoChart, nomeDoArquivo, urlDaCapa, ehUrlDoEncore, type ResultadoDaBusca } from "./encore";
 
 const itemDaApi = {
   name: "Enter Sandman",
@@ -135,5 +135,16 @@ describe("nomeDoArquivo", () => {
 
   it("sem artista, usa só o título", () => {
     expect(nomeDoArquivo(chart({ artista: "" }))).toBe("Enter Sandman.sng");
+  });
+});
+
+describe("ehUrlDoEncore", () => {
+  it("só aceita .sng do servidor de arquivos do Encore", () => {
+    expect(ehUrlDoEncore(`https://files.enchor.us/${md5}.sng`)).toBe(true);
+    expect(ehUrlDoEncore(`https://files.enchor.us/charts/v2/${md5}_novideo.sng`)).toBe(true);
+    expect(ehUrlDoEncore("https://malicioso.com/a.sng")).toBe(false);
+    expect(ehUrlDoEncore("http://files.enchor.us/a.sng")).toBe(false);
+    expect(ehUrlDoEncore("https://files.enchor.us/a.exe")).toBe(false);
+    expect(ehUrlDoEncore("isso não é url")).toBe(false);
   });
 });
