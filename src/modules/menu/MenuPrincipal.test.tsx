@@ -1,11 +1,10 @@
-import { act, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { registrarUso } from "@/modules/gamepad";
-import { fecharJanela } from "@/modules/platform";
+import { abrirLink, fecharJanela } from "@/modules/platform";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { MenuPrincipal } from "./MenuPrincipal";
 
-vi.mock("@/modules/platform", () => ({ fecharJanela: vi.fn() }));
+vi.mock("@/modules/platform", () => ({ fecharJanela: vi.fn(), abrirLink: vi.fn() }));
 
 function abrir({ noCelular = false } = {}) {
   const acoes = { aoJogar: vi.fn(), aoMultijogador: vi.fn(), aoPersonagem: vi.fn(), aoConfigurar: vi.fn(), aoBuscarMusicas: vi.fn() };
@@ -59,15 +58,24 @@ describe("MenuPrincipal", () => {
   });
 });
 
-describe("MenuPrincipal com controle", () => {
-  afterEach(() => registrarUso("teclado"));
-
-  it("a dica de comandos troca as teclas pelos botões do controle quando ele é usado", () => {
+describe("MenuPrincipal rodapé", () => {
+  it("não mostra mais a dica de comandos", () => {
     abrir();
-    expect(screen.getByText(/para escolher/)).toHaveTextContent("Enter");
-    act(() => registrarUso("controle"));
-    expect(screen.getByText(/para escolher/)).toHaveTextContent("A para escolher");
-    expect(screen.getByText(/para escolher/)).not.toHaveTextContent("Enter");
+    expect(screen.queryByText(/para navegar/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/para escolher/)).not.toBeInTheDocument();
+  });
+
+  it("mostra os direitos autorais no canto direito", () => {
+    abrir();
+    expect(screen.getByText(/© 2026/)).toBeInTheDocument();
+  });
+
+  it("o ícone do GitHub abre o repositório do projeto", async () => {
+    const { usuario } = abrir();
+    const link = screen.getByRole("link", { name: "Riff Rush no GitHub" });
+    expect(link).toHaveAttribute("href", "https://github.com/lucasherrerods/riffrush");
+    await usuario.click(link);
+    expect(abrirLink).toHaveBeenCalledWith("https://github.com/lucasherrerods/riffrush");
   });
 });
 
