@@ -8,6 +8,7 @@ import { AudioContextFalso } from "@/test/audioFalso";
 import { iniciarControle } from "@/modules/gamepad";
 import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
 import { useSeguirMusica } from "@/modules/player";
+import { sessaoDaConta } from "@/modules/conta";
 import { avisar } from "@/shared/ui/avisos";
 import { App } from "./App";
 
@@ -55,6 +56,11 @@ vi.mock("@/modules/multiplayer", async (original) => ({
   ...(await original<typeof import("@/modules/multiplayer")>()),
   useConexao: vi.fn(() => ({ sala: null, endereco: "" })),
   voltarParaASala: vi.fn(),
+}));
+
+vi.mock("@/modules/conta", async (original) => ({
+  ...(await original<typeof import("@/modules/conta")>()),
+  sessaoDaConta: { iniciar: vi.fn(async () => {}), registrarPartida: vi.fn(async () => null) },
 }));
 
 // Sem isso o player sintetizaria a primeira música a cada teste.
@@ -150,6 +156,17 @@ describe("App", () => {
     await usuario.click(await screen.findByRole("button", { name: "terminar" }));
     await screen.findByLabelText("777 pontos");
     expect(carregarRecordes()).toEqual({});
+  });
+
+  it("com conta, mostra o XP que a partida deu; com o bot, nem manda", async () => {
+    const nivel = { nivel: 2, xp_no_nivel: 50, xp_para_o_proximo: 283 };
+    vi.mocked(sessaoDaConta.registrarPartida).mockResolvedValueOnce({ xp_ganho: 150, antes: { ...nivel, nivel: 1 }, depois: nivel });
+    const usuario = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
+    await usuario.click(await screen.findByRole("button", { name: "terminar" }));
+    expect(await screen.findByText("+150 XP")).toBeInTheDocument();
+    expect(sessaoDaConta.registrarPartida).toHaveBeenCalledWith(expect.objectContaining({ pontos: 777, acertos: 9, total: 10 }));
   });
 
   it("as configurações ficam salvas", async () => {

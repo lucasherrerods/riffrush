@@ -7,7 +7,8 @@ import { playerDeMusica } from "./playerDeMusica";
 import { usePlayerDeMusica, usePosicaoDaMusica } from "./usePlayerDeMusica";
 
 /** O player no topo das telas: mostra a música que está tocando e deixa pausar, pular e escolher o trecho. */
-export function CabecalhoDoPlayerDeMusica() {
+/** `children` fica no canto direito (a conta, por exemplo). */
+export function CabecalhoDoPlayerDeMusica({ children }: { children?: React.ReactNode }) {
   const { musica, tocando, carregando, duracao } = usePlayerDeMusica();
   const posicao = usePosicaoDaMusica(tocando);
   // Enquanto arrasta, o slider mostra o ponto escolhido; a música só pula ao soltar.
@@ -48,6 +49,7 @@ export function CabecalhoDoPlayerDeMusica() {
         />
         <span className="w-12 font-mono text-sm tabular-nums text-texto-suave">{formatarTempo(duracao)}</span>
       </div>
+      {children && <div className="ml-auto flex items-center">{children}</div>}
     </header>
   );
 }

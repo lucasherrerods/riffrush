@@ -5,6 +5,7 @@ import { ROTULOS_DOS_TRASTES, ROTULO_DA_ESTRELA, iniciarControle } from "@/modul
 import { TelaDeJogo, type Resultado } from "@/modules/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
+import { CartaoDaConta, GanhoDeXp, contasLigadas, sessaoDaConta, type XpDaPartida } from "@/modules/conta";
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/player";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
@@ -33,6 +34,7 @@ export function App() {
   const [indice, setIndice] = useState(0);
   const [dificuldade, setDificuldade] = useState<Dificuldade>("medio");
   const [resultado, setResultado] = useState<{ resultado: Resultado; recordeNovo: boolean } | null>(null);
+  const [xpDaPartida, setXpDaPartida] = useState<XpDaPartida | null>(null);
   const [partida, setPartida] = useState(0);
   const [emRede, setEmRede] = useState<PartidaEmRede | null>(null);
   const [voltarDoPersonagemPara, setVoltarDoPersonagemPara] = useState<Tela>("menu");
@@ -123,6 +125,11 @@ export function App() {
     return () => playerDeMusica.definirNavegacao(null);
   }, [tela, musicas.length]);
 
+  // Termina o login que voltou do Google ou retoma a sessão guardada.
+  useEffect(() => {
+    if (contasLigadas) sessaoDaConta.iniciar().catch((erro) => avisar.error(erro instanceof Error ? erro.message : String(erro)));
+  }, []);
+
   const mudarConfiguracoes = (novas: Configuracoes) => {
     setConfiguracoes(novas);
     salvarConfiguracoes(novas);
@@ -142,6 +149,13 @@ export function App() {
     (r: Resultado) => {
       // Com o bot tocando, o recorde não é do jogador.
       setResultado({ resultado: r, recordeNovo: !configuracoes.bot && salvarRecorde(r) });
+      setXpDaPartida(null);
+      if (!configuracoes.bot) {
+        sessaoDaConta
+          .registrarPartida(r)
+          .then(setXpDaPartida)
+          .catch((erro) => avisar.error(`Não deu para registrar o XP: ${erro instanceof Error ? erro.message : String(erro)}`));
+      }
       setTela("resultado");
     },
     [configuracoes.bot],
@@ -177,7 +191,7 @@ export function App() {
   return (
     <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
       <Fundo tocando={tela === "jogo"} />
-      {tela !== "jogo" && <CabecalhoDoPlayerDeMusica />}
+      {tela !== "jogo" && <CabecalhoDoPlayerDeMusica>{contasLigadas && <CartaoDaConta />}</CabecalhoDoPlayerDeMusica>}
       <div className="relative flex-1">
         <AnimatePresence mode="wait">
           <motion.div
@@ -287,9 +301,12 @@ export function App() {
                 }}
                 rotuloDeContinuar={emRede ? "Voltar para a sala" : undefined}
                 extra={
-                  emRede && conexao.sala ? (
-                    <Placar sala={conexao.sala} meusPontos={resultado.resultado.pontos} minhaDerrota={resultado.resultado.derrota} meuFantasma={resultado.resultado.fantasma} />
-                  ) : undefined
+                  <>
+                    {xpDaPartida && <GanhoDeXp xp={xpDaPartida} />}
+                    {emRede && conexao.sala && (
+                      <Placar sala={conexao.sala} meusPontos={resultado.resultado.pontos} minhaDerrota={resultado.resultado.derrota} meuFantasma={resultado.resultado.fantasma} />
+                    )}
+                  </>
                 }
               />
             )}
