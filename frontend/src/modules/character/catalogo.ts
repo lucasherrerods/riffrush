@@ -14,7 +14,10 @@ export interface Opcao<T extends string> {
 }
 
 export interface Base extends Opcao<string> {
+  /** O .vrm, ou a pasta do ator filmado quando `tipo` é "video". */
   arquivo: string;
+  /** "video": pessoa filmada em 2D (scripts/preparar-ator.py). Sem tipo, é um VRM. */
+  tipo?: "vrm" | "video";
 }
 
 export interface Peca extends Opcao<string> {
@@ -30,8 +33,12 @@ export const BASES: Base[] = [
   { id: "tecladista", rotulo: "Tecladista", arquivo: "/modelos/personagens/tecladista.vrm" },
   { id: "vocalista", rotulo: "Vocalista", arquivo: "/modelos/personagens/vocalista.vrm" },
   { id: "baterista", rotulo: "Baterista", arquivo: "/modelos/personagens/baterista.vrm" },
+  // Gente de verdade filmada, recortada por scripts/preparar-ator.py a partir de atores/*.json.
+  { id: "sorriso", rotulo: "Sorriso (filmado)", arquivo: "/modelos/atores/sorriso", tipo: "video" },
 ];
 export const PECAS: Peca[] = [];
+
+export const tipoDoModelo = (id: string) => BASES.find((b) => b.id === id)?.tipo ?? "vrm";
 
 export const INSTRUMENTOS: Opcao<Instrumento>[] = [
   { id: "guitarra", rotulo: "Guitarra" },

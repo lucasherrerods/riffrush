@@ -1,0 +1,12 @@
+{
+  "nome": "Sorriso",
+  "video": "../assets-fonte/atores/sorriso.mp4",
+  "cenas": {
+    "parado": [0.0, 1.4],
+    "tocando": [1.5, 5.0],
+    "errou": [5.35, 5.9],
+    "vaiado": [5.5, 6.8],
+    "nitro": [9.2, 11.0],
+    "vitoria": [12.9, 14.5]
+  }
+}

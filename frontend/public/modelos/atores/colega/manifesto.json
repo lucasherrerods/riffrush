@@ -1,0 +1,55 @@
+{
+  "nome": "Colega",
+  "fps": 12,
+  "alturaEmMetros": 1.7,
+  "cenas": {
+    "parado": {
+      "arquivo": "parado.png",
+      "quadros": 17,
+      "colunas": 5,
+      "linhas": 4,
+      "largura": 141,
+      "altura": 256
+    },
+    "tocando": {
+      "arquivo": "tocando.png",
+      "quadros": 42,
+      "colunas": 7,
+      "linhas": 6,
+      "largura": 141,
+      "altura": 256
+    },
+    "errou": {
+      "arquivo": "errou.png",
+      "quadros": 7,
+      "colunas": 3,
+      "linhas": 3,
+      "largura": 141,
+      "altura": 256
+    },
+    "vaiado": {
+      "arquivo": "vaiado.png",
+      "quadros": 16,
+      "colunas": 4,
+      "linhas": 4,
+      "largura": 141,
+      "altura": 256
+    },
+    "nitro": {
+      "arquivo": "nitro.png",
+      "quadros": 22,
+      "colunas": 5,
+      "linhas": 5,
+      "largura": 141,
+      "altura": 256
+    },
+    "vitoria": {
+      "arquivo": "vitoria.png",
+      "quadros": 19,
+      "colunas": 5,
+      "linhas": 4,
+      "largura": 141,
+      "altura": 256
+    }
+  }
+}
