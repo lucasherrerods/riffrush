@@ -8,7 +8,7 @@ import { Fundo, MenuPrincipal } from "@/modules/menu";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { TelaDeBuscaDeMusicas, baixarDoEncore, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
-import { TelaDeResultado, salvarRecorde } from "@/modules/results";
+import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { MUSICAS_EMBUTIDAS, type Dificuldade, type Musica } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
@@ -194,6 +194,15 @@ export function App() {
               aoJogar={jogar}
               aoVoltar={() => setTela("menu")}
               aoImportar={(arquivos) => void importar(arquivos)}
+              aoRemover={(removida) => {
+                void biblioteca.remover(removida);
+                setMusicas((atuais) => {
+                  const restantes = atuais.filter((m) => m.id !== removida.id);
+                  setIndice((i) => Math.min(i, restantes.length - 1));
+                  return restantes;
+                });
+                avisar.success(`${removida.titulo} removida.`);
+              }}
             />
           )}
           {tela === "buscaDeMusicas" && (
@@ -232,6 +241,7 @@ export function App() {
               dificuldade={dificuldadeDaPartida}
               opcoes={opcoes}
               personagem={personagem}
+              recorde={recordeDe(carregarRecordes(), musica.id, dificuldadeDaPartida)?.pontos}
               rede={
                 emRede && conexao.sala
                   ? { inicio: emRede.inicio, aoAtualizar: enviarEstado, adversarios: <Adversarios sala={conexao.sala} compacto={estreita} /> }

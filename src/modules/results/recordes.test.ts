@@ -15,15 +15,19 @@ const resultado = (extra: Partial<Resultado> = {}): Resultado => ({
 beforeEach(() => localStorage.clear());
 
 describe("estrelasDoResultado", () => {
+  // A barra da partida e o resultado usam a mesma escala: pontos em relação à base da música (50 por nota).
   it.each([
-    [100, 5],
-    [98, 5],
-    [90, 4],
-    [75, 3],
-    [50, 2],
-    [10, 1],
-  ])("%i%% de acerto dá %i estrelas", (acertos, estrelas) => {
-    expect(estrelasDoResultado(resultado({ acertos }))).toBe(estrelas);
+    [14_000, 5],
+    [10_000, 4],
+    [5_000, 3],
+    [2_500, 2],
+    [1_250, 1],
+  ])("%i pontos em 100 notas dão %i estrelas", (pontos, estrelas) => {
+    expect(estrelasDoResultado(resultado({ pontos, total: 100 }))).toBe(estrelas);
+  });
+
+  it("terminar a música sem derrota dá pelo menos 1 estrela", () => {
+    expect(estrelasDoResultado(resultado({ pontos: 10, total: 100 }))).toBe(1);
   });
 
   it("derrota não dá estrelas", () => {
@@ -38,7 +42,7 @@ describe("estrelasDoResultado", () => {
 describe("salvarRecorde", () => {
   it("salva o primeiro resultado como recorde", () => {
     expect(salvarRecorde(resultado())).toBe(true);
-    expect(recordeDe(carregarRecordes(), "neon", "medio")).toEqual({ pontos: 1000, estrelas: 4, fullCombo: false });
+    expect(recordeDe(carregarRecordes(), "neon", "medio")).toEqual({ pontos: 1000, estrelas: estrelasDoResultado(resultado()), fullCombo: false });
   });
 
   it("só substitui quando os pontos são maiores", () => {

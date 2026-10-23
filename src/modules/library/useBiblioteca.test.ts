@@ -68,6 +68,22 @@ describe("useBiblioteca", () => {
     expect(avisar.error).toHaveBeenCalledWith(expect.stringMatching(/Salva.*disco cheio/));
   });
 
+  it("remover apaga a música do armazenamento", async () => {
+    const biblioteca = bibliotecaFalsa();
+    const { result } = renderHook(() => useBiblioteca(async () => biblioteca));
+    await waitFor(() => expect(result.current.salvas).toHaveLength(1));
+    await act(() => result.current.remover(salva));
+    expect(biblioteca.remover).toHaveBeenCalledWith("arquivo:salva");
+  });
+
+  it("avisa quando não consegue remover", async () => {
+    const biblioteca = { ...bibliotecaFalsa(), remover: vi.fn(async () => Promise.reject(new Error("arquivo em uso"))) };
+    const { result } = renderHook(() => useBiblioteca(async () => biblioteca));
+    await waitFor(() => expect(result.current.salvas).toHaveLength(1));
+    await act(() => result.current.remover(salva));
+    expect(avisar.error).toHaveBeenCalledWith(expect.stringMatching(/Salva.*arquivo em uso/));
+  });
+
   it("sem IndexedDB (aba anônima), o jogo continua sem salvar nada", async () => {
     const { result } = renderHook(() => useBiblioteca(async () => Promise.reject(new Error("sem IndexedDB"))));
     await waitFor(() => expect(result.current.salvas).toEqual([]));

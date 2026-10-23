@@ -1,4 +1,4 @@
-import type { Resultado } from "@/modules/gameplay";
+import { estrelasPorPontos, type Resultado } from "@/modules/gameplay";
 import type { Dificuldade } from "@/modules/songs";
 
 export interface Recorde {
@@ -10,17 +10,10 @@ export interface Recorde {
 export type Recordes = Record<string, Recorde>;
 
 const CHAVE = "riffrush.recordes";
-const FAIXAS_DE_ESTRELAS: [number, number][] = [
-  [0.98, 5],
-  [0.9, 4],
-  [0.75, 3],
-  [0.5, 2],
-];
-
+/** A mesma escala da barra da partida. Quem termina a música sem derrota leva pelo menos 1 estrela. */
 export function estrelasDoResultado(resultado: Resultado) {
   if (resultado.derrota || resultado.total === 0) return 0;
-  const acerto = resultado.acertos / resultado.total;
-  return FAIXAS_DE_ESTRELAS.find(([minimo]) => acerto >= minimo)?.[1] ?? 1;
+  return Math.max(1, estrelasPorPontos(resultado.pontos, resultado.total));
 }
 
 const chaveDoRecorde = (musicaId: string, dificuldade: Dificuldade) => `${musicaId}:${dificuldade}`;
