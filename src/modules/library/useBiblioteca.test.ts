@@ -1,7 +1,10 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { MUSICAS_EMBUTIDAS, type Musica } from "@/modules/songs";
+import { avisar } from "@/shared/ui/avisos";
 import type { Biblioteca } from "./storage/biblioteca";
 import { useBiblioteca } from "./useBiblioteca";
+
+vi.mock("@/shared/ui/avisos", () => ({ avisar: { error: vi.fn() } }));
 
 const salva: Musica = { ...MUSICAS_EMBUTIDAS[0], id: "arquivo:salva", titulo: "Salva" };
 
@@ -55,6 +58,14 @@ describe("useBiblioteca", () => {
     await waitFor(() => expect(result.current.salvas).toHaveLength(1));
     expect(await result.current.prepararParaTocar(MUSICAS_EMBUTIDAS[0])).toBe(MUSICAS_EMBUTIDAS[0]);
     expect(biblioteca.abrir).not.toHaveBeenCalled();
+  });
+
+  it("avisa quando não consegue salvar uma música, em vez de falhar calado", async () => {
+    const biblioteca = { ...bibliotecaFalsa(), guardar: vi.fn(async () => Promise.reject(new Error("disco cheio"))) };
+    const { result } = renderHook(() => useBiblioteca(async () => biblioteca));
+    await waitFor(() => expect(result.current.salvas).toHaveLength(1));
+    await act(() => result.current.guardar([salva]));
+    expect(avisar.error).toHaveBeenCalledWith(expect.stringMatching(/Salva.*disco cheio/));
   });
 
   it("sem IndexedDB (aba anônima), o jogo continua sem salvar nada", async () => {

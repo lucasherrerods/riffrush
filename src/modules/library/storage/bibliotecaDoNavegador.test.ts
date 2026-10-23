@@ -38,37 +38,31 @@ describe("abrirBibliotecaDoNavegador", () => {
     expect(titulos(await biblioteca.listar())).toEqual(["c", "b", "a"]);
   });
 
-  it("a quarta música tira o áudio da mais antiga, que continua no histórico", async () => {
+  it("guarda o áudio de todas as músicas, sem limite", async () => {
     const biblioteca = await abrir();
-    for (const nome of ["a", "b", "c", "d"]) await biblioteca.guardar(importada(nome));
-    const musicas = await biblioteca.listar();
-    expect(titulos(musicas)).toEqual(["d", "c", "b", "a"]);
-    expect(comAudio(musicas)).toEqual(["d", "c", "b"]);
+    const nomes = ["a", "b", "c", "d", "e", "f"];
+    for (const nome of nomes) await biblioteca.guardar(importada(nome));
+    expect(comAudio(await biblioteca.listar())).toEqual([...nomes].reverse());
   });
 
-  it("tocar uma música leva ela para o começo da fila", async () => {
+  it("tocar uma música leva ela para o começo da lista", async () => {
     const biblioteca = await abrir();
     for (const nome of ["a", "b", "c"]) await biblioteca.guardar(importada(nome));
     await biblioteca.usar("arquivo:a");
-    await biblioteca.guardar(importada("d"));
-    expect(comAudio(await biblioteca.listar())).toEqual(["d", "a", "c"]);
+    expect(titulos(await biblioteca.listar())).toEqual(["a", "c", "b"]);
   });
 
-  it("guardar de novo uma música do histórico devolve o áudio a ela", async () => {
+  it("guarda a capa junto com a música", async () => {
     const biblioteca = await abrir();
-    for (const nome of ["a", "b", "c", "d"]) await biblioteca.guardar(importada(nome));
-    await biblioteca.guardar(importada("a"));
-    const musicas = await biblioteca.listar();
-    expect(titulos(musicas)).toEqual(["a", "d", "c", "b"]);
-    expect(comAudio(musicas)).toEqual(["a", "d", "c"]);
+    await biblioteca.guardar(importada("a"), new Blob(["png"], { type: "image/png" }));
+    expect((await biblioteca.listar())[0].imagemDeCapa).toBe("blob:capa");
   });
 
-  it("guarda a capa junto com o histórico", async () => {
-    const biblioteca = await abrir();
-    for (const nome of ["a", "b", "c", "d"]) await biblioteca.guardar(importada(nome), new Blob(["png"], { type: "image/png" }));
-    const antiga = (await biblioteca.listar()).at(-1)!;
-    expect(antiga.arquivo).toBeUndefined();
-    expect(antiga.imagemDeCapa).toBe("blob:capa");
+  it("pede ao navegador para não apagar as músicas quando faltar espaço", async () => {
+    const persist = vi.fn(async () => true);
+    vi.stubGlobal("navigator", { storage: { persist } });
+    await abrir();
+    expect(persist).toHaveBeenCalled();
   });
 
   it("não guarda música sem arquivo, como as embutidas", async () => {

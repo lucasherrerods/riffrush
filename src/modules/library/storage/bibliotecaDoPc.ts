@@ -14,6 +14,9 @@ interface Registro {
 
 type Chamar = (comando: string, ...args: unknown[]) => Promise<unknown>;
 
+/** O .sng e alguns arquivos arrastados chegam sem tipo, e o WebView2 descarta cabeçalho vazio. */
+const TIPO_GENERICO = "application/octet-stream";
+
 /** Os cabeçalhos do invoke só aceitam ASCII; o Rust decodifica do outro lado. */
 const cabecalhos = (valores: Record<string, string>) => ({
   headers: Object.fromEntries(Object.entries(valores).map(([nome, valor]) => [nome, encodeURIComponent(valor)])),
@@ -42,8 +45,9 @@ export async function abrirBibliotecaDoPc(chamar: Chamar = invoke as Chamar): Pr
       const { arquivo } = musica;
       if (!arquivo) return;
       const dados = JSON.stringify(dadosDa(musica));
-      await chamar("biblioteca_guardar", new Uint8Array(await arquivo.arrayBuffer()), cabecalhos({ "x-id": musica.id, "x-dados": dados, "x-nome": arquivo.name, "x-tipo": arquivo.type }));
-      registros.set(musica.id, { id: musica.id, dados, usadaEm: Date.now(), nomeDoArquivo: arquivo.name, tipoDoArquivo: arquivo.type, temCapa: !!capa });
+      const tipo = arquivo.type || TIPO_GENERICO;
+      await chamar("biblioteca_guardar", new Uint8Array(await arquivo.arrayBuffer()), cabecalhos({ "x-id": musica.id, "x-dados": dados, "x-nome": arquivo.name, "x-tipo": tipo }));
+      registros.set(musica.id, { id: musica.id, dados, usadaEm: Date.now(), nomeDoArquivo: arquivo.name, tipoDoArquivo: tipo, temCapa: !!capa });
       if (capa) await chamar("biblioteca_guardar_capa", new Uint8Array(await capa.arrayBuffer()), cabecalhos({ "x-id": musica.id }));
     },
 

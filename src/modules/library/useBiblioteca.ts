@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { importarArquivo, type Musica } from "@/modules/songs";
+import { avisar } from "@/shared/ui/avisos";
 import type { Biblioteca } from "./storage/biblioteca";
 import { abrirBibliotecaDoNavegador } from "./storage/bibliotecaDoNavegador";
 import { abrirBibliotecaDoPc } from "./storage/bibliotecaDoPc";
@@ -34,7 +35,11 @@ export function useBiblioteca(abrir: () => Promise<Biblioteca> = abrirBiblioteca
 
   const guardar = useCallback(async (musicas: Musica[]) => {
     const aberta = await biblioteca.current;
-    for (const musica of musicas) await aberta?.guardar(musica, await capaDe(musica)).catch(() => {});
+    for (const musica of musicas) {
+      await aberta
+        ?.guardar(musica, await capaDe(musica))
+        .catch((erro) => avisar.error(`Não consegui salvar ${musica.titulo}: ${erro instanceof Error ? erro.message : erro}`));
+    }
   }, []);
 
   const usar = useCallback(async (id: string) => {

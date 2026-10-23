@@ -7,5 +7,5 @@ export function juntarMusicas(atuais: Musica[], novas: Musica[]): Musica[] {
   return [...trocadas, ...novas.filter((m) => !atuais.some((a) => a.id === m.id))];
 }
 
-/** Música importada que ficou só no histórico: o áudio saiu da fila e precisa ser importado de novo. */
+/** Música importada que ficou só no histórico: o navegador apagou o áudio e ele precisa ser importado de novo. */
 export const semAudio = (musica: Musica) => musica.id.startsWith("arquivo:") && !musica.arquivo && !musica.noAparelho;
