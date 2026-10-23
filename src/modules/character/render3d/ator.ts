@@ -4,6 +4,7 @@ import { POSE_DE_DESCANSO, ajustesDaPose, animacaoDoInstrumento } from "../anima
 import { pesosDasExpressoes } from "../aparencia";
 import { BASES, PECAS } from "../catalogo";
 import { migrarPersonagem, type Personagem } from "../personagem";
+import { criarAjustador } from "./ajustes";
 import { criarInstrumento, encaixarNasMaos, type Montado } from "./instrumentos";
 import { animacaoParaVRM, aplicarCores, aplicarCorpo, carregarPeca, carregarVRM, vestirPeca } from "./vrm";
 
@@ -37,6 +38,7 @@ interface Modelo {
   /** Id da animação tocando agora (null é a pose de descanso), ou o id que está sendo carregado. */
   animacao: string | null;
   instrumentos: Montado[];
+  ajustador: ReturnType<typeof criarAjustador>;
   /** O que exige recarregar o modelo inteiro quando muda. */
   chave: string;
   altura: number;
@@ -45,7 +47,6 @@ interface Modelo {
 const TRANSICAO = 0.4;
 const EXPRESSOES_CONTROLADAS = ["happy", "sad", "angry", "relaxed", "blink"];
 const euler = new THREE.Euler();
-const ajuste = new THREE.Quaternion();
 const maoDireita = new THREE.Vector3();
 const maoEsquerda = new THREE.Vector3();
 const frente = new THREE.Vector3();
@@ -137,7 +138,7 @@ export function criarAtor(estadoInicial: EstadoDoAvatar): Ator {
     mixer.update(0);
     vrm.update(0);
     const altura = new THREE.Box3().setFromObject(vrm.scene).max.y || 1.6;
-    modelo = { vrm, mixer, descanso, acao: descanso, animacao: null, instrumentos: [], chave, altura };
+    modelo = { vrm, mixer, descanso, acao: descanso, animacao: null, instrumentos: [], ajustador: criarAjustador(), chave, altura };
     trocarInstrumento(modelo, personagem);
     raiz.add(vrm.scene);
     carregando = undefined;
@@ -181,10 +182,12 @@ export function criarAtor(estadoInicial: EstadoDoAvatar): Ator {
       const { vrm } = modelo;
       const tempo = (agora - nascimento) / 1000;
       escolherAnimacao(modelo);
+      modelo.ajustador.desfazer();
       modelo.mixer.update(dt);
       const ajustes = ajustesDaPose({ tempo, bpm: estado.bpm, tocando: estado.tocando, triste: estado.triste, comAnimacao: modelo.acao !== modelo.descanso });
-      for (const [osso, [x, y, z]] of Object.entries(ajustes)) {
-        vrm.humanoid.getNormalizedBoneNode(osso as VRMHumanBoneName)?.quaternion.multiply(ajuste.setFromEuler(euler.set(x, y, z)));
+      for (const [osso, rotacao] of Object.entries(ajustes)) {
+        const no = vrm.humanoid.getNormalizedBoneNode(osso as VRMHumanBoneName);
+        if (no) modelo.ajustador.aplicar(no, rotacao);
       }
       const pesos = pesosDasExpressoes({ expressao: personagem.expressao, triste: estado.triste, tempo, desdeOPulso: (agora - ultimoPulso) / 1000 });
       for (const nome of EXPRESSOES_CONTROLADAS) vrm.expressionManager?.setValue(nome, pesos[nome] ?? 0);
