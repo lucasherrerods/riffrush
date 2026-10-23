@@ -17,7 +17,7 @@ export function LinhaDeSlider({ rotulo, dica, valor, minimo, maximo, passo, form
     <LinhaDeOpcao rotulo={rotulo} dica={dica}>
       <Slider
         aria-label={rotulo}
-        className="w-56"
+        className="w-48"
         value={[valor]}
         min={minimo}
         max={maximo}

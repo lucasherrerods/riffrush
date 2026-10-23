@@ -44,7 +44,6 @@ function abrir() {
 
 beforeEach(() => {
   localStorage.clear();
-  Element.prototype.scrollIntoView = vi.fn();
 });
 
 describe("App", () => {

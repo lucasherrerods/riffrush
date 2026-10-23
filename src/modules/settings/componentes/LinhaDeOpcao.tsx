@@ -11,12 +11,12 @@ interface Props {
 
 export function LinhaDeOpcao({ rotulo, dica, para, children }: Props) {
   return (
-    <div className="flex items-center justify-between gap-8 rounded-lg bg-superficie-elevada px-4 py-4">
+    <div className="flex items-center justify-between gap-8 rounded-lg bg-superficie-elevada px-4 py-2">
       <div>
         <Label htmlFor={para} className="text-base font-semibold">
           {rotulo}
         </Label>
-        {dica && <p className="mt-1 text-base text-texto-suave">{dica}</p>}
+        {dica && <p className="text-base text-texto-suave">{dica}</p>}
       </div>
       <div className="flex shrink-0 items-center gap-4">{children}</div>
     </div>

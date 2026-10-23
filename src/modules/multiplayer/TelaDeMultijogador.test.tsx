@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
@@ -106,10 +106,24 @@ describe("na sala", () => {
 
   it("o host escolhe a música e a dificuldade", async () => {
     const { usuario } = abrir({ sala: naSala(true), endereco: "" });
-    await usuario.click(screen.getByRole("radio", { name: /Overdrive/ }));
-    expect(sala.escolher).toHaveBeenCalledWith(MUSICAS_EMBUTIDAS[3], "medio");
+    await usuario.click(screen.getByRole("radio", { name: /Cosmic Riff/ }));
+    expect(sala.escolher).toHaveBeenCalledWith(MUSICAS_EMBUTIDAS[2], "medio");
     await usuario.click(screen.getByRole("radio", { name: "Expert" }));
     expect(sala.escolher).toHaveBeenCalledWith(MUSICAS_EMBUTIDAS[0], "expert");
+  });
+
+  it("com muitas músicas, mostra só as próximas da escolhida, sem rolagem, e as setas trocam", async () => {
+    const muitas = Array.from({ length: 12 }, (_, i) => ({ ...MUSICAS_EMBUTIDAS[0], id: `m${i}`, titulo: `Faixa ${i}` }));
+    vi.mocked(sala.useConexao).mockReturnValue({ sala: naSala(true, { musica: { tipo: "embutida", id: "m6" } }), endereco: "" });
+    render(<TelaDeMultijogador personagem={lucas} musicas={muitas} volumeDosEfeitos={0} aoVoltar={vi.fn()} aoEditarPersonagem={vi.fn()} />);
+    const usuario = userEvent.setup();
+    const lista = screen.getByRole("radiogroup", { name: "Música" });
+    expect(within(lista).getAllByRole("radio")).toHaveLength(3);
+    expect(lista.className).not.toMatch(/overflow/);
+    await usuario.click(screen.getByRole("button", { name: "Próxima música" }));
+    expect(sala.escolher).toHaveBeenCalledWith(muitas[7], "medio");
+    await usuario.click(screen.getByRole("button", { name: "Música anterior" }));
+    expect(sala.escolher).toHaveBeenCalledWith(muitas[5], "medio");
   });
 
   it("o host começa a partida com a música escolhida", async () => {
