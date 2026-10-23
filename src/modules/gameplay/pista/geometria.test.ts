@@ -70,7 +70,8 @@ describe("cordasDaPista", () => {
     expect(grave.espessura).toBeGreaterThan(aguda.espessura);
   });
 
-  it("as 3 cordas graves são enroladas, as agudas são lisas", () => {
-    expect(cordasDaPista(layout, 0).map((c) => c.enrolada)).toEqual([true, true, true, false, false]);
+  // As agudas lisas pareciam linhas soltas no braço: no jogo todas ganham o fio enrolado.
+  it("todas as cordas são enroladas, com o mesmo acabamento", () => {
+    expect(cordasDaPista(layout, 0).every((c) => c.enrolada)).toBe(true);
   });
 });

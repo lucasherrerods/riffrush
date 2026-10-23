@@ -39,8 +39,8 @@ export function xDaPista(layout: LayoutDaPista, pista: number, escala: number) {
 
 /** Grossura das cordas na linha de batida, da mais grave (esquerda) para a mais aguda. */
 const ESPESSURA_DAS_CORDAS = [0.11, 0.095, 0.08, 0.06, 0.048];
-/** Como numa guitarra, as cordas mais grossas têm um fio enrolado por fora. */
-const CORDAS_ENROLADAS = 3;
+/** Todas as cordas têm o fio enrolado por fora: lisas, as finas pareciam linhas soltas no braço. */
+const CORDAS_ENROLADAS = 5;
 
 /** As cordas passam no meio de cada pista, da linha de batida (ou um pouco antes) até o fim do braço. */
 export function cordasDaPista(layout: LayoutDaPista, inicio: number) {

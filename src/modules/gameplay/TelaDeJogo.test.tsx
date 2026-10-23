@@ -274,6 +274,13 @@ describe("TelaDeJogo no celular", () => {
 });
 
 describe("TelaDeJogo e as estrelas", () => {
+  it("escurece as bordas da tela com uma vinheta, como luz de palco", async () => {
+    carregarCom([nota(1)]);
+    abrir();
+    await partidaPronta();
+    expect(document.querySelector('[data-parte="vinheta"]')).toHaveClass("pointer-events-none");
+  });
+
   it("mostra a barra de estrelas, que começa vazia", async () => {
     carregarCom([nota(1), nota(2)]);
     abrir();

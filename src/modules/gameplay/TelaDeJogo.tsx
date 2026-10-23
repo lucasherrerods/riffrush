@@ -464,6 +464,12 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
     <div className="relative h-full w-full touch-none overflow-hidden select-none">
       {comPalco && carregada && <Palco lerEstado={() => estadoDoPalco.current} />}
       <canvas ref={canvas} className="absolute inset-0 h-full w-full" />
+      {/* Vinheta: as bordas escurecem e a luz fica no braço, como num palco. */}
+      <div
+        data-parte="vinheta"
+        className="pointer-events-none absolute inset-0"
+        style={{ background: "radial-gradient(ellipse at 50% 70%, transparent 35%, color-mix(in srgb, var(--cor-fundo) 85%, transparent) 100%)" }}
+      />
 
       {!carregada && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
