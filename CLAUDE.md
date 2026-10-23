@@ -50,6 +50,13 @@ Cada módulo expõe sua API pública em `index.ts`. Outros módulos importam só
 - Use os tokens de cor e espaçamento definidos em `src/shared/styles`, nunca cores soltas.
 - Exceção: o brilho neon é permitido apenas dentro do canvas da pista (notas, explosões, trilhos), por ser efeito de jogo. Menus, painéis e botões seguem a regra de não usar sombras no tema escuro.
 
+### Economia de tokens
+- Durante o trabalho, rode só o teste do arquivo alterado (`npx vitest run caminho/arquivo.test.ts`). A suíte inteira roda só no final.
+- Use saídas curtas: `npm test -- --reporter=dot` e `cargo test -q`.
+- Não rode `npm run build` a cada passo, só antes do PR.
+- Leia `docs/design.md` só quando a mudança for de interface.
+- Não leia nem busque em `node_modules`, `dist`, `coverage`, `src-tauri/target` e arquivos de áudio.
+
 ### Git
 - Commits convencionais, curtos e em português: `feat: adiciona sustain nas notas`, `fix: corrige atraso do input`, `test: cobre parser de .chart`.
 - Nunca adicione co-autor nos commits nem assinatura nas descrições de PR.
