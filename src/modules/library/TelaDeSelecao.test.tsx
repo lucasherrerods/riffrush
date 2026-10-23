@@ -175,3 +175,27 @@ describe("TelaDeSelecao com estética arcade", () => {
     act(() => registrarUso("teclado"));
   });
 });
+
+describe("TelaDeSelecao com música do histórico sem áudio", () => {
+  const semArquivo: Musica = { ...MUSICAS_EMBUTIDAS[0], id: "arquivo:Riff.mp3:10", titulo: "Riff" };
+
+  it("troca o TOCAR por importar de novo", () => {
+    abrir({ musicas: [semArquivo] });
+    expect(screen.queryByRole("button", { name: /TOCAR/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/áudio não está mais salvo/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Importar de novo/)).toHaveAttribute("type", "file");
+  });
+
+  it("Enter não começa a partida sem o áudio", async () => {
+    const { aoJogar, usuario } = abrir({ musicas: [semArquivo] });
+    await usuario.keyboard("{Enter}");
+    expect(aoJogar).not.toHaveBeenCalled();
+  });
+
+  it("o arquivo escolhido volta pela importação", async () => {
+    const { aoImportar, usuario } = abrir({ musicas: [semArquivo] });
+    const arquivo = new File(["x"], "Riff.mp3", { type: "audio/mpeg" });
+    await usuario.upload(screen.getByLabelText(/Importar de novo/), arquivo);
+    expect(aoImportar).toHaveBeenCalledWith([arquivo]);
+  });
+});

@@ -6,7 +6,14 @@ import { useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { iniciarControle } from "@/modules/gamepad";
+import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
 import { App } from "./App";
+
+const biblioteca = vi.hoisted(() => ({ salvas: [] as unknown[], guardar: vi.fn(async () => {}), usar: vi.fn(async () => {}) }));
+vi.mock("@/modules/library", async (original) => ({
+  ...(await original<typeof import("@/modules/library")>()),
+  useBiblioteca: () => biblioteca,
+}));
 
 vi.mock("@/modules/platform", () => ({
   estaEmTelaCheia: vi.fn(async () => false),
@@ -44,6 +51,9 @@ function abrir() {
 
 beforeEach(() => {
   localStorage.clear();
+  biblioteca.salvas = [];
+  biblioteca.guardar.mockClear();
+  biblioteca.usar.mockClear();
 });
 
 describe("App", () => {
@@ -112,6 +122,27 @@ describe("App", () => {
     await usuario.upload(await screen.findByLabelText(/Importar/), new File(["x"], "Banda X - Hit.wav", { type: "audio/wav" }));
     expect(await screen.findByRole("heading", { name: "Hit" })).toBeInTheDocument();
     expect(await screen.findByText(/1 música importada/)).toBeInTheDocument();
+  });
+
+  it("as músicas salvas em outras sessões aparecem na seleção", async () => {
+    biblioteca.salvas = [{ ...MUSICAS_EMBUTIDAS[0], id: "arquivo:salva", titulo: "Salva de Ontem" }];
+    const usuario = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    expect(await screen.findByRole("button", { name: /Salva de Ontem/ })).toBeInTheDocument();
+  });
+
+  it("a música importada fica salva na biblioteca", async () => {
+    const usuario = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    await usuario.upload(await screen.findByLabelText(/Importar música/), new File(["x"], "Banda X - Hit.wav", { type: "audio/wav" }));
+    await waitFor(() => expect(biblioteca.guardar).toHaveBeenCalledWith([expect.objectContaining({ titulo: "Hit" })]));
+  });
+
+  it("tocar uma música avisa a biblioteca, para ela ir ao começo da fila", async () => {
+    const usuario = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
+    expect(biblioteca.usar).toHaveBeenCalledWith(MUSICAS_EMBUTIDAS[0].id);
   });
 
   it("arrastar uma música para o menu importa e abre a seleção com ela", async () => {

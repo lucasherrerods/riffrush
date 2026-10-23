@@ -5,3 +5,5 @@ export { SoltarParaImportar } from "./componentes/SoltarParaImportar";
 export { useImportacao } from "./useImportacao";
 export type { Biblioteca } from "./storage/biblioteca";
 export { abrirBibliotecaDoNavegador } from "./storage/bibliotecaDoNavegador";
+export { juntarMusicas, semAudio } from "./storage/historico";
+export { useBiblioteca } from "./useBiblioteca";
