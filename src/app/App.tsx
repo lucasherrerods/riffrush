@@ -7,6 +7,7 @@ import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, useImportacao
 import { Fundo, MenuPrincipal } from "@/modules/menu";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
+import { TelaDeBusca } from "@/modules/search";
 import { TelaDeResultado, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { MUSICAS_EMBUTIDAS, type Dificuldade, type Musica } from "@/modules/songs";
@@ -15,7 +16,7 @@ import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { opcoesDaPartida } from "./opcoes";
 
-type Tela = "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "jogo" | "resultado";
+type Tela = "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "busca" | "jogo" | "resultado";
 
 interface PartidaEmRede {
   musica: Musica;
@@ -151,6 +152,7 @@ export function App() {
                 setTela("personagem");
               }}
               aoConfigurar={() => setTela("configuracoes")}
+              aoBuscarMusica={() => setTela("busca")}
             />
           )}
           {tela === "selecao" && (
@@ -167,6 +169,7 @@ export function App() {
               aoImportar={(arquivos) => void importar(arquivos)}
             />
           )}
+          {tela === "busca" && <TelaDeBusca aoVoltar={() => setTela("menu")} />}
           {tela === "configuracoes" && (
             <TelaDeConfiguracoes configuracoes={configuracoes} aoMudar={mudarConfiguracoes} aoVoltar={() => setTela("menu")} />
           )}

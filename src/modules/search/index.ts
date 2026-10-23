@@ -1,0 +1,1 @@
+export { TelaDeBusca } from "./TelaDeBusca";
