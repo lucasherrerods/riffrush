@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use super::casos_de_uso::{ErroDaConta, PartidaEnviada, XpDaPartida};
 use super::dominio::Conta;
-use super::portas::PedidoDeLogin;
+use super::portas::{ClienteDoGoogle, PedidoDeLogin};
 use crate::modules::progresso::{Dificuldade, Nivel, ResumoDaPartida};
 use crate::shared::erro::ErroDaApi;
 use crate::shared::estado::EstadoDoApp;
@@ -87,6 +87,10 @@ pub struct CorpoDoLogin {
     codigo: String,
     verificador: String,
     redirect_uri: String,
+    /// `web` (padrão) ou `desktop`.
+    #[serde(default)]
+    #[schema(value_type = Option<String>, example = "web")]
+    cliente: ClienteDoGoogle,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -102,6 +106,7 @@ pub async fn entrar(State(estado): State<EstadoDoApp>, Json(corpo): Json<CorpoDo
         codigo: corpo.codigo,
         verificador: corpo.verificador,
         redirect_uri: corpo.redirect_uri,
+        cliente: corpo.cliente,
     };
     let entrada = estado.conta.entrar_com_google(&pedido).await?;
     Ok(Json(RespostaDoLogin {

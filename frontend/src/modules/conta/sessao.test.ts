@@ -42,7 +42,7 @@ describe("SessaoDaConta", () => {
     ambiente.temporario.setItem("riffrush:pkce", "verif");
     ambiente.temporario.setItem("riffrush:pkce-estado", "e");
     await sessao.iniciar();
-    expect(ambiente.api.entrar).toHaveBeenCalledWith("abc", "verif", "http://app/");
+    expect(ambiente.api.entrar).toHaveBeenCalledWith("abc", "verif", "http://app/", "web");
     expect(ambiente.local.getItem("riffrush:token")).toBe("tok");
     expect(ambiente.limparBusca).toHaveBeenCalled();
     expect(ambiente.temporario.getItem("riffrush:pkce")).toBeNull();
@@ -54,6 +54,26 @@ describe("SessaoDaConta", () => {
     ambiente.temporario.setItem("riffrush:pkce-estado", "e");
     await expect(sessao.iniciar()).rejects.toThrow("cancelado");
     expect(sessao.estado().conta).toBeNull();
+  });
+
+  it("no desktop, entra pelo navegador do sistema e usa o redirect do loopback", async () => {
+    const { sessao, ambiente } = montar();
+    ambiente.loginPeloNavegador = vi.fn(async (url: string) => {
+      const pedido = new URL(url);
+      expect(pedido.searchParams.has("redirect_uri")).toBe(false);
+      return { busca: `?code=abc&state=${pedido.searchParams.get("state")}`, redirectUri: "http://127.0.0.1:5000/" };
+    });
+    await sessao.entrar();
+    expect(ambiente.irPara).not.toHaveBeenCalled();
+    expect(ambiente.api.entrar).toHaveBeenCalledWith("abc", expect.any(String), "http://127.0.0.1:5000/", "desktop");
+    expect(ambiente.local.getItem("riffrush:token")).toBe("tok");
+  });
+
+  it("no desktop, volta com estado errado não entra", async () => {
+    const { sessao, ambiente } = montar();
+    ambiente.loginPeloNavegador = vi.fn(async () => ({ busca: "?code=abc&state=outro", redirectUri: "x" }));
+    await expect(sessao.entrar()).rejects.toThrow("cancelado");
+    expect(ambiente.api.entrar).not.toHaveBeenCalled();
   });
 
   it("retoma a sessão guardada", async () => {

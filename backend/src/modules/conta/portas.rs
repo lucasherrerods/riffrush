@@ -36,11 +36,21 @@ pub trait RepositorioDeSessoes: Send + Sync {
     async fn apagar(&self, token_hash: &str) -> Result<(), FalhaExterna>;
 }
 
+/// O Google tem um client id para a web e outro para o desktop, que aceita qualquer porta no loopback.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ClienteDoGoogle {
+    #[default]
+    Web,
+    Desktop,
+}
+
 pub struct PedidoDeLogin {
     pub codigo: String,
     /// O verificador do PKCE: prova que quem troca o código é quem começou o login.
     pub verificador: String,
     pub redirect_uri: String,
+    pub cliente: ClienteDoGoogle,
 }
 
 #[derive(Debug, thiserror::Error)]

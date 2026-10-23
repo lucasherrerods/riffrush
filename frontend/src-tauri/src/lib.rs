@@ -1,5 +1,6 @@
 mod biblioteca;
 mod lan;
+mod login;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -11,6 +12,7 @@ pub fn run() {
             lan::lan_fechar_sala,
             lan::lan_compartilhar_musica,
             lan::lan_procurar_salas,
+            login::login_pelo_navegador,
             biblioteca::biblioteca_listar,
             biblioteca::biblioteca_guardar,
             biblioteca::biblioteca_guardar_capa,

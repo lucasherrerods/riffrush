@@ -18,7 +18,8 @@ export async function desafioDoVerificador(verificador: string) {
 
 interface PedidoAoGoogle {
   clientId: string;
-  redirectUri: string;
+  /** No desktop fica de fora: o app junta o endereço do loopback quando sabe a porta. */
+  redirectUri?: string;
   desafio: string;
   /** Valor aleatório que volta na URL: prova que o retorno é do nosso pedido. */
   estado: string;
@@ -27,7 +28,7 @@ interface PedidoAoGoogle {
 export function urlDoLoginDoGoogle({ clientId, redirectUri, desafio, estado }: PedidoAoGoogle) {
   const parametros = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: redirectUri,
+    ...(redirectUri && { redirect_uri: redirectUri }),
     response_type: "code",
     scope: "openid profile",
     code_challenge: desafio,
