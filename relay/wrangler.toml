@@ -7,6 +7,14 @@ name = "SALAS"
 class_name = "Sala"
 
 # Durable Objects com SQLite são os que entram no plano gratuito.
+[[durable_objects.bindings]]
+name = "DIRETORIO"
+class_name = "Diretorio"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Sala"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Diretorio"]

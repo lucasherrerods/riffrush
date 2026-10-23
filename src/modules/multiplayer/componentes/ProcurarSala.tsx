@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { Crown, Globe, Plus, RefreshCw, Users, Wifi } from "lucide-react";
+import { Crown, Globe, Plus, RefreshCw, Users, Wifi, type LucideIcon } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar, type Personagem } from "@/modules/character";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { cn } from "@/shared/lib/utils";
+import type { SalaOnline } from "../online";
 import { MAXIMO_DE_JOGADORES } from "../protocolo";
-import { PORTA_DA_SALA, criarSala, criarSalaOnline, ehClienteWebDaSala, entrarNaSala, entrarNaSalaOnline, procurarSalas, temModoOnline, type SalaEncontrada } from "../sala";
+import { PORTA_DA_SALA, criarSala, criarSalaOnline, ehClienteWebDaSala, entrarNaSala, entrarNaSalaOnline, procurarSalas, procurarSalasOnline, temModoOnline, type SalaEncontrada } from "../sala";
 
 const INTERVALO_DA_BUSCA = 5000;
 
@@ -22,6 +23,7 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
   const [procurando, setProcurando] = useState(false);
   const [ip, setIp] = useState("");
   const [codigo, setCodigo] = useState("");
+  const [salasOnline, setSalasOnline] = useState<SalaOnline[]>([]);
   const noCelular = ehClienteWebDaSala();
   // O celular que entrou pelo QR code só entra na sala de quem serviu a página.
   const online = temModoOnline() && !noCelular;
@@ -29,9 +31,9 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
   const procurar = async () => {
     setProcurando(true);
     try {
-      setSalas(await procurarSalas());
-    } catch {
-      setSalas([]);
+      const [daRede, daInternet] = await Promise.all([procurarSalas().catch(() => []), online ? procurarSalasOnline() : []]);
+      setSalas(daRede);
+      setSalasOnline(daInternet);
     } finally {
       setProcurando(false);
     }
@@ -95,34 +97,33 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
         <section className="col-span-8 flex min-h-0 flex-col gap-4 placa p-6">
           <div className="flex items-center gap-4">
             <Wifi className="text-primaria opacity-70" aria-hidden />
-            <h2 className="text-xl font-bold">Salas na sua rede</h2>
+            <h2 className="text-xl font-bold">{online ? "Salas abertas" : "Salas na sua rede"}</h2>
             <div className="flex-1" />
             <Button variant="ghost" onClick={() => void procurar()} disabled={procurando}>
               <RefreshCw className={procurando ? "animate-spin opacity-70" : "opacity-70"} /> Procurar
             </Button>
           </div>
           <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-            {salas.length === 0 && (
+            {salas.length === 0 && salasOnline.length === 0 && (
               <li className="py-12 text-center text-base text-texto-suave">
                 {procurando ? "Procurando salas..." : "Nenhuma sala encontrada. Crie a sua ou peça para alguém criar."}
               </li>
             )}
             {salas.map((s) => (
-              <li key={`${s.ip}:${s.porta}`}>
-                <button
-                  onClick={() => entrar(`http://${s.ip}:${s.porta}`)}
-                  className="chapa flex w-full items-center gap-4 bg-superficie-elevada p-4 text-left transition-colors hover:border-primaria"
-                >
-                  <Crown className="text-ouro opacity-70" aria-hidden />
-                  <span className="flex-1">
-                    <span className="block text-base font-bold">Sala de {s.nome}</span>
-                    <span className="block font-mono text-base text-texto-suave">{s.ip}</span>
-                  </span>
-                  <span className="rounded-full bg-superficie px-3 py-1 text-base">
-                    {s.jogadores}/{MAXIMO_DE_JOGADORES}
-                  </span>
-                </button>
-              </li>
+              <ItemDeSala key={`${s.ip}:${s.porta}`} icone={Crown} nome={s.nome} detalhe={s.ip} jogadores={s.jogadores} aoEntrar={() => entrar(`http://${s.ip}:${s.porta}`)} />
+            ))}
+            {salasOnline.map((s) => (
+              <ItemDeSala
+                key={s.codigo}
+                icone={Globe}
+                nome={s.nome}
+                detalhe={`Online · ${s.codigo}`}
+                jogadores={s.jogadores}
+                aoEntrar={() => {
+                  tocarEfeito("selecionar", volumeDosEfeitos);
+                  entrarNaSalaOnline(s.codigo, personagem);
+                }}
+              />
             ))}
           </ul>
           <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
@@ -176,5 +177,36 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
         </section>
       )}
     </div>
+  );
+}
+
+interface PropsDoItem {
+  icone: LucideIcon;
+  nome: string;
+  detalhe: string;
+  jogadores: number;
+  aoEntrar: () => void;
+}
+
+/** Uma sala aberta na lista, da rede ou da internet. */
+function ItemDeSala({ icone: Icone, nome, detalhe, jogadores, aoEntrar }: PropsDoItem) {
+  const cheia = jogadores >= MAXIMO_DE_JOGADORES;
+  return (
+    <li>
+      <button
+        onClick={aoEntrar}
+        disabled={cheia}
+        className="chapa flex w-full items-center gap-4 bg-superficie-elevada p-4 text-left transition-colors hover:border-primaria disabled:opacity-50 disabled:hover:border-borda"
+      >
+        <Icone className="text-ouro opacity-70" aria-hidden />
+        <span className="flex-1">
+          <span className="block text-base font-bold">Sala de {nome}</span>
+          <span className="block font-mono text-base text-texto-suave">{detalhe}</span>
+        </span>
+        <span className="rounded-full bg-superficie px-3 py-1 text-base">
+          {cheia ? "Cheia" : `${jogadores}/${MAXIMO_DE_JOGADORES}`}
+        </span>
+      </button>
+    </li>
   );
 }

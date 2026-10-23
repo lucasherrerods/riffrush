@@ -12,7 +12,22 @@ const FORMATO_DO_CODIGO = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{5}$/;
 
 const semBarraNoFim = (url: string) => url.replace(/\/+$/, "");
 
-export const urlParaCriarSala = (base: string) => `${semBarraNoFim(base)}/criar`;
+/** O nome do host vai junto para aparecer na lista de salas abertas. */
+export const urlParaCriarSala = (base: string, nome: string) => `${semBarraNoFim(base)}/criar?nome=${encodeURIComponent(nome)}`;
+export const urlDasSalas = (base: string) => `${semBarraNoFim(base).replace(/^ws/, "http")}/salas`;
+
+export interface SalaOnline {
+  codigo: string;
+  nome: string;
+  jogadores: number;
+}
+
+export function lerSalasOnline(json: unknown): SalaOnline[] {
+  if (!Array.isArray(json)) return [];
+  return json.filter(
+    (s): s is SalaOnline => typeof s?.codigo === "string" && FORMATO_DO_CODIGO.test(s.codigo) && typeof s.nome === "string" && Number.isInteger(s.jogadores),
+  );
+}
 export const urlParaEntrarNaSala = (base: string, codigo: string) => `${semBarraNoFim(base)}/sala/${codigo}`;
 
 export function normalizarCodigo(texto: string): string | null {
