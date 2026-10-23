@@ -1,6 +1,6 @@
-import { type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, FileAudio, Flame, Play, Trophy } from "lucide-react";
+import { ArrowLeft, FileAudio, Flame, Play, RotateCcw, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
@@ -12,6 +12,7 @@ import { Button } from "@/shared/ui/button";
 import { AvatarPalhetando } from "./componentes/AvatarPalhetando";
 import { Capa } from "./componentes/Capa";
 import { Carrossel } from "./componentes/Carrossel";
+import { semAudio } from "./storage/historico";
 
 interface Props {
   musicas: Musica[];
@@ -47,9 +48,16 @@ export function TelaDeSelecao(props: Props) {
     efeito("mover");
     aoDificuldade(id);
   };
+  const reimportar = useRef<HTMLInputElement>(null);
+  const precisaReimportar = semAudio(musica);
   const jogar = () => {
     efeito("selecionar");
-    aoJogar();
+    if (precisaReimportar) reimportar.current?.click();
+    else aoJogar();
+  };
+  const importarEscolhidos = (campo: HTMLInputElement) => {
+    aoImportar(Array.from(campo.files ?? []));
+    campo.value = "";
   };
 
   useTeclado((evento) => {
@@ -100,10 +108,7 @@ export function TelaDeSelecao(props: Props) {
               accept={TIPOS_IMPORTAVEIS}
               multiple
               className="sr-only"
-              onChange={(e) => {
-                aoImportar(Array.from(e.target.files ?? []));
-                e.target.value = "";
-              }}
+              onChange={(e) => importarEscolhidos(e.target)}
             />
           </label>
         </Button>
@@ -146,9 +151,21 @@ export function TelaDeSelecao(props: Props) {
           </div>
 
           <div className="flex-1" />
-          <Button size="lg" className="h-14 font-titulo text-2xl tracking-widest" onClick={jogar}>
-            <Play className="fill-current opacity-70" /> TOCAR
-          </Button>
+          {precisaReimportar ? (
+            <div className="flex flex-col gap-2">
+              <p className="text-base text-texto-suave">O áudio não está mais salvo neste aparelho. Escolha o arquivo de novo para tocar.</p>
+              <Button size="lg" className="h-14 font-titulo text-2xl tracking-widest" asChild>
+                <label className="cursor-pointer">
+                  <RotateCcw className="opacity-70" /> Importar de novo
+                  <input ref={reimportar} type="file" accept={TIPOS_IMPORTAVEIS} className="sr-only" onChange={(e) => importarEscolhidos(e.target)} />
+                </label>
+              </Button>
+            </div>
+          ) : (
+            <Button size="lg" className="h-14 font-titulo text-2xl tracking-widest" onClick={jogar}>
+              <Play className="fill-current opacity-70" /> TOCAR
+            </Button>
+          )}
         </section>
 
         <Carrossel

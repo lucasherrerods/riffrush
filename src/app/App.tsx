@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/character";
 import { ROTULOS_DOS_TRASTES, ROTULO_DA_ESTRELA, iniciarControle } from "@/modules/gamepad";
 import { TelaDeJogo, type Resultado } from "@/modules/gameplay";
-import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, useImportacao } from "@/modules/library";
+import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, useBiblioteca, useImportacao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
@@ -37,6 +37,13 @@ export function App() {
   const conexao = useConexao();
   const estreita = useTelaEstreita();
   const partidasVistas = useRef(0);
+
+  const biblioteca = useBiblioteca();
+  const { salvas } = biblioteca;
+  // As músicas de outras sessões chegam depois de abrir o armazenamento.
+  useEffect(() => {
+    if (salvas?.length) setMusicas((atuais) => juntarMusicas(atuais, salvas));
+  }, [salvas]);
 
   const musica = emRede?.musica ?? musicas[indice];
   const dificuldadeDaPartida = emRede?.dificuldade ?? dificuldade;
@@ -103,6 +110,7 @@ export function App() {
   };
 
   const jogar = () => {
+    void biblioteca.usar(musicas[indice].id);
     setEmRede(null);
     setPartida((p) => p + 1);
     setTela("jogo");
@@ -119,11 +127,11 @@ export function App() {
 
   const { importar, progresso } = useImportacao((importadas) => {
     setMusicas((atuais) => {
-      const novas = importadas.filter((m) => !atuais.some((a) => a.id === m.id));
-      const todas = [...atuais, ...novas];
+      const todas = juntarMusicas(atuais, importadas);
       setIndice(todas.findIndex((m) => m.id === importadas[importadas.length - 1].id));
       return todas;
     });
+    void biblioteca.guardar(importadas);
     // Arrastou no menu: já mostra a música na seleção.
     if (telaAtual.current === "menu") setTela("selecao");
   });
