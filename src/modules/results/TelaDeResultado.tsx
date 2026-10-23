@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { animate, motion } from "framer-motion";
 import { ListMusic, RotateCcw, Star, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
+import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
 import type { Resultado } from "@/modules/gameplay";
 import { DIFICULDADES } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
@@ -28,6 +29,7 @@ export function TelaDeResultado(props: Props) {
   const { titulo, artista, resultado, recordeNovo, volumeDosEfeitos, aoRepetir, aoContinuar, extra, rotuloDeContinuar } = props;
   const podeRepetir = rotuloDeContinuar === undefined;
   const [pontosNaTela, setPontosNaTela] = useState(0);
+  const dispositivo = useDispositivo();
   const estrelas = estrelasDoResultado(resultado);
   const precisao = resultado.total ? Math.round((resultado.acertos / resultado.total) * 100) : 0;
   const fullCombo = resultado.total > 0 && resultado.acertos === resultado.total;
@@ -108,11 +110,11 @@ export function TelaDeResultado(props: Props) {
       <div className="flex gap-4">
         {podeRepetir && (
           <Button size="lg" variant="outline" onClick={aoRepetir}>
-            <RotateCcw className="opacity-70" /> Tocar de novo (R)
+            <RotateCcw className="opacity-70" /> Tocar de novo{dispositivo === "teclado" && " (R)"}
           </Button>
         )}
         <Button size="lg" onClick={aoContinuar}>
-          <ListMusic className="opacity-70" /> {rotuloDeContinuar ?? "Escolher outra"} (Enter)
+          <ListMusic className="opacity-70" /> {rotuloDeContinuar ?? "Escolher outra"} ({rotuloDoComando("confirmar", dispositivo)})
         </Button>
       </div>
     </div>

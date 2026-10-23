@@ -1,6 +1,7 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
+import { registrarUso } from "@/modules/gamepad";
 import { salvarRecorde } from "@/modules/results";
 import { MUSICAS_EMBUTIDAS, type Dificuldade, type Musica } from "@/modules/songs";
 import { AudioContextFalso } from "@/test/audioFalso";
@@ -127,5 +128,16 @@ describe("TelaDeSelecao com estética arcade", () => {
     abrir();
     const legenda = screen.getByRole("contentinfo");
     for (const comando of ["Dificuldade", "Confirmar", "Voltar"]) expect(legenda).toHaveTextContent(comando);
+    expect(legenda).toHaveTextContent("Enter");
+  });
+
+  it("depois de usar o controle, o rodapé mostra os botões dele", () => {
+    abrir();
+    act(() => registrarUso("controle"));
+    const legenda = screen.getByRole("contentinfo");
+    expect(within(legenda).getByText("A").nextSibling).toHaveTextContent("Confirmar");
+    expect(within(legenda).getByText("B").nextSibling).toHaveTextContent("Voltar");
+    expect(legenda).not.toHaveTextContent("Enter");
+    act(() => registrarUso("teclado"));
   });
 });

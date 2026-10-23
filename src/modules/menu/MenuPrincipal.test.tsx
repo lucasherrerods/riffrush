@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { registrarUso } from "@/modules/gamepad";
 import { fecharJanela } from "@/modules/platform";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { MenuPrincipal } from "./MenuPrincipal";
@@ -55,6 +56,18 @@ describe("MenuPrincipal", () => {
     const { usuario } = abrir();
     await usuario.click(screen.getByRole("button", { name: "Sair" }));
     expect(fecharJanela).toHaveBeenCalled();
+  });
+});
+
+describe("MenuPrincipal com controle", () => {
+  afterEach(() => registrarUso("teclado"));
+
+  it("a dica de comandos troca as teclas pelos botões do controle quando ele é usado", () => {
+    abrir();
+    expect(screen.getByText(/para escolher/)).toHaveTextContent("Enter");
+    act(() => registrarUso("controle"));
+    expect(screen.getByText(/para escolher/)).toHaveTextContent("A para escolher");
+    expect(screen.getByText(/para escolher/)).not.toHaveTextContent("Enter");
   });
 });
 

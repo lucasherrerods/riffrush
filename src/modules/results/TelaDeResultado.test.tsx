@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { registrarUso } from "@/modules/gamepad";
 import type { Resultado } from "@/modules/gameplay";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { TelaDeResultado } from "./TelaDeResultado";
@@ -75,6 +76,18 @@ describe("TelaDeResultado", () => {
     await usuario.click(screen.getByRole("button", { name: /Escolher outra/ }));
     expect(aoRepetir).toHaveBeenCalled();
     expect(aoContinuar).toHaveBeenCalled();
+  });
+});
+
+describe("TelaDeResultado com controle", () => {
+  afterEach(() => registrarUso("teclado"));
+
+  it("o atalho do botão continuar vira o botão A, e o R some porque o controle não tem", () => {
+    abrir();
+    expect(screen.getByRole("button", { name: /Escolher outra/ })).toHaveTextContent("(Enter)");
+    act(() => registrarUso("controle"));
+    expect(screen.getByRole("button", { name: /Escolher outra/ })).toHaveTextContent("(A)");
+    expect(screen.getByRole("button", { name: /Tocar de novo/ })).not.toHaveTextContent("(R)");
   });
 });
 

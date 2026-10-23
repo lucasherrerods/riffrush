@@ -1,3 +1,4 @@
+import { marcarComoDoControle, registrarUso } from "./dispositivo";
 import { traduzir, type Mapa, type Modo } from "./mapeamento";
 
 interface Opcoes {
@@ -17,7 +18,12 @@ export function iniciarControle({ modo, mapa }: Opcoes) {
     const controle = Array.from(navigator.getGamepads?.() ?? []).find((c) => c);
     const agora = controle ? controle.buttons.map((b) => b.pressed) : [];
     const traducao = traduzir(antes, agora, emitidos, modo(), mapa());
-    for (const { tipo, code } of traducao.eventos) window.dispatchEvent(new KeyboardEvent(tipo, { code, key: code, bubbles: true, cancelable: true }));
+    for (const { tipo, code } of traducao.eventos) {
+      const evento = new KeyboardEvent(tipo, { code, key: code, bubbles: true, cancelable: true });
+      marcarComoDoControle(evento);
+      registrarUso("controle");
+      window.dispatchEvent(evento);
+    }
     antes = agora;
     emitidos = traducao.emitidos;
   };
