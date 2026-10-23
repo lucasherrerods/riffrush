@@ -54,14 +54,37 @@ async function carregarEmbutida(musica: Musica, dificuldade: Dificuldade): Promi
   };
 }
 
+export type AoProgredir = (fracao: number) => void;
+
+/** Lê o arquivo aos pedaços, avisando quanto já leu. Sem leitura em partes, lê de uma vez. */
+async function lerComProgresso(arquivo: Blob, aoProgredir: AoProgredir): Promise<ArrayBuffer> {
+  if (typeof arquivo.stream !== "function" || !arquivo.size) {
+    const bytes = await arquivo.arrayBuffer();
+    aoProgredir(1);
+    return bytes;
+  }
+  const leitor = arquivo.stream().getReader();
+  const bytes = new Uint8Array(arquivo.size);
+  let lidos = 0;
+  for (let pedaco = await leitor.read(); !pedaco.done; pedaco = await leitor.read()) {
+    bytes.set(pedaco.value, lidos);
+    lidos += pedaco.value.length;
+    aoProgredir(lidos / arquivo.size);
+  }
+  return bytes.buffer;
+}
+
+/** No .sng, ler o arquivo é metade do trabalho; decodificar as faixas é a outra metade. */
+const PESO_DA_LEITURA = 0.5;
+
 const pacotes = new Map<string, Promise<{ pacote: PacoteSng; chart: ChartLido; audio: AudioBuffer }>>();
 
 /** Abre o .sng uma vez só: lê o pacote, o chart e mistura as faixas de áudio. */
-function abrirSng(musica: Musica) {
+function abrirSng(musica: Musica, aoProgredir: AoProgredir = () => {}) {
   let aberto = pacotes.get(musica.id);
   if (!aberto) {
     aberto = (async () => {
-      const pacote = lerSng(await musica.arquivo!.arrayBuffer());
+      const pacote = lerSng(await lerComProgresso(musica.arquivo!, (fracao) => aoProgredir(fracao * PESO_DA_LEITURA)));
       const texto = pacote.arquivos.get("notes.chart");
       const midi = pacote.arquivos.get("notes.mid");
       if (!texto && !midi) throw new Error("O .sng não tem chart (notes.chart ou notes.mid).");
@@ -69,7 +92,14 @@ function abrirSng(musica: Musica) {
       const faixas = [...pacote.arquivos].filter(([nome]) => AUDIO_DO_SNG.test(nome));
       if (!faixas.length) throw new Error("O .sng não tem áudio.");
       const contexto = obterContextoDeAudio();
-      const decodificadas = await Promise.all(faixas.map(([, bytes]) => contexto.decodeAudioData(bytes.slice().buffer)));
+      let prontas = 0;
+      const decodificadas = await Promise.all(
+        faixas.map(async ([, bytes]) => {
+          const audio = await contexto.decodeAudioData(bytes.slice().buffer);
+          aoProgredir(PESO_DA_LEITURA + (1 - PESO_DA_LEITURA) * (++prontas / faixas.length));
+          return audio;
+        }),
+      );
       const taxa = decodificadas[0].sampleRate;
       const mix = mixarFaixas(
         decodificadas.map((a) => ({ taxa: a.sampleRate, canais: Array.from({ length: a.numberOfChannels }, (_, c) => a.getChannelData(c)) })),
@@ -133,12 +163,19 @@ function musicaDoNome(arquivo: File): Musica {
   };
 }
 
-/** Importa um áudio, um clipe ou um .sng. O .sng traz nome, artista, capa e vídeo de dentro do pacote. */
-export async function importarArquivo(arquivo: File): Promise<Musica> {
+/**
+ * Importa um áudio, um clipe ou um .sng. O .sng traz nome, artista, capa e vídeo de dentro do pacote.
+ * Áudio e clipe só são lidos na hora de tocar, então terminam na hora.
+ */
+export async function importarArquivo(arquivo: File, aoProgredir: AoProgredir = () => {}): Promise<Musica> {
   const base = musicaDoNome(arquivo);
-  if (!ehSng(arquivo)) return base;
+  if (!ehSng(arquivo)) {
+    aoProgredir(1);
+    return base;
+  }
   const musica: Musica = { ...base, sng: true, genero: "Clone Hero", capa: ["#f59e0b", "#7c2d12"] };
-  const { pacote, chart } = await abrirSng(musica);
+  const { pacote, chart } = await abrirSng(musica, aoProgredir);
+  aoProgredir(1);
   const { metadados, arquivos } = pacote;
   const capa = [...arquivos].find(([nome]) => CAPA_DO_SNG.test(nome));
   const video = [...arquivos].find(([nome]) => VIDEO_DO_SNG.test(nome));
