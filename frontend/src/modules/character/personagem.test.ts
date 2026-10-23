@@ -1,5 +1,5 @@
 import { geradorAleatorio } from "@/shared/lib/aleatorio";
-import { BASES, EXPRESSOES, INSTRUMENTOS, PALETAS } from "./catalogo";
+import { BASES, EXPRESSOES, INSTRUMENTOS, PALETAS, tipoDoModelo } from "./catalogo";
 import { PERSONAGEM_PADRAO, carregarPersonagem, migrarPersonagem, personagemAleatorio, salvarPersonagem } from "./personagem";
 
 beforeEach(() => localStorage.clear());
@@ -92,5 +92,13 @@ describe("modelo removido", () => {
     expect(salvo.base).toBe("roqueiro");
     expect(salvo.nome).toBe("Lucas");
     expect(salvo.instrumento).toBe("baixo");
+  });
+});
+
+describe("tipoDoModelo", () => {
+  it("o ator filmado é vídeo; os personagens gerados são VRM", () => {
+    expect(tipoDoModelo("sorriso")).toBe("video");
+    expect(tipoDoModelo("roqueiro")).toBe("vrm");
+    expect(tipoDoModelo("nao-existe")).toBe("vrm");
   });
 });
