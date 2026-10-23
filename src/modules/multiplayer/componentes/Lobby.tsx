@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import { Check, ChevronDown, ChevronUp, Globe, Loader2, Play, Smartphone, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar } from "@/modules/character";
+import { useSeguirMusica } from "@/modules/player";
 import { DIFICULDADES, type Dificuldade, type Musica } from "@/modules/songs";
 import { janelaEmVolta } from "@/shared/lib/janela";
 import { cn } from "@/shared/lib/utils";
@@ -29,6 +30,7 @@ interface Props {
 
 export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos }: Props) {
   const preparo = useMusicaDaSala(sala, musicas, endereco);
+  useSeguirMusica(preparo.tipo === "pronta" ? (preparo.musica ?? null) : null);
   // Na LAN, escolher uma música importada envia o arquivo, e isso pode falhar.
   const escolherNaSala = (m: Musica, d: Dificuldade) => void escolher(m, d).catch((erro) => avisar.error(erro instanceof Error ? erro.message : String(erro)));
   const convidados = sala.jogadores.filter((j) => j.id !== sala.hostId);
