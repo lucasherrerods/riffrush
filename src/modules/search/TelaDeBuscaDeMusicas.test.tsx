@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { avisar } from "@/shared/ui/avisos";
 import type { FiltrosDaBusca, RespostaDaBusca, ResultadoDaBusca } from "./encore";
@@ -129,6 +129,35 @@ describe("TelaDeBuscaDeMusicas", () => {
       abrir();
       await screen.findByRole("heading", { name: "Hit" });
       expect(screen.queryByRole("button", { name: "Baixar Hit" })).not.toBeInTheDocument();
+    });
+
+    describe("arquivo grande", () => {
+      const pedirConfirmacao = (resposta: { valor?: boolean }) =>
+        vi.fn(async (_r: ResultadoDaBusca, { confirmarTamanho }: { confirmarTamanho: (bytes: number) => Promise<boolean> }) => {
+          resposta.valor = await confirmarTamanho(420 * 1024 * 1024);
+          return resposta.valor;
+        });
+
+      it("pergunta num modal mostrando o tamanho, e Baixar confirma", async () => {
+        const resposta: { valor?: boolean } = {};
+        const { usuario } = abrir(undefined, { aoBaixar: pedirConfirmacao(resposta) });
+        await usuario.click(await screen.findByRole("button", { name: "Baixar Hit" }));
+        const modal = await screen.findByRole("alertdialog", { name: "Arquivo grande" });
+        expect(modal).toHaveTextContent("420 MB");
+        await usuario.click(within(modal).getByRole("button", { name: "Baixar mesmo assim" }));
+        await waitFor(() => expect(resposta.valor).toBe(true));
+        expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+      });
+
+      it("Esc cancela o download sem sair da tela", async () => {
+        const resposta: { valor?: boolean } = {};
+        const { usuario, aoVoltar } = abrir(undefined, { aoBaixar: pedirConfirmacao(resposta) });
+        await usuario.click(await screen.findByRole("button", { name: "Baixar Hit" }));
+        await screen.findByRole("alertdialog");
+        await usuario.keyboard("{Escape}");
+        await waitFor(() => expect(resposta.valor).toBe(false));
+        expect(aoVoltar).not.toHaveBeenCalled();
+      });
     });
   });
 });

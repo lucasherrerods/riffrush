@@ -1,4 +1,4 @@
-import { LIMITE_PARA_AVISAR, baixarDoEncore } from "./download";
+import { LIMITE_PARA_AVISAR, baixarDoEncore, formatarTamanho } from "./download";
 import type { ResultadoDaBusca } from "./encore";
 
 const resultado: ResultadoDaBusca = {
@@ -67,5 +67,12 @@ describe("baixarDoEncore", () => {
 
   it("explica quando a rede cai", async () => {
     await expect(baixarDoEncore(resultado, { buscar: async () => Promise.reject(new TypeError("Failed to fetch")) })).rejects.toThrow(/conexão/);
+  });
+});
+
+describe("formatarTamanho", () => {
+  it("mostra em MB, e em GB a partir de 1 GB", () => {
+    expect(formatarTamanho(420 * 1024 * 1024)).toBe("420 MB");
+    expect(formatarTamanho(1.5 * 1024 * 1024 * 1024)).toBe("1,5 GB");
   });
 });

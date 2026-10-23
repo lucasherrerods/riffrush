@@ -7,7 +7,7 @@ import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas
 import { Fundo, MenuPrincipal } from "@/modules/menu";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
-import { TelaDeBuscaDeMusicas, baixarDoEncore, type ResultadoDaBusca } from "@/modules/search";
+import { TelaDeBuscaDeMusicas, baixarDoEncore, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { MUSICAS_EMBUTIDAS, type Dificuldade, type Musica } from "@/modules/songs";
@@ -143,11 +143,8 @@ export function App() {
   // Música do Encore que perdeu o áudio (o navegador apagou) volta a mostrar "Baixar".
   const baixadasDoEncore = useMemo(() => new Set(musicas.flatMap((m) => (m.md5DoEncore && !semAudio(m) ? [m.md5DoEncore] : []))), [musicas]);
 
-  const baixarMusica = async (resultado: ResultadoDaBusca, opcoes: { comVideo: boolean; aoProgredir: (fracao: number) => void }) => {
-    const arquivo = await baixarDoEncore(resultado, {
-      ...opcoes,
-      confirmarTamanho: async (bytes) => window.confirm(`Esse chart tem ${Math.round(bytes / 1024 / 1024)} MB. Baixar mesmo assim?`),
-    });
+  const baixarMusica = async (resultado: ResultadoDaBusca, opcoes: OpcoesDeBaixar) => {
+    const arquivo = await baixarDoEncore(resultado, opcoes);
     if (!arquivo) return false;
     await importar([arquivo], { md5DoEncore: resultado.md5 });
     return true;

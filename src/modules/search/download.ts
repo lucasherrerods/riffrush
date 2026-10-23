@@ -48,3 +48,8 @@ export async function baixarDoEncore(resultado: ResultadoDaBusca, { comVideo, ao
   if (!ehSng(pedacos[0] ?? new Uint8Array())) throw new Error("O arquivo baixado não é um .sng válido.");
   return new File(pedacos as BlobPart[], nomeDoArquivo(resultado), { type: "application/octet-stream" });
 }
+
+export function formatarTamanho(bytes: number): string {
+  const mb = bytes / 1024 / 1024;
+  return mb >= 1024 ? `${(mb / 1024).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} GB` : `${Math.round(mb)} MB`;
+}

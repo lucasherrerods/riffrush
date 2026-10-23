@@ -7,6 +7,7 @@ import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { Input } from "@/shared/ui/input";
 import { Switch } from "@/shared/ui/switch";
 import { avisar } from "@/shared/ui/avisos";
+import { ConfirmacaoDeTamanho } from "./componentes/ConfirmacaoDeTamanho";
 import {
   FILTROS_PADRAO,
   TAMANHO_DA_PAGINA,
@@ -25,10 +26,23 @@ interface Props {
   /** Espera o jogador parar de digitar antes de buscar o texto, para não estourar o limite da API. */
   atrasoMs?: number;
   /** Baixa e importa o chart. Resolve false quando o jogador desistiu. Sem ela, a tela só lista. */
-  aoBaixar?: (resultado: ResultadoDaBusca, opcoes: { comVideo: boolean; aoProgredir: (fracao: number) => void }) => Promise<boolean>;
+  aoBaixar?: (resultado: ResultadoDaBusca, opcoes: OpcoesDeBaixar) => Promise<boolean>;
   /** md5 dos charts que já estão na biblioteca. */
   baixadas?: ReadonlySet<string>;
   aoJogar?: (md5: string) => void;
+}
+
+export interface OpcoesDeBaixar {
+  comVideo: boolean;
+  aoProgredir: (fracao: number) => void;
+  /** Mostra o modal de arquivo grande e responde se o jogador quer baixar. */
+  confirmarTamanho: (bytes: number) => Promise<boolean>;
+}
+
+interface Pergunta {
+  titulo: string;
+  bytes: number;
+  responder: (baixar: boolean) => void;
 }
 
 interface Download {
@@ -60,6 +74,7 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
   const [comVideo, setComVideo] = useState(false);
   // Um download por vez: poupa o Encore e a memória do celular.
   const [baixando, setBaixando] = useState<Download | null>(null);
+  const [pergunta, setPergunta] = useState<Pergunta | null>(null);
   const [texto, setTexto] = useState(FILTROS_PADRAO.texto);
   const [filtros, setFiltros] = useState<Omit<FiltrosDaBusca, "texto">>(FILTROS_PADRAO);
   const [pagina, setPagina] = useState(1);
@@ -88,7 +103,11 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
     if (!aoBaixar) return;
     setBaixando({ md5: resultado.md5, fracao: 0 });
     try {
-      await aoBaixar(resultado, { comVideo, aoProgredir: (fracao) => setBaixando({ md5: resultado.md5, fracao }) });
+      await aoBaixar(resultado, {
+        comVideo,
+        aoProgredir: (fracao) => setBaixando({ md5: resultado.md5, fracao }),
+        confirmarTamanho: (bytes) => new Promise((responder) => setPergunta({ titulo: resultado.titulo, bytes, responder })),
+      });
     } catch (erro) {
       avisar.error(erro instanceof Error ? erro.message : String(erro));
     } finally {
@@ -96,8 +115,14 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
     }
   };
 
+  const responder = (baixar: boolean) => {
+    pergunta?.responder(baixar);
+    setPergunta(null);
+  };
+
   useTeclado((evento) => {
-    if (evento.code === "Escape") aoVoltar();
+    // Com o modal aberto, o Esc é dele: cancela o download sem sair da tela.
+    if (evento.code === "Escape" && !pergunta) aoVoltar();
   });
 
   const totalDePaginas = estado.tipo === "pronto" ? Math.max(1, Math.ceil(estado.resposta.total / TAMANHO_DA_PAGINA)) : 1;
@@ -185,6 +210,7 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
           </div>
         </footer>
       </div>
+      {pergunta && <ConfirmacaoDeTamanho titulo={pergunta.titulo} bytes={pergunta.bytes} aoResponder={responder} />}
     </div>
   );
 }
