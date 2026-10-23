@@ -132,4 +132,19 @@ describe("PlayerDeMusica", () => {
     await esperar();
     expect(contexto.ganhos[0].gain.value).toBe(0.3);
   });
+
+  it("com uma navegação definida, avançar e voltar ficam com a tela", async () => {
+    const { player, carregar } = montar();
+    const navegar = vi.fn();
+    player.seguir(fila[0]);
+    await esperar();
+    player.definirNavegacao(navegar);
+    player.proxima();
+    player.anterior();
+    expect(navegar.mock.calls).toEqual([[1], [-1]]);
+    expect(carregar).toHaveBeenCalledTimes(1);
+    player.definirNavegacao(null);
+    player.proxima();
+    expect(player.estado().musica).toBe(fila[1]);
+  });
 });
