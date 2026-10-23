@@ -5,7 +5,7 @@ import { ROTULOS_DOS_TRASTES, ROTULO_DA_ESTRELA, iniciarControle } from "@/modul
 import { TelaDeJogo, type Resultado } from "@/modules/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
-import { CabecalhoDoPlayerDeMusica, playerDeMusica } from "@/modules/player";
+import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/player";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { TelaDeBuscaDeMusicas, baixarDoEncore, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
@@ -114,6 +114,14 @@ export function App() {
   }, [filaDoPlayer]);
   useEffect(() => playerDeMusica.definirVolume(configuracoes.volumeDaMusica), [configuracoes.volumeDaMusica]);
   useEffect(() => playerDeMusica.suspender(tela === "jogo"), [tela]);
+  // Na seleção o player toca a música escolhida, e avançar/voltar mexem no carrossel.
+  const escolhida = musicas[indice];
+  useSeguirMusica(tela === "selecao" && escolhida && !semAudio(escolhida) ? escolhida : null);
+  useEffect(() => {
+    if (tela !== "selecao") return;
+    playerDeMusica.definirNavegacao((passos) => setIndice((i) => indiceVizinho(musicas.length, i, passos)));
+    return () => playerDeMusica.definirNavegacao(null);
+  }, [tela, musicas.length]);
 
   const mudarConfiguracoes = (novas: Configuracoes) => {
     setConfiguracoes(novas);
