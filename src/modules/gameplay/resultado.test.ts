@@ -18,6 +18,7 @@ describe("resultadoDaPartida", () => {
       total: 3,
       maiorSequencia: 2,
       derrota: false,
+      fantasma: false,
     });
   });
 

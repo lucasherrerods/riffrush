@@ -57,6 +57,10 @@ describe("salvarRecorde", () => {
     expect(recordeDe(carregarRecordes(), "neon", "medio")).toBeUndefined();
   });
 
+  it("não salva partida em que virou fantasma no multijogador: a vida zerou no meio", () => {
+    expect(salvarRecorde(resultado({ fantasma: true }))).toBe(false);
+  });
+
   it("não salva derrotas", () => {
     expect(salvarRecorde(resultado({ derrota: true }))).toBe(false);
   });

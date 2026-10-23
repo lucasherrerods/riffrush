@@ -31,7 +31,8 @@ export type Evento =
   | { tipo: "fraseCompleta" }
   | { tipo: "estrelaPronta" }
   | { tipo: "estrelaAtivada" }
-  | { tipo: "derrota" };
+  | { tipo: "derrota" }
+  | { tipo: "virouFantasma" };
 
 export interface Partida {
   notas: NotaEmJogo[];
@@ -49,13 +50,17 @@ export interface Partida {
   estrelaAtiva: boolean;
   derrota: boolean;
   semFalha: boolean;
+  /** Multijogador: a vida zerada não tira da música, só deixa a marca de fantasma. */
+  modoFantasma: boolean;
+  /** A vida zerou em algum momento. Fica marcado até o fim, mesmo que a vida volte. */
+  fantasma: boolean;
   tamanhoDasFrases: Map<number, number>;
   acertosPorFrase: Map<number, number>;
   frasesFalhas: Set<number>;
   eventos: Evento[];
 }
 
-export function criarPartida(notas: Nota[], { semFalha = false } = {}): Partida {
+export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false } = {}): Partida {
   const tamanhoDasFrases = new Map<number, number>();
   for (const nota of notas) if (nota.frase >= 0) tamanhoDasFrases.set(nota.frase, (tamanhoDasFrases.get(nota.frase) ?? 0) + 1);
   return {
@@ -72,6 +77,8 @@ export function criarPartida(notas: Nota[], { semFalha = false } = {}): Partida 
     estrelaAtiva: false,
     derrota: false,
     semFalha,
+    modoFantasma: fantasma,
+    fantasma: false,
     tamanhoDasFrases,
     acertosPorFrase: new Map(),
     frasesFalhas: new Set(),
@@ -127,9 +134,13 @@ function errar(partida: Partida, nota: NotaEmJogo) {
   partida.vida = Math.max(0, partida.vida - VIDA_POR_ERRO);
   if (nota.frase >= 0) partida.frasesFalhas.add(nota.frase);
   partida.eventos.push({ tipo: "erro", nota });
-  if (partida.vida === 0 && !partida.semFalha) {
+  if (partida.vida > 0 || partida.semFalha) return;
+  if (!partida.modoFantasma) {
     partida.derrota = true;
     partida.eventos.push({ tipo: "derrota" });
+  } else if (!partida.fantasma) {
+    partida.fantasma = true;
+    partida.eventos.push({ tipo: "virouFantasma" });
   }
 }
 
