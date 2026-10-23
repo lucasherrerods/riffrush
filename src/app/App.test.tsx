@@ -56,6 +56,12 @@ vi.mock("@/modules/multiplayer", async (original) => ({
   voltarParaASala: vi.fn(),
 }));
 
+// Sem isso o player sintetizaria a primeira música a cada teste.
+vi.mock("@/modules/player", () => ({
+  CabecalhoDoPlayerDeMusica: () => null,
+  playerDeMusica: { definirFila: vi.fn(), seguir: vi.fn(), definirVolume: vi.fn(), suspender: vi.fn(), estado: () => ({ musica: null }) },
+}));
+
 vi.stubGlobal("AudioContext", AudioContextFalso);
 
 function abrir() {
