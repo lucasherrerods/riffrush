@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { definirTelaCheia } from "@/modules/platform";
-import { carregarRecordes } from "@/modules/results";
+import { carregarRecordes, salvarRecorde } from "@/modules/results";
 import { useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { AudioContextFalso } from "@/test/audioFalso";
@@ -36,9 +36,10 @@ vi.mock("@/modules/platform", () => ({
 // A partida de verdade é testada no módulo de gameplay; aqui só importa a ligação entre as telas.
 vi.mock("@/modules/gameplay", async (original) => ({
   ...(await original<typeof import("@/modules/gameplay")>()),
-  TelaDeJogo: ({ musica, dificuldade, rede, aoTerminar, aoSair }: { musica: { id: string; titulo: string }; dificuldade: string; rede?: { adversarios?: React.ReactNode }; aoTerminar: (r: unknown) => void; aoSair: () => void }) => (
+  TelaDeJogo: ({ musica, dificuldade, recorde, rede, aoTerminar, aoSair }: { musica: { id: string; titulo: string }; dificuldade: string; recorde?: number; rede?: { adversarios?: React.ReactNode }; aoTerminar: (r: unknown) => void; aoSair: () => void }) => (
     <div>
       <h1>Jogando {musica.titulo}{rede ? " em rede" : ""}</h1>
+      {recorde !== undefined && <p>Recorde da partida: {recorde}</p>}
       {rede?.adversarios}
       <button onClick={() => aoTerminar({ musicaId: musica.id, dificuldade, pontos: 777, acertos: 9, total: 10, maiorSequencia: 9, derrota: false })}>terminar</button>
       <button onClick={aoSair}>sair</button>
@@ -113,6 +114,14 @@ describe("App", () => {
     await usuario.click(await screen.findByRole("button", { name: "terminar" }));
     expect(await screen.findByLabelText("777 pontos")).toBeInTheDocument();
     expect(carregarRecordes()["neon-highway:medio"].pontos).toBe(777);
+  });
+
+  it("a partida recebe o recorde da música para marcar na barra de estrelas", async () => {
+    salvarRecorde({ musicaId: MUSICAS_EMBUTIDAS[0].id, dificuldade: "medio", pontos: 4321, acertos: 10, total: 10, maiorSequencia: 10, derrota: false });
+    const usuario = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
+    expect(await screen.findByText("Recorde da partida: 4321")).toBeInTheDocument();
   });
 
   it("com o bot ligado, o recorde não é salvo", async () => {

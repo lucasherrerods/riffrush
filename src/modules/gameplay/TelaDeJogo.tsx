@@ -12,6 +12,8 @@ import { criarBot, jogarSozinho } from "./bot";
 import { MedidorDeVida } from "./componentes/MedidorDeVida";
 import { MenuDePausa } from "./componentes/MenuDePausa";
 import { PainelDePontos } from "./componentes/PainelDePontos";
+import { BarraDeEstrelas } from "./componentes/BarraDeEstrelas";
+import { progressoDasEstrelas } from "./estrelas";
 import { NOMES_DAS_PISTAS } from "./cores";
 import { ativarEstrela, avancar, criarPartida, multiplicador, precisao, retirarEventos, soltar, tocar } from "./partida";
 import { desenharPista, type Cena } from "./pista/desenhar";
@@ -56,6 +58,8 @@ interface Props {
   dificuldade: Dificuldade;
   opcoes: OpcoesDaPartida;
   personagem: Personagem;
+  /** Pontos do recorde nesta música e dificuldade, para marcar na barra de estrelas. */
+  recorde?: number;
   /** Partida em rede: largada combinada, estado enviado à sala e o painel dos adversários. */
   rede?: {
     /** Instante (performance.now) em que a música começa para todos. */
@@ -79,17 +83,22 @@ interface Hud {
   /** Segundos que faltam para a música começar (contagem), ou 0. */
   contagem: number;
   pulso: number;
+  /** De 0 a 5: as estrelas conquistadas e o caminho até a próxima. */
+  estrelas: number;
+  estrelasDoRecorde: number;
 }
 
 const ENTRADA = 2.5;
-const HUD_INICIAL: Hud = { pontos: 0, sequencia: 0, multiplicador: 1, vida: 0.5, estrela: 0, estrelaAtiva: false, progresso: 0, precisao: 1, contagem: 3, pulso: 0 };
+const HUD_INICIAL: Hud = { pontos: 0, sequencia: 0, multiplicador: 1, vida: 0.5, estrela: 0, estrelaAtiva: false, progresso: 0, precisao: 1, contagem: 3, pulso: 0, estrelas: 0, estrelasDoRecorde: 0 };
 const MAXIMO_DE_EXPLOSOES = 20;
 const MAXIMO_DE_TROVOES = 4;
 const SINCRONIA_DO_VIDEO = 0.15;
 const INTERVALO_DO_ENVIO_MS = 125;
 const nada = () => {};
 
-export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSair, aoTerminar }: Props) {
+export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, rede, aoSair, aoTerminar }: Props) {
+  const recordeAtual = useRef(recorde);
+  recordeAtual.current = recorde;
   const canvas = useRef<HTMLCanvasElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const controles = useRef<{ pausar: () => void; continuar: () => void; desistir: () => void; apertar: (pista: number, evento: Event) => void; largar: (pista: number) => void; estrela: () => void }>({
@@ -391,6 +400,8 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
         precisao: Math.round(precisao(partida) * 1000) / 1000,
         contagem: tempo < 0 ? Math.ceil(-tempo) : 0,
         pulso: partida.acertos,
+        estrelas: Math.round(progressoDasEstrelas(partida.pontos, carregada.notas.length) * 100) / 100,
+        estrelasDoRecorde: progressoDasEstrelas(recordeAtual.current ?? 0, carregada.notas.length),
       };
       if ((Object.keys(proximo) as (keyof Hud)[]).some((chave) => proximo[chave] !== ultimoHud[chave])) {
         ultimoHud = proximo;
@@ -540,6 +551,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, rede, aoSa
                 <Avatar personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} className="mb-2 h-44 w-auto" />
               )}
               <div className="flex items-end gap-4">
+                <BarraDeEstrelas progresso={hud.estrelas} recorde={hud.estrelasDoRecorde} />
                 <div className="flex flex-col items-center gap-2" aria-label="Star power">
                   <Zap className={cn("size-5", hud.estrela >= 0.5 ? "text-estrela" : "text-borda")} aria-hidden />
                   <div className="relative h-40 w-4 overflow-hidden rounded-full bg-superficie-elevada">

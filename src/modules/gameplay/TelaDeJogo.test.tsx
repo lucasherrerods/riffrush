@@ -18,7 +18,7 @@ function carregarCom(notas: Nota[], duracao = 10) {
   vi.mocked(carregarMusica).mockResolvedValue({ audio: {} as AudioBuffer, notas, batidas: [], duracao });
 }
 
-function abrir(opcoes: Partial<OpcoesDaPartida> = {}) {
+function abrir(opcoes: Partial<OpcoesDaPartida> = {}, recorde?: number) {
   const aoSair = vi.fn();
   const aoTerminar = vi.fn();
   render(
@@ -27,6 +27,7 @@ function abrir(opcoes: Partial<OpcoesDaPartida> = {}) {
       dificuldade="medio"
       opcoes={{ ...OPCOES_PADRAO_DA_PARTIDA, ...opcoes }}
       personagem={PERSONAGEM_PADRAO}
+      recorde={recorde}
       aoSair={aoSair}
       aoTerminar={aoTerminar}
     />,
@@ -269,5 +270,22 @@ describe("TelaDeJogo no celular", () => {
     carregarCom([nota(5)]);
     abrir();
     expect(await screen.findByRole("img", { name: "Personagem Rockstar" })).toBeInTheDocument();
+  });
+});
+
+describe("TelaDeJogo e as estrelas", () => {
+  it("mostra a barra de estrelas, que começa vazia", async () => {
+    carregarCom([nota(1), nota(2)]);
+    abrir();
+    await partidaPronta();
+    expect(screen.getByRole("meter", { name: "Estrelas" })).toHaveAttribute("aria-valuenow", "0");
+  });
+
+  it("marca o recorde da música na barra", async () => {
+    // 2 notas valem 100 pontos de base; 280 pontos são as 5 estrelas.
+    carregarCom([nota(1), nota(2)]);
+    abrir({}, 280);
+    await partidaPronta();
+    expect(await screen.findByLabelText("Recorde: 5 estrelas")).toBeInTheDocument();
   });
 });
