@@ -55,6 +55,17 @@ jobs:
     name: Testes do backend
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: riffrush
+          POSTGRES_PASSWORD: riffrush
+          POSTGRES_DB: riffrush
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://riffrush:riffrush@localhost:5432/riffrush
     defaults:
       run:
         working-directory: backend

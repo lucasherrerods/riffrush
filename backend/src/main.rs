@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use riffrush_api::modules::conta::{ContasPostgres, GeradorAleatorio, Google, RelogioDoSistema, ServicosDaConta};
 use riffrush_api::modules::saude::BancoPostgres;
 use riffrush_api::shared::config::Config;
 use riffrush_api::shared::estado::EstadoDoApp;
@@ -17,8 +18,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let banco = PgPoolOptions::new().max_connections(5).connect(&config.url_do_banco).await?;
     sqlx::migrate!("./migrations").run(&banco).await?;
 
+    let contas = Arc::new(ContasPostgres(banco.clone()));
+    let conta = ServicosDaConta {
+        contas: contas.clone(),
+        sessoes: contas,
+        login: Arc::new(Google {
+            client_id: config.google_client_id.clone(),
+            client_secret: config.google_client_secret.clone(),
+            http: reqwest::Client::new(),
+        }),
+        relogio: Arc::new(RelogioDoSistema),
+        gerador: Arc::new(GeradorAleatorio),
+    };
     let estado = EstadoDoApp {
         banco: Arc::new(BancoPostgres(banco)),
+        conta,
     };
     let app = riffrush_api::app(estado, &config.origens_permitidas);
 

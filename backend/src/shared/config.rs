@@ -6,6 +6,8 @@ pub struct Config {
     pub url_do_banco: String,
     /// Origens do navegador que podem chamar a API (o app web e o dev server).
     pub origens_permitidas: Vec<String>,
+    pub google_client_id: String,
+    pub google_client_secret: String,
 }
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -35,10 +37,14 @@ impl Config {
             .filter(|o| !o.is_empty())
             .map(String::from)
             .collect();
+        let google_client_id = variavel("GOOGLE_CLIENT_ID").ok_or(ErroDeConfig::Faltando("GOOGLE_CLIENT_ID"))?;
+        let google_client_secret = variavel("GOOGLE_CLIENT_SECRET").ok_or(ErroDeConfig::Faltando("GOOGLE_CLIENT_SECRET"))?;
         Ok(Self {
             endereco,
             url_do_banco,
             origens_permitidas,
+            google_client_id,
+            google_client_secret,
         })
     }
 }
@@ -53,14 +59,25 @@ mod tests {
 
     #[test]
     fn le_o_ambiente_com_padroes() {
-        let config = Config::ler(com(&[("DATABASE_URL", "postgres://x")])).unwrap();
+        let config = Config::ler(com(&[
+            ("DATABASE_URL", "postgres://x"),
+            ("GOOGLE_CLIENT_ID", "id"),
+            ("GOOGLE_CLIENT_SECRET", "segredo"),
+        ]))
+        .unwrap();
         assert_eq!(config.endereco.to_string(), "0.0.0.0:8080");
         assert!(config.origens_permitidas.is_empty());
     }
 
     #[test]
     fn separa_as_origens_por_virgula() {
-        let config = Config::ler(com(&[("DATABASE_URL", "postgres://x"), ("ORIGENS_PERMITIDAS", "http://a, http://b,")])).unwrap();
+        let config = Config::ler(com(&[
+            ("DATABASE_URL", "postgres://x"),
+            ("GOOGLE_CLIENT_ID", "id"),
+            ("GOOGLE_CLIENT_SECRET", "segredo"),
+            ("ORIGENS_PERMITIDAS", "http://a, http://b,"),
+        ]))
+        .unwrap();
         assert_eq!(config.origens_permitidas, ["http://a", "http://b"]);
     }
 
@@ -70,8 +87,22 @@ mod tests {
     }
 
     #[test]
+    fn sem_credenciais_do_google_nao_sobe() {
+        assert_eq!(
+            Config::ler(com(&[("DATABASE_URL", "x")])).unwrap_err(),
+            ErroDeConfig::Faltando("GOOGLE_CLIENT_ID")
+        );
+    }
+
+    #[test]
     fn endereco_invalido_e_erro() {
-        let erro = Config::ler(com(&[("DATABASE_URL", "x"), ("ENDERECO", "nao")])).unwrap_err();
+        let erro = Config::ler(com(&[
+            ("DATABASE_URL", "x"),
+            ("GOOGLE_CLIENT_ID", "id"),
+            ("GOOGLE_CLIENT_SECRET", "segredo"),
+            ("ENDERECO", "nao"),
+        ]))
+        .unwrap_err();
         assert_eq!(erro, ErroDeConfig::Invalida("ENDERECO"));
     }
 }
