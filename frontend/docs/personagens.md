@@ -145,3 +145,66 @@ reacao = novaReacao(reacao, "nitro");
 ## Licença
 
 Os personagens gerados são do projeto: o script grava `licenseUrl` VRM 1.0 com redistribuição e modificação permitidas. Registre cada personagem novo em `public/modelos/LICENCAS.md`.
+
+## Atores filmados (pessoa de verdade em 2D)
+
+Além dos personagens 3D, o jogo aceita gente de verdade filmada, no estilo dos jogos de luta digitalizados dos anos 90: a pessoa é recortada do vídeo e vira uma folha de sprites com poucas cores e pixels grandes. No palco ela aparece como um recorte de papelão, e as reações (erro, nitro, vitória, derrota) trocam de cena.
+
+### Gravar
+
+- Celular em pé, parado (apoiado em algo), com a pessoa de corpo inteiro no quadro.
+- Fundo liso ajuda, mas não é obrigatório: o recorte é feito por IA.
+- Grave tudo num vídeo só, fazendo as cenas em sequência, com uma pausa entre elas:
+
+| Cena | O que fazer | Duração |
+|---|---|---|
+| `parado` | Em pé, olhando para a câmera | 1–2 s |
+| `tocando` | Guitarra imaginária, no ritmo (vira loop) | 3–4 s |
+| `errou` | Um tranco, cara de "ops" | ~0,5 s |
+| `vaiado` | Cabeça baixa, ombros caídos (vira loop) | 1–2 s |
+| `nitro` | Cabeça para trás e depois agitar muito | ~2 s |
+| `vitoria` | Comemorar: braço para cima, pulo, power slide | ~1,5 s |
+
+### Converter
+
+Salve o vídeo em `assets-fonte/atores/` (essa pasta não vai para o git) e crie uma receita em `atores/<id>.json` com o início e o fim de cada cena, em segundos:
+
+```json
+{
+  "nome": "Sorriso",
+  "video": "../assets-fonte/atores/sorriso.mp4",
+  "cenas": {
+    "parado": [0.0, 1.4],
+    "tocando": [1.5, 5.0],
+    "errou": [5.35, 5.9],
+    "vaiado": [5.5, 6.8],
+    "nitro": [9.2, 11.0],
+    "vitoria": [12.9, 14.5]
+  }
+}
+```
+
+Opcionais: `fps` (12), `altura` em pixels de cada quadro (256), `cores` (48) e `alturaEmMetros`, a altura da pessoa parada no palco (1,75). Depois rode:
+
+```bash
+pip install "rembg[cpu]" pillow numpy scipy   # uma vez; precisa do ffmpeg no PATH
+python scripts/preparar-ator.py atores/<id>.json
+```
+
+O script recorta a pessoa com dois modelos de IA (cada um erra em quadros diferentes), descarta o que fica solto (cadeiras, gente passando atrás), enquadra todas as cenas do mesmo jeito e gera `public/modelos/atores/<id>/` com uma folha `.png` por cena e o `manifesto.json`. Na primeira vez ele baixa os modelos (~350 MB).
+
+Registre em `BASES` com `tipo: "video"`:
+
+```ts
+{ id: "<id>", rotulo: "Nome (filmado)", arquivo: "/modelos/atores/<id>", tipo: "video" },
+```
+
+### No código
+
+- `character/video.ts`: funções puras que escolhem a cena (`cenaDoAtor`) e o quadro (`quadroDaCena`, `recorteDoQuadro`).
+- `render3d/atorDeVideo.ts`: o ator 2D, com a mesma interface do ator VRM.
+- `render3d/ator.ts › criarAtor`: monta o ator certo conforme o tipo do modelo escolhido.
+
+Cores, corpo e instrumento do criador de personagem não se aplicam a atores filmados: eles aparecem como foram gravados (inclusive com a guitarra imaginária).
+
+**Combine antes com quem foi filmado.** O vídeo original fica só na sua máquina, mas as folhas de sprites vão para o repositório e para quem jogar.
