@@ -73,3 +73,33 @@ async fn partida_soma_xp_e_marca_a_ultima() {
     let ultima = banco.ultima_partida(conta.id).await.unwrap().unwrap();
     assert!((ultima - jogada_em).num_milliseconds().abs() < 1);
 }
+
+#[tokio::test]
+async fn excluir_apaga_a_conta_com_sessoes_e_partidas() {
+    let Some(banco) = banco().await else { return };
+    let conta = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let hash = Uuid::new_v4().to_string();
+    let agora = Utc::now();
+    banco.criar(&hash, conta.id, agora + Duration::days(1)).await.unwrap();
+    let partida = PartidaRegistrada {
+        conta_id: conta.id,
+        musica_id: "embutida:neon".into(),
+        pontos: 1,
+        resumo: ResumoDaPartida {
+            dificuldade: Dificuldade::Facil,
+            acertos: 1,
+            total: 1,
+            derrota: false,
+            fantasma: false,
+        },
+        xp_ganho: 10,
+        jogada_em: agora,
+    };
+    banco.registrar_partida(&partida).await.unwrap();
+
+    banco.excluir(conta.id).await.unwrap();
+
+    assert_eq!(banco.buscar(conta.id).await.unwrap(), None);
+    assert_eq!(banco.conta_da_sessao(&hash, agora).await.unwrap(), None);
+    assert_eq!(banco.ultima_partida(conta.id).await.unwrap(), None);
+}

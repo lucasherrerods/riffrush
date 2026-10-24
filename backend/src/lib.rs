@@ -12,7 +12,7 @@ use shared::estado::EstadoDoApp;
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::registrar_partida),
+    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida),
     components(schemas(
         modules::saude::RespostaDeSaude,
         modules::conta::CorpoDoLogin,

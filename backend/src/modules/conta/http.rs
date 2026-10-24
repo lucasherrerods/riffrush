@@ -126,6 +126,13 @@ pub async fn eu(State(estado): State<EstadoDoApp>, Token(token): Token) -> Resul
     Ok(Json(estado.conta.conta_da_sessao(&token).await?.into()))
 }
 
+/// Apaga a conta, as sessões e as partidas de quem está logado.
+#[utoipa::path(delete, path = "/eu", responses((status = 204), (status = 401)), security(("token" = [])))]
+pub async fn excluir(State(estado): State<EstadoDoApp>, Token(token): Token) -> Result<StatusCode, ErroDaApi> {
+    estado.conta.excluir_conta(&token).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct CorpoDaPartida {
     musica_id: String,
@@ -181,6 +188,6 @@ pub fn rotas() -> Router<EstadoDoApp> {
     Router::new()
         .route("/auth/google", post(entrar))
         .route("/auth/sair", post(sair))
-        .route("/eu", get(eu))
+        .route("/eu", get(eu).delete(excluir))
         .route("/partidas", post(registrar_partida))
 }

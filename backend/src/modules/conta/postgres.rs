@@ -100,6 +100,16 @@ impl RepositorioDeContas for ContasPostgres {
         transacao.commit().await.map_err(falha)?;
         Ok(conta.into())
     }
+
+    async fn excluir(&self, id: Uuid) -> Result<(), FalhaExterna> {
+        // Sessões e partidas saem junto pelo ON DELETE CASCADE.
+        sqlx::query("DELETE FROM contas WHERE id = $1")
+            .bind(id)
+            .execute(&self.0)
+            .await
+            .map(|_| ())
+            .map_err(falha)
+    }
 }
 
 #[async_trait]

@@ -151,3 +151,12 @@ async fn login_aceita_o_cliente_desktop_e_recusa_cliente_desconhecido() {
         StatusCode::UNPROCESSABLE_ENTITY
     );
 }
+
+#[tokio::test]
+async fn excluir_a_conta_derruba_a_sessao() {
+    let app = app();
+    assert_eq!(chamar(&app, "DELETE", "/eu", None, None).await.0, StatusCode::UNAUTHORIZED);
+    let token = entrar(&app).await;
+    assert_eq!(chamar(&app, "DELETE", "/eu", Some(&token), None).await.0, StatusCode::NO_CONTENT);
+    assert_eq!(chamar(&app, "GET", "/eu", Some(&token), None).await.0, StatusCode::UNAUTHORIZED);
+}
