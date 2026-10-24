@@ -1,4 +1,4 @@
-import { haQuantoTempo, precisaoDaPartida } from "./formatar";
+import { haQuantoTempo, porcentagem, precisaoDaPartida } from "./formatar";
 
 describe("haQuantoTempo", () => {
   const agora = new Date("2026-10-24T12:00:00Z");
@@ -23,5 +23,12 @@ describe("precisaoDaPartida", () => {
   it("mostra a porcentagem com duas casas, como no osu!", () => {
     expect(precisaoDaPartida(9946, 10000)).toBe("99,46%");
     expect(precisaoDaPartida(0, 0)).toBe("0,00%");
+  });
+});
+
+describe("porcentagem", () => {
+  it("mostra a fração com duas casas, no formato brasileiro", () => {
+    expect(porcentagem(0.8765)).toBe("87,65%");
+    expect(porcentagem(1)).toBe("100,00%");
   });
 });

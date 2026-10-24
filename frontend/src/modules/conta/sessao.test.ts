@@ -13,7 +13,7 @@ class Memoria {
 
 function montar(api: Partial<ApiDaConta> = {}, busca = "") {
   const ambiente: Ambiente = {
-    api: { entrar: vi.fn(async () => ({ token: "tok", conta })), eu: vi.fn(async () => conta), sair: vi.fn(async () => {}), excluirConta: vi.fn(async () => {}), registrarPartida: vi.fn(), ...api },
+    api: { entrar: vi.fn(async () => ({ token: "tok", conta })), eu: vi.fn(async () => conta), sair: vi.fn(async () => {}), excluirConta: vi.fn(async () => {}), registrarPartida: vi.fn(), perfil: vi.fn(), ...api },
     clientId: "id",
     local: new Memoria(),
     temporario: new Memoria(),
@@ -119,6 +119,21 @@ describe("SessaoDaConta", () => {
     const { sessao, ambiente } = montar();
     expect(await sessao.registrarPartida(resultado)).toBeNull();
     expect(ambiente.api.registrarPartida).not.toHaveBeenCalled();
+  });
+
+  it("o perfil vai para a API com o token de quem está logado", async () => {
+    const perfil = vi.fn(async () => ({ nome: "Lucas" }) as never);
+    const { sessao, ambiente } = montar({ perfil });
+    ambiente.local.setItem("riffrush:token", "tok");
+    await sessao.iniciar();
+    await sessao.perfil();
+    expect(perfil).toHaveBeenCalledWith("tok", undefined);
+  });
+
+  it("sem conta, o perfil falha sem chamar a API", async () => {
+    const { sessao, ambiente } = montar();
+    await expect(sessao.perfil()).rejects.toThrow();
+    expect(ambiente.api.perfil).not.toHaveBeenCalled();
   });
 
   it("sair apaga o token e avisa a API", async () => {

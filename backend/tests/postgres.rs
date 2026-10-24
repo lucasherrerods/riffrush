@@ -3,6 +3,7 @@
 
 use chrono::{Duration, Utc};
 use riffrush_api::modules::conta::{ContasPostgres, PartidaRegistrada, PerfilDoGoogle, RepositorioDeContas, RepositorioDeSessoes};
+use riffrush_api::modules::perfil::{PerfilPostgres, RepositorioDoPerfil};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento, ResumoDaPartida};
 use riffrush_api::modules::ranking::{RankingPostgres, RepositorioDoRanking};
 use sqlx::PgPool;
@@ -162,4 +163,47 @@ async fn ranking_pega_a_melhor_partida_terminada_de_cada_jogador() {
         .is_empty());
     let baixo = ranking.linhas(&musica, Dificuldade::Expert, Instrumento::Baixo, 50, None).await.unwrap();
     assert_eq!(baixo.iter().map(|l| (l.conta_id, l.pontos)).collect::<Vec<_>>(), [(caio.id, 9999)]);
+}
+
+#[tokio::test]
+async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
+    let Some(banco) = banco().await else { return };
+    let repositorio = PerfilPostgres(banco.0.clone());
+    let conta = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let agora = Utc::now();
+    let jogar = |musica: &str, dificuldade: Dificuldade, pontos: u64, derrota: bool, segundos: i64| PartidaRegistrada {
+        conta_id: conta.id,
+        musica_id: musica.into(),
+        instrumento: Instrumento::Guitarra,
+        pontos,
+        resumo: ResumoDaPartida {
+            dificuldade,
+            acertos: 8,
+            total: 10,
+            derrota,
+            fantasma: false,
+        },
+        xp_ganho: 0,
+        jogada_em: agora + Duration::seconds(segundos),
+    };
+    for partida in [
+        jogar("a", Dificuldade::Expert, 900, false, 0),
+        // Vaiada conta como partida, mas não como melhor pontuação.
+        jogar("a", Dificuldade::Expert, 5000, true, 1),
+        jogar("b", Dificuldade::Facil, 300, false, 2),
+    ] {
+        banco.registrar_partida(&partida).await.unwrap();
+    }
+
+    let dados = repositorio.dados(conta.id, 2).await.unwrap().unwrap();
+
+    assert_eq!(dados.musicas_distintas, 2);
+    let expert = dados.por_dificuldade.iter().find(|e| e.dificuldade == Dificuldade::Expert).unwrap();
+    assert_eq!(
+        (expert.partidas, expert.derrotas, expert.acertos, expert.notas, expert.melhor_pontuacao),
+        (2, 1, 16, 20, 900)
+    );
+    let recentes: Vec<_> = dados.recentes.iter().map(|p| p.musica_id.as_str()).collect();
+    assert_eq!(recentes, ["b", "a"]);
+    assert!(repositorio.dados(Uuid::new_v4(), 10).await.unwrap().is_none());
 }

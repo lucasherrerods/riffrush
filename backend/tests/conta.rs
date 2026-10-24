@@ -29,6 +29,7 @@ fn app() -> Router {
         EstadoDoApp {
             banco: Arc::new(BancoOk),
             ranking: servicos_do_ranking(conta.clone()).0,
+            perfil: riffrush_api::modules::perfil::fakes::servicos_do_perfil(conta.clone()).0,
             conta,
         },
         &[],

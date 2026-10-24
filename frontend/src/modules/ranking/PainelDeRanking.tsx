@@ -2,7 +2,7 @@ import { Loader2, Trophy, UserRound } from "lucide-react";
 import type { Dificuldade, Instrumento } from "@/modules/songs";
 import { cn } from "@/shared/lib/utils";
 import type { PosicaoNoRanking } from "./api";
-import { haQuantoTempo, precisaoDaPartida } from "./formatar";
+import { haQuantoTempo, precisaoDaPartida } from "@/shared/lib/formatar";
 import { useRanking, type OpcoesDoRanking } from "./useRanking";
 
 interface Props extends OpcoesDoRanking {

@@ -41,7 +41,7 @@ export function CabecalhoDoPlayerDeMusica({ volume, aoMudarVolume, children }: P
         <Music className="size-4 shrink-0 text-texto-suave" />
         <span className="truncate text-base font-bold">{musica ? `${musica.titulo}${musica.artista ? ` — ${musica.artista}` : ""}` : "Nenhuma música"}</span>
       </div>
-      <div className="hidden flex-1 items-center gap-2 sm:flex">
+      <div className="hidden max-w-md flex-1 items-center gap-2 sm:flex">
         <span className="w-12 text-right font-mono text-sm tabular-nums text-texto-suave">{formatarTempo(tempo)}</span>
         <Slider
           aria-label="Tempo da música"

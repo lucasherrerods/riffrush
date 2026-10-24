@@ -20,6 +20,15 @@ describe("criarApi", () => {
     await expect(api.eu("t")).rejects.toMatchObject({ status: 429 });
   });
 
+  it("o perfil é um GET em /eu/perfil com o token", async () => {
+    const buscar = vi.fn(async () => resposta(200, { nome: "Lucas" }));
+    expect(await criarApi("http://api", buscar).perfil("t")).toEqual({ nome: "Lucas" });
+    const [url, init] = buscar.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("http://api/eu/perfil");
+    expect(init.method).toBe("GET");
+    expect((init.headers as Record<string, string>).authorization).toBe("Bearer t");
+  });
+
   it("excluir a conta é um DELETE em /eu com o token", async () => {
     const buscar = vi.fn(async () => resposta(204));
     await criarApi("http://api", buscar).excluirConta("t");

@@ -20,6 +20,12 @@ impl Dificuldade {
         }
     }
 
+    pub fn do_texto(texto: &str) -> Option<Self> {
+        [Self::Facil, Self::Medio, Self::Dificil, Self::Expert]
+            .into_iter()
+            .find(|d| d.como_texto() == texto)
+    }
+
     fn base(self) -> f64 {
         match self {
             Self::Facil => 50.0,
@@ -143,7 +149,9 @@ mod tests {
     fn a_dificuldade_vira_o_mesmo_texto_do_json() {
         for dificuldade in [Dificuldade::Facil, Dificuldade::Medio, Dificuldade::Dificil, Dificuldade::Expert] {
             assert_eq!(serde_json::to_value(dificuldade).unwrap(), dificuldade.como_texto());
+            assert_eq!(Dificuldade::do_texto(dificuldade.como_texto()), Some(dificuldade));
         }
+        assert_eq!(Dificuldade::do_texto("impossivel"), None);
     }
 
     fn partida(dificuldade: Dificuldade, acertos: u32, total: u32) -> ResumoDaPartida {

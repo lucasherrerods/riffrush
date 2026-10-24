@@ -5,7 +5,7 @@ import { ROTULOS_DOS_TRASTES, ROTULO_DA_ESTRELA, iniciarControle } from "@/modul
 import { TelaDeJogo, type Resultado } from "@/modules/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
-import { CartaoDaConta, ExcluirConta, GanhoDeXp, contasLigadas, sessaoDaConta, type XpDaPartida } from "@/modules/conta";
+import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, type XpDaPartida } from "@/modules/conta";
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/player";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
@@ -13,14 +13,14 @@ import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEsta
 import { TelaDeBuscaDeMusicas, baixarDoEncore, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
-import { MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
+import { MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { PainelDeRanking, PlacarAoVivo } from "@/modules/ranking";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { opcoesDaPartida } from "./opcoes";
 
-type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado";
+type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil";
 
 interface PartidaEmRede {
   musica: Musica;
@@ -42,6 +42,7 @@ export function App() {
   const [partida, setPartida] = useState(0);
   const [emRede, setEmRede] = useState<PartidaEmRede | null>(null);
   const [voltarDoPersonagemPara, setVoltarDoPersonagemPara] = useState<Tela>("menu");
+  const [voltarDoPerfilPara, setVoltarDoPerfilPara] = useState<Tela>("menu");
   const [voltarDaBuscaPara, setVoltarDaBuscaPara] = useState<Tela>("menu");
   const conexao = useConexao();
   const estreita = useTelaEstreita();
@@ -221,7 +222,15 @@ export function App() {
       {!(tela === "jogo" && configuracoes.modoCompetitivo) && <Fundo tocando={tela === "jogo"} />}
       {tela !== "jogo" && (
         <CabecalhoDoPlayerDeMusica volume={configuracoes.volumeDoPlayer} aoMudarVolume={(volumeDoPlayer) => mudarConfiguracoes({ ...configuracoes, volumeDoPlayer })}>
-          {contasLigadas && <CartaoDaConta />}
+          {contasLigadas && (
+            <CartaoDaConta
+              aoVerPerfil={() => {
+                if (tela === "perfil") return;
+                setVoltarDoPerfilPara(tela);
+                setTela("perfil");
+              }}
+            />
+          )}
         </CabecalhoDoPlayerDeMusica>
       )}
       <div className="relative flex-1">
@@ -292,6 +301,9 @@ export function App() {
             )}
             {tela === "buscaDeMusicas" && (
               <TelaDeBuscaDeMusicas aoVoltar={() => setTela(voltarDaBuscaPara)} aoBaixar={baixarMusica} baixadas={baixadasDoEncore} aoJogar={jogarBaixada} />
+            )}
+            {tela === "perfil" && (
+              <TelaDePerfil aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />
             )}
             {tela === "configuracoes" && (
               <TelaDeConfiguracoes configuracoes={configuracoes} aoMudar={mudarConfiguracoes} aoVoltar={() => setTela("menu")} />
