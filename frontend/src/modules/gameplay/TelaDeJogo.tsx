@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, Pause, Skull, Zap } from "lucide-react";
 import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, tocarEfeito } from "@/modules/audio";
 import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "@/modules/character";
+import { cenaDaPartida } from "./cena";
 import { Palco, opacidadeDaPista, type EstadoDoPalco, type QualidadeDoPalco } from "@/modules/stage";
 import { DIFICULDADES, carregarMusica, type Dificuldade, type Musica, type MusicaCarregada } from "@/modules/songs";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
@@ -45,6 +46,7 @@ export interface OpcoesDaPartida {
   personagem: boolean;
   mostrarFps: boolean;
   qualidadeDoPalco: QualidadeDoPalco;
+  modoCompetitivo: boolean;
 }
 
 export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
@@ -61,6 +63,7 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   personagem: true,
   mostrarFps: false,
   qualidadeDoPalco: "media",
+  modoCompetitivo: false,
 };
 
 interface Props {
@@ -128,8 +131,8 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
   });
   const estreita = useTelaEstreita();
   const [comWebGL] = useState(suportaWebGL);
-  // No celular a GPU fica toda para a pista; sem efeitos, o palco também sai.
-  const comPalco = comWebGL && !estreita && opcoes.efeitos;
+  const cena = cenaDaPartida({ modoCompetitivo: opcoes.modoCompetitivo, efeitos: opcoes.efeitos, personagem: opcoes.personagem, comWebGL, estreita });
+  const comPalco = cena.palco;
   const comPalcoAgora = useRef(comPalco);
   comPalcoAgora.current = comPalco;
   const estadoDoPalco = useRef<EstadoDoPalco>({
@@ -500,7 +503,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
 
   return (
     <div className="relative h-full w-full touch-none overflow-hidden select-none">
-      {comPalco && carregada && <Palco lerEstado={() => estadoDoPalco.current} comPersonagem={opcoes.personagem} qualidade={opcoes.qualidadeDoPalco} />}
+      {comPalco && carregada && <Palco lerEstado={() => estadoDoPalco.current} comPersonagem={cena.personagem} qualidade={opcoes.qualidadeDoPalco} />}
       <canvas ref={canvas} className="absolute inset-0 h-full w-full" />
       {/* Vinheta: as bordas escurecem e a luz fica no braço, como num palco. */}
       <div
@@ -563,7 +566,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
 
           {rede?.adversarios}
 
-          {urlDoVideo && (
+          {urlDoVideo && cena.video && (
             <motion.div
               initial={{ opacity: 0, x: -32 }}
               animate={{ opacity: 1, x: 0 }}
@@ -573,7 +576,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
             </motion.div>
           )}
 
-          <HudDaPartida loja={loja} layout={layout} estreita={estreita} comPalco={comPalco} pausado={pausado} derrota={derrota} personagem={opcoes.personagem ? personagem : null} bpm={musica.bpm || 120} aoEstrela={() => controles.current.estrela()} />
+          <HudDaPartida loja={loja} layout={layout} estreita={estreita} comPalco={comPalco} pausado={pausado} derrota={derrota} personagem={cena.personagem ? personagem : null} bpm={musica.bpm || 120} aoEstrela={() => controles.current.estrela()} />
 
           <AnimatePresence>
             {aviso && (

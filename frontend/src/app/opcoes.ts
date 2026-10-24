@@ -17,5 +17,6 @@ export function opcoesDaPartida(c: Configuracoes): OpcoesDaPartida {
     personagem: c.personagem3d,
     mostrarFps: c.mostrarFps,
     qualidadeDoPalco: c.qualidadeDoPalco,
+    modoCompetitivo: c.modoCompetitivo,
   };
 }

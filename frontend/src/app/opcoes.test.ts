@@ -22,4 +22,9 @@ describe("opcoesDaPartida", () => {
     expect(opcoesDaPartida(CONFIGURACOES_PADRAO).qualidadeDoPalco).toBe("media");
     expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, qualidadeDoPalco: "leve" }).qualidadeDoPalco).toBe("leve");
   });
+
+  it("leva o modo competitivo", () => {
+    expect(opcoesDaPartida(CONFIGURACOES_PADRAO).modoCompetitivo).toBe(false);
+    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, modoCompetitivo: true }).modoCompetitivo).toBe(true);
+  });
 });

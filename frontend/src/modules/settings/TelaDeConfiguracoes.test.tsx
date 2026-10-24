@@ -91,4 +91,11 @@ describe("TelaDeConfiguracoes", () => {
     await usuario.click(screen.getByRole("button", { name: /Calibrar/ }));
     expect(screen.getByText(/junto com o clique/)).toBeInTheDocument();
   });
+
+  it("liga o modo competitivo no vídeo", async () => {
+    const { aoMudar, usuario } = abrir();
+    await usuario.click(screen.getByRole("tab", { name: /Vídeo/ }));
+    await usuario.click(screen.getByRole("switch", { name: "Modo competitivo" }));
+    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ modoCompetitivo: true }));
+  });
 });
