@@ -15,6 +15,7 @@ import { MenuDePausa } from "./componentes/MenuDePausa";
 import { PainelDePontos } from "./componentes/PainelDePontos";
 import { BarraDeEstrelas } from "./componentes/BarraDeEstrelas";
 import { progressoDasEstrelas } from "./estrelas";
+import { criarLojaDoHud, useLoja, type LojaDoHud } from "./lojaDoHud";
 import { NOMES_DAS_PISTAS } from "./cores";
 import { ativarEstrela, avancar, criarPartida, multiplicador, precisao, retirarEventos, soltar, tocar } from "./partida";
 import { desenharPista, type Cena } from "./pista/desenhar";
@@ -148,7 +149,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
   const [carregada, setCarregada] = useState<MusicaCarregada | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [urlDoVideo, setUrlDoVideo] = useState<string | null>(null);
-  const [hud, setHud] = useState(HUD_INICIAL);
+  const [loja] = useState(() => criarLojaDoHud<Hud>(HUD_INICIAL));
   const [pausado, setPausado] = useState(false);
   const pausadoNaTela = useRef(false);
   pausadoNaTela.current = pausado;
@@ -202,6 +203,16 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
     const bot = opcoes.bot ? criarBot() : null;
     const sprites = criarSprites();
     const contexto2d = canvas.current?.getContext("2d") ?? null;
+    // O tamanho vem do ResizeObserver: ler clientWidth no loop, logo depois de mudar a opacidade, força um layout por quadro.
+    const medida = { largura: canvas.current?.clientWidth ?? 0, altura: canvas.current?.clientHeight ?? 0 };
+    const observador =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(([entrada]) => {
+            medida.largura = entrada.contentRect.width;
+            medida.altura = entrada.contentRect.height;
+          });
+    if (canvas.current) observador?.observe(canvas.current);
     const apertados = [false, false, false, false, false];
     const explosoes: Cena["explosoes"] = [];
     const trovoes: Cena["trovoes"] = [];
@@ -389,8 +400,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
       if (elemento) elemento.style.opacity = comPalcoAgora.current ? String(opacidadeDaPista(tempo, ENTRADA)) : "1";
       if (contexto2d && elemento) {
         const escala = Math.min(2, window.devicePixelRatio || 1);
-        const largura = elemento.clientWidth;
-        const altura = elemento.clientHeight;
+        const { largura, altura } = medida;
         if (elemento.width !== Math.round(largura * escala) || elemento.height !== Math.round(altura * escala)) {
           elemento.width = Math.round(largura * escala);
           elemento.height = Math.round(altura * escala);
@@ -419,7 +429,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
         );
       }
 
-      // O HUD é React: valores arredondados, e só re-renderiza quando algo visível mudou.
+      // O HUD fica na loja: valores arredondados, e só os componentes dele re-renderizam quando algo visível muda.
       const recorde = recordeAtual.current;
       if (!recordeBatido && recorde && partida.pontos > recorde) {
         recordeBatido = true;
@@ -442,15 +452,14 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
         estrelasDoRecorde: progressoDasEstrelas(recordeAtual.current ?? 0, carregada.notas.length),
         reacao,
       };
-      if ((Object.keys(proximo) as (keyof Hud)[]).some((chave) => proximo[chave] !== ultimoHud[chave])) {
-        ultimoHud = proximo;
-        setHud(proximo);
-      }
+      loja.definir(proximo);
+      ultimoHud = loja.ler();
     };
     quadro = requestAnimationFrame(desenhar);
 
     return () => {
       cancelAnimationFrame(quadro);
+      observador?.disconnect();
       window.removeEventListener("keydown", aoApertar);
       window.removeEventListener("keyup", aoSoltar);
       window.removeEventListener("blur", aoPerderFoco);
@@ -468,7 +477,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
   const recomecar = () => {
     setPausado(false);
     setDerrota(false);
-    setHud(HUD_INICIAL);
+    loja.definir(HUD_INICIAL);
     setAviso(null);
     setRodada((r) => r + 1);
   };
@@ -486,9 +495,6 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
     );
   }
 
-
-  const avatarDoJogador = (className: string) =>
-    opcoes.personagem && <Avatar personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={musica.bpm || 120} pulso={hud.pulso} triste={hud.vida < 0.25} reacao={hud.reacao} className={className} />;
 
   return (
     <div className="relative h-full w-full touch-none overflow-hidden select-none">
@@ -522,9 +528,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
                 {opcoes.mostrarFps && <span className="ml-2 font-mono tabular-nums">{fps ?? "–"} FPS</span>}
               </p>
             </div>
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-superficie-elevada" aria-label="Progresso da música">
-              <div className="h-full bg-primaria" style={{ width: `${hud.progresso * 100}%` }} />
-            </div>
+            <ProgressoDaMusica loja={loja} />
             <Button variant="ghost" size="icon" onClick={() => controles.current.pausar()} aria-label="Pausar">
               <Pause />
             </Button>
@@ -567,64 +571,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
             </motion.div>
           )}
 
-          {/* Os números ficam colados à esquerda da pista; no celular a pista ocupa a largura toda e eles sobem para o topo. */}
-          <div
-            className={cn("absolute", estreita ? "top-20 left-4" : "bottom-10 -translate-x-full")}
-            style={estreita ? undefined : { left: Math.max(layout.centro - layout.largura / 2 - 24, LARGURA_DO_PAINEL + MARGEM_DO_HUD) }}
-          >
-            <PainelDePontos
-              pontos={hud.pontos}
-              sequencia={hud.sequencia}
-              multiplicador={hud.multiplicador}
-              precisao={hud.precisao}
-              estrelaAtiva={hud.estrelaAtiva}
-              compacto={estreita}
-            />
-          </div>
-
-          {estreita ? (
-            <div data-parte="hud-compacto" className="absolute top-20 right-4 flex flex-col items-end gap-2">
-              {avatarDoJogador("h-20 w-auto")}
-              <MedidorDeVida vida={hud.vida} fantasma={hud.fantasma} horizontal className="h-2.5 w-24" />
-              <button
-                aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`}
-                onClick={() => controles.current.estrela()}
-                className={cn("flex items-center gap-1 rounded-full px-3 py-1 text-base font-bold", hud.estrela >= 0.5 ? "bg-estrela text-fundo" : "bg-superficie-elevada text-texto-suave")}
-              >
-                <Zap className="size-4 opacity-70" aria-hidden /> {Math.round(hud.estrela * 100)}%
-              </button>
-            </div>
-          ) : (
-            <div data-parte="hud-lateral" className="absolute bottom-10 flex flex-col items-center" style={{ left: Math.min(layout.centro + layout.largura / 2 + 24, layout.centro * 2 - LARGURA_DO_HUD_LATERAL - MARGEM_DO_HUD) }}>
-              {/* Com o palco, o personagem já está em cena atrás da pista. */}
-              {!comPalco && avatarDoJogador("mb-2 h-44 w-auto")}
-              <div className="flex items-end gap-4">
-                <BarraDeEstrelas progresso={hud.estrelas} recorde={hud.estrelasDoRecorde} />
-                <div className="flex flex-col items-center gap-2" aria-label="Star power">
-                  <Zap className={cn("size-5", hud.estrela >= 0.5 ? "text-estrela" : "text-borda")} aria-hidden />
-                  <div className="relative h-40 w-4 overflow-hidden rounded-full bg-superficie-elevada">
-                    <div className={cn("absolute bottom-0 w-full rounded-full bg-estrela transition-all", hud.estrelaAtiva && "animate-pulse")} style={{ height: `${hud.estrela * 100}%` }} />
-                    <div className="absolute bottom-1/2 h-px w-full bg-texto/60" />
-                  </div>
-                </div>
-                <MedidorDeRock vida={hud.vida} fantasma={hud.fantasma} className="w-36" />
-              </div>
-            </div>
-          )}
-
-          <AnimatePresence>
-            {hud.contagem > 0 && !pausado && (
-              <motion.p
-                key={hud.contagem}
-                initial={{ scale: 2, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.5, opacity: 0 }}
-                className="pointer-events-none absolute inset-0 flex items-center justify-center text-8xl font-black"
-              >
-                {hud.contagem}
-              </motion.p>
-            )}
-          </AnimatePresence>
+          <HudDaPartida loja={loja} layout={layout} estreita={estreita} comPalco={comPalco} pausado={pausado} derrota={derrota} personagem={opcoes.personagem ? personagem : null} bpm={musica.bpm || 120} aoEstrela={() => controles.current.estrela()} />
 
           <AnimatePresence>
             {aviso && (
@@ -657,5 +604,90 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function ProgressoDaMusica({ loja }: { loja: LojaDoHud<Hud> }) {
+  const { progresso } = useLoja(loja);
+  return (
+    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-superficie-elevada" aria-label="Progresso da música">
+      <div className="h-full bg-primaria" style={{ width: `${progresso * 100}%` }} />
+    </div>
+  );
+}
+
+interface PropsDoHud {
+  loja: LojaDoHud<Hud>;
+  layout: ReturnType<typeof layoutDaPista>;
+  estreita: boolean;
+  comPalco: boolean;
+  pausado: boolean;
+  derrota: boolean;
+  /** Sem ele, o HUD não mostra o personagem. */
+  personagem: Personagem | null;
+  bpm: number;
+  aoEstrela: () => void;
+}
+
+/** Tudo que muda junto com o placar: só este pedaço re-renderiza a cada quadro, não a tela inteira. */
+function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, personagem, bpm, aoEstrela }: PropsDoHud) {
+  const hud = useLoja(loja);
+  const avatarDoJogador = (className: string) =>
+    personagem && <Avatar personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={bpm} pulso={hud.pulso} triste={hud.vida < 0.25} reacao={hud.reacao} className={className} />;
+
+  return (
+    <>
+      {/* Os números ficam colados à esquerda da pista; no celular a pista ocupa a largura toda e eles sobem para o topo. */}
+      <div
+        className={cn("absolute", estreita ? "top-20 left-4" : "bottom-10 -translate-x-full")}
+        style={estreita ? undefined : { left: Math.max(layout.centro - layout.largura / 2 - 24, LARGURA_DO_PAINEL + MARGEM_DO_HUD) }}
+      >
+        <PainelDePontos pontos={hud.pontos} sequencia={hud.sequencia} multiplicador={hud.multiplicador} precisao={hud.precisao} estrelaAtiva={hud.estrelaAtiva} compacto={estreita} />
+      </div>
+
+      {estreita ? (
+        <div data-parte="hud-compacto" className="absolute top-20 right-4 flex flex-col items-end gap-2">
+          {avatarDoJogador("h-20 w-auto")}
+          <MedidorDeVida vida={hud.vida} fantasma={hud.fantasma} horizontal className="h-2.5 w-24" />
+          <button
+            aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`}
+            onClick={aoEstrela}
+            className={cn("flex items-center gap-1 rounded-full px-3 py-1 text-base font-bold", hud.estrela >= 0.5 ? "bg-estrela text-fundo" : "bg-superficie-elevada text-texto-suave")}
+          >
+            <Zap className="size-4 opacity-70" aria-hidden /> {Math.round(hud.estrela * 100)}%
+          </button>
+        </div>
+      ) : (
+        <div data-parte="hud-lateral" className="absolute bottom-10 flex flex-col items-center" style={{ left: Math.min(layout.centro + layout.largura / 2 + 24, layout.centro * 2 - LARGURA_DO_HUD_LATERAL - MARGEM_DO_HUD) }}>
+          {/* Com o palco, o personagem já está em cena atrás da pista. */}
+          {!comPalco && avatarDoJogador("mb-2 h-44 w-auto")}
+          <div className="flex items-end gap-4">
+            <BarraDeEstrelas progresso={hud.estrelas} recorde={hud.estrelasDoRecorde} />
+            <div className="flex flex-col items-center gap-2" aria-label="Star power">
+              <Zap className={cn("size-5", hud.estrela >= 0.5 ? "text-estrela" : "text-borda")} aria-hidden />
+              <div className="relative h-40 w-4 overflow-hidden rounded-full bg-superficie-elevada">
+                <div className={cn("absolute bottom-0 w-full rounded-full bg-estrela transition-all", hud.estrelaAtiva && "animate-pulse")} style={{ height: `${hud.estrela * 100}%` }} />
+                <div className="absolute bottom-1/2 h-px w-full bg-texto/60" />
+              </div>
+            </div>
+            <MedidorDeRock vida={hud.vida} fantasma={hud.fantasma} className="w-36" />
+          </div>
+        </div>
+      )}
+
+      <AnimatePresence>
+        {hud.contagem > 0 && !pausado && (
+          <motion.p
+            key={hud.contagem}
+            initial={{ scale: 2, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.5, opacity: 0 }}
+            className="pointer-events-none absolute inset-0 flex items-center justify-center text-8xl font-black"
+          >
+            {hud.contagem}
+          </motion.p>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

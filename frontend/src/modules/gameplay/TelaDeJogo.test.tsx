@@ -69,6 +69,29 @@ describe("TelaDeJogo", () => {
     expect(await screen.findByRole("heading", { name: "Neon Highway" })).toBeInTheDocument();
   });
 
+  // Bug: ler o tamanho do canvas logo depois de mudar o estilo dele forçava um recálculo de layout a cada quadro.
+  it("mede o canvas por um ResizeObserver, sem ler o tamanho a cada quadro", async () => {
+    const observados: Element[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe = (alvo: Element) => observados.push(alvo);
+        disconnect = () => {};
+      },
+    );
+    const leituras = vi.spyOn(HTMLElement.prototype, "clientWidth", "get");
+    carregarCom([nota(1)]);
+    abrir();
+    await partidaPronta();
+    const antes = leituras.mock.calls.length;
+    await new Promise((pronto) => setTimeout(pronto, 100));
+    expect(observados.some((alvo) => alvo instanceof HTMLCanvasElement)).toBe(true);
+    expect(leituras.mock.calls.length).toBe(antes);
+    leituras.mockRestore();
+    vi.unstubAllGlobals();
+    vi.stubGlobal("AudioContext", AudioContextFalso);
+  });
+
   it("faz a contagem regressiva antes da música", async () => {
     carregarCom([nota(1)]);
     abrir();
