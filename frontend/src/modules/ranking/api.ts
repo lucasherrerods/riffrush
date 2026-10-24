@@ -19,11 +19,20 @@ export interface RespostaDoRanking {
   meu: PosicaoNoRanking | null;
 }
 
+/** Uma resposta estranha (proxy, versão antiga da API) vira erro aqui, e não uma tela quebrada no painel. */
+function conferirRanking(corpo: unknown): RespostaDoRanking {
+  const ranking = corpo as Partial<RespostaDoRanking> | null;
+  if (!ranking || typeof ranking !== "object" || !Array.isArray(ranking.top) || typeof ranking.jogadores !== "number") {
+    throw new Error("O ranking veio num formato inesperado.");
+  }
+  return { jogadores: ranking.jogadores, top: ranking.top, meu: ranking.meu ?? null };
+}
+
 export function criarApiDoRanking(base: string, buscar?: typeof fetch) {
   const chamar = criarCliente(base, buscar);
   return {
     buscar: (musicaId: string, dificuldade: Dificuldade, { token, sinal }: { token?: string; sinal?: AbortSignal } = {}) =>
-      chamar<RespostaDoRanking>("GET", `/ranking?${new URLSearchParams({ musica_id: musicaId, dificuldade })}`, { token, sinal }),
+      chamar<unknown>("GET", `/ranking?${new URLSearchParams({ musica_id: musicaId, dificuldade })}`, { token, sinal }).then(conferirRanking),
   };
 }
 
