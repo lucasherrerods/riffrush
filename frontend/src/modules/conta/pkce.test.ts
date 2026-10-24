@@ -23,7 +23,7 @@ describe("urlDoLoginDoGoogle", () => {
       client_id: "id",
       redirect_uri: "http://localhost:1420/",
       response_type: "code",
-      scope: "openid profile",
+      scope: "openid profile email",
       code_challenge: "d",
       code_challenge_method: "S256",
       state: "e",

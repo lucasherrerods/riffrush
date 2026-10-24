@@ -8,6 +8,7 @@ const dificuldade = (d: PerfilDaApi["por_dificuldade"][number]["dificuldade"], p
 const perfil: PerfilDaApi = {
   nome: "Lucas",
   avatar: null,
+  email: "lucas@exemplo.com",
   xp_total: 1234,
   nivel: { nivel: 4, xp_no_nivel: 30, xp_para_o_proximo: 200 },
   criada_em: "2026-03-10T12:00:00Z",
@@ -17,6 +18,11 @@ const perfil: PerfilDaApi = {
   melhor_pontuacao: 98_500,
   musicas_distintas: 5,
   por_dificuldade: [dificuldade("facil"), dificuldade("medio", 4), dificuldade("dificil"), dificuldade("expert", 8)],
+  por_instrumento: [
+    { instrumento: "guitarra", partidas: 9 },
+    { instrumento: "baixo", partidas: 3 },
+  ],
+  mais_tocadas: [{ musica_id: "encore:abc", partidas: 7 }],
   recentes: [{ musica_id: "encore:abc", dificuldade: "expert", pontos: 98_500, acertos: 9, total: 10, derrota: true, jogada_em: "2026-10-20T12:00:00Z" }],
 };
 
@@ -31,18 +37,23 @@ describe("TelaDePerfil", () => {
     expect(screen.getByText("87,65%")).toBeInTheDocument();
     expect(screen.getByText("12")).toBeInTheDocument();
     expect(screen.getAllByText("98.500").length).toBeGreaterThan(0);
-    expect(screen.getByText("Shine — Spektrem")).toBeInTheDocument();
+    expect(screen.getAllByText("Shine — Spektrem").length).toBe(2);
+    expect(screen.getByText(/lucas@exemplo\.com/)).toBeInTheDocument();
+    expect(screen.getByText("83% concluídas")).toBeInTheDocument();
+    expect(screen.getByText("Baixo")).toBeInTheDocument();
+    expect(screen.getByText("75%")).toBeInTheDocument();
+    expect(screen.getByText("7 vezes")).toBeInTheDocument();
     expect(screen.getByText("Vaiada")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "XP do nível 4" })).toBeInTheDocument();
   });
 
   it("música que não está na biblioteca aparece pelo id", async () => {
     render(<TelaDePerfil aoVoltar={() => {}} tituloDaMusica={() => undefined} carregar={async () => perfil} />);
-    expect(await screen.findByText("encore:abc")).toBeInTheDocument();
+    expect((await screen.findAllByText("encore:abc")).length).toBe(2);
   });
 
   it("sem partidas, convida a jogar", async () => {
-    const vazio = { ...perfil, partidas: 0, recentes: [], por_dificuldade: perfil.por_dificuldade.map((d) => dificuldade(d.dificuldade)) };
+    const vazio = { ...perfil, partidas: 0, recentes: [], por_instrumento: [], mais_tocadas: [], por_dificuldade: perfil.por_dificuldade.map((d) => dificuldade(d.dificuldade)) };
     render(<TelaDePerfil aoVoltar={() => {}} tituloDaMusica={tituloDaMusica} carregar={async () => vazio} />);
     expect(await screen.findByText(/Nenhuma partida ainda/)).toBeInTheDocument();
   });

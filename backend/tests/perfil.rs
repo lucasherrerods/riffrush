@@ -10,8 +10,8 @@ use chrono::DateTime;
 use http_body_util::BodyExt;
 use riffrush_api::modules::conta::fakes::{pedido, servicos};
 use riffrush_api::modules::perfil::fakes::servicos_do_perfil;
-use riffrush_api::modules::perfil::{DadosDoPerfil, EstatisticasDaDificuldade, PartidaRecente};
-use riffrush_api::modules::progresso::Dificuldade;
+use riffrush_api::modules::perfil::{DadosDoPerfil, EstatisticasDaDificuldade, MusicaMaisTocada, PartidaRecente, PartidasNoInstrumento};
+use riffrush_api::modules::progresso::{Dificuldade, Instrumento};
 use riffrush_api::modules::ranking::fakes::servicos_do_ranking;
 use riffrush_api::modules::saude::VerificadorDoBanco;
 use riffrush_api::shared::estado::EstadoDoApp;
@@ -44,6 +44,14 @@ async fn app() -> (Router, String) {
                 acertos: 15,
                 notas: 20,
                 melhor_pontuacao: 900,
+            }],
+            por_instrumento: vec![PartidasNoInstrumento {
+                instrumento: Instrumento::Baixo,
+                partidas: 2,
+            }],
+            mais_tocadas: vec![MusicaMaisTocada {
+                musica_id: "encore:abc".into(),
+                partidas: 2,
             }],
             recentes: vec![PartidaRecente {
                 musica_id: "encore:abc".into(),
@@ -92,6 +100,9 @@ async fn devolve_as_estatisticas_de_quem_esta_logado() {
     assert_eq!(corpo["por_dificuldade"][3]["dificuldade"], "expert");
     assert_eq!(corpo["recentes"][0]["musica_id"], "encore:abc");
     assert_eq!(corpo["nivel"]["nivel"], 1);
+    assert_eq!(corpo["email"], "lucas@exemplo.com");
+    assert_eq!(corpo["por_instrumento"][0]["instrumento"], "baixo");
+    assert_eq!(corpo["mais_tocadas"][0]["partidas"], 2);
 }
 
 #[tokio::test]

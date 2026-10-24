@@ -48,6 +48,7 @@ export function CartaoDaConta({ aoVerPerfil }: { aoVerPerfil: () => void }) {
           <FotoDaConta avatar={conta.avatar} className="size-10" />
           <span className="flex min-w-0 flex-1 flex-col gap-1.5">
             <span className="truncate text-base leading-none font-bold">{conta.nome}</span>
+            {conta.email && <span className="truncate text-sm leading-none text-texto-suave">{conta.email}</span>}
             <span className="text-sm leading-none text-texto-suave">
               {xp_no_nivel} / {xp_para_o_proximo} XP para o <span className="font-titulo text-destaque">Nv {nivel + 1}</span>
             </span>

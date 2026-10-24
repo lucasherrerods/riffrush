@@ -78,6 +78,7 @@ async fn login_devolve_token_e_conta_no_nivel_1() {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(corpo["conta"]["nome"], "Lucas");
+    assert_eq!(corpo["conta"]["email"], "lucas@exemplo.com");
     assert_eq!(corpo["conta"]["nivel"], json!({ "nivel": 1, "xp_no_nivel": 0, "xp_para_o_proximo": 100 }));
 }
 

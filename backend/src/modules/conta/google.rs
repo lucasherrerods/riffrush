@@ -41,6 +41,7 @@ struct Declaracoes {
     aud: String,
     name: Option<String>,
     picture: Option<String>,
+    email: Option<String>,
 }
 
 /// Lê o perfil de dentro do id_token. A assinatura não precisa ser conferida porque o token
@@ -52,6 +53,7 @@ fn perfil_do_id_token(id_token: &str, client_id: &str) -> Option<PerfilDoGoogle>
         nome: declaracoes.name.unwrap_or_else(|| "Jogador".into()),
         sub: declaracoes.sub,
         avatar: declaracoes.picture,
+        email: declaracoes.email,
     })
 }
 
@@ -96,13 +98,14 @@ mod tests {
 
     #[test]
     fn le_o_perfil_do_token() {
-        let token = id_token(serde_json::json!({ "sub": "123", "aud": "nosso", "name": "Lucas", "picture": "http://foto" }));
+        let token = id_token(serde_json::json!({ "sub": "123", "aud": "nosso", "name": "Lucas", "picture": "http://foto", "email": "lucas@exemplo.com" }));
         assert_eq!(
             perfil_do_id_token(&token, "nosso"),
             Some(PerfilDoGoogle {
                 sub: "123".into(),
                 nome: "Lucas".into(),
-                avatar: Some("http://foto".into())
+                avatar: Some("http://foto".into()),
+                email: Some("lucas@exemplo.com".into())
             })
         );
     }

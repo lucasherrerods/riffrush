@@ -2,7 +2,7 @@ import type { Resultado } from "@/modules/gameplay";
 import { ErroDaApi, type ApiDaConta, type ContaDaApi } from "./api";
 import { SessaoDaConta, type Ambiente } from "./sessao";
 
-const conta: ContaDaApi = { id: "1", nome: "Lucas", avatar: null, xp_total: 0, nivel: { nivel: 1, xp_no_nivel: 0, xp_para_o_proximo: 100 } };
+const conta: ContaDaApi = { id: "1", nome: "Lucas", avatar: null, email: null, xp_total: 0, nivel: { nivel: 1, xp_no_nivel: 0, xp_para_o_proximo: 100 } };
 
 class Memoria {
   dados = new Map<string, string>();

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Loader2, RotateCcw } from "lucide-react";
-import { DIFICULDADES } from "@/modules/songs";
+import { DIFICULDADES, INSTRUMENTOS } from "@/modules/songs";
 import { haQuantoTempo, porcentagem, precisaoDaPartida } from "@/shared/lib/formatar";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -20,6 +20,8 @@ type Estado = { tipo: "carregando" } | { tipo: "pronto"; perfil: PerfilDaApi } |
 
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 const rotuloDa = (dificuldade: string) => DIFICULDADES.find((d) => d.id === dificuldade)?.rotulo ?? dificuldade;
+const rotuloDoInstrumento = (instrumento: string) => INSTRUMENTOS.find((i) => i.id === instrumento)?.rotulo ?? instrumento;
+const vezes = (n: number) => `${formatar(n)} ${n === 1 ? "vez" : "vezes"}`;
 const mesEAno = (data: string) => new Date(data).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
 function Numero({ rotulo, valor, detalhe }: { rotulo: string; valor: string; detalhe?: string }) {
@@ -57,7 +59,7 @@ export function TelaDePerfil({ aoVoltar, tituloDaMusica, carregar = (sinal) => s
         <h1 className="text-4xl leading-[1.1] font-black tracking-[-0.02em]">Perfil</h1>
       </header>
 
-      <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-4 overflow-y-auto">
+      <div className="sem-barra-de-rolagem mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-4 overflow-y-auto">
         {estado.tipo === "carregando" && <Loader2 aria-label="Carregando o perfil" className="m-auto size-6 animate-spin text-texto-suave" />}
         {estado.tipo === "erro" && (
           <div className="m-auto flex flex-col items-center gap-4 text-center">
@@ -75,7 +77,7 @@ export function TelaDePerfil({ aoVoltar, tituloDaMusica, carregar = (sinal) => s
 
 function Conteudo({ perfil, tituloDaMusica }: { perfil: PerfilDaApi; tituloDaMusica: Props["tituloDaMusica"] }) {
   const { nivel, xp_no_nivel, xp_para_o_proximo } = perfil.nivel;
-  const concluidas = perfil.partidas - perfil.derrotas;
+  const concluidas = perfil.partidas ? (perfil.partidas - perfil.derrotas) / perfil.partidas : 0;
 
   return (
     <>
@@ -83,7 +85,9 @@ function Conteudo({ perfil, tituloDaMusica }: { perfil: PerfilDaApi; tituloDaMus
         <FotoDaConta avatar={perfil.avatar} className="size-20" />
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <h2 className="truncate text-2xl leading-[1.1] font-bold">{perfil.nome}</h2>
-          <p className="text-base text-texto-suave">Jogando desde {mesEAno(perfil.criada_em)}</p>
+          <p className="truncate text-base text-texto-suave">
+            {perfil.email && <>{perfil.email} · </>}Jogando desde {mesEAno(perfil.criada_em)}
+          </p>
           <div className="flex items-center gap-4">
             <span className="font-titulo text-3xl leading-none text-destaque">Nv {nivel}</span>
             <BarraDeProgresso fracao={xp_no_nivel / xp_para_o_proximo} rotulo={`XP do nível ${nivel}`} className="flex-1" />
@@ -95,7 +99,7 @@ function Conteudo({ perfil, tituloDaMusica }: { perfil: PerfilDaApi; tituloDaMus
       </section>
 
       <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Numero rotulo="Partidas" valor={formatar(perfil.partidas)} detalhe={`${formatar(concluidas)} até o fim`} />
+        <Numero rotulo="Partidas" valor={formatar(perfil.partidas)} detalhe={`${porcentagem(concluidas, 0)} concluídas`} />
         <Numero rotulo="Precisão" valor={porcentagem(perfil.precisao)} detalhe="de todas as notas" />
         <Numero rotulo="Melhor pontuação" valor={formatar(perfil.melhor_pontuacao)} />
         <Numero rotulo="Músicas tocadas" valor={formatar(perfil.musicas_distintas)} detalhe={`${formatar(perfil.xp_total)} XP no total`} />
@@ -105,24 +109,56 @@ function Conteudo({ perfil, tituloDaMusica }: { perfil: PerfilDaApi; tituloDaMus
         <p className="placa p-6 text-center text-base text-texto-suave">Nenhuma partida ainda. Jogue uma música para começar a encher o perfil.</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-12">
-          <section className="placa flex flex-col gap-4 p-6 md:col-span-5">
-            <h3 className="font-titulo text-2xl leading-none tracking-wide">Por dificuldade</h3>
-            {perfil.por_dificuldade.map((d) => (
-              <div key={d.dificuldade} className={cn("flex flex-col gap-2", d.partidas === 0 && "opacity-50")}>
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-base font-bold">{rotuloDa(d.dificuldade)}</span>
-                  <span className="text-sm text-texto-suave tabular-nums">
-                    {formatar(d.partidas)} {d.partidas === 1 ? "partida" : "partidas"}
-                  </span>
+          <div className="flex flex-col gap-4 md:col-span-5">
+            <section className="placa flex flex-col gap-4 p-6">
+              <h3 className="font-titulo text-2xl leading-none tracking-wide">Por dificuldade</h3>
+              {perfil.por_dificuldade.map((d) => (
+                <div key={d.dificuldade} className={cn("flex flex-col gap-2", d.partidas === 0 && "opacity-50")}>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-base font-bold">{rotuloDa(d.dificuldade)}</span>
+                    <span className="text-sm text-texto-suave tabular-nums">
+                      {formatar(d.partidas)} {d.partidas === 1 ? "partida" : "partidas"}
+                    </span>
+                  </div>
+                  <BarraDeProgresso fracao={d.precisao} rotulo={`Precisão no ${rotuloDa(d.dificuldade)}`} className="h-1" />
+                  <div className="flex justify-between text-sm text-texto-suave tabular-nums">
+                    <span>{porcentagem(d.precisao)}</span>
+                    <span>Melhor {formatar(d.melhor_pontuacao)}</span>
+                  </div>
                 </div>
-                <BarraDeProgresso fracao={d.precisao} rotulo={`Precisão no ${rotuloDa(d.dificuldade)}`} className="h-1" />
-                <div className="flex justify-between text-sm text-texto-suave tabular-nums">
-                  <span>{porcentagem(d.precisao)}</span>
-                  <span>Melhor {formatar(d.melhor_pontuacao)}</span>
-                </div>
-              </div>
-            ))}
-          </section>
+              ))}
+            </section>
+
+            {perfil.por_instrumento.length > 0 && (
+              <section className="placa flex flex-col gap-4 p-6">
+                <h3 className="font-titulo text-2xl leading-none tracking-wide">Por instrumento</h3>
+                {perfil.por_instrumento.map((i) => (
+                  <div key={i.instrumento} className="flex flex-col gap-2">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-base font-bold">{rotuloDoInstrumento(i.instrumento)}</span>
+                      <span className="text-sm text-texto-suave tabular-nums">{porcentagem(i.partidas / perfil.partidas, 0)}</span>
+                    </div>
+                    <BarraDeProgresso fracao={i.partidas / perfil.partidas} rotulo={`Partidas de ${rotuloDoInstrumento(i.instrumento)}`} className="h-1" />
+                  </div>
+                ))}
+              </section>
+            )}
+
+            {perfil.mais_tocadas.length > 0 && (
+              <section className="placa flex flex-col gap-4 p-6">
+                <h3 className="font-titulo text-2xl leading-none tracking-wide">Mais tocadas</h3>
+                <ol className="flex flex-col gap-2">
+                  {perfil.mais_tocadas.map((m, posicao) => (
+                    <li key={m.musica_id} className="flex items-center gap-4">
+                      <span className="w-6 font-titulo text-2xl leading-none text-destaque">{posicao + 1}</span>
+                      <span className="min-w-0 flex-1 truncate text-base font-bold">{tituloDaMusica(m.musica_id) ?? m.musica_id}</span>
+                      <span className="text-sm whitespace-nowrap text-texto-suave tabular-nums">{vezes(m.partidas)}</span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
+          </div>
 
           <section className="placa flex flex-col gap-2 p-6 md:col-span-7">
             <h3 className="mb-2 font-titulo text-2xl leading-none tracking-wide">Últimas partidas</h3>

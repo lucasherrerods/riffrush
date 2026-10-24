@@ -9,6 +9,7 @@ pub struct Conta {
     pub id: Uuid,
     pub nome: String,
     pub avatar: Option<String>,
+    pub email: Option<String>,
     pub xp_total: u64,
 }
 
@@ -24,6 +25,7 @@ pub struct PerfilDoGoogle {
     pub sub: String,
     pub nome: String,
     pub avatar: Option<String>,
+    pub email: Option<String>,
 }
 
 pub const DURACAO_DA_SESSAO: Duration = Duration::days(30);
@@ -66,6 +68,7 @@ mod tests {
             id: Uuid::nil(),
             nome: "Lucas".into(),
             avatar: None,
+            email: None,
             xp_total: 100,
         };
         assert_eq!(conta.nivel().nivel, 2);

@@ -9,7 +9,9 @@ mod postgres;
 #[cfg(any(test, feature = "testes"))]
 pub use casos_de_uso::fakes;
 pub use casos_de_uso::{ErroDoPerfil, ServicosDoPerfil};
-pub use dominio::{montar_perfil, DadosDoPerfil, EstatisticasDaDificuldade, PartidaRecente, Perfil, PARTIDAS_RECENTES};
-pub use http::{__path_perfil, perfil, rotas, DificuldadeDoPerfil, PartidaDoPerfil, RespostaDoPerfil};
+pub use dominio::{
+    montar_perfil, DadosDoPerfil, EstatisticasDaDificuldade, MusicaMaisTocada, PartidaRecente, PartidasNoInstrumento, Perfil, MAIS_TOCADAS, PARTIDAS_RECENTES,
+};
+pub use http::{__path_perfil, perfil, rotas, DificuldadeDoPerfil, InstrumentoDoPerfil, MusicaDoPerfil, PartidaDoPerfil, RespostaDoPerfil};
 pub use portas::RepositorioDoPerfil;
 pub use postgres::PerfilPostgres;

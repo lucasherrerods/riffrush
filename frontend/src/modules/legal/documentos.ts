@@ -21,14 +21,14 @@ export const DOCUMENTOS: Record<Documento, ConteudoDoDocumento> = {
       {
         titulo: "Resumo",
         paragrafos: [
-          "Dá para jogar o Riff Rush sem conta. A conta é opcional e serve só para guardar o seu nível e o seu XP. Não vendemos dados, não mostramos anúncios e não pedimos seu e-mail nem sua senha.",
+          "Dá para jogar o Riff Rush sem conta. A conta é opcional e serve só para guardar o seu nível e o seu XP. Não vendemos dados, não mostramos anúncios, não pedimos sua senha e não mandamos e-mails.",
         ],
       },
       {
         titulo: "O que guardamos no servidor",
         paragrafos: [
-          "Só quando você entra com o Google: o identificador da sua conta Google, o seu nome e o endereço da sua foto de perfil, como o Google nos informa.",
-          "O seu XP total e o resumo de cada partida: música, dificuldade, pontos, acertos, total de notas, se foi vaiado e a data.",
+          "Só quando você entra com o Google: o identificador da sua conta Google, o seu nome, o seu e-mail e o endereço da sua foto de perfil, como o Google nos informa. O e-mail aparece só para você, no menu da conta e no perfil.",
+          "O seu XP total e o resumo de cada partida: música, instrumento, dificuldade, pontos, acertos, total de notas, se foi vaiado e a data.",
           "As sessões de login, guardadas como um código embaralhado (hash) que vale por 30 dias. O código original fica só no seu aparelho.",
         ],
       },
@@ -42,7 +42,7 @@ export const DOCUMENTOS: Record<Documento, ConteudoDoDocumento> = {
       {
         titulo: "Para que usamos",
         paragrafos: [
-          "Para fazer o login, calcular e mostrar o seu nível e o XP de cada partida e evitar trapaças, como partidas impossíveis ou enviadas rápido demais. A base legal é a execução do serviço que você pediu ao criar a conta (LGPD, art. 7º, V).",
+          "Para fazer o login, mostrar com qual conta Google você entrou, calcular e mostrar o seu nível e o XP de cada partida e evitar trapaças, como partidas impossíveis ou enviadas rápido demais. A base legal é a execução do serviço que você pediu ao criar a conta (LGPD, art. 7º, V).",
         ],
       },
       {

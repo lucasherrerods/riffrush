@@ -79,6 +79,8 @@ mod tests {
             criada_em: DateTime::UNIX_EPOCH,
             musicas_distintas: 2,
             por_dificuldade: vec![],
+            por_instrumento: vec![],
+            mais_tocadas: vec![],
             recentes: vec![],
         }
     }

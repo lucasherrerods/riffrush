@@ -79,6 +79,7 @@ pub struct RespostaDaConta {
     id: Uuid,
     nome: String,
     avatar: Option<String>,
+    email: Option<String>,
     xp_total: u64,
     nivel: NivelDaConta,
 }
@@ -90,6 +91,7 @@ impl From<Conta> for RespostaDaConta {
             id: conta.id,
             nome: conta.nome,
             avatar: conta.avatar,
+            email: conta.email,
             xp_total: conta.xp_total,
             nivel,
         }

@@ -22,6 +22,7 @@ fn perfil() -> PerfilDoGoogle {
         sub: Uuid::new_v4().to_string(),
         nome: "Lucas".into(),
         avatar: None,
+        email: Some("lucas@exemplo.com".into()),
     }
 }
 
@@ -35,6 +36,17 @@ async fn entrar_cria_uma_vez_e_atualiza_o_nome() {
     assert_eq!(criada.id, de_novo.id);
     assert_eq!(de_novo.nome, "Lucas H");
     assert_eq!(banco.buscar(criada.id).await.unwrap(), Some(de_novo));
+}
+
+#[tokio::test]
+async fn login_sem_email_mantem_o_que_ja_estava_guardado() {
+    let Some(banco) = banco().await else { return };
+    let mut pessoa = perfil();
+    let criada = banco.entrar(&pessoa, Uuid::new_v4()).await.unwrap();
+    assert_eq!(criada.email.as_deref(), Some("lucas@exemplo.com"));
+    pessoa.email = None;
+    let de_novo = banco.entrar(&pessoa, Uuid::new_v4()).await.unwrap();
+    assert_eq!(de_novo.email.as_deref(), Some("lucas@exemplo.com"));
 }
 
 #[tokio::test]
@@ -205,5 +217,9 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
     );
     let recentes: Vec<_> = dados.recentes.iter().map(|p| p.musica_id.as_str()).collect();
     assert_eq!(recentes, ["b", "a"]);
+    let instrumentos: Vec<_> = dados.por_instrumento.iter().map(|i| (i.instrumento, i.partidas)).collect();
+    assert_eq!(instrumentos, [(Instrumento::Guitarra, 3)]);
+    let mais_tocadas: Vec<_> = dados.mais_tocadas.iter().map(|m| (m.musica_id.as_str(), m.partidas)).collect();
+    assert_eq!(mais_tocadas, [("a", 2), ("b", 1)]);
     assert!(repositorio.dados(Uuid::new_v4(), 10).await.unwrap().is_none());
 }

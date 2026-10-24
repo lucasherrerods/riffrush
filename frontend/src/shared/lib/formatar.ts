@@ -19,9 +19,9 @@ export function haQuantoTempo(data: string, agora = new Date()) {
   return `há ${anos} ${anos === 1 ? "ano" : "anos"}`;
 }
 
-/** De 0 a 1 para "87,65%". */
-export function porcentagem(fracao: number) {
-  return `${(fracao * 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+/** De 0 a 1 para "87,65%" (ou "88%" com `casas` = 0). */
+export function porcentagem(fracao: number, casas = 2) {
+  return `${(fracao * 100).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas })}%`;
 }
 
 export function precisaoDaPartida(acertos: number, total: number) {

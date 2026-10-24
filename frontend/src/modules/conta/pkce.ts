@@ -30,7 +30,7 @@ export function urlDoLoginDoGoogle({ clientId, redirectUri, desafio, estado }: P
     client_id: clientId,
     ...(redirectUri && { redirect_uri: redirectUri }),
     response_type: "code",
-    scope: "openid profile",
+    scope: "openid profile email",
     code_challenge: desafio,
     code_challenge_method: "S256",
     state: estado,

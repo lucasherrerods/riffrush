@@ -1,10 +1,24 @@
 use chrono::{DateTime, Utc};
 
 use crate::modules::conta::Conta;
-use crate::modules::progresso::{Dificuldade, Nivel};
+use crate::modules::progresso::{Dificuldade, Instrumento, Nivel};
 
 /// Quantas partidas o perfil mostra na lista das últimas.
 pub const PARTIDAS_RECENTES: u32 = 10;
+/// Quantas músicas entram na lista das mais tocadas.
+pub const MAIS_TOCADAS: u32 = 3;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PartidasNoInstrumento {
+    pub instrumento: Instrumento,
+    pub partidas: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MusicaMaisTocada {
+    pub musica_id: String,
+    pub partidas: u32,
+}
 
 /// As partidas de uma conta numa dificuldade, já somadas pelo banco.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -40,6 +54,9 @@ pub struct DadosDoPerfil {
     pub criada_em: DateTime<Utc>,
     pub musicas_distintas: u32,
     pub por_dificuldade: Vec<EstatisticasDaDificuldade>,
+    pub por_instrumento: Vec<PartidasNoInstrumento>,
+    /// Da mais tocada para a menos, até `MAIS_TOCADAS`.
+    pub mais_tocadas: Vec<MusicaMaisTocada>,
     pub recentes: Vec<PartidaRecente>,
 }
 
@@ -56,6 +73,9 @@ pub struct Perfil {
     pub musicas_distintas: u32,
     /// Sempre as quatro, da mais fácil para a mais difícil, mesmo sem partidas.
     pub por_dificuldade: Vec<EstatisticasDaDificuldade>,
+    /// Só os instrumentos jogados, do mais jogado para o menos.
+    pub por_instrumento: Vec<PartidasNoInstrumento>,
+    pub mais_tocadas: Vec<MusicaMaisTocada>,
     pub recentes: Vec<PartidaRecente>,
 }
 
@@ -87,6 +107,8 @@ pub fn montar_perfil(conta: Conta, dados: DadosDoPerfil) -> Perfil {
                 })
         })
         .collect();
+    let mut por_instrumento: Vec<_> = dados.por_instrumento.into_iter().filter(|i| i.partidas > 0).collect();
+    por_instrumento.sort_by_key(|i| std::cmp::Reverse(i.partidas));
     let acertos = por_dificuldade.iter().map(|e| e.acertos).sum();
     let notas = por_dificuldade.iter().map(|e| e.notas).sum();
     Perfil {
@@ -99,6 +121,8 @@ pub fn montar_perfil(conta: Conta, dados: DadosDoPerfil) -> Perfil {
         melhor_pontuacao: por_dificuldade.iter().map(|e| e.melhor_pontuacao).max().unwrap_or(0),
         musicas_distintas: dados.musicas_distintas,
         por_dificuldade,
+        por_instrumento,
+        mais_tocadas: dados.mais_tocadas,
         recentes: dados.recentes,
     }
 }
@@ -114,6 +138,7 @@ mod tests {
             id: Uuid::nil(),
             nome: "Lucas".into(),
             avatar: None,
+            email: None,
             xp_total: 0,
         }
     }
@@ -134,6 +159,8 @@ mod tests {
             criada_em: DateTime::UNIX_EPOCH,
             musicas_distintas: 3,
             por_dificuldade,
+            por_instrumento: vec![],
+            mais_tocadas: vec![],
             recentes: vec![],
         }
     }
@@ -162,5 +189,14 @@ mod tests {
         assert_eq!(perfil.por_dificuldade[0].partidas, 3);
         assert_eq!(perfil.por_dificuldade[3].precisao(), 0.9);
         assert_eq!(perfil.musicas_distintas, 3);
+    }
+
+    #[test]
+    fn instrumentos_vem_do_mais_jogado_para_o_menos_sem_os_zerados() {
+        let no = |instrumento, partidas| PartidasNoInstrumento { instrumento, partidas };
+        let mut entrada = dados(vec![]);
+        entrada.por_instrumento = vec![no(Instrumento::Baixo, 2), no(Instrumento::Teclado, 0), no(Instrumento::Guitarra, 7)];
+        let perfil = montar_perfil(conta(), entrada);
+        assert_eq!(perfil.por_instrumento, [no(Instrumento::Guitarra, 7), no(Instrumento::Baixo, 2)]);
     }
 }
