@@ -1,4 +1,4 @@
-import { ArrowLeft, Loader2, LogOut } from "lucide-react";
+import { ArrowLeft, Download, Loader2, LogOut } from "lucide-react";
 import type { Personagem } from "@/modules/character";
 import type { Musica } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
@@ -14,9 +14,11 @@ interface Props {
   volumeDosEfeitos: number;
   aoVoltar: () => void;
   aoEditarPersonagem: () => void;
+  /** Abre a busca de músicas sem sair da sala. */
+  aoBuscarMusicas: () => void;
 }
 
-export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVoltar, aoEditarPersonagem }: Props) {
+export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVoltar, aoEditarPersonagem, aoBuscarMusicas }: Props) {
   const { sala, info, erro, online, codigo, endereco } = useConexao();
   const musicasDaSala = online ? musicas.filter(podeTocarOnline) : musicas;
 
@@ -32,6 +34,11 @@ export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVo
         </Button>
         <h1 className="text-4xl leading-[1.1] font-black tracking-[-0.02em] max-md:text-2xl">Multijogador</h1>
         <div className="flex-1" />
+        {sala && (
+          <Button variant="ghost" aria-label="Baixar músicas" onClick={aoBuscarMusicas}>
+            <Download className="opacity-70" /> <span className="max-md:hidden">Baixar músicas</span>
+          </Button>
+        )}
         {sala && (
           <Button variant="ghost" onClick={() => sairDaSala()}>
             <LogOut className="opacity-70" /> Sair da sala

@@ -9,7 +9,7 @@ import { CartaoDaConta, ExcluirConta, GanhoDeXp, contasLigadas, sessaoDaConta, t
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/player";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
-import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
+import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, escolherNaSala, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { TelaDeBuscaDeMusicas, baixarDoEncore, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
@@ -39,6 +39,7 @@ export function App() {
   const [partida, setPartida] = useState(0);
   const [emRede, setEmRede] = useState<PartidaEmRede | null>(null);
   const [voltarDoPersonagemPara, setVoltarDoPersonagemPara] = useState<Tela>("menu");
+  const [voltarDaBuscaPara, setVoltarDaBuscaPara] = useState<Tela>("menu");
   const conexao = useConexao();
   const estreita = useTelaEstreita();
   const partidasVistas = useRef(0);
@@ -185,6 +186,12 @@ export function App() {
 
   const jogarBaixada = (md5: string) => {
     const posicao = musicas.findIndex((m) => m.md5DoEncore === md5);
+    // Veio do lobby: volta para a sala, e o host já deixa a música escolhida para todos.
+    if (voltarDaBuscaPara === "multijogador") {
+      const sala = conexao.sala;
+      if (posicao >= 0 && sala?.souHost) escolherNaSala(musicas[posicao], sala.dificuldade).catch((erro) => avisar.error(erro instanceof Error ? erro.message : String(erro)));
+      return setTela("multijogador");
+    }
     if (posicao >= 0) setIndice(posicao);
     setTela("selecao");
   };
@@ -214,7 +221,10 @@ export function App() {
                   setTela("personagem");
                 }}
                 aoConfigurar={() => setTela("configuracoes")}
-                aoBuscarMusicas={() => setTela("buscaDeMusicas")}
+                aoBuscarMusicas={() => {
+                  setVoltarDaBuscaPara("menu");
+                  setTela("buscaDeMusicas");
+                }}
                 aoAbrirDocumento={setTela}
               />
             )}
@@ -254,7 +264,7 @@ export function App() {
               />
             )}
             {tela === "buscaDeMusicas" && (
-              <TelaDeBuscaDeMusicas aoVoltar={() => setTela("menu")} aoBaixar={baixarMusica} baixadas={baixadasDoEncore} aoJogar={jogarBaixada} />
+              <TelaDeBuscaDeMusicas aoVoltar={() => setTela(voltarDaBuscaPara)} aoBaixar={baixarMusica} baixadas={baixadasDoEncore} aoJogar={jogarBaixada} />
             )}
             {tela === "configuracoes" && (
               <TelaDeConfiguracoes configuracoes={configuracoes} aoMudar={mudarConfiguracoes} aoVoltar={() => setTela("menu")} />
@@ -280,6 +290,10 @@ export function App() {
                 aoEditarPersonagem={() => {
                   setVoltarDoPersonagemPara("multijogador");
                   setTela("personagem");
+                }}
+                aoBuscarMusicas={() => {
+                  setVoltarDaBuscaPara("multijogador");
+                  setTela("buscaDeMusicas");
                 }}
               />
             )}

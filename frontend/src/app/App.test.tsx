@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { definirTelaCheia } from "@/modules/platform";
 import { carregarRecordes, salvarRecorde } from "@/modules/results";
-import { useConexao, voltarParaASala } from "@/modules/multiplayer";
+import { escolherNaSala, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { iniciarControle } from "@/modules/gamepad";
@@ -52,10 +52,18 @@ vi.mock("@/modules/gameplay", async (original) => ({
 
 vi.mock("@/modules/gamepad", async (original) => ({ ...(await original<typeof import("@/modules/gamepad")>()), iniciarControle: vi.fn(() => () => {}) }));
 
+// O lobby de verdade é testado no módulo multiplayer; aqui só importa a ligação entre as telas.
 vi.mock("@/modules/multiplayer", async (original) => ({
   ...(await original<typeof import("@/modules/multiplayer")>()),
+  TelaDeMultijogador: ({ aoBuscarMusicas }: { aoBuscarMusicas: () => void }) => (
+    <div>
+      <h1>Multijogador</h1>
+      <button onClick={aoBuscarMusicas}>Baixar músicas</button>
+    </div>
+  ),
   useConexao: vi.fn(() => ({ sala: null, endereco: "" })),
   voltarParaASala: vi.fn(),
+  escolherNaSala: vi.fn(async () => {}),
 }));
 
 vi.mock("@/modules/conta", async (original) => ({
@@ -319,5 +327,34 @@ describe("App em rede", () => {
     await usuario.click(screen.getByRole("button", { name: /Voltar para a sala/ }));
     expect(voltarParaASala).toHaveBeenCalled();
     expect(await screen.findByRole("heading", { name: "Multijogador" })).toBeInTheDocument();
+  });
+
+  describe("baixando músicas no lobby", () => {
+    const md5 = "8d633d2940da9b3acda9074c2385e672";
+    const salaNoLobby = { ...salaJogando, status: "naSala" as const, souHost: true, meuId: 1, partidas: 0 };
+
+    beforeEach(() => {
+      vi.mocked(useConexao).mockReturnValue({ sala: salaNoLobby, endereco: "" });
+      vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ found: 1, data: [{ md5, name: "Do Encore", artist: "Banda" }] }))));
+    });
+
+    it("Esc na busca volta para a sala, não para o menu", async () => {
+      const usuario = abrir();
+      await usuario.click(screen.getByRole("button", { name: "Multijogador" }));
+      await usuario.click(await screen.findByRole("button", { name: /Baixar músicas/ }));
+      expect(await screen.findByRole("heading", { name: "Busca músicas" })).toBeInTheDocument();
+      await usuario.keyboard("{Escape}");
+      expect(await screen.findByRole("heading", { name: "Multijogador" })).toBeInTheDocument();
+    });
+
+    it("jogar a música baixada volta para a sala com ela escolhida", async () => {
+      const usuario = abrir();
+      await usuario.click(screen.getByRole("button", { name: "Multijogador" }));
+      await usuario.click(await screen.findByRole("button", { name: /Baixar músicas/ }));
+      await usuario.click(await screen.findByRole("button", { name: "Baixar Do Encore" }));
+      await usuario.click(await screen.findByRole("button", { name: "Jogar Do Encore" }));
+      expect(await screen.findByRole("heading", { name: "Multijogador" })).toBeInTheDocument();
+      expect(escolherNaSala).toHaveBeenCalledWith(expect.objectContaining({ titulo: "Do Encore", md5DoEncore: md5 }), "expert");
+    });
   });
 });
