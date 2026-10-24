@@ -21,10 +21,12 @@ impl VerificadorDoBanco for BancoFalso {
 }
 
 async fn chamar(banco_ok: bool, caminho: &str) -> (StatusCode, Value) {
+    let conta = riffrush_api::modules::conta::fakes::servicos().0;
     let app = riffrush_api::app(
         EstadoDoApp {
             banco: Arc::new(BancoFalso(banco_ok)),
-            conta: riffrush_api::modules::conta::fakes::servicos().0,
+            ranking: riffrush_api::modules::ranking::fakes::servicos_do_ranking(conta.clone()).0,
+            conta,
         },
         &["http://localhost:1420".into()],
     );

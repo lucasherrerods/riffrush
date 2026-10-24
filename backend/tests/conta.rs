@@ -8,6 +8,7 @@ use axum::http::{Request, StatusCode};
 use axum::Router;
 use http_body_util::BodyExt;
 use riffrush_api::modules::conta::fakes::servicos;
+use riffrush_api::modules::ranking::fakes::servicos_do_ranking;
 use riffrush_api::modules::saude::VerificadorDoBanco;
 use riffrush_api::shared::estado::EstadoDoApp;
 use serde_json::{json, Value};
@@ -23,10 +24,12 @@ impl VerificadorDoBanco for BancoOk {
 }
 
 fn app() -> Router {
+    let conta = servicos().0;
     riffrush_api::app(
         EstadoDoApp {
             banco: Arc::new(BancoOk),
-            conta: servicos().0,
+            ranking: servicos_do_ranking(conta.clone()).0,
+            conta,
         },
         &[],
     )

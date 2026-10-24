@@ -12,7 +12,7 @@ use shared::estado::EstadoDoApp;
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida),
+    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida, modules::ranking::ranking),
     components(schemas(
         modules::saude::RespostaDeSaude,
         modules::conta::CorpoDoLogin,
@@ -20,7 +20,9 @@ use shared::estado::EstadoDoApp;
         modules::conta::RespostaDaConta,
         modules::conta::NivelDaConta,
         modules::conta::CorpoDaPartida,
-        modules::conta::RespostaDaPartida
+        modules::conta::RespostaDaPartida,
+        modules::ranking::RespostaDoRanking,
+        modules::ranking::PosicaoNoRanking
     )),
     modifiers(&Token)
 )]
@@ -49,6 +51,7 @@ pub fn app(estado: EstadoDoApp, origens_permitidas: &[String]) -> Router {
     Router::new()
         .merge(modules::saude::rotas())
         .merge(modules::conta::rotas())
+        .merge(modules::ranking::rotas())
         .route("/openapi.json", get(|| async { Json(Documentacao::openapi()) }))
         .with_state(estado)
         .layer(cors)
