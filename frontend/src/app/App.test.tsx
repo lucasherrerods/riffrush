@@ -57,7 +57,7 @@ vi.mock("@/modules/multiplayer", async (original) => ({
   ...(await original<typeof import("@/modules/multiplayer")>()),
   TelaDeMultijogador: ({ aoBuscarMusicas }: { aoBuscarMusicas: () => void }) => (
     <div>
-      <h1>Multijogador</h1>
+      <h1>Multiplayer</h1>
       <button onClick={aoBuscarMusicas}>Baixar músicas</button>
     </div>
   ),
@@ -118,20 +118,20 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
   });
 
-  it("Busca músicas abre a tela de busca e Esc volta ao menu", async () => {
+  it("Buscar músicas abre a tela de busca e Esc volta ao menu", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ found: 0, data: [] }))));
     const usuario = abrir();
-    await usuario.click(screen.getByRole("button", { name: "Busca músicas" }));
-    expect(await screen.findByRole("heading", { name: "Busca músicas" })).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Buscar músicas" }));
+    expect(await screen.findByRole("heading", { name: "Buscar músicas" })).toBeInTheDocument();
     await usuario.keyboard("{Escape}");
     expect(await screen.findByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
   });
 
-  it("baixar na Busca músicas importa, salva e deixa jogar a música", async () => {
+  it("baixar na Buscar músicas importa, salva e deixa jogar a música", async () => {
     const md5 = "8d633d2940da9b3acda9074c2385e672";
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ found: 1, data: [{ md5, name: "Do Encore", artist: "Banda" }] }))));
     const usuario = abrir();
-    await usuario.click(screen.getByRole("button", { name: "Busca músicas" }));
+    await usuario.click(screen.getByRole("button", { name: "Buscar músicas" }));
     await usuario.click(await screen.findByRole("button", { name: "Baixar Do Encore" }));
     await usuario.click(await screen.findByRole("button", { name: "Jogar Do Encore" }));
     expect(await screen.findByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
@@ -341,10 +341,10 @@ describe("App em rede", () => {
     inicio: performance.now() + 5000,
   };
 
-  it("Multijogador abre a tela da sala", async () => {
+  it("Multiplayer abre a tela da sala", async () => {
     const usuario = abrir();
-    await usuario.click(screen.getByRole("button", { name: "Multijogador" }));
-    expect(await screen.findByRole("heading", { name: "Multijogador" })).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Multiplayer" }));
+    expect(await screen.findByRole("heading", { name: "Multiplayer" })).toBeInTheDocument();
   });
 
   it("quando o host dá a largada, abre a partida em rede com os adversários", async () => {
@@ -361,7 +361,7 @@ describe("App em rede", () => {
     expect(await screen.findByText("Vitor")).toBeInTheDocument();
     await usuario.click(screen.getByRole("button", { name: /Voltar para a sala/ }));
     expect(voltarParaASala).toHaveBeenCalled();
-    expect(await screen.findByRole("heading", { name: "Multijogador" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Multiplayer" })).toBeInTheDocument();
   });
 
   describe("baixando músicas no lobby", () => {
@@ -375,20 +375,20 @@ describe("App em rede", () => {
 
     it("Esc na busca volta para a sala, não para o menu", async () => {
       const usuario = abrir();
-      await usuario.click(screen.getByRole("button", { name: "Multijogador" }));
+      await usuario.click(screen.getByRole("button", { name: "Multiplayer" }));
       await usuario.click(await screen.findByRole("button", { name: /Baixar músicas/ }));
-      expect(await screen.findByRole("heading", { name: "Busca músicas" })).toBeInTheDocument();
+      expect(await screen.findByRole("heading", { name: "Buscar músicas" })).toBeInTheDocument();
       await usuario.keyboard("{Escape}");
-      expect(await screen.findByRole("heading", { name: "Multijogador" })).toBeInTheDocument();
+      expect(await screen.findByRole("heading", { name: "Multiplayer" })).toBeInTheDocument();
     });
 
     it("jogar a música baixada volta para a sala com ela escolhida", async () => {
       const usuario = abrir();
-      await usuario.click(screen.getByRole("button", { name: "Multijogador" }));
+      await usuario.click(screen.getByRole("button", { name: "Multiplayer" }));
       await usuario.click(await screen.findByRole("button", { name: /Baixar músicas/ }));
       await usuario.click(await screen.findByRole("button", { name: "Baixar Do Encore" }));
       await usuario.click(await screen.findByRole("button", { name: "Jogar Do Encore" }));
-      expect(await screen.findByRole("heading", { name: "Multijogador" })).toBeInTheDocument();
+      expect(await screen.findByRole("heading", { name: "Multiplayer" })).toBeInTheDocument();
       expect(escolherNaSala).toHaveBeenCalledWith(expect.objectContaining({ titulo: "Do Encore", md5DoEncore: md5 }), "expert");
     });
   });

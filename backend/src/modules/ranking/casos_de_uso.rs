@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::dominio::{montar_ranking, Ranking, TAMANHO_DO_TOP};
+use super::dominio::{montar_ranking, LinhaDoGeral, Ranking, TAMANHO_DO_TOP};
 use super::portas::RepositorioDoRanking;
 use crate::modules::conta::{FalhaExterna, ServicosDaConta, TAMANHO_MAXIMO_DO_ID_DA_MUSICA};
 use crate::modules::progresso::{Dificuldade, Instrumento};
@@ -25,13 +25,24 @@ impl ServicosDoRanking {
         if musica_id.is_empty() || musica_id.len() > TAMANHO_MAXIMO_DO_ID_DA_MUSICA {
             return Err(ErroDoRanking::MusicaInvalida);
         }
-        // Sessão vencida ou inválida não esconde o ranking: só fica sem o recorde pessoal.
-        let conta = match token {
-            Some(token) => self.conta.conta_da_sessao(token).await.ok().map(|c| c.id),
-            None => None,
-        };
+        let conta = self.conta_de(token).await;
         let linhas = self.repositorio.linhas(musica_id, dificuldade, instrumento, TAMANHO_DO_TOP, conta).await?;
         Ok(montar_ranking(linhas, conta))
+    }
+
+    /// Os jogadores com mais XP. Com o token, vem também a posição de quem pediu.
+    pub async fn geral(&self, token: Option<&str>) -> Result<Ranking<LinhaDoGeral>, ErroDoRanking> {
+        let conta = self.conta_de(token).await;
+        let linhas = self.repositorio.geral(TAMANHO_DO_TOP, conta).await?;
+        Ok(montar_ranking(linhas, conta))
+    }
+
+    /// Sessão vencida ou inválida não esconde o ranking: só fica sem a linha pessoal.
+    async fn conta_de(&self, token: Option<&str>) -> Option<uuid::Uuid> {
+        match token {
+            Some(token) => self.conta.conta_da_sessao(token).await.ok().map(|c| c.id),
+            None => None,
+        }
     }
 }
 
@@ -50,6 +61,7 @@ pub mod fakes {
     #[derive(Default)]
     pub struct RankingEmMemoria {
         pub linhas: Mutex<Vec<(String, Dificuldade, Instrumento, LinhaDoRanking)>>,
+        pub geral: Mutex<Vec<LinhaDoGeral>>,
         /// O limite do último pedido, para conferir que o caso de uso pede o top inteiro.
         pub ultimo_limite: Mutex<Option<u32>>,
     }
@@ -82,6 +94,18 @@ pub mod fakes {
                 .iter()
                 .filter(|(m, d, i, l)| m == musica_id && *d == dificuldade && *i == instrumento && (l.posicao <= ate || Some(l.conta_id) == conta))
                 .map(|(_, _, _, l)| l.clone())
+                .collect())
+        }
+
+        async fn geral(&self, ate: u32, conta: Option<Uuid>) -> Result<Vec<LinhaDoGeral>, FalhaExterna> {
+            *self.ultimo_limite.lock().unwrap() = Some(ate);
+            Ok(self
+                .geral
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|l| l.posicao <= ate || Some(l.conta_id) == conta)
+                .cloned()
                 .collect())
         }
     }
@@ -164,5 +188,28 @@ mod tests {
             servicos.ranking(&enorme, Dificuldade::Medio, Instrumento::Guitarra, None).await,
             Err(ErroDoRanking::MusicaInvalida)
         ));
+    }
+
+    #[tokio::test]
+    async fn geral_logado_traz_a_propria_posicao() {
+        let conta = servicos().0;
+        let entrada = conta.entrar_com_google(&pedido("bom")).await.unwrap();
+        let (servicos, repositorio) = servicos_do_ranking(conta);
+        let geral = |posicao, conta_id| LinhaDoGeral {
+            posicao,
+            jogadores: 80,
+            conta_id,
+            nome: "alguém".into(),
+            avatar: None,
+            xp_total: 500,
+        };
+        *repositorio.geral.lock().unwrap() = vec![geral(1, Uuid::from_u128(5)), geral(77, entrada.conta.id)];
+
+        let ranking = servicos.geral(Some(&entrada.token)).await.unwrap();
+
+        assert_eq!(ranking.top.len(), 1);
+        assert_eq!(ranking.meu.map(|l| l.posicao), Some(77));
+        assert_eq!(*repositorio.ultimo_limite.lock().unwrap(), Some(TAMANHO_DO_TOP));
+        assert_eq!(servicos.geral(None).await.unwrap().meu, None);
     }
 }

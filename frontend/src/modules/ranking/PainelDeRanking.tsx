@@ -1,8 +1,8 @@
-import { Loader2, Trophy, UserRound } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { Dificuldade, Instrumento } from "@/modules/songs";
-import { cn } from "@/shared/lib/utils";
 import type { PosicaoNoRanking } from "./api";
 import { haQuantoTempo, precisaoDaPartida } from "@/shared/lib/formatar";
+import { LinhaComPosicao } from "./LinhaComPosicao";
 import { useRanking, type OpcoesDoRanking } from "./useRanking";
 
 interface Props extends OpcoesDoRanking {
@@ -62,22 +62,13 @@ export function PainelDeRanking({ musicaId, dificuldade, instrumento = "guitarra
 
 function LinhaDoRanking({ linha, minha }: { linha: PosicaoNoRanking; minha: boolean }) {
   return (
-    // Compacta: a 720p cabem várias linhas no espaço que sobra ao lado da roda.
-    <li className={cn("chapa flex items-center gap-2 px-2 py-1 pr-4", minha ? "border-primaria bg-superficie-elevada" : "border-borda bg-superficie")}>
-      <span className={cn("w-12 shrink-0 text-center font-titulo text-xl", linha.posicao <= 3 ? "text-ouro" : "text-texto-suave")}>#{linha.posicao}</span>
-      {linha.avatar ? (
-        <img src={linha.avatar} alt="" referrerPolicy="no-referrer" className="size-8 shrink-0 rounded-sm" />
-      ) : (
-        <UserRound className="size-8 shrink-0 text-texto-suave opacity-70" aria-hidden />
-      )}
-      <span className="flex min-w-0 flex-1 items-baseline gap-2">
-        <span className="truncate text-base font-bold">{linha.nome}</span>
-        <span className="shrink-0 text-base text-texto-suave">
-          {precisaoDaPartida(linha.acertos, linha.total)} · {haQuantoTempo(linha.jogada_em)}
-        </span>
-      </span>
-      {linha.posicao === 1 && <Trophy className="size-4 shrink-0 text-ouro opacity-70" aria-label="Primeiro lugar" />}
-      <span className="shrink-0 font-mono text-xl font-black tabular-nums">{formatar(linha.pontos)}</span>
-    </li>
+    <LinhaComPosicao
+      posicao={linha.posicao}
+      nome={linha.nome}
+      avatar={linha.avatar}
+      minha={minha}
+      detalhe={`${precisaoDaPartida(linha.acertos, linha.total)} · ${haQuantoTempo(linha.jogada_em)}`}
+      valor={formatar(linha.pontos)}
+    />
   );
 }

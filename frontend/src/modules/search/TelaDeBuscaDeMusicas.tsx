@@ -133,7 +133,7 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
           <ArrowLeft />
         </Button>
-        <h1 className="text-4xl leading-[1.1] text-destaque max-md:text-2xl">Busca músicas</h1>
+        <h1 className="text-4xl leading-[1.1] text-destaque max-md:text-2xl">Buscar músicas</h1>
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 p-8 max-md:p-4">

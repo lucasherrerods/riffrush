@@ -223,3 +223,34 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
     assert_eq!(mais_tocadas, [("a", 2), ("b", 1)]);
     assert!(repositorio.dados(Uuid::new_v4(), 10).await.unwrap().is_none());
 }
+
+#[tokio::test]
+async fn ranking_geral_ordena_por_xp_e_ignora_quem_nao_jogou() {
+    let Some(banco) = banco().await else { return };
+    let ranking = RankingPostgres(banco.0.clone());
+    let sem_xp = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let jogador = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    banco
+        .registrar_partida(&PartidaRegistrada {
+            conta_id: jogador.id,
+            musica_id: "teste:geral".into(),
+            instrumento: Instrumento::Guitarra,
+            pontos: 10,
+            resumo: ResumoDaPartida {
+                dificuldade: Dificuldade::Facil,
+                acertos: 1,
+                total: 1,
+                derrota: false,
+                fantasma: false,
+            },
+            xp_ganho: 1_000_000_000,
+            jogada_em: Utc::now(),
+        })
+        .await
+        .unwrap();
+
+    let linhas = ranking.geral(1, Some(sem_xp.id)).await.unwrap();
+
+    // Com um XP tão alto, este jogador é o primeiro mesmo com outras contas no banco.
+    assert_eq!(linhas.iter().map(|l| (l.posicao, l.conta_id)).collect::<Vec<_>>(), [(1, jogador.id)]);
+}

@@ -19,19 +19,62 @@ pub struct LinhaDoRanking {
     pub jogada_em: DateTime<Utc>,
 }
 
+/// Um jogador no ranking geral: a ordem é pelo XP total da conta.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Ranking {
-    pub top: Vec<LinhaDoRanking>,
+pub struct LinhaDoGeral {
+    pub posicao: u32,
+    /// Quantas contas já ganharam XP.
     pub jogadores: u32,
-    /// O recorde de quem pediu, mesmo fora do top.
-    pub meu: Option<LinhaDoRanking>,
+    pub conta_id: Uuid,
+    pub nome: String,
+    pub avatar: Option<String>,
+    pub xp_total: u64,
+}
+
+/// O que o ranking da música e o geral têm em comum para separar o top da linha de quem pediu.
+pub trait Posicionada: Clone {
+    fn posicao(&self) -> u32;
+    fn jogadores(&self) -> u32;
+    fn conta_id(&self) -> Uuid;
+}
+
+impl Posicionada for LinhaDoRanking {
+    fn posicao(&self) -> u32 {
+        self.posicao
+    }
+    fn jogadores(&self) -> u32 {
+        self.jogadores
+    }
+    fn conta_id(&self) -> Uuid {
+        self.conta_id
+    }
+}
+
+impl Posicionada for LinhaDoGeral {
+    fn posicao(&self) -> u32 {
+        self.posicao
+    }
+    fn jogadores(&self) -> u32 {
+        self.jogadores
+    }
+    fn conta_id(&self) -> Uuid {
+        self.conta_id
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Ranking<L = LinhaDoRanking> {
+    pub top: Vec<L>,
+    pub jogadores: u32,
+    /// A linha de quem pediu, mesmo fora do top.
+    pub meu: Option<L>,
 }
 
 /// O banco devolve o top e, se existir, a linha de quem pediu. Aqui cada uma vai para o seu lugar.
-pub fn montar_ranking(linhas: Vec<LinhaDoRanking>, conta: Option<Uuid>) -> Ranking {
-    let jogadores = linhas.first().map_or(0, |l| l.jogadores);
-    let meu = conta.and_then(|id| linhas.iter().find(|l| l.conta_id == id).cloned());
-    let top = linhas.into_iter().filter(|l| l.posicao <= TAMANHO_DO_TOP).collect();
+pub fn montar_ranking<L: Posicionada>(linhas: Vec<L>, conta: Option<Uuid>) -> Ranking<L> {
+    let jogadores = linhas.first().map_or(0, |l| l.jogadores());
+    let meu = conta.and_then(|id| linhas.iter().find(|l| l.conta_id() == id).cloned());
+    let top = linhas.into_iter().filter(|l| l.posicao() <= TAMANHO_DO_TOP).collect();
     Ranking { top, jogadores, meu }
 }
 
@@ -54,9 +97,25 @@ mod tests {
     }
 
     #[test]
+    fn o_geral_separa_o_top_e_quem_pediu_do_mesmo_jeito() {
+        let geral = |posicao: u32, conta: u128| LinhaDoGeral {
+            posicao,
+            jogadores: 300,
+            conta_id: Uuid::from_u128(conta),
+            nome: "alguém".into(),
+            avatar: None,
+            xp_total: 10_000 - u64::from(posicao),
+        };
+        let ranking = montar_ranking(vec![geral(1, 1), geral(120, 9)], Some(Uuid::from_u128(9)));
+        assert_eq!(ranking.top.len(), 1);
+        assert_eq!(ranking.meu.map(|l| l.posicao), Some(120));
+        assert_eq!(ranking.jogadores, 300);
+    }
+
+    #[test]
     fn sem_recordes_o_ranking_fica_vazio() {
         assert_eq!(
-            montar_ranking(vec![], Some(Uuid::nil())),
+            montar_ranking::<LinhaDoRanking>(vec![], Some(Uuid::nil())),
             Ranking {
                 top: vec![],
                 jogadores: 0,

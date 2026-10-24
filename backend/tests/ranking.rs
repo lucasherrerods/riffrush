@@ -11,7 +11,7 @@ use http_body_util::BodyExt;
 use riffrush_api::modules::conta::fakes::{pedido, servicos};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento};
 use riffrush_api::modules::ranking::fakes::{servicos_do_ranking, RankingEmMemoria};
-use riffrush_api::modules::ranking::LinhaDoRanking;
+use riffrush_api::modules::ranking::{LinhaDoGeral, LinhaDoRanking};
 use riffrush_api::modules::saude::VerificadorDoBanco;
 use riffrush_api::shared::estado::EstadoDoApp;
 use serde_json::Value;
@@ -141,4 +141,39 @@ async fn a_rota_esta_no_openapi() {
     let (app, _, _) = app().await;
     let (_, corpo) = chamar(&app, "/openapi.json", None).await;
     assert!(corpo["paths"]["/ranking"]["get"].is_object());
+}
+
+#[tokio::test]
+async fn o_geral_traz_o_top_por_xp_com_nivel_e_a_propria_posicao() {
+    let (app, token, repositorio) = app().await;
+    let (_, eu) = chamar(&app, "/eu", Some(&token)).await;
+    let minha_conta = uuid::Uuid::parse_str(eu["id"].as_str().unwrap()).unwrap();
+    *repositorio.geral.lock().unwrap() = vec![
+        LinhaDoGeral {
+            posicao: 1,
+            jogadores: 40,
+            conta_id: Uuid::from_u128(999_999),
+            nome: "Srr 4".into(),
+            avatar: None,
+            xp_total: 100,
+        },
+        LinhaDoGeral {
+            posicao: 63,
+            jogadores: 40,
+            conta_id: minha_conta,
+            nome: "Lucas".into(),
+            avatar: None,
+            xp_total: 5,
+        },
+    ];
+
+    let (status, corpo) = chamar(&app, "/ranking/geral", Some(&token)).await;
+
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(corpo["jogadores"], 40);
+    assert_eq!(corpo["top"][0]["nome"], "Srr 4");
+    assert_eq!(corpo["top"][0]["nivel"]["nivel"], 2);
+    assert_eq!(corpo["meu"]["posicao"], 63);
+    assert!(chamar(&app, "/ranking/geral", None).await.1["meu"].is_null());
+    assert!(chamar(&app, "/openapi.json", None).await.1["paths"]["/ranking/geral"]["get"].is_object());
 }
