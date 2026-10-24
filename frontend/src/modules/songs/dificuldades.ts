@@ -1,11 +1,31 @@
-import { DIFICULDADES, type Dificuldade, type Musica } from "./tipos";
+import { DIFICULDADES, INSTRUMENTOS, type Dificuldade, type Instrumento, type Musica, type Trilhas } from "./tipos";
 
 const ORDEM = DIFICULDADES.map((d) => d.id);
 
-/** As dificuldades que a música tem de verdade. Sem a lista, o chart é gerado e existe nas quatro. */
-export function dificuldadesDaMusica(musica: Pick<Musica, "dificuldades">) {
-  const { dificuldades } = musica;
-  return dificuldades?.length ? DIFICULDADES.filter((d) => dificuldades.includes(d.id)) : DIFICULDADES;
+type ComTrilhas = Pick<Musica, "trilhas" | "dificuldades">;
+
+/** As trilhas da música. Sem elas, o chart é gerado na guitarra, nas quatro dificuldades. */
+function trilhasDaMusica({ trilhas, dificuldades }: ComTrilhas): Trilhas {
+  if (trilhas && Object.keys(trilhas).length) return trilhas;
+  return { guitarra: dificuldades?.length ? dificuldades : ORDEM };
+}
+
+/** Os instrumentos que a música tem, na ordem da seleção. */
+export function instrumentosDaMusica(musica: ComTrilhas) {
+  const trilhas = trilhasDaMusica(musica);
+  return INSTRUMENTOS.filter((i) => trilhas[i.id]?.length);
+}
+
+/** O instrumento pedido ou, se a música não o tiver, o primeiro que ela tem. */
+export function instrumentoDaMusica(musica: ComTrilhas, pedido: Instrumento): Instrumento {
+  const tem = instrumentosDaMusica(musica);
+  return tem.some((i) => i.id === pedido) ? pedido : tem[0].id;
+}
+
+/** As dificuldades que a música tem de verdade no instrumento. */
+export function dificuldadesDaMusica(musica: ComTrilhas, instrumento: Instrumento = "guitarra") {
+  const dificuldades = trilhasDaMusica(musica)[instrumentoDaMusica(musica, instrumento)]!;
+  return DIFICULDADES.filter((d) => dificuldades.includes(d.id));
 }
 
 /** A dificuldade pedida ou, se não houver, a mais próxima (empate vai para a mais fácil). */

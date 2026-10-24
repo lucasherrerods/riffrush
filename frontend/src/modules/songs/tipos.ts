@@ -7,6 +7,20 @@ export const DIFICULDADES: { id: Dificuldade; rotulo: string }[] = [
   { id: "expert", rotulo: "Expert" },
 ];
 
+export type Instrumento = "guitarra" | "baixo" | "ritmica" | "coop" | "teclado";
+
+/** Os instrumentos de 5 trastes que um chart do Clone Hero pode ter, na ordem em que aparecem na seleção. */
+export const INSTRUMENTOS: { id: Instrumento; rotulo: string }[] = [
+  { id: "guitarra", rotulo: "Guitarra" },
+  { id: "baixo", rotulo: "Baixo" },
+  { id: "ritmica", rotulo: "Rítmica" },
+  { id: "coop", rotulo: "Guitarra coop" },
+  { id: "teclado", rotulo: "Teclado" },
+];
+
+/** As dificuldades que o chart tem em cada instrumento. */
+export type Trilhas = Partial<Record<Instrumento, Dificuldade[]>>;
+
 export interface Nota {
   tempo: number;
   pista: number;
@@ -38,7 +52,9 @@ export interface Musica {
   arquivoDeVideo?: Blob;
   /** Pacote do Clone Hero, com chart feito à mão. */
   sng?: boolean;
-  /** As dificuldades que o chart do pacote tem. Sem ela, o chart é gerado nas quatro. */
+  /** Os instrumentos e dificuldades que o chart do pacote tem. Sem elas, o chart é gerado na guitarra, nas quatro. */
+  trilhas?: Trilhas;
+  /** Como o pacote era guardado antes dos instrumentos: as dificuldades da guitarra. */
   dificuldades?: Dificuldade[];
   imagemDeCapa?: string;
   /** O arquivo está salvo no PC e só é lido na hora de tocar. */
