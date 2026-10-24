@@ -96,6 +96,14 @@ describe("SessaoDaConta", () => {
     expect(semRede.ambiente.local.getItem("riffrush:token")).toBe("tok");
   });
 
+  it("entrega o token só com a conta carregada, para outros módulos mostrarem dados da pessoa", async () => {
+    const { sessao, ambiente } = montar();
+    ambiente.local.setItem("riffrush:token", "tok");
+    expect(sessao.token()).toBeNull();
+    await sessao.iniciar();
+    expect(sessao.token()).toBe("tok");
+  });
+
   it("registrar a partida atualiza o nível da conta", async () => {
     const depois = { nivel: 2, xp_no_nivel: 50, xp_para_o_proximo: 283 };
     const { sessao, ambiente } = montar({ registrarPartida: vi.fn(async () => ({ xp_ganho: 150, antes: conta.nivel, depois })) });

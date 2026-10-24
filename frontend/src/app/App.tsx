@@ -13,7 +13,8 @@ import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEsta
 import { TelaDeBuscaDeMusicas, baixarDoEncore, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
-import { MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, type Dificuldade, type Musica } from "@/modules/songs";
+import { MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, type Dificuldade, type Musica } from "@/modules/songs";
+import { PainelDeRanking } from "@/modules/ranking";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -52,6 +53,9 @@ export function App() {
   }, [salvas]);
 
   const musica = emRede?.musica ?? musicas[indice];
+  // Lida no fim da partida sem entrar nas dependências do terminar, que reiniciariam a partida.
+  const musicaDaPartida = useRef(musica);
+  musicaDaPartida.current = musica;
   // A dificuldade escolhida fica guardada; a música que não a tem usa a mais próxima do chart dela.
   const dificuldades = dificuldadesDaMusica(musicas[indice] ?? {}).map((d) => d.id);
   const dificuldadeDaSelecao = dificuldadeMaisProxima(dificuldades, dificuldade) ?? dificuldade;
@@ -157,7 +161,7 @@ export function App() {
       setXpDaPartida(null);
       if (!configuracoes.bot) {
         sessaoDaConta
-          .registrarPartida(r)
+          .registrarPartida({ ...r, musicaId: idDoRanking(musicaDaPartida.current) })
           .then(setXpDaPartida)
           .catch((erro) => avisar.error(`Não deu para registrar o XP: ${erro instanceof Error ? erro.message : String(erro)}`));
       }
@@ -268,6 +272,7 @@ export function App() {
                   });
                   avisar.success(`${removida.titulo} removida.`);
                 }}
+                ranking={contasLigadas && escolhida ? <PainelDeRanking musicaId={idDoRanking(escolhida)} dificuldade={dificuldadeDaSelecao} /> : undefined}
               />
             )}
             {tela === "buscaDeMusicas" && (

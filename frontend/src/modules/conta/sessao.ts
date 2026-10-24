@@ -1,5 +1,6 @@
 import type { Resultado } from "@/modules/gameplay";
 import { invoke } from "@tauri-apps/api/core";
+import { URL_DA_API } from "@/shared/lib/api";
 import { ErroDaApi, criarApi, type ApiDaConta, type ClienteDoGoogle, type ContaDaApi, type XpDaPartida } from "./api";
 import { desafioDoVerificador, gerarVerificador, lerRetornoDoGoogle, urlDoLoginDoGoogle } from "./pkce";
 
@@ -50,6 +51,11 @@ export class SessaoDaConta {
   };
 
   estado = () => this.estadoAtual;
+
+  /** O token de quem está logado, para rotas que mostram algo a mais para a pessoa (o ranking). */
+  token() {
+    return this.estadoAtual.conta ? this.ambiente.local.getItem(CHAVE_DO_TOKEN) : null;
+  }
 
   /** Na abertura: termina um login que voltou do Google ou retoma a sessão guardada. */
   async iniciar() {
@@ -144,7 +150,6 @@ export class SessaoDaConta {
   }
 }
 
-const URL_DA_API = import.meta.env.VITE_URL_DA_API ?? "";
 const noDesktop = "__TAURI_INTERNALS__" in window;
 const CLIENT_ID = (noDesktop ? import.meta.env.VITE_GOOGLE_CLIENT_ID_DESKTOP : import.meta.env.VITE_GOOGLE_CLIENT_ID) ?? "";
 
