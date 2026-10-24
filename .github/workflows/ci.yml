@@ -14,12 +14,16 @@ jobs:
     name: Testes e build web
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm test
       - run: npm run build
@@ -28,6 +32,9 @@ jobs:
     name: Testes do Rust
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - name: Dependências do Tauri no Linux
@@ -39,7 +46,37 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri
+          workspaces: frontend/src-tauri
       # O Tauri exige que a pasta do frontend exista para compilar, mesmo vazia.
       - run: mkdir -p dist
       - run: cargo test --manifest-path src-tauri/Cargo.toml
+
+  backend:
+    name: Testes do backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: riffrush
+          POSTGRES_PASSWORD: riffrush
+          POSTGRES_DB: riffrush
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://riffrush:riffrush@localhost:5432/riffrush
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
