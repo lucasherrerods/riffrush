@@ -1,9 +1,10 @@
-import { ChevronsUpDown, Loader2, LogIn, LogOut, UserRound } from "lucide-react";
+import { ChevronsUpDown, Loader2, LogOut, UserRound } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu";
 import { avisar } from "@/shared/ui/avisos";
 import { cn } from "@/shared/lib/utils";
+import { LogoDoGoogle } from "./LogoDoGoogle";
 import { sessaoDaConta } from "./sessao";
 import { useConta } from "./useConta";
 
@@ -28,9 +29,14 @@ export function CartaoDaConta() {
 
   if (!conta) {
     return (
-      <Button variant="ghost" onClick={() => void sessaoDaConta.entrar().catch((erro) => avisar.error(String(erro)))}>
-        <LogIn className="opacity-70" />
-        Entrar com Google
+      <Button
+        variant="outline"
+        aria-label="Entrar com Google"
+        className="gap-2.5 px-4 font-medium"
+        onClick={() => void sessaoDaConta.entrar().catch((erro) => avisar.error(String(erro)))}
+      >
+        <LogoDoGoogle className="size-4" />
+        Google
       </Button>
     );
   }

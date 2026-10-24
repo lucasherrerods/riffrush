@@ -8,6 +8,17 @@ const conta = { id: "1", nome: "Lucas", avatar: null, xp_total: 0, nivel: { nive
 describe("CartaoDaConta", () => {
   afterEach(() => vi.restoreAllMocks());
 
+  it("sem conta, mostra o botão do Google que inicia o login", async () => {
+    vi.spyOn(sessaoDaConta, "estado").mockReturnValue({ conta: null, carregando: false });
+    const entrar = vi.spyOn(sessaoDaConta, "entrar").mockResolvedValue();
+    render(<CartaoDaConta />);
+
+    const botao = screen.getByRole("button", { name: "Entrar com Google" });
+    expect(botao).toHaveTextContent("Google");
+    await userEvent.setup().click(botao);
+    expect(entrar).toHaveBeenCalled();
+  });
+
   it("mostra nome e nível num botão que abre o menu com a opção de sair", async () => {
     vi.spyOn(sessaoDaConta, "estado").mockReturnValue({ conta, carregando: false });
     const sair = vi.spyOn(sessaoDaConta, "sair").mockResolvedValue();
