@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Play, Power, Search, Settings2, Shirt, Users, Zap, type LucideIcon } from "lucide-react";
+import { FileText, Info, Play, Power, Search, Settings2, Shield, Shirt, Users, Zap, type LucideIcon } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Documento } from "@/modules/legal";
 import { abrirLink, fecharJanela } from "@/modules/platform";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
+import { Button } from "@/shared/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/shared/ui/dialog";
 
 interface Props {
   volumeDosEfeitos: number;
@@ -29,10 +31,12 @@ const URL_DO_PROJETO = "https://github.com/lucasherrerods/riffrush";
 
 export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoAbrirDocumento }: Props) {
   const [selecionado, setSelecionado] = useState(0);
+  const [sobreAberto, setSobreAberto] = useState(false);
   const comuns: Item[] = [
     { rotulo: "Busca músicas", icone: Search, acao: aoBuscarMusicas },
     { rotulo: "Personagem", icone: Shirt, acao: aoPersonagem },
     { rotulo: "Configurações", icone: Settings2, acao: aoConfigurar },
+    { rotulo: "Sobre", icone: Info, acao: () => setSobreAberto(true) },
   ];
   const itens: Item[] = noCelular
     ? [{ rotulo: "Entrar na sala", icone: Users, acao: aoMultijogador }, { rotulo: "Jogar sozinho", icone: Play, acao: aoJogar }, ...comuns]
@@ -49,6 +53,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
   };
 
   useTeclado((evento) => {
+    if (sobreAberto) return;
     if (evento.code === "ArrowDown" || evento.code === "ArrowUp") {
       evento.preventDefault();
       tocarEfeito("mover", volumeDosEfeitos);
@@ -104,6 +109,21 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
           );
         })}
       </nav>
+
+      <Dialog open={sobreAberto} onOpenChange={setSobreAberto}>
+        <DialogContent>
+          <DialogTitle>Sobre o Riff Rush</DialogTitle>
+          <DialogDescription>Jogo de ritmo gratuito e de código aberto. Veja como tratamos seus dados e as regras de uso.</DialogDescription>
+          <DialogFooter className="flex-wrap">
+            <Button variant="ghost" onClick={() => aoAbrirDocumento("privacidade")}>
+              <Shield className="opacity-70" /> Política de Privacidade
+            </Button>
+            <Button variant="ghost" onClick={() => aoAbrirDocumento("termos")}>
+              <FileText className="opacity-70" /> Termos de Uso
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <footer className="absolute right-6 bottom-6 flex items-center gap-3 text-base text-texto-suave">
         {(

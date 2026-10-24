@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { abrirLink, fecharJanela } from "@/modules/platform";
 import { AudioContextFalso } from "@/test/audioFalso";
@@ -18,7 +18,7 @@ describe("MenuPrincipal", () => {
   it("mostra o nome do jogo e as opções", () => {
     abrir();
     expect(screen.getByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Multijogador", "Busca músicas", "Personagem", "Configurações", "Sair"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Multijogador", "Busca músicas", "Personagem", "Configurações", "Sobre", "Sair"]);
   });
 
   it("Enter abre a opção selecionada, que começa em Jogar", async () => {
@@ -29,7 +29,7 @@ describe("MenuPrincipal", () => {
 
   it("as setas trocam a opção selecionada, dando a volta", async () => {
     const { aoConfigurar, usuario } = abrir();
-    await usuario.keyboard("{ArrowUp}{ArrowUp}{Enter}");
+    await usuario.keyboard("{ArrowUp}{ArrowUp}{ArrowUp}{Enter}");
     expect(aoConfigurar).toHaveBeenCalled();
   });
 
@@ -82,7 +82,7 @@ describe("MenuPrincipal rodapé", () => {
 describe("MenuPrincipal no celular que entrou pelo QR code", () => {
   it("começa por entrar na sala e não tem Sair (é só fechar a aba)", () => {
     abrir({ noCelular: true });
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Entrar na sala", "Jogar sozinho", "Busca músicas", "Personagem", "Configurações"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Entrar na sala", "Jogar sozinho", "Busca músicas", "Personagem", "Configurações", "Sobre"]);
   });
 
   it("Enter já leva para a sala", async () => {
@@ -104,5 +104,20 @@ describe("MenuPrincipal na tela estreita", () => {
     await usuario.click(screen.getByRole("link", { name: "Privacidade" }));
     await usuario.click(screen.getByRole("link", { name: "Termos" }));
     expect(aoAbrirDocumento.mock.calls).toEqual([["privacidade"], ["termos"]]);
+  });
+
+  it("Sobre abre um diálogo com os termos e a privacidade", async () => {
+    const { aoAbrirDocumento, usuario } = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Sobre" }));
+    const dialogo = screen.getByRole("dialog", { name: "Sobre o Riff Rush" });
+    await usuario.click(within(dialogo).getByRole("button", { name: "Termos de Uso" }));
+    expect(aoAbrirDocumento).toHaveBeenCalledWith("termos");
+  });
+
+  it("com o diálogo aberto, Enter não aciona o menu de trás", async () => {
+    const { aoJogar, usuario } = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Sobre" }));
+    await usuario.keyboard("{ArrowDown}{Enter}");
+    expect(aoJogar).not.toHaveBeenCalled();
   });
 });
