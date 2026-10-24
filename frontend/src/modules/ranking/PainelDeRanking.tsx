@@ -1,46 +1,21 @@
-import { useEffect, useState } from "react";
 import { Loader2, Trophy, UserRound } from "lucide-react";
-import { sessaoDaConta, useConta } from "@/modules/conta";
 import type { Dificuldade } from "@/modules/songs";
-import { URL_DA_API } from "@/shared/lib/api";
-import { useValorAtrasado } from "@/shared/hooks/useValorAtrasado";
 import { cn } from "@/shared/lib/utils";
-import { criarApiDoRanking, type ApiDoRanking, type PosicaoNoRanking, type RespostaDoRanking } from "./api";
+import type { PosicaoNoRanking } from "./api";
 import { haQuantoTempo, precisaoDaPartida } from "./formatar";
+import { useRanking, type OpcoesDoRanking } from "./useRanking";
 
-interface Props {
+interface Props extends OpcoesDoRanking {
   /** O id da música no ranking (`idDoRanking` do módulo songs). */
   musicaId: string;
   dificuldade: Dificuldade;
-  api?: ApiDoRanking;
-  /** Espera a seleção parar antes de pedir: girar o carrossel passa por muitas músicas. */
-  atrasoMs?: number;
-  lerToken?: () => string | null;
 }
 
-type Estado = { tipo: "carregando" } | { tipo: "pronto"; ranking: RespostaDoRanking } | { tipo: "erro" };
-
-const apiPadrao = criarApiDoRanking(URL_DA_API);
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 /** O ranking da música selecionada, como no osu!: o top rolável e o recorde pessoal fixo embaixo. */
-export function PainelDeRanking({ musicaId, dificuldade, api = apiPadrao, atrasoMs = 300, lerToken = () => sessaoDaConta.token() }: Props) {
-  // Entrar ou sair da conta muda o recorde pessoal: a conta entra no pedido.
-  const contaId = useConta().conta?.id ?? null;
-  const pedido = useValorAtrasado(`${musicaId}\n${dificuldade}\n${contaId}`, atrasoMs);
-  const [estado, setEstado] = useState<Estado>({ tipo: "carregando" });
-
-  useEffect(() => {
-    const [id, dificuldadePedida] = pedido.split("\n") as [string, Dificuldade];
-    const controle = new AbortController();
-    setEstado({ tipo: "carregando" });
-    api
-      .buscar(id, dificuldadePedida, { token: lerToken() ?? undefined, sinal: controle.signal })
-      .then((ranking) => !controle.signal.aborted && setEstado({ tipo: "pronto", ranking }))
-      .catch(() => !controle.signal.aborted && setEstado({ tipo: "erro" }));
-    return () => controle.abort();
-    // lerToken é lido na hora do pedido; a conta já está na chave do pedido.
-  }, [pedido, api]);
+export function PainelDeRanking({ musicaId, dificuldade, ...opcoes }: Props) {
+  const estado = useRanking(musicaId, dificuldade, opcoes);
 
   if (estado.tipo === "carregando") {
     return (
@@ -61,7 +36,7 @@ export function PainelDeRanking({ musicaId, dificuldade, api = apiPadrao, atraso
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       {top.length ? (
-        <ol aria-label="Ranking" className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+        <ol aria-label="Ranking" className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1">
           {top.map((linha) => (
             <LinhaDoRanking key={linha.posicao} linha={linha} minha={!!meu && meu.posicao === linha.posicao} />
           ))}
@@ -85,16 +60,17 @@ export function PainelDeRanking({ musicaId, dificuldade, api = apiPadrao, atraso
 
 function LinhaDoRanking({ linha, minha }: { linha: PosicaoNoRanking; minha: boolean }) {
   return (
-    <li className={cn("chapa flex items-center gap-4 p-2 pr-4", minha ? "border-primaria bg-superficie-elevada" : "border-borda bg-superficie")}>
-      <span className={cn("w-12 shrink-0 text-center font-titulo text-2xl", linha.posicao <= 3 ? "text-ouro" : "text-texto-suave")}>#{linha.posicao}</span>
+    // Compacta: a 720p cabem várias linhas no espaço que sobra ao lado da roda.
+    <li className={cn("chapa flex items-center gap-2 px-2 py-1 pr-4", minha ? "border-primaria bg-superficie-elevada" : "border-borda bg-superficie")}>
+      <span className={cn("w-12 shrink-0 text-center font-titulo text-xl", linha.posicao <= 3 ? "text-ouro" : "text-texto-suave")}>#{linha.posicao}</span>
       {linha.avatar ? (
-        <img src={linha.avatar} alt="" referrerPolicy="no-referrer" className="size-10 shrink-0 rounded-sm" />
+        <img src={linha.avatar} alt="" referrerPolicy="no-referrer" className="size-8 shrink-0 rounded-sm" />
       ) : (
-        <UserRound className="size-10 shrink-0 text-texto-suave opacity-70" aria-hidden />
+        <UserRound className="size-8 shrink-0 text-texto-suave opacity-70" aria-hidden />
       )}
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-base font-bold">{linha.nome}</span>
-        <span className="block truncate text-base text-texto-suave">
+      <span className="flex min-w-0 flex-1 items-baseline gap-2">
+        <span className="truncate text-base font-bold">{linha.nome}</span>
+        <span className="shrink-0 text-base text-texto-suave">
           {precisaoDaPartida(linha.acertos, linha.total)} · {haQuantoTempo(linha.jogada_em)}
         </span>
       </span>
