@@ -74,7 +74,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
           </motion.span>
           Rush
         </h1>
-        <p className="bg-primaria px-4 py-1 text-center text-base font-bold tracking-[0.4em] text-texto -skew-x-12 max-md:tracking-[0.15em]">TOQUE ATÉ OS DEDOS SANGRAREM</p>
+        <p className="bg-primaria px-4 py-1 text-center text-base font-bold tracking-[0.4em] text-texto -skew-x-12 max-md:tracking-[0.15em]">O PALCO É SEU</p>
       </motion.div>
 
       <nav className="flex w-80 flex-col gap-2 max-md:w-[85vw]">
