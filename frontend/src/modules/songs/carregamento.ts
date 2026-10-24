@@ -2,7 +2,7 @@ import { obterContextoDeAudio } from "@/modules/audio";
 import { criarCacheLimitado } from "@/shared/lib/cacheLimitado";
 import { chartDoAudio } from "./chartAutomatico";
 import { dificuldadesDoChart, escolherDificuldade, lerChart, lerMidi, lerSng, type ChartLido, type PacoteSng } from "./cloneHero";
-import { mixarFaixas } from "./mixagem";
+import { mixarEmSegundoPlano } from "./mixagem";
 import type { Batida, Dificuldade, Musica, MusicaCarregada } from "./tipos";
 
 const AUDIO_DO_SNG = /^(song|guitar|bass|rhythm|keys|vocals?|vocals_\d|drums(_\d)?|backing)\.(opus|ogg|mp3|wav)$/;
@@ -80,7 +80,7 @@ function abrirSng(musica: Musica, aoProgredir: AoProgredir = () => {}) {
         }),
       );
       const taxa = decodificadas[0].sampleRate;
-      const mix = mixarFaixas(
+      const mix = await mixarEmSegundoPlano(
         decodificadas.map((a) => ({ taxa: a.sampleRate, canais: Array.from({ length: a.numberOfChannels }, (_, c) => a.getChannelData(c)) })),
         taxa,
       );
