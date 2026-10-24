@@ -114,6 +114,13 @@ export class SessaoDaConta {
     this.mudar({ conta: null });
   }
 
+  /** As estatísticas de quem está logado. Sem conta, não pergunta à API. */
+  async perfil(sinal?: AbortSignal) {
+    const token = this.token();
+    if (!token) throw new Error("Entre com o Google para ver o perfil.");
+    return this.ambiente.api.perfil(token, sinal);
+  }
+
   /** Manda a partida para a API e devolve o XP ganho. Sem conta, não manda nada. */
   async registrarPartida(resultado: Resultado): Promise<XpDaPartida | null> {
     const token = this.ambiente.local.getItem(CHAVE_DO_TOKEN);

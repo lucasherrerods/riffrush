@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use riffrush_api::modules::conta::{ContasPostgres, CredenciaisDoGoogle, GeradorAleatorio, Google, RelogioDoSistema, ServicosDaConta};
+use riffrush_api::modules::perfil::{PerfilPostgres, ServicosDoPerfil};
 use riffrush_api::modules::ranking::{RankingPostgres, ServicosDoRanking};
 use riffrush_api::modules::saude::BancoPostgres;
 use riffrush_api::shared::config::Config;
@@ -41,10 +42,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         repositorio: Arc::new(RankingPostgres(banco.clone())),
         conta: conta.clone(),
     };
+    let perfil = ServicosDoPerfil {
+        repositorio: Arc::new(PerfilPostgres(banco.clone())),
+        conta: conta.clone(),
+    };
     let estado = EstadoDoApp {
         banco: Arc::new(BancoPostgres(banco)),
         conta,
         ranking,
+        perfil,
     };
     let app = riffrush_api::app(estado, &config.origens_permitidas);
 

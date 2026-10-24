@@ -6,7 +6,7 @@ import { URL_DA_API } from "@/shared/lib/api";
 import { useValorAtrasado } from "@/shared/hooks/useValorAtrasado";
 import { cn } from "@/shared/lib/utils";
 import { criarApiDoRanking, type ApiDoRanking, type PosicaoNoRanking, type RespostaDoRanking } from "./api";
-import { haQuantoTempo, precisaoDaPartida } from "./formatar";
+import { haQuantoTempo, precisaoDaPartida } from "@/shared/lib/formatar";
 
 interface Props {
   /** O id da música no ranking (`idDoRanking` do módulo songs). */

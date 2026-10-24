@@ -1,0 +1,166 @@
+use chrono::{DateTime, Utc};
+
+use crate::modules::conta::Conta;
+use crate::modules::progresso::{Dificuldade, Nivel};
+
+/// Quantas partidas o perfil mostra na lista das últimas.
+pub const PARTIDAS_RECENTES: u32 = 10;
+
+/// As partidas de uma conta numa dificuldade, já somadas pelo banco.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EstatisticasDaDificuldade {
+    pub dificuldade: Dificuldade,
+    pub partidas: u32,
+    pub derrotas: u32,
+    pub acertos: u64,
+    pub notas: u64,
+    pub melhor_pontuacao: u64,
+}
+
+impl EstatisticasDaDificuldade {
+    pub fn precisao(&self) -> f64 {
+        precisao(self.acertos, self.notas)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PartidaRecente {
+    pub musica_id: String,
+    pub dificuldade: Dificuldade,
+    pub pontos: u64,
+    pub acertos: u32,
+    pub total: u32,
+    pub derrota: bool,
+    pub jogada_em: DateTime<Utc>,
+}
+
+/// O que o repositório devolve sobre uma conta.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DadosDoPerfil {
+    pub criada_em: DateTime<Utc>,
+    pub musicas_distintas: u32,
+    pub por_dificuldade: Vec<EstatisticasDaDificuldade>,
+    pub recentes: Vec<PartidaRecente>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Perfil {
+    pub conta: Conta,
+    pub nivel: Nivel,
+    pub criada_em: DateTime<Utc>,
+    pub partidas: u32,
+    pub derrotas: u32,
+    /// De 0 a 1, contando todas as notas de todas as partidas.
+    pub precisao: f64,
+    pub melhor_pontuacao: u64,
+    pub musicas_distintas: u32,
+    /// Sempre as quatro, da mais fácil para a mais difícil, mesmo sem partidas.
+    pub por_dificuldade: Vec<EstatisticasDaDificuldade>,
+    pub recentes: Vec<PartidaRecente>,
+}
+
+fn precisao(acertos: u64, notas: u64) -> f64 {
+    if notas == 0 {
+        0.0
+    } else {
+        acertos as f64 / notas as f64
+    }
+}
+
+/// Soma as dificuldades no total e completa as que a conta nunca jogou.
+pub fn montar_perfil(conta: Conta, dados: DadosDoPerfil) -> Perfil {
+    let por_dificuldade: Vec<_> = [Dificuldade::Facil, Dificuldade::Medio, Dificuldade::Dificil, Dificuldade::Expert]
+        .into_iter()
+        .map(|dificuldade| {
+            dados
+                .por_dificuldade
+                .iter()
+                .find(|e| e.dificuldade == dificuldade)
+                .cloned()
+                .unwrap_or(EstatisticasDaDificuldade {
+                    dificuldade,
+                    partidas: 0,
+                    derrotas: 0,
+                    acertos: 0,
+                    notas: 0,
+                    melhor_pontuacao: 0,
+                })
+        })
+        .collect();
+    let acertos = por_dificuldade.iter().map(|e| e.acertos).sum();
+    let notas = por_dificuldade.iter().map(|e| e.notas).sum();
+    Perfil {
+        nivel: conta.nivel(),
+        conta,
+        criada_em: dados.criada_em,
+        partidas: por_dificuldade.iter().map(|e| e.partidas).sum(),
+        derrotas: por_dificuldade.iter().map(|e| e.derrotas).sum(),
+        precisao: precisao(acertos, notas),
+        melhor_pontuacao: por_dificuldade.iter().map(|e| e.melhor_pontuacao).max().unwrap_or(0),
+        musicas_distintas: dados.musicas_distintas,
+        por_dificuldade,
+        recentes: dados.recentes,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use uuid::Uuid;
+
+    use super::*;
+
+    fn conta() -> Conta {
+        Conta {
+            id: Uuid::nil(),
+            nome: "Lucas".into(),
+            avatar: None,
+            xp_total: 0,
+        }
+    }
+
+    fn estatisticas(dificuldade: Dificuldade, partidas: u32, acertos: u64, notas: u64, melhor: u64) -> EstatisticasDaDificuldade {
+        EstatisticasDaDificuldade {
+            dificuldade,
+            partidas,
+            derrotas: 1,
+            acertos,
+            notas,
+            melhor_pontuacao: melhor,
+        }
+    }
+
+    fn dados(por_dificuldade: Vec<EstatisticasDaDificuldade>) -> DadosDoPerfil {
+        DadosDoPerfil {
+            criada_em: DateTime::UNIX_EPOCH,
+            musicas_distintas: 3,
+            por_dificuldade,
+            recentes: vec![],
+        }
+    }
+
+    #[test]
+    fn conta_nova_tem_tudo_zerado_e_as_quatro_dificuldades() {
+        let perfil = montar_perfil(conta(), dados(vec![]));
+        assert_eq!((perfil.partidas, perfil.derrotas, perfil.melhor_pontuacao), (0, 0, 0));
+        assert_eq!(perfil.precisao, 0.0);
+        let ordem: Vec<_> = perfil.por_dificuldade.iter().map(|e| e.dificuldade).collect();
+        assert_eq!(ordem, [Dificuldade::Facil, Dificuldade::Medio, Dificuldade::Dificil, Dificuldade::Expert]);
+    }
+
+    #[test]
+    fn soma_as_dificuldades_e_pesa_a_precisao_pelas_notas() {
+        let perfil = montar_perfil(
+            conta(),
+            dados(vec![
+                estatisticas(Dificuldade::Expert, 2, 900, 1000, 80_000),
+                estatisticas(Dificuldade::Facil, 3, 100, 100, 20_000),
+            ]),
+        );
+        assert_eq!((perfil.partidas, perfil.derrotas), (5, 2));
+        assert_eq!(perfil.melhor_pontuacao, 80_000);
+        assert!((perfil.precisao - 1000.0 / 1100.0).abs() < 1e-9);
+        assert_eq!(perfil.por_dificuldade[0].partidas, 3);
+        assert_eq!(perfil.por_dificuldade[3].precisao(), 0.9);
+        assert_eq!(perfil.musicas_distintas, 3);
+    }
+}

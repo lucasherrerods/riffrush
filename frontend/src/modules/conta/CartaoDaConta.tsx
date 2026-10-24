@@ -3,26 +3,13 @@ import { Button } from "@/shared/ui/button";
 import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu";
 import { avisar } from "@/shared/ui/avisos";
-import { cn } from "@/shared/lib/utils";
+import { FotoDaConta } from "./FotoDaConta";
 import { LogoDoGoogle } from "./LogoDoGoogle";
 import { sessaoDaConta } from "./sessao";
 import { useConta } from "./useConta";
 
-function FotoDaConta({ avatar, className }: { avatar: string | null; className: string }) {
-  return (
-    <span className="relative shrink-0">
-      {avatar ? (
-        <img src={avatar} alt="" referrerPolicy="no-referrer" className={cn("rounded-full", className)} />
-      ) : (
-        <UserRound className={cn("rounded-full bg-superficie-elevada p-1 text-texto-suave", className)} />
-      )}
-      <span className="absolute right-0 bottom-0 size-2.5 rounded-full border-2 border-superficie bg-sucesso" />
-    </span>
-  );
-}
-
 /** No canto do cabeçalho: entrar com o Google ou abrir o menu da conta. */
-export function CartaoDaConta() {
+export function CartaoDaConta({ aoVerPerfil }: { aoVerPerfil: () => void }) {
   const { conta, carregando } = useConta();
 
   if (carregando) return <Loader2 aria-label="Carregando a conta" className="size-4 animate-spin text-texto-suave" />;
@@ -67,6 +54,10 @@ export function CartaoDaConta() {
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={aoVerPerfil}>
+          <UserRound />
+          Ver perfil
+        </DropdownMenuItem>
         <DropdownMenuItem variant="perigo" onSelect={() => void sessaoDaConta.sair()}>
           <LogOut />
           Sair da conta
