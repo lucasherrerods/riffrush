@@ -5,7 +5,7 @@ import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
 import { carregarRecordes, recordeDe } from "@/modules/results";
-import { DIFICULDADES, type Dificuldade, type Musica } from "@/modules/songs";
+import { DIFICULDADES, dificuldadesDaMusica, type Dificuldade, type Musica } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -36,6 +36,7 @@ export function TelaDeSelecao(props: Props) {
   const { musicas, indice, dificuldade, personagem, volumeDosEfeitos, aoSelecionar, aoDificuldade, aoJogar, aoVoltar, aoImportar, aoRemover } = props;
   const recordes = carregarRecordes();
   const musica = musicas[indice];
+  const dificuldades = dificuldadesDaMusica(musica);
   const recordeAtual = recordeDe(recordes, musica.id, dificuldade);
   const rotuloDaDificuldade = DIFICULDADES.find((d) => d.id === dificuldade)?.rotulo;
   const efeito = (nome: "mover" | "selecionar" | "voltar") => tocarEfeito(nome, volumeDosEfeitos);
@@ -73,12 +74,12 @@ export function TelaDeSelecao(props: Props) {
     // Com o modal aberto, as teclas são dele: Esc o fecha, sem voltar ao menu.
     if (removendo) return;
     if (evento.code === "Delete" && podeRemover) return setRemovendo(true);
-    const posicao = DIFICULDADES.findIndex((d) => d.id === dificuldade);
+    const posicao = dificuldades.findIndex((d) => d.id === dificuldade);
     if (evento.code === "ArrowDown" || evento.code === "ArrowUp") {
       evento.preventDefault();
       andar(evento.code === "ArrowDown" ? 1 : -1);
     } else if (evento.code === "ArrowLeft" || evento.code === "ArrowRight") {
-      const proxima = DIFICULDADES[posicao + (evento.code === "ArrowRight" ? 1 : -1)];
+      const proxima = dificuldades[posicao + (evento.code === "ArrowRight" ? 1 : -1)];
       if (proxima) escolherDificuldade(proxima.id);
     } else if (evento.code === "Enter") {
       jogar();
@@ -189,6 +190,7 @@ export function TelaDeSelecao(props: Props) {
           musicas={musicas}
           indice={indice}
           dificuldade={dificuldade}
+          dificuldades={dificuldades}
           recordes={recordes}
           aoEscolherMusica={(i) => {
             efeito("mover");

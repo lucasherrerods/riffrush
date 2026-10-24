@@ -1,6 +1,6 @@
 import { obterContextoDeAudio } from "@/modules/audio";
 import { chartDoAudio } from "./chartAutomatico";
-import { escolherDificuldade, lerChart, lerMidi, lerSng, type ChartLido, type PacoteSng } from "./cloneHero";
+import { dificuldadesDoChart, escolherDificuldade, lerChart, lerMidi, lerSng, type ChartLido, type PacoteSng } from "./cloneHero";
 import { mixarFaixas } from "./mixagem";
 import type { Batida, Dificuldade, Musica, MusicaCarregada } from "./tipos";
 
@@ -64,6 +64,7 @@ function abrirSng(musica: Musica, aoProgredir: AoProgredir = () => {}) {
       const midi = pacote.arquivos.get("notes.mid");
       if (!texto && !midi) throw new Error("O .sng não tem chart (notes.chart ou notes.mid).");
       const chart = texto ? lerChart(new TextDecoder().decode(texto)) : lerMidi(midi!);
+      if (!dificuldadesDoChart(chart).length) throw new Error("O chart não tem notas de guitarra.");
       const faixas = [...pacote.arquivos].filter(([nome]) => AUDIO_DO_SNG.test(nome));
       if (!faixas.length) throw new Error("O .sng não tem áudio.");
       const contexto = obterContextoDeAudio();
@@ -164,6 +165,7 @@ export async function importarArquivo(arquivo: File, aoProgredir: AoProgredir = 
     artista: metadados.artist || base.artista,
     genero: metadados.genre || musica.genero,
     intensidade: Math.max(1, Math.min(5, Number(metadados.diff_guitar) + 1 || Object.keys(chart.notas).length + 1)),
+    dificuldades: dificuldadesDoChart(chart),
     imagemDeCapa: capa ? URL.createObjectURL(new Blob([capa[1].slice()])) : undefined,
     video: !!video,
     arquivoDeVideo: video ? new Blob([video[1].slice()], { type: video[0].endsWith("webm") ? "video/webm" : "video/mp4" }) : undefined,

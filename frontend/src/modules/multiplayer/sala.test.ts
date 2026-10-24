@@ -115,6 +115,15 @@ describe("sala", () => {
       expect(socket().enviadas.at(-1)).toMatchObject({ tipo: "sala", musica: { tipo: "importada", id: "arquivo:x" } });
     });
 
+    it("a dificuldade da sala se ajusta ao que o chart da música tem", async () => {
+      const sala = await importar();
+      await sala.criarSala(PERSONAGEM_PADRAO);
+      socket().abrir();
+      socket().receber(0, { tipo: "bemVindo", id: 1 });
+      await sala.escolher({ ...MUSICAS_EMBUTIDAS[0], dificuldades: ["facil", "expert"] }, "dificil");
+      expect(socket().enviadas.at(-1)).toMatchObject({ tipo: "sala", dificuldade: "expert" });
+    });
+
     it("o host não começa enquanto algum convidado não está pronto", async () => {
       const sala = await importar();
       await sala.criarSala(PERSONAGEM_PADRAO);

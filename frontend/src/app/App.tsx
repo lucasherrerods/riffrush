@@ -13,7 +13,7 @@ import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEsta
 import { TelaDeBuscaDeMusicas, baixarDoEncore, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
-import { MUSICAS_EMBUTIDAS, type Dificuldade, type Musica } from "@/modules/songs";
+import { MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, type Dificuldade, type Musica } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -52,7 +52,10 @@ export function App() {
   }, [salvas]);
 
   const musica = emRede?.musica ?? musicas[indice];
-  const dificuldadeDaPartida = emRede?.dificuldade ?? dificuldade;
+  // A dificuldade escolhida fica guardada; a música que não a tem usa a mais próxima do chart dela.
+  const dificuldades = dificuldadesDaMusica(musicas[indice] ?? {}).map((d) => d.id);
+  const dificuldadeDaSelecao = dificuldadeMaisProxima(dificuldades, dificuldade) ?? dificuldade;
+  const dificuldadeDaPartida = emRede?.dificuldade ?? dificuldadeDaSelecao;
   const [comControle, setComControle] = useState(() => Array.from(navigator.getGamepads?.() ?? []).some((c) => c));
   const opcoes = useMemo(() => {
     const base = opcoesDaPartida(configuracoes);
@@ -248,7 +251,7 @@ export function App() {
               <TelaDeSelecao
                 musicas={musicas}
                 indice={indice}
-                dificuldade={dificuldade}
+                dificuldade={dificuldadeDaSelecao}
                 personagem={personagem}
                 volumeDosEfeitos={configuracoes.volumeDosEfeitos}
                 aoSelecionar={setIndice}

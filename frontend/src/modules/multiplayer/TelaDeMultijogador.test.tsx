@@ -173,6 +173,13 @@ describe("na sala", () => {
     expect(sala.escolher).toHaveBeenCalledWith(MUSICAS_DE_TESTE[0], "expert");
   });
 
+  it("o host só vê as dificuldades que o chart da música tem", () => {
+    const soExpert = [{ ...MUSICAS_DE_TESTE[0], dificuldades: ["expert" as const] }];
+    abrir({ sala: naSala(true), endereco: "" }, soExpert);
+    const grupo = screen.getByRole("radiogroup", { name: "Dificuldade" });
+    expect(within(grupo).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Expert"]);
+  });
+
   it("com muitas músicas, mostra só as próximas da escolhida, sem rolagem, e as setas trocam", async () => {
     const muitas = Array.from({ length: 12 }, (_, i) => ({ ...MUSICAS_DE_TESTE[0], id: `m${i}`, titulo: `Faixa ${i}` }));
     vi.mocked(sala.useConexao).mockReturnValue({ sala: naSala(true, { musica: { tipo: "embutida", id: "m6" } }), endereco: "" });

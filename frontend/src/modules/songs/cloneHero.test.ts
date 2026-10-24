@@ -1,5 +1,5 @@
 import { andamento, construirMidi, construirSng, nomeDaFaixa, notaDesligada, notaLigada } from "@/test/cloneHero";
-import { MapaDeTempo, escolherDificuldade, lerChart, lerMidi, lerSng } from "./cloneHero";
+import { MapaDeTempo, dificuldadesDoChart, escolherDificuldade, lerChart, lerMidi, lerSng } from "./cloneHero";
 
 const resumo = (notas: { tempo: number; pista: number; duracao: number; frase: number }[]) =>
   notas.map((n) => `${n.tempo.toFixed(3)}:${n.pista}${n.duracao ? ` s${n.duracao.toFixed(2)}` : ""}${n.frase >= 0 ? " *" : ""}`);
@@ -110,6 +110,17 @@ describe("lerMidi", () => {
     expect(resumo(lerMidi(comBateria).notas.expert!)).toEqual(["1.000:4"]);
   });
 
+  // Bug: sem faixa de guitarra, o baixo (ou qualquer faixa com notas na mesma altura) virava a guitarra.
+  it("sem faixa de guitarra, não lê nenhuma dificuldade", () => {
+    const semGuitarra = construirMidi(
+      480,
+      [andamento(500000)],
+      [nomeDaFaixa("PART BASS"), notaLigada(0, 97), notaDesligada(10, 97)],
+      [nomeDaFaixa("PART DRUMS"), notaLigada(0, 98), notaDesligada(10, 98)],
+    );
+    expect(lerMidi(semGuitarra).notas).toEqual({});
+  });
+
   it("recusa arquivos que não são MIDI", () => {
     expect(() => lerMidi(new Uint8Array([1, 2, 3, 4]))).toThrow();
   });
@@ -133,6 +144,12 @@ describe("lerSng", () => {
 
   it("recusa arquivos que não são .sng", () => {
     expect(() => lerSng(new TextEncoder().encode("qualquer coisa").buffer)).toThrow(".sng inválido");
+  });
+});
+
+describe("dificuldadesDoChart", () => {
+  it("lista, em ordem, só as dificuldades que têm notas", () => {
+    expect(dificuldadesDoChart(lerChart(CHART))).toEqual(["facil", "expert"]);
   });
 });
 

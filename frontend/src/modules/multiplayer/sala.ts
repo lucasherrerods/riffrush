@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Personagem } from "@/modules/character";
 import type { EstadoDoJogador } from "@/modules/gameplay";
-import type { Dificuldade, Musica } from "@/modules/songs";
+import { dificuldadeMaisProxima, dificuldadesDaMusica, type Dificuldade, type Musica } from "@/modules/songs";
 import { paraRede } from "./musicaNaRede";
 import { URL_DO_RELAY, deveEnviarEstado, lerSalasOnline, normalizarCodigo, podeTocarOnline, urlDasSalas, urlParaCriarSala, urlParaEntrarNaSala, type SalaOnline } from "./online";
 import { comecarPartida, escolherMusica, estadoInicial, reduzir, todosProntos, type EstadoDaSala, type Mensagem } from "./protocolo";
@@ -146,7 +146,10 @@ export async function escolher(musica: Musica, dificuldade: Dificuldade) {
     await invoke("lan_compartilhar_musica", bytes, { headers: { "x-tipo": musica.arquivo.type || "application/octet-stream" } });
   }
   if (!conexao.sala) return;
-  const reacao = escolherMusica(conexao.sala, paraRede(musica, { online: conexao.online }), dificuldade);
+  // Música nova sem a dificuldade da sala: vai para a mais próxima que o chart tem.
+  const disponiveis = dificuldadesDaMusica(musica).map((d) => d.id);
+  const ajustada = dificuldadeMaisProxima(disponiveis, dificuldade) ?? dificuldade;
+  const reacao = escolherMusica(conexao.sala, paraRede(musica, { online: conexao.online }), ajustada);
   atualizar({ sala: reacao.estado });
   enviar(reacao.enviar);
 }

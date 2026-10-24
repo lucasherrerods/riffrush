@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { motion } from "framer-motion";
 import { Star } from "lucide-react";
 import { recordeDe, type Recordes } from "@/modules/results";
-import { DIFICULDADES, type Dificuldade, type Musica } from "@/modules/songs";
+import type { Dificuldade, Musica } from "@/modules/songs";
 import { cn } from "@/shared/lib/utils";
 import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, centroDoGrupoAberto, passosDaRoda, posicoesNoCarrossel, recuoNaCurva } from "../carrossel";
 import { Capa } from "./Capa";
@@ -11,6 +11,8 @@ interface Props {
   musicas: Musica[];
   indice: number;
   dificuldade: Dificuldade;
+  /** As dificuldades que a música selecionada tem. */
+  dificuldades: { id: Dificuldade; rotulo: string }[];
   recordes: Recordes;
   aoEscolherMusica: (indice: number) => void;
   aoEscolherDificuldade: (dificuldade: Dificuldade) => void;
@@ -36,10 +38,10 @@ const COR_DA_DIFICULDADE: Record<Dificuldade, string> = {
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 /** Lista de músicas em roda, como no osu!lazer: a selecionada fica no meio, com as dificuldades abertas embaixo. */
-export function Carrossel({ musicas, indice, dificuldade, recordes, aoEscolherMusica, aoEscolherDificuldade, aoJogar, aoGirar }: Props) {
+export function Carrossel({ musicas, indice, dificuldade, dificuldades, recordes, aoEscolherMusica, aoEscolherDificuldade, aoJogar, aoGirar }: Props) {
   const giro = useRef(0);
-  const posicoes = posicoesNoCarrossel(musicas.length, indice, DIFICULDADES.length);
-  const centro = centroDoGrupoAberto(DIFICULDADES.length);
+  const posicoes = posicoesNoCarrossel(musicas.length, indice, dificuldades.length);
+  const centro = centroDoGrupoAberto(dificuldades.length);
 
   return (
     <ul
@@ -91,7 +93,7 @@ export function Carrossel({ musicas, indice, dificuldade, recordes, aoEscolherMu
 
             {selecionada && (
               <div role="radiogroup" aria-label="Dificuldade" className="mt-2 flex flex-col gap-2 pl-12">
-                {DIFICULDADES.map((d) => {
+                {dificuldades.map((d) => {
                   const escolhida = d.id === dificuldade;
                   const recordeDaDificuldade = recordeDe(recordes, m.id, d.id);
                   return (

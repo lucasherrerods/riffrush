@@ -4,7 +4,7 @@ import { Check, ChevronDown, ChevronUp, Globe, Loader2, Play, Smartphone, Users 
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar } from "@/modules/character";
 import { useSeguirMusica } from "@/modules/player";
-import { DIFICULDADES, type Dificuldade, type Musica } from "@/modules/songs";
+import { DIFICULDADES, dificuldadesDaMusica, type Dificuldade, type Musica } from "@/modules/songs";
 import { janelaEmVolta } from "@/shared/lib/janela";
 import { cn } from "@/shared/lib/utils";
 import { avisar } from "@/shared/ui/avisos";
@@ -154,7 +154,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
             {sala.souHost ? (
               <GrupoDeOpcoes
                 titulo="Dificuldade"
-                opcoes={DIFICULDADES.map((d) => ({ id: d.id, rotulo: d.rotulo }))}
+                opcoes={(musica ? dificuldadesDaMusica(musica) : DIFICULDADES).map((d) => ({ id: d.id, rotulo: d.rotulo }))}
                 valor={sala.dificuldade}
                 aoEscolher={(dificuldade) => musica && escolherNaSala(musica, dificuldade)}
               />

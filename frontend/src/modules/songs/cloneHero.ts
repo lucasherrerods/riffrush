@@ -1,4 +1,5 @@
-import type { Batida, Dificuldade, Nota } from "./tipos";
+import { dificuldadeMaisProxima } from "./dificuldades";
+import { DIFICULDADES, type Batida, type Dificuldade, type Nota } from "./tipos";
 
 /*
  * Formatos do Clone Hero.
@@ -188,7 +189,8 @@ export function lerChart(conteudo: string): ChartLido {
 
 const NOTA_MIDI_BASE: Record<Dificuldade, number> = { facil: 60, medio: 72, dificil: 84, expert: 96 };
 const NOTA_MIDI_STAR_POWER = 116;
-const FAIXAS_PREFERIDAS = ["PART GUITAR", "T1 GEMS", "PART BASS", "PART RHYTHM", "PART KEYS"];
+/** Só a guitarra principal: "T1 GEMS" é o nome dela nos MIDIs do Guitar Hero 1 e 2. */
+const FAIXAS_DE_GUITARRA = ["PART GUITAR", "T1 GEMS"];
 
 /** Formato notes.mid, o MIDI do Rock Band e do Clone Hero. */
 export function lerMidi(dados: Uint8Array): ChartLido {
@@ -252,9 +254,7 @@ export function lerMidi(dados: Uint8Array): ChartLido {
   }
 
   const mapa = new MapaDeTempo(resolucao, andamentos);
-  const guitarra =
-    FAIXAS_PREFERIDAS.map((n) => faixas.find((f) => f.nome === n)).find((f) => f?.notas.length) ??
-    faixas.find((f) => f.notas.some((n) => n.nota >= 60 && n.nota <= 100));
+  const guitarra = FAIXAS_DE_GUITARRA.map((n) => faixas.find((f) => f.nome === n)).find((f) => f?.notas.length);
 
   const notas: ChartLido["notas"] = {};
   if (guitarra) {
@@ -269,12 +269,12 @@ export function lerMidi(dados: Uint8Array): ChartLido {
   return { notas, mapa };
 }
 
-const ORDEM: Dificuldade[] = ["facil", "medio", "dificil", "expert"];
+export function dificuldadesDoChart(chart: ChartLido): Dificuldade[] {
+  return DIFICULDADES.map((d) => d.id).filter((d) => chart.notas[d]?.length);
+}
 
 /** A dificuldade pedida ou, se o chart não tiver, a mais próxima (empate vai para a mais fácil). */
 export function escolherDificuldade(chart: ChartLido, dificuldade: Dificuldade): Nota[] {
-  const alvo = ORDEM.indexOf(dificuldade);
-  const porDistancia = [...ORDEM].sort((a, b) => Math.abs(ORDEM.indexOf(a) - alvo) - Math.abs(ORDEM.indexOf(b) - alvo));
-  for (const d of porDistancia) if (chart.notas[d]?.length) return chart.notas[d]!;
-  return [];
+  const escolhida = dificuldadeMaisProxima(dificuldadesDoChart(chart), dificuldade);
+  return escolhida ? chart.notas[escolhida]! : [];
 }

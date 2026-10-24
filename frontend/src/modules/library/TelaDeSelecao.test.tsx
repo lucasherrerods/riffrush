@@ -52,6 +52,15 @@ describe("TelaDeSelecao", () => {
     expect(aoDificuldade).toHaveBeenCalledWith("dificil");
   });
 
+  it("o chart importado mostra só as dificuldades que tem, e as setas andam só por elas", async () => {
+    const soDuas = [{ ...MUSICAS_DE_TESTE[0], dificuldades: ["facil", "expert"] as Dificuldade[] }];
+    const { aoDificuldade, usuario } = abrir({ musicas: soDuas, dificuldade: "facil" });
+    const grupo = screen.getByRole("radiogroup", { name: "Dificuldade" });
+    expect(within(grupo).getAllByRole("radio").map((r) => r.textContent)).toEqual([expect.stringMatching(/Fácil/), expect.stringMatching(/Expert/)]);
+    await usuario.keyboard("{ArrowRight}");
+    expect(aoDificuldade).toHaveBeenCalledWith("expert");
+  });
+
   it("Enter toca e Esc volta", async () => {
     const { aoJogar, aoVoltar, usuario } = abrir();
     await usuario.keyboard("{Enter}{Escape}");

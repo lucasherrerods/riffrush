@@ -236,6 +236,18 @@ describe("App", () => {
     expect(biblioteca.usar).toHaveBeenCalledWith(MUSICAS_EMBUTIDAS[0].id);
   });
 
+  it("uma música sem a dificuldade escolhida toca a mais próxima que o chart tem", async () => {
+    biblioteca.salvas = [{ ...MUSICAS_EMBUTIDAS[0], id: "arquivo:so-expert", titulo: "Só Expert", noAparelho: true, dificuldades: ["expert"] }];
+    const usuario = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    await screen.findByRole("heading", { name: "Selecione a música" });
+    await usuario.keyboard("{ArrowUp}");
+    expect(await screen.findByRole("heading", { name: "Só Expert" })).toBeInTheDocument();
+    await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
+    await usuario.click(await screen.findByRole("button", { name: "terminar" }));
+    expect(await screen.findByText("Expert")).toBeInTheDocument();
+  });
+
   it("a música guardada no PC é lida do disco antes da partida", async () => {
     biblioteca.salvas = [{ ...MUSICAS_EMBUTIDAS[0], id: "arquivo:salva", titulo: "No Disco", noAparelho: true }];
     biblioteca.prepararParaTocar.mockImplementationOnce(async (musica) => ({ ...musica, titulo: "No Disco Carregada" }));
