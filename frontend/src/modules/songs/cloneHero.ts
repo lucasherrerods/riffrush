@@ -1,5 +1,5 @@
 import { dificuldadeMaisProxima } from "./dificuldades";
-import { DIFICULDADES, type Batida, type Dificuldade, type Nota } from "./tipos";
+import { DIFICULDADES, INSTRUMENTOS, type Batida, type Dificuldade, type Instrumento, type Nota, type Trilhas } from "./tipos";
 
 /*
  * Formatos do Clone Hero.
@@ -106,7 +106,7 @@ export class MapaDeTempo {
 }
 
 export interface ChartLido {
-  notas: Partial<Record<Dificuldade, Nota[]>>;
+  notas: Partial<Record<Instrumento, Partial<Record<Dificuldade, Nota[]>>>>;
   mapa: MapaDeTempo;
 }
 
@@ -131,12 +131,19 @@ function montarNotas(brutas: NotaEmTicks[], frases: { tick: number; duracao: num
   });
 }
 
-const SECOES_DO_CHART: Record<Dificuldade, string> = {
-  facil: "EasySingle",
-  medio: "MediumSingle",
-  dificil: "HardSingle",
-  expert: "ExpertSingle",
+const PREFIXOS_DO_CHART: Record<Dificuldade, string> = { facil: "Easy", medio: "Medium", dificil: "Hard", expert: "Expert" };
+const INSTRUMENTOS_DO_CHART: Record<Instrumento, string> = {
+  guitarra: "Single",
+  baixo: "DoubleBass",
+  ritmica: "DoubleRhythm",
+  coop: "DoubleGuitar",
+  teclado: "Keyboard",
 };
+
+/** Guarda as notas de uma trilha, criando o instrumento na primeira vez. */
+function guardarTrilha(notas: ChartLido["notas"], instrumento: Instrumento, dificuldade: Dificuldade, trilha: Nota[]) {
+  (notas[instrumento] ??= {})[dificuldade] = trilha;
+}
 
 /** Formato .chart, em texto. */
 export function lerChart(conteudo: string): ChartLido {
@@ -167,8 +174,8 @@ export function lerChart(conteudo: string): ChartLido {
   const mapa = new MapaDeTempo(resolucao, andamentos);
 
   const notas: ChartLido["notas"] = {};
-  for (const [dificuldade, nome] of Object.entries(SECOES_DO_CHART) as [Dificuldade, string][]) {
-    const linhas = secoes.get(nome);
+  for (const { id: instrumento } of INSTRUMENTOS) for (const { id: dificuldade } of DIFICULDADES) {
+    const linhas = secoes.get(PREFIXOS_DO_CHART[dificuldade] + INSTRUMENTOS_DO_CHART[instrumento]);
     if (!linhas) continue;
     const brutas: NotaEmTicks[] = [];
     const frases: { tick: number; duracao: number }[] = [];
@@ -182,14 +189,21 @@ export function lerChart(conteudo: string): ChartLido {
       if (encontrado[2] === "N" && valor <= 4) brutas.push({ tick, pista: valor, duracao });
       else if (encontrado[2] === "S" && valor === 2) frases.push({ tick, duracao });
     }
-    if (brutas.length) notas[dificuldade] = montarNotas(brutas, frases, mapa, resolucao);
+    if (brutas.length) guardarTrilha(notas, instrumento, dificuldade, montarNotas(brutas, frases, mapa, resolucao));
   }
   return { notas, mapa };
 }
 
 const NOTA_MIDI_BASE: Record<Dificuldade, number> = { facil: 60, medio: 72, dificil: 84, expert: 96 };
 const NOTA_MIDI_STAR_POWER = 116;
-const FAIXAS_PREFERIDAS = ["PART GUITAR", "T1 GEMS", "PART BASS", "PART RHYTHM", "PART KEYS"];
+const FAIXAS_DO_MIDI: Record<string, Instrumento> = {
+  "PART GUITAR": "guitarra",
+  "T1 GEMS": "guitarra",
+  "PART BASS": "baixo",
+  "PART RHYTHM": "ritmica",
+  "PART GUITAR COOP": "coop",
+  "PART KEYS": "teclado",
+};
 
 /** Formato notes.mid, o MIDI do Rock Band e do Clone Hero. */
 export function lerMidi(dados: Uint8Array): ChartLido {
@@ -253,29 +267,49 @@ export function lerMidi(dados: Uint8Array): ChartLido {
   }
 
   const mapa = new MapaDeTempo(resolucao, andamentos);
-  const guitarra =
-    FAIXAS_PREFERIDAS.map((n) => faixas.find((f) => f.nome === n)).find((f) => f?.notas.length) ??
-    faixas.find((f) => f.notas.some((n) => n.nota >= 60 && n.nota <= 100));
+  const porInstrumento = new Map<Instrumento, (typeof faixas)[number]>();
+  for (const faixa of faixas) {
+    const instrumento = FAIXAS_DO_MIDI[faixa.nome];
+    if (instrumento && faixa.notas.length && !porInstrumento.has(instrumento)) porInstrumento.set(instrumento, faixa);
+  }
+  // MIDI antigo, sem nome nas faixas: a que tem notas de guitarra é a guitarra.
+  if (!porInstrumento.size) {
+    const semNome = faixas.find((f) => f.notas.some((n) => n.nota >= 60 && n.nota <= 100));
+    if (semNome) porInstrumento.set("guitarra", semNome);
+  }
 
   const notas: ChartLido["notas"] = {};
-  if (guitarra) {
-    const frases = guitarra.notas.filter((n) => n.nota === NOTA_MIDI_STAR_POWER).map((n) => ({ tick: n.tick, duracao: n.duracao }));
+  for (const { id: instrumento } of INSTRUMENTOS) {
+    const faixa = porInstrumento.get(instrumento);
+    if (!faixa) continue;
+    const frases = faixa.notas.filter((n) => n.nota === NOTA_MIDI_STAR_POWER).map((n) => ({ tick: n.tick, duracao: n.duracao }));
     for (const [dificuldade, base] of Object.entries(NOTA_MIDI_BASE) as [Dificuldade, number][]) {
-      const brutas = guitarra.notas
+      const brutas = faixa.notas
         .filter((n) => n.nota >= base && n.nota <= base + 4)
         .map((n) => ({ tick: n.tick, pista: n.nota - base, duracao: n.duracao }));
-      if (brutas.length) notas[dificuldade] = montarNotas(brutas, frases, mapa, resolucao);
+      if (brutas.length) guardarTrilha(notas, instrumento, dificuldade, montarNotas(brutas, frases, mapa, resolucao));
     }
   }
   return { notas, mapa };
 }
 
-export function dificuldadesDoChart(chart: ChartLido): Dificuldade[] {
-  return DIFICULDADES.map((d) => d.id).filter((d) => chart.notas[d]?.length);
+export function trilhasDoChart(chart: ChartLido): Trilhas {
+  const trilhas: Trilhas = {};
+  for (const { id: instrumento } of INSTRUMENTOS) {
+    const dificuldades = DIFICULDADES.map((d) => d.id).filter((d) => chart.notas[instrumento]?.[d]?.length);
+    if (dificuldades.length) trilhas[instrumento] = dificuldades;
+  }
+  return trilhas;
 }
 
-/** A dificuldade pedida ou, se o chart não tiver, a mais próxima (empate vai para a mais fácil). */
-export function escolherDificuldade(chart: ChartLido, dificuldade: Dificuldade): Nota[] {
-  const escolhida = dificuldadeMaisProxima(dificuldadesDoChart(chart), dificuldade);
-  return escolhida ? chart.notas[escolhida]! : [];
+/**
+ * As notas do instrumento e da dificuldade pedidos. Sem a dificuldade, vale a mais próxima (empate vai para a mais fácil);
+ * sem o instrumento, o primeiro que o chart tem.
+ */
+export function escolherTrilha(chart: ChartLido, instrumento: Instrumento, dificuldade: Dificuldade): Nota[] {
+  const trilhas = trilhasDoChart(chart);
+  const tocado = trilhas[instrumento] ? instrumento : INSTRUMENTOS.map((i) => i.id).find((i) => trilhas[i]);
+  if (!tocado) return [];
+  const escolhida = dificuldadeMaisProxima(trilhas[tocado]!, dificuldade);
+  return escolhida ? chart.notas[tocado]![escolhida]! : [];
 }

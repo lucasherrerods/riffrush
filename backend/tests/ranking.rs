@@ -9,7 +9,7 @@ use axum::Router;
 use chrono::DateTime;
 use http_body_util::BodyExt;
 use riffrush_api::modules::conta::fakes::{pedido, servicos};
-use riffrush_api::modules::progresso::Dificuldade;
+use riffrush_api::modules::progresso::{Dificuldade, Instrumento};
 use riffrush_api::modules::ranking::fakes::{servicos_do_ranking, RankingEmMemoria};
 use riffrush_api::modules::ranking::LinhaDoRanking;
 use riffrush_api::modules::saude::VerificadorDoBanco;
@@ -47,8 +47,24 @@ async fn app() -> (Router, String, Arc<RankingEmMemoria>) {
     let entrada = conta.entrar_com_google(&pedido("bom")).await.unwrap();
     let (ranking, repositorio) = servicos_do_ranking(conta.clone());
     *repositorio.linhas.lock().unwrap() = vec![
-        ("encore:abc".into(), Dificuldade::Expert, linha(1, Uuid::from_u128(999_999), "Srr 4", 1_099_340)),
-        ("encore:abc".into(), Dificuldade::Expert, linha(578, entrada.conta.id, "Lucas", 380_146)),
+        (
+            "encore:abc".into(),
+            Dificuldade::Expert,
+            Instrumento::Guitarra,
+            linha(1, Uuid::from_u128(999_999), "Srr 4", 1_099_340),
+        ),
+        (
+            "encore:abc".into(),
+            Dificuldade::Expert,
+            Instrumento::Guitarra,
+            linha(578, entrada.conta.id, "Lucas", 380_146),
+        ),
+        (
+            "encore:abc".into(),
+            Dificuldade::Expert,
+            Instrumento::Baixo,
+            linha(1, Uuid::from_u128(7), "Baixista", 50_000),
+        ),
     ];
     let app = riffrush_api::app(
         EstadoDoApp {
@@ -91,6 +107,22 @@ async fn com_login_vem_o_proprio_recorde_fora_do_top() {
     let (_, corpo) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert", Some(&token)).await;
     assert_eq!(corpo["meu"]["posicao"], 578);
     assert_eq!(corpo["meu"]["pontos"], 380_146);
+}
+
+#[tokio::test]
+async fn cada_instrumento_tem_o_proprio_ranking_e_sem_ele_vale_a_guitarra() {
+    let (app, _, _) = app().await;
+    let (_, guitarra) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&instrumento=guitarra", None).await;
+    assert_eq!(guitarra["top"][0]["nome"], "Srr 4");
+    let (_, baixo) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&instrumento=baixo", None).await;
+    assert_eq!(baixo["top"][0]["nome"], "Baixista");
+    assert_eq!(baixo["top"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&instrumento=bateria", None)
+            .await
+            .0,
+        StatusCode::BAD_REQUEST
+    );
 }
 
 #[tokio::test]

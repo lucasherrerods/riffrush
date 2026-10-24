@@ -13,8 +13,8 @@ import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEsta
 import { TelaDeBuscaDeMusicas, baixarDoEncore, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
-import { MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, tituloDaMusica, type Dificuldade, type Musica } from "@/modules/songs";
-import { PainelDeRanking } from "@/modules/ranking";
+import { MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
+import { PainelDeRanking, PlacarAoVivo } from "@/modules/ranking";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -25,6 +25,7 @@ type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "p
 interface PartidaEmRede {
   musica: Musica;
   dificuldade: Dificuldade;
+  instrumento: Instrumento;
   inicio: number;
 }
 
@@ -35,6 +36,7 @@ export function App() {
   const [musicas, setMusicas] = useState<Musica[]>(MUSICAS_EMBUTIDAS);
   const [indice, setIndice] = useState(0);
   const [dificuldade, setDificuldade] = useState<Dificuldade>("medio");
+  const [instrumento, setInstrumento] = useState<Instrumento>("guitarra");
   const [resultado, setResultado] = useState<{ resultado: Resultado; recordeNovo: boolean } | null>(null);
   const [xpDaPartida, setXpDaPartida] = useState<XpDaPartida | null>(null);
   const [partida, setPartida] = useState(0);
@@ -57,10 +59,12 @@ export function App() {
   // Lida no fim da partida sem entrar nas dependências do terminar, que reiniciariam a partida.
   const musicaDaPartida = useRef(musica);
   musicaDaPartida.current = musica;
-  // A dificuldade escolhida fica guardada; a música que não a tem usa a mais próxima do chart dela.
-  const dificuldades = dificuldadesDaMusica(musicas[indice] ?? {}).map((d) => d.id);
+  // O instrumento e a dificuldade escolhidos ficam guardados; a música que não os tem usa o mais próximo do chart dela.
+  const instrumentoDaSelecao = instrumentoDaMusica(musicas[indice] ?? {}, instrumento);
+  const dificuldades = dificuldadesDaMusica(musicas[indice] ?? {}, instrumentoDaSelecao).map((d) => d.id);
   const dificuldadeDaSelecao = dificuldadeMaisProxima(dificuldades, dificuldade) ?? dificuldade;
   const dificuldadeDaPartida = emRede?.dificuldade ?? dificuldadeDaSelecao;
+  const instrumentoDaPartida = emRede?.instrumento ?? instrumentoDaSelecao;
   const [comControle, setComControle] = useState(() => Array.from(navigator.getGamepads?.() ?? []).some((c) => c));
   const opcoes = useMemo(() => {
     const base = opcoesDaPartida(configuracoes);
@@ -112,7 +116,7 @@ export function App() {
     partidasVistas.current = sala.partidas;
     resolverMusica(sala.musica, musicas, conexao.endereco)
       .then((m) => {
-        setEmRede({ musica: m, dificuldade: sala.dificuldade, inicio: sala.inicio });
+        setEmRede({ musica: m, dificuldade: sala.dificuldade, instrumento: sala.instrumento, inicio: sala.inicio });
         setPartida((p) => p + 1);
         setTela("jogo");
       })
@@ -274,10 +278,12 @@ export function App() {
                 musicas={musicas}
                 indice={indice}
                 dificuldade={dificuldadeDaSelecao}
+                instrumento={instrumentoDaSelecao}
                 personagem={personagem}
                 volumeDosEfeitos={configuracoes.volumeDosEfeitos}
                 aoSelecionar={setIndice}
                 aoDificuldade={setDificuldade}
+                aoInstrumento={setInstrumento}
                 aoJogar={jogar}
                 aoVoltar={() => setTela("menu")}
                 aoImportar={(arquivos) => void importar(arquivos)}
@@ -290,7 +296,7 @@ export function App() {
                   });
                   avisar.success(`${removida.titulo} removida.`);
                 }}
-                ranking={contasLigadas && escolhida ? <PainelDeRanking musicaId={idDoRanking(escolhida)} dificuldade={dificuldadeDaSelecao} /> : undefined}
+                ranking={contasLigadas && escolhida ? <PainelDeRanking musicaId={idDoRanking(escolhida)} dificuldade={dificuldadeDaSelecao} instrumento={instrumentoDaSelecao} /> : undefined}
               />
             )}
             {tela === "buscaDeMusicas" && (
@@ -334,14 +340,17 @@ export function App() {
               <TelaDeJogo
                 musica={musica}
                 dificuldade={dificuldadeDaPartida}
+                instrumento={instrumentoDaPartida}
                 opcoes={opcoes}
                 personagem={personagem}
-                recorde={recordeDe(carregarRecordes(), musica.id, dificuldadeDaPartida)?.pontos}
+                recorde={recordeDe(carregarRecordes(), musica.id, dificuldadeDaPartida, instrumentoDaPartida)?.pontos}
                 rede={
                   emRede && conexao.sala
                     ? { inicio: emRede.inicio, aoAtualizar: enviarEstado, adversarios: <Adversarios sala={conexao.sala} compacto={estreita} /> }
                     : undefined
                 }
+                // Em rede o canto mostra a sala; sozinho, o ranking global da música.
+                placar={contasLigadas && !emRede ? (pontos) => <PlacarAoVivo musicaId={idDoRanking(musica)} dificuldade={dificuldadeDaPartida} instrumento={instrumentoDaPartida} pontos={pontos} /> : undefined}
                 aoSair={() => setTela(emRede ? "multijogador" : "selecao")}
                 aoTerminar={terminar}
               />

@@ -7,9 +7,15 @@ describe("criarApiDoRanking", () => {
     const buscar = vi.fn(async () => resposta({ jogadores: 0, top: [], meu: null }));
     await criarApiDoRanking("http://api", buscar).buscar("arquivo:Banda - Hit.sng:12", "expert");
     const [url, init] = buscar.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe("http://api/ranking?musica_id=arquivo%3ABanda+-+Hit.sng%3A12&dificuldade=expert");
+    expect(url).toBe("http://api/ranking?musica_id=arquivo%3ABanda+-+Hit.sng%3A12&dificuldade=expert&instrumento=guitarra");
     expect(init.method).toBe("GET");
     expect((init.headers as Record<string, string>).authorization).toBeUndefined();
+  });
+
+  it("pede o ranking do instrumento escolhido", async () => {
+    const buscar = vi.fn(async () => resposta({ jogadores: 0, top: [], meu: null }));
+    await criarApiDoRanking("http://api", buscar).buscar("m", "medio", { instrumento: "baixo" });
+    expect(buscar.mock.calls[0] as unknown as [string]).toEqual([expect.stringContaining("instrumento=baixo"), expect.anything()]);
   });
 
   it("com token, manda o token para vir o recorde pessoal", async () => {

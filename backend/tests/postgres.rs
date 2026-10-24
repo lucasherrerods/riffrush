@@ -4,7 +4,7 @@
 use chrono::{Duration, Utc};
 use riffrush_api::modules::conta::{ContasPostgres, PartidaRegistrada, PerfilDoGoogle, RepositorioDeContas, RepositorioDeSessoes};
 use riffrush_api::modules::perfil::{PerfilPostgres, RepositorioDoPerfil};
-use riffrush_api::modules::progresso::{Dificuldade, ResumoDaPartida};
+use riffrush_api::modules::progresso::{Dificuldade, Instrumento, ResumoDaPartida};
 use riffrush_api::modules::ranking::{RankingPostgres, RepositorioDoRanking};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -59,6 +59,7 @@ async fn partida_soma_xp_e_marca_a_ultima() {
     let partida = PartidaRegistrada {
         conta_id: conta.id,
         musica_id: "embutida:neon".into(),
+        instrumento: Instrumento::Guitarra,
         pontos: 1000,
         resumo: ResumoDaPartida {
             dificuldade: Dificuldade::Expert,
@@ -86,6 +87,7 @@ async fn excluir_apaga_a_conta_com_sessoes_e_partidas() {
     let partida = PartidaRegistrada {
         conta_id: conta.id,
         musica_id: "embutida:neon".into(),
+        instrumento: Instrumento::Guitarra,
         pontos: 1,
         resumo: ResumoDaPartida {
             dificuldade: Dificuldade::Facil,
@@ -116,6 +118,7 @@ async fn ranking_pega_a_melhor_partida_terminada_de_cada_jogador() {
     let jogar = |conta_id: Uuid, pontos: u64, derrota: bool, segundos: i64| PartidaRegistrada {
         conta_id,
         musica_id: musica.clone(),
+        instrumento: Instrumento::Guitarra,
         pontos,
         resumo: ResumoDaPartida {
             dificuldade: Dificuldade::Expert,
@@ -137,15 +140,29 @@ async fn ranking_pega_a_melhor_partida_terminada_de_cada_jogador() {
         jogar(bia.id, 5000, true, 2),
         jogar(bia.id, 700, false, 3),
         jogar(caio.id, 100, false, 4),
+        // No baixo é outro ranking: não entra no da guitarra.
+        PartidaRegistrada {
+            instrumento: Instrumento::Baixo,
+            ..jogar(caio.id, 9999, false, 5)
+        },
     ] {
         banco.registrar_partida(&partida).await.unwrap();
     }
 
-    let linhas = ranking.linhas(&musica, Dificuldade::Expert, 2, Some(caio.id)).await.unwrap();
+    let linhas = ranking
+        .linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, 2, Some(caio.id))
+        .await
+        .unwrap();
 
     let resumo: Vec<_> = linhas.iter().map(|l| (l.posicao, l.conta_id, l.pontos, l.jogadores)).collect();
     assert_eq!(resumo, [(1, ana.id, 900, 3), (2, bia.id, 700, 3), (3, caio.id, 100, 3)]);
-    assert!(ranking.linhas(&musica, Dificuldade::Facil, 50, None).await.unwrap().is_empty());
+    assert!(ranking
+        .linhas(&musica, Dificuldade::Facil, Instrumento::Guitarra, 50, None)
+        .await
+        .unwrap()
+        .is_empty());
+    let baixo = ranking.linhas(&musica, Dificuldade::Expert, Instrumento::Baixo, 50, None).await.unwrap();
+    assert_eq!(baixo.iter().map(|l| (l.conta_id, l.pontos)).collect::<Vec<_>>(), [(caio.id, 9999)]);
 }
 
 #[tokio::test]
@@ -157,6 +174,7 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
     let jogar = |musica: &str, dificuldade: Dificuldade, pontos: u64, derrota: bool, segundos: i64| PartidaRegistrada {
         conta_id: conta.id,
         musica_id: musica.into(),
+        instrumento: Instrumento::Guitarra,
         pontos,
         resumo: ResumoDaPartida {
             dificuldade,

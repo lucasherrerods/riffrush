@@ -5,7 +5,7 @@ import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, tocarEfeito } from
 import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "@/modules/character";
 import { cenaDaPartida } from "./cena";
 import { Palco, opacidadeDaPista, type EstadoDoPalco, type QualidadeDoPalco } from "@/modules/stage";
-import { DIFICULDADES, carregarMusica, type Dificuldade, type Musica, type MusicaCarregada } from "@/modules/songs";
+import { DIFICULDADES, INSTRUMENTOS, carregarMusica, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada } from "@/modules/songs";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -69,6 +69,8 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
 interface Props {
   musica: Musica;
   dificuldade: Dificuldade;
+  /** Sem ele, a guitarra. */
+  instrumento?: Instrumento;
   opcoes: OpcoesDaPartida;
   personagem: Personagem;
   /** Pontos do recorde nesta música e dificuldade, para marcar na barra de estrelas. */
@@ -82,6 +84,8 @@ interface Props {
   };
   aoSair: () => void;
   aoTerminar: (resultado: Resultado) => void;
+  /** O placar do ranking no canto da tela, desenhado com os pontos de agora. */
+  placar?: (pontos: number) => ReactNode;
 }
 
 interface Hud {
@@ -116,7 +120,7 @@ const LARGURA_DO_PAINEL = 250;
 const LARGURA_DO_HUD_LATERAL = 240;
 const MARGEM_DO_HUD = 16;
 
-export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, rede, aoSair, aoTerminar }: Props) {
+export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar }: Props) {
   const recordeAtual = useRef(recorde);
   recordeAtual.current = recorde;
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -166,13 +170,13 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
 
   useEffect(() => {
     let cancelado = false;
-    carregarMusica(musica, dificuldade)
+    carregarMusica(musica, dificuldade, instrumento)
       .then((m) => !cancelado && setCarregada(m))
       .catch((e) => !cancelado && setErro(String(e)));
     return () => {
       cancelado = true;
     };
-  }, [musica, dificuldade]);
+  }, [musica, dificuldade, instrumento]);
 
   useEffect(() => {
     const fonte = musica.arquivoDeVideo ?? (musica.video ? musica.arquivo : undefined);
@@ -258,7 +262,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
         tocarEfeito("erro", opcoes.volumeDosEfeitos);
         setDerrota(true);
       } else {
-        aoTerminar(resultadoDaPartida(partida, musica.id, dificuldade));
+        aoTerminar(resultadoDaPartida(partida, musica.id, dificuldade, instrumento));
       }
     };
 
@@ -317,7 +321,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
       partida.derrota = true;
       terminou = true;
       publicar(true);
-      aoTerminar(resultadoDaPartida(partida, musica.id, dificuldade));
+      aoTerminar(resultadoDaPartida(partida, musica.id, dificuldade, instrumento));
     };
     Object.assign(controles.current, { pausar, continuar, desistir, estrela: () => ativarEstrela(partida) });
 
@@ -477,7 +481,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
       video.current?.pause();
       void audio.resume();
     };
-  }, [carregada, rodada, opcoes, musica.id, dificuldade, aoTerminar, inicioEmRede]);
+  }, [carregada, rodada, opcoes, musica.id, dificuldade, instrumento, aoTerminar, inicioEmRede]);
 
   const recomecar = () => {
     setPausado(false);
@@ -487,7 +491,10 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
     setRodada((r) => r + 1);
   };
 
-  const rotuloDaDificuldade = DIFICULDADES.find((d) => d.id === dificuldade)?.rotulo;
+  // A guitarra é o padrão e não aparece; os outros instrumentos vêm antes da dificuldade.
+  const rotuloDaDificuldade = [instrumento !== "guitarra" && INSTRUMENTOS.find((i) => i.id === instrumento)?.rotulo, DIFICULDADES.find((d) => d.id === dificuldade)?.rotulo]
+    .filter(Boolean)
+    .join(" · ");
   const layout = layoutDaPista(tamanho.largura, tamanho.altura);
 
   if (erro) {
@@ -566,15 +573,15 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
 
           {rede?.adversarios}
 
-          {urlDoVideo && cena.video && (
-            <motion.div
-              initial={{ opacity: 0, x: -32 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="absolute top-20 left-6 w-[min(26vw,360px)] overflow-hidden rounded-2xl border border-borda"
-            >
-              <video ref={video} src={urlDoVideo} muted playsInline className="aspect-video w-full bg-fundo object-cover" />
-            </motion.div>
-          )}
+          {/* Canto superior esquerdo: o clipe da música e, embaixo, o placar do ranking. */}
+          <div data-parte="canto-esquerdo" className="absolute top-20 left-6 flex flex-col gap-4">
+            {urlDoVideo && cena.video && (
+              <motion.div initial={{ opacity: 0, x: -32 }} animate={{ opacity: 1, x: 0 }} className="w-[min(26vw,360px)] overflow-hidden rounded-2xl border border-borda">
+                <video ref={video} src={urlDoVideo} muted playsInline className="aspect-video w-full bg-fundo object-cover" />
+              </motion.div>
+            )}
+            {placar && !estreita && <PlacarDaPartida loja={loja} placar={placar} />}
+          </div>
 
           <HudDaPartida loja={loja} layout={layout} estreita={estreita} comPalco={comPalco} pausado={pausado} derrota={derrota} personagem={cena.personagem ? personagem : null} bpm={musica.bpm || 120} aoEstrela={() => controles.current.estrela()} />
 
@@ -695,4 +702,9 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
       </AnimatePresence>
     </>
   );
+}
+/** Só o placar re-renderiza quando os pontos mudam. */
+function PlacarDaPartida({ loja, placar }: { loja: LojaDoHud<Hud>; placar: (pontos: number) => ReactNode }) {
+  const { pontos } = useLoja(loja);
+  return <>{placar(pontos)}</>;
 }

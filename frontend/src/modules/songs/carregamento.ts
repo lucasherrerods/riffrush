@@ -1,9 +1,9 @@
 import { obterContextoDeAudio } from "@/modules/audio";
 import { criarCacheLimitado } from "@/shared/lib/cacheLimitado";
 import { chartDoAudio } from "./chartAutomatico";
-import { dificuldadesDoChart, escolherDificuldade, lerChart, lerMidi, lerSng, type ChartLido, type PacoteSng } from "./cloneHero";
+import { escolherTrilha, trilhasDoChart, lerChart, lerMidi, lerSng, type ChartLido, type PacoteSng } from "./cloneHero";
 import { mixarEmSegundoPlano } from "./mixagem";
-import type { Batida, Dificuldade, Musica, MusicaCarregada } from "./tipos";
+import type { Batida, Dificuldade, Instrumento, Musica, MusicaCarregada } from "./tipos";
 
 const AUDIO_DO_SNG = /^(song|guitar|bass|rhythm|keys|vocals?|vocals_\d|drums(_\d)?|backing)\.(opus|ogg|mp3|wav)$/;
 const CAPA_DO_SNG = /^album\.(jpe?g|png)$/;
@@ -92,13 +92,13 @@ function abrirSng(musica: Musica, aoProgredir: AoProgredir = () => {}) {
   return aberto;
 }
 
-async function carregarSng(musica: Musica, dificuldade: Dificuldade): Promise<MusicaCarregada> {
+async function carregarSng(musica: Musica, dificuldade: Dificuldade, instrumento: Instrumento): Promise<MusicaCarregada> {
   const { pacote, chart, audio } = await abrirSng(musica);
   // "delay" do song.ini: quanto o áudio atrasa em relação ao chart.
   const atraso = (Number(pacote.metadados.delay) || 0) / 1000;
   return {
     audio,
-    notas: escolherDificuldade(chart, dificuldade).map((n) => ({ ...n, tempo: n.tempo - atraso })),
+    notas: escolherTrilha(chart, instrumento, dificuldade).map((n) => ({ ...n, tempo: n.tempo - atraso })),
     batidas: chart.mapa.batidas(audio.duration + atraso).map((b) => ({ ...b, tempo: b.tempo - atraso })),
     duracao: audio.duration,
   };
@@ -123,9 +123,9 @@ async function carregarAudio(musica: Musica, bytes: () => Promise<ArrayBuffer>, 
   };
 }
 
-export function carregarMusica(musica: Musica, dificuldade: Dificuldade) {
+export function carregarMusica(musica: Musica, dificuldade: Dificuldade, instrumento: Instrumento = "guitarra") {
   const { arquivo, audioEmbutido } = musica;
-  if (arquivo) return musica.sng ? carregarSng(musica, dificuldade) : carregarAudio(musica, () => arquivo.arrayBuffer(), dificuldade);
+  if (arquivo) return musica.sng ? carregarSng(musica, dificuldade, instrumento) : carregarAudio(musica, () => arquivo.arrayBuffer(), dificuldade);
   if (!audioEmbutido) throw new Error(`${musica.titulo} não tem áudio.`);
   return carregarAudio(musica, async () => (await (await fetch(audioEmbutido)).blob()).arrayBuffer(), dificuldade);
 }
@@ -167,8 +167,8 @@ export async function importarArquivo(arquivo: File, aoProgredir: AoProgredir = 
     titulo: metadados.name || base.titulo,
     artista: metadados.artist || base.artista,
     genero: metadados.genre || musica.genero,
-    intensidade: Math.max(1, Math.min(5, Number(metadados.diff_guitar) + 1 || Object.keys(chart.notas).length + 1)),
-    dificuldades: dificuldadesDoChart(chart),
+    intensidade: Math.max(1, Math.min(5, Number(metadados.diff_guitar) + 1 || Object.keys(chart.notas.guitarra ?? {}).length + 1)),
+    trilhas: trilhasDoChart(chart),
     imagemDeCapa: capa ? URL.createObjectURL(new Blob([capa[1].slice()])) : undefined,
     video: !!video,
     arquivoDeVideo: video ? new Blob([video[1].slice()], { type: video[0].endsWith("webm") ? "video/webm" : "video/mp4" }) : undefined,

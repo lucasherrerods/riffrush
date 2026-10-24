@@ -330,6 +330,7 @@ describe("App em rede", () => {
     souHost: false,
     meuId: 2,
     hostId: 1,
+    instrumento: "guitarra" as const,
     personagem: vitor,
     jogadores: [{ id: 1, personagem: PERSONAGEM_PADRAO }, { id: 2, personagem: vitor }],
     musica: { tipo: "embutida" as const, id: "spektrem-shine" },

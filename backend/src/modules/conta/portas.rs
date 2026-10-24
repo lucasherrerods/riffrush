@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use super::dominio::{Conta, PerfilDoGoogle};
-use crate::modules::progresso::ResumoDaPartida;
+use crate::modules::progresso::{Instrumento, ResumoDaPartida};
 
 /// Algo de fora (banco, Google) falhou. O detalhe vai só para o log.
 #[derive(Debug, thiserror::Error)]
@@ -13,6 +13,7 @@ pub struct FalhaExterna(pub String);
 pub struct PartidaRegistrada {
     pub conta_id: Uuid,
     pub musica_id: String,
+    pub instrumento: Instrumento,
     pub pontos: u64,
     pub resumo: ResumoDaPartida,
     pub xp_ganho: u64,

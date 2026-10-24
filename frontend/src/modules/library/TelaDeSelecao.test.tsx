@@ -3,18 +3,19 @@ import userEvent from "@testing-library/user-event";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { registrarUso } from "@/modules/gamepad";
 import { salvarRecorde } from "@/modules/results";
-import { type Dificuldade, type Musica } from "@/modules/songs";
+import { type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { TelaDeSelecao } from "./TelaDeSelecao";
 import { MUSICAS_DE_TESTE } from "@/test/musicas";
 
-function abrir({ indice = 0, dificuldade = "medio" as Dificuldade, musicas = MUSICAS_DE_TESTE } = {}) {
-  const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn() };
+function abrir({ indice = 0, dificuldade = "medio" as Dificuldade, instrumento = "guitarra" as Instrumento, musicas = MUSICAS_DE_TESTE } = {}) {
+  const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoInstrumento: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn() };
   render(
     <TelaDeSelecao
       musicas={musicas}
       indice={indice}
       dificuldade={dificuldade}
+      instrumento={instrumento}
       personagem={PERSONAGEM_PADRAO}
       volumeDosEfeitos={0}
       {...acoes}
@@ -61,9 +62,39 @@ describe("TelaDeSelecao", () => {
     expect(aoDificuldade).toHaveBeenCalledWith("expert");
   });
 
+  it("música só com guitarra não mostra a escolha de instrumento", () => {
+    abrir();
+    expect(screen.queryByRole("radiogroup", { name: "Instrumento" })).not.toBeInTheDocument();
+  });
+
+  describe("com mais de um instrumento", () => {
+    const banda = [{ ...MUSICAS_DE_TESTE[0], trilhas: { guitarra: ["expert" as const], baixo: ["facil" as const, "medio" as const] } }];
+
+    it("mostra os instrumentos do chart e as dificuldades do escolhido", () => {
+      abrir({ musicas: banda, instrumento: "baixo", dificuldade: "medio" });
+      const instrumentos = screen.getByRole("radiogroup", { name: "Instrumento" });
+      expect(within(instrumentos).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Guitarra", "Baixo"]);
+      expect(within(instrumentos).getByRole("radio", { name: "Baixo" })).toHaveAttribute("aria-checked", "true");
+      const dificuldades = screen.getByRole("radiogroup", { name: "Dificuldade" });
+      expect(within(dificuldades).getAllByRole("radio").map((r) => r.textContent)).toEqual([expect.stringMatching(/Fácil/), expect.stringMatching(/Médio/)]);
+    });
+
+    it("clicar num instrumento o escolhe", async () => {
+      const { aoInstrumento, usuario } = abrir({ musicas: banda });
+      await usuario.click(screen.getByRole("radio", { name: "Baixo" }));
+      expect(aoInstrumento).toHaveBeenCalledWith("baixo");
+    });
+
+    it("Tab passa para o próximo instrumento, dando a volta", async () => {
+      const { aoInstrumento, usuario } = abrir({ musicas: banda, instrumento: "baixo" });
+      await usuario.keyboard("{Tab}");
+      expect(aoInstrumento).toHaveBeenCalledWith("guitarra");
+    });
+  });
+
   it("com ranking, abre na aba Ranking e a aba Detalhes mostra a dificuldade e o recorde local", async () => {
-    const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn() };
-    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} ranking={<p>top da música</p>} {...acoes} />);
+    const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoInstrumento: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn() };
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} ranking={<p>top da música</p>} {...acoes} />);
     expect(screen.getByRole("tab", { name: /Ranking/ })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("top da música")).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("tab", { name: /Detalhes/ }));
@@ -187,6 +218,7 @@ describe("TelaDeSelecao com estética arcade", () => {
     abrir();
     const legenda = screen.getByRole("contentinfo");
     for (const comando of ["Dificuldade", "Confirmar", "Voltar"]) expect(legenda).toHaveTextContent(comando);
+    expect(legenda).not.toHaveTextContent("Instrumento");
     expect(legenda).toHaveTextContent("Enter");
   });
 

@@ -49,7 +49,7 @@ describe("reduzir", () => {
   it("o host registra quem chega e manda a sala atualizada para todos", () => {
     const { estado, enviar } = reduzir(salaDoHost(), 2, { tipo: "oi", personagem: vitor }, 0);
     expect(estado.jogadores).toEqual([{ id: 2, personagem: vitor }]);
-    expect(enviar).toEqual([{ tipo: "sala", jogadores: estado.jogadores, musica: estado.musica, dificuldade: estado.dificuldade, prontos: [] }]);
+    expect(enviar).toEqual([{ tipo: "sala", jogadores: estado.jogadores, musica: estado.musica, dificuldade: estado.dificuldade, instrumento: "guitarra", prontos: [] }]);
   });
 
   it("um jogador que muda o personagem não aparece duas vezes", () => {
@@ -72,7 +72,9 @@ describe("reduzir", () => {
   it("o convidado adota a sala enviada pelo host", () => {
     const jogadores = [{ id: 1, personagem: lucas }, { id: 2, personagem: vitor }];
     const { estado } = reduzir(salaDoConvidado(), 1, { tipo: "sala", jogadores, musica: { tipo: "embutida", id: "overdrive" }, dificuldade: "expert", prontos: [] }, 0);
-    expect(estado).toMatchObject({ hostId: 1, jogadores, musica: { id: "overdrive" }, dificuldade: "expert" });
+    expect(estado).toMatchObject({ hostId: 1, jogadores, musica: { id: "overdrive" }, dificuldade: "expert", instrumento: "guitarra" });
+    const comBaixo = reduzir(salaDoConvidado(), 1, { tipo: "sala", jogadores, musica: { tipo: "embutida", id: "overdrive" }, dificuldade: "expert", instrumento: "baixo", prontos: [] }, 0);
+    expect(comBaixo.estado.instrumento).toBe("baixo");
   });
 
   it("quem sai some da lista, e o host avisa todos", () => {
@@ -103,7 +105,9 @@ describe("reduzir", () => {
 
   it("o começo da partida marca o mesmo instante de largada para todos", () => {
     const { estado } = reduzir(salaDoConvidado(), 1, { tipo: "comecar", musica: { tipo: "embutida", id: "overdrive" }, dificuldade: "dificil" }, 1000);
-    expect(estado).toMatchObject({ status: "jogando", partidas: 1, inicio: 1000 + ATRASO_DO_INICIO_MS, dificuldade: "dificil", adversarios: {} });
+    expect(estado).toMatchObject({ status: "jogando", partidas: 1, inicio: 1000 + ATRASO_DO_INICIO_MS, dificuldade: "dificil", instrumento: "guitarra", adversarios: {} });
+    const noBaixo = reduzir(salaDoConvidado(), 1, { tipo: "comecar", musica: { tipo: "embutida", id: "overdrive" }, dificuldade: "dificil", instrumento: "baixo" }, 1000);
+    expect(noBaixo.estado.instrumento).toBe("baixo");
   });
 
   it("guarda o estado dos adversários, mas não o próprio", () => {
@@ -159,7 +163,7 @@ describe("ações do host", () => {
       expect(comecarPartida(umPronto)).toEqual([]);
       const todos = pronto(umPronto, 3).estado;
       expect(todosProntos(todos)).toBe(true);
-      expect(comecarPartida(todos)).toEqual([{ tipo: "comecar", musica: overdrive, dificuldade: "medio" }]);
+      expect(comecarPartida(todos)).toEqual([{ tipo: "comecar", musica: overdrive, dificuldade: "medio", instrumento: "guitarra" }]);
     });
 
     it("trocar a música zera os prontos, porque todos precisam baixar a nova", () => {
@@ -168,8 +172,11 @@ describe("ações do host", () => {
       expect(enviar[0]).toMatchObject({ prontos: [] });
     });
 
-    it("trocar só a dificuldade mantém os prontos", () => {
+    it("trocar só a dificuldade ou o instrumento mantém os prontos", () => {
       expect(escolherMusica(pronto(salaCheia(), 2).estado, overdrive, "expert").estado.prontos).toEqual([2]);
+      const noBaixo = escolherMusica(pronto(salaCheia(), 2).estado, overdrive, "expert", "baixo");
+      expect(noBaixo.estado).toMatchObject({ instrumento: "baixo", prontos: [2] });
+      expect(noBaixo.enviar).toEqual([expect.objectContaining({ tipo: "sala", instrumento: "baixo" })]);
     });
 
     it("quem sai deixa de contar", () => {
@@ -185,7 +192,7 @@ describe("ações do host", () => {
   });
 
   it("começar a partida avisa todos com a música e a dificuldade", () => {
-    expect(comecarPartida(salaDoHost())).toEqual([{ tipo: "comecar", musica: salaDoHost().musica, dificuldade: salaDoHost().dificuldade }]);
+    expect(comecarPartida(salaDoHost())).toEqual([{ tipo: "comecar", musica: salaDoHost().musica, dificuldade: salaDoHost().dificuldade, instrumento: "guitarra" }]);
     expect(comecarPartida(salaDoConvidado())).toEqual([]);
   });
 });

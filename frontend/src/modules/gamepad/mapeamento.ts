@@ -66,6 +66,7 @@ function teclasDoBotao(botao: number, modo: Modo, mapa: Mapa): string[] {
   if (modo === "menu") {
     if (botao === BOTOES.A || botao === BOTOES.START) return ["Enter"];
     if (botao === BOTOES.B) return ["Escape"];
+    if (botao === BOTOES.Y) return ["Tab"];
     return [];
   }
   const pista = TRASTES.indexOf(botao as (typeof TRASTES)[number]);

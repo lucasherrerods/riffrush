@@ -2,11 +2,11 @@ import { useSyncExternalStore } from "react";
 
 /** O último aparelho que o jogador usou: as dicas de comandos mostram as teclas ou os botões dele. */
 export type Dispositivo = "teclado" | "controle";
-export type Comando = "horizontal" | "vertical" | "confirmar" | "voltar";
+export type Comando = "horizontal" | "vertical" | "confirmar" | "voltar" | "instrumento";
 
 const ROTULOS: Record<Dispositivo, Record<Comando, string>> = {
-  teclado: { horizontal: "← →", vertical: "↑ ↓", confirmar: "Enter", voltar: "Esc" },
-  controle: { horizontal: "✚ ◀ ▶", vertical: "✚ ▲ ▼", confirmar: "A", voltar: "B" },
+  teclado: { horizontal: "← →", vertical: "↑ ↓", confirmar: "Enter", voltar: "Esc", instrumento: "Tab" },
+  controle: { horizontal: "✚ ◀ ▶", vertical: "✚ ▲ ▼", confirmar: "A", voltar: "B", instrumento: "Y" },
 };
 
 export const rotuloDoComando = (comando: Comando, dispositivo: Dispositivo) => ROTULOS[dispositivo][comando];
