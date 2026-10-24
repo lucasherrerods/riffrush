@@ -56,8 +56,18 @@ function naSala(souHost: boolean, extra: Partial<EstadoDaSala> = {}): EstadoDaSa
 function abrir(conexao: sala.Conexao, musicas = MUSICAS_DE_TESTE) {
   vi.mocked(sala.useConexao).mockReturnValue(conexao);
   const aoVoltar = vi.fn();
-  render(<TelaDeMultijogador personagem={lucas} musicas={musicas} volumeDosEfeitos={0} aoVoltar={aoVoltar} aoEditarPersonagem={vi.fn()} />);
-  return { aoVoltar, usuario: userEvent.setup() };
+  const aoBuscarMusicas = vi.fn();
+  render(
+    <TelaDeMultijogador
+      personagem={lucas}
+      musicas={musicas}
+      volumeDosEfeitos={0}
+      aoVoltar={aoVoltar}
+      aoEditarPersonagem={vi.fn()}
+      aoBuscarMusicas={aoBuscarMusicas}
+    />,
+  );
+  return { aoVoltar, aoBuscarMusicas, usuario: userEvent.setup() };
 }
 
 beforeEach(() => {
@@ -166,7 +176,7 @@ describe("na sala", () => {
   it("com muitas músicas, mostra só as próximas da escolhida, sem rolagem, e as setas trocam", async () => {
     const muitas = Array.from({ length: 12 }, (_, i) => ({ ...MUSICAS_DE_TESTE[0], id: `m${i}`, titulo: `Faixa ${i}` }));
     vi.mocked(sala.useConexao).mockReturnValue({ sala: naSala(true, { musica: { tipo: "embutida", id: "m6" } }), endereco: "" });
-    render(<TelaDeMultijogador personagem={lucas} musicas={muitas} volumeDosEfeitos={0} aoVoltar={vi.fn()} aoEditarPersonagem={vi.fn()} />);
+    render(<TelaDeMultijogador personagem={lucas} musicas={muitas} volumeDosEfeitos={0} aoVoltar={vi.fn()} aoEditarPersonagem={vi.fn()} aoBuscarMusicas={vi.fn()} />);
     const usuario = userEvent.setup();
     const lista = screen.getByRole("radiogroup", { name: "Música" });
     expect(within(lista).getAllByRole("radio")).toHaveLength(3);
@@ -252,6 +262,13 @@ describe("na sala", () => {
     expect(screen.getByText("Overdrive")).toBeInTheDocument();
     expect(screen.getByText(/Baixando a música|Estou pronto/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Começar partida/ })).toBeNull();
+  });
+
+  it("dá para baixar músicas sem sair da sala", async () => {
+    const { aoBuscarMusicas, usuario } = abrir({ sala: naSala(true), endereco: "" });
+    await usuario.click(screen.getByRole("button", { name: /Baixar músicas/ }));
+    expect(aoBuscarMusicas).toHaveBeenCalled();
+    expect(sala.sairDaSala).not.toHaveBeenCalled();
   });
 
   it("sair da sala", async () => {
