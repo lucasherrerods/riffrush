@@ -30,5 +30,6 @@ describe("porcentagem", () => {
   it("mostra a fração com duas casas, no formato brasileiro", () => {
     expect(porcentagem(0.8765)).toBe("87,65%");
     expect(porcentagem(1)).toBe("100,00%");
+    expect(porcentagem(10 / 11, 0)).toBe("91%");
   });
 });

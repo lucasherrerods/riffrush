@@ -25,7 +25,9 @@ use shared::estado::EstadoDoApp;
         modules::ranking::PosicaoNoRanking,
         modules::perfil::RespostaDoPerfil,
         modules::perfil::DificuldadeDoPerfil,
-        modules::perfil::PartidaDoPerfil
+        modules::perfil::PartidaDoPerfil,
+        modules::perfil::InstrumentoDoPerfil,
+        modules::perfil::MusicaDoPerfil
     )),
     modifiers(&Token)
 )]

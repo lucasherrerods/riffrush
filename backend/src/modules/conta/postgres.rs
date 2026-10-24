@@ -13,6 +13,7 @@ struct LinhaDaConta {
     id: Uuid,
     nome: String,
     avatar: Option<String>,
+    email: Option<String>,
     xp_total: i64,
 }
 
@@ -22,6 +23,7 @@ impl From<LinhaDaConta> for Conta {
             id: linha.id,
             nome: linha.nome,
             avatar: linha.avatar,
+            email: linha.email,
             xp_total: linha.xp_total.max(0) as u64,
         }
     }
@@ -35,14 +37,16 @@ fn falha(erro: sqlx::Error) -> FalhaExterna {
 impl RepositorioDeContas for ContasPostgres {
     async fn entrar(&self, perfil: &PerfilDoGoogle, novo_id: Uuid) -> Result<Conta, FalhaExterna> {
         sqlx::query_as::<_, LinhaDaConta>(
-            "INSERT INTO contas (id, google_sub, nome, avatar) VALUES ($1, $2, $3, $4)
-             ON CONFLICT (google_sub) DO UPDATE SET nome = EXCLUDED.nome, avatar = EXCLUDED.avatar
-             RETURNING id, nome, avatar, xp_total",
+            "INSERT INTO contas (id, google_sub, nome, avatar, email) VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (google_sub) DO UPDATE SET nome = EXCLUDED.nome, avatar = EXCLUDED.avatar,
+                 email = COALESCE(EXCLUDED.email, contas.email)
+             RETURNING id, nome, avatar, email, xp_total",
         )
         .bind(novo_id)
         .bind(&perfil.sub)
         .bind(&perfil.nome)
         .bind(&perfil.avatar)
+        .bind(&perfil.email)
         .fetch_one(&self.0)
         .await
         .map(Conta::from)
@@ -50,7 +54,7 @@ impl RepositorioDeContas for ContasPostgres {
     }
 
     async fn buscar(&self, id: Uuid) -> Result<Option<Conta>, FalhaExterna> {
-        sqlx::query_as::<_, LinhaDaConta>("SELECT id, nome, avatar, xp_total FROM contas WHERE id = $1")
+        sqlx::query_as::<_, LinhaDaConta>("SELECT id, nome, avatar, email, xp_total FROM contas WHERE id = $1")
             .bind(id)
             .fetch_optional(&self.0)
             .await
@@ -88,7 +92,7 @@ impl RepositorioDeContas for ContasPostgres {
         .execute(&mut *transacao)
         .await
         .map_err(falha)?;
-        let conta = sqlx::query_as::<_, LinhaDaConta>("UPDATE contas SET xp_total = xp_total + $2 WHERE id = $1 RETURNING id, nome, avatar, xp_total")
+        let conta = sqlx::query_as::<_, LinhaDaConta>("UPDATE contas SET xp_total = xp_total + $2 WHERE id = $1 RETURNING id, nome, avatar, email, xp_total")
             .bind(partida.conta_id)
             .bind(partida.xp_ganho as i64)
             .fetch_one(&mut *transacao)

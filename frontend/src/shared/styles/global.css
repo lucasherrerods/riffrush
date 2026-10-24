@@ -297,3 +297,11 @@ h1 {
   }
 }
 
+
+/* Rola com a roda e o toque, mas sem a barra aparecendo. */
+@utility sem-barra-de-rolagem {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

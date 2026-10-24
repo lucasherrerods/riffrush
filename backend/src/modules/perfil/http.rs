@@ -6,9 +6,9 @@ use serde::Serialize;
 use utoipa::ToSchema;
 
 use super::casos_de_uso::ErroDoPerfil;
-use super::dominio::{EstatisticasDaDificuldade, PartidaRecente, Perfil};
+use super::dominio::{EstatisticasDaDificuldade, MusicaMaisTocada, PartidaRecente, PartidasNoInstrumento, Perfil};
 use crate::modules::conta::{NivelDaConta, Token};
-use crate::modules::progresso::Dificuldade;
+use crate::modules::progresso::{Dificuldade, Instrumento};
 use crate::shared::erro::ErroDaApi;
 use crate::shared::estado::EstadoDoApp;
 
@@ -44,6 +44,37 @@ impl From<EstatisticasDaDificuldade> for DificuldadeDoPerfil {
 }
 
 #[derive(Serialize, ToSchema)]
+pub struct InstrumentoDoPerfil {
+    #[schema(value_type = String, example = "guitarra")]
+    instrumento: Instrumento,
+    partidas: u32,
+}
+
+impl From<PartidasNoInstrumento> for InstrumentoDoPerfil {
+    fn from(i: PartidasNoInstrumento) -> Self {
+        Self {
+            instrumento: i.instrumento,
+            partidas: i.partidas,
+        }
+    }
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct MusicaDoPerfil {
+    musica_id: String,
+    partidas: u32,
+}
+
+impl From<MusicaMaisTocada> for MusicaDoPerfil {
+    fn from(m: MusicaMaisTocada) -> Self {
+        Self {
+            musica_id: m.musica_id,
+            partidas: m.partidas,
+        }
+    }
+}
+
+#[derive(Serialize, ToSchema)]
 pub struct PartidaDoPerfil {
     musica_id: String,
     #[schema(value_type = String, example = "expert")]
@@ -73,6 +104,7 @@ impl From<PartidaRecente> for PartidaDoPerfil {
 pub struct RespostaDoPerfil {
     nome: String,
     avatar: Option<String>,
+    email: Option<String>,
     xp_total: u64,
     nivel: NivelDaConta,
     criada_em: DateTime<Utc>,
@@ -83,6 +115,9 @@ pub struct RespostaDoPerfil {
     melhor_pontuacao: u64,
     musicas_distintas: u32,
     por_dificuldade: Vec<DificuldadeDoPerfil>,
+    /// Só os instrumentos jogados, do mais jogado para o menos.
+    por_instrumento: Vec<InstrumentoDoPerfil>,
+    mais_tocadas: Vec<MusicaDoPerfil>,
     recentes: Vec<PartidaDoPerfil>,
 }
 
@@ -91,6 +126,7 @@ impl From<Perfil> for RespostaDoPerfil {
         Self {
             nome: p.conta.nome,
             avatar: p.conta.avatar,
+            email: p.conta.email,
             xp_total: p.conta.xp_total,
             nivel: p.nivel.into(),
             criada_em: p.criada_em,
@@ -100,6 +136,8 @@ impl From<Perfil> for RespostaDoPerfil {
             melhor_pontuacao: p.melhor_pontuacao,
             musicas_distintas: p.musicas_distintas,
             por_dificuldade: p.por_dificuldade.into_iter().map(Into::into).collect(),
+            por_instrumento: p.por_instrumento.into_iter().map(Into::into).collect(),
+            mais_tocadas: p.mais_tocadas.into_iter().map(Into::into).collect(),
             recentes: p.recentes.into_iter().map(Into::into).collect(),
         }
     }

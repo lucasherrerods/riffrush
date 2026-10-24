@@ -21,7 +21,7 @@ describe("GanhoDeXp", () => {
 });
 
 describe("ExcluirConta", () => {
-  const conta = { id: "1", nome: "Lucas", avatar: null, xp_total: 0, nivel: nivel(1, 0, 100) };
+  const conta = { id: "1", nome: "Lucas", avatar: null, email: null, xp_total: 0, nivel: nivel(1, 0, 100) };
 
   afterEach(() => vi.restoreAllMocks());
 

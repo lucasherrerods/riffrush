@@ -153,6 +153,9 @@ pub mod fakes {
             let conta = match existente {
                 Some((_, conta)) => {
                     conta.nome = perfil.nome.clone();
+                    if perfil.email.is_some() {
+                        conta.email = perfil.email.clone();
+                    }
                     conta.clone()
                 }
                 None => {
@@ -160,6 +163,7 @@ pub mod fakes {
                         id: novo_id,
                         nome: perfil.nome.clone(),
                         avatar: perfil.avatar.clone(),
+                        email: perfil.email.clone(),
                         xp_total: 0,
                     };
                     contas.insert(novo_id, (perfil.sub.clone(), conta.clone()));
@@ -228,6 +232,7 @@ pub mod fakes {
                     sub: "google-1".into(),
                     nome: "Lucas".into(),
                     avatar: None,
+                    email: Some("lucas@exemplo.com".into()),
                 }),
                 _ => Err(ErroDeLogin::Recusado),
             }

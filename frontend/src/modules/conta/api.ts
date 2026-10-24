@@ -1,4 +1,4 @@
-import type { Dificuldade } from "@/modules/songs";
+import type { Dificuldade, Instrumento } from "@/modules/songs";
 import { ErroDaApi, criarCliente } from "@/shared/lib/api";
 
 /** Os formatos que a API devolve, em snake_case como no JSON. */
@@ -12,6 +12,8 @@ export interface ContaDaApi {
   id: string;
   nome: string;
   avatar: string | null;
+  /** Contas antigas só ganham o e-mail no próximo login. */
+  email: string | null;
   xp_total: number;
   nivel: NivelDaConta;
 }
@@ -52,9 +54,20 @@ export interface PartidaDoPerfil {
   jogada_em: string;
 }
 
+export interface InstrumentoDoPerfil {
+  instrumento: Instrumento;
+  partidas: number;
+}
+
+export interface MusicaDoPerfil {
+  musica_id: string;
+  partidas: number;
+}
+
 export interface PerfilDaApi {
   nome: string;
   avatar: string | null;
+  email: string | null;
   xp_total: number;
   nivel: NivelDaConta;
   criada_em: string;
@@ -66,6 +79,10 @@ export interface PerfilDaApi {
   musicas_distintas: number;
   /** Sempre as quatro, da mais fácil para a mais difícil. */
   por_dificuldade: DificuldadeDoPerfil[];
+  /** Só os instrumentos jogados, do mais jogado para o menos. */
+  por_instrumento: InstrumentoDoPerfil[];
+  /** Até três, da mais tocada para a menos. */
+  mais_tocadas: MusicaDoPerfil[];
   /** As últimas partidas, da mais nova para a mais velha. */
   recentes: PartidaDoPerfil[];
 }

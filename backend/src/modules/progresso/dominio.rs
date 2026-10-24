@@ -60,6 +60,12 @@ impl Instrumento {
             Self::Teclado => "teclado",
         }
     }
+
+    pub fn do_texto(texto: &str) -> Option<Self> {
+        [Self::Guitarra, Self::Baixo, Self::Ritmica, Self::Coop, Self::Teclado]
+            .into_iter()
+            .find(|i| i.como_texto() == texto)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -152,6 +158,20 @@ mod tests {
             assert_eq!(Dificuldade::do_texto(dificuldade.como_texto()), Some(dificuldade));
         }
         assert_eq!(Dificuldade::do_texto("impossivel"), None);
+    }
+
+    #[test]
+    fn o_instrumento_volta_do_texto_do_banco() {
+        for instrumento in [
+            Instrumento::Guitarra,
+            Instrumento::Baixo,
+            Instrumento::Ritmica,
+            Instrumento::Coop,
+            Instrumento::Teclado,
+        ] {
+            assert_eq!(Instrumento::do_texto(instrumento.como_texto()), Some(instrumento));
+        }
+        assert_eq!(Instrumento::do_texto("bateria"), None);
     }
 
     fn partida(dificuldade: Dificuldade, acertos: u32, total: u32) -> ResumoDaPartida {

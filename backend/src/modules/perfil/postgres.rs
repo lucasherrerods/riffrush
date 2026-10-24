@@ -3,10 +3,10 @@ use chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
-use super::dominio::{DadosDoPerfil, EstatisticasDaDificuldade, PartidaRecente};
+use super::dominio::{DadosDoPerfil, EstatisticasDaDificuldade, MusicaMaisTocada, PartidaRecente, PartidasNoInstrumento, MAIS_TOCADAS};
 use super::portas::RepositorioDoPerfil;
 use crate::modules::conta::FalhaExterna;
-use crate::modules::progresso::Dificuldade;
+use crate::modules::progresso::{Dificuldade, Instrumento};
 
 pub struct PerfilPostgres(pub PgPool);
 
@@ -24,6 +24,12 @@ struct LinhaDaDificuldade {
     acertos: i64,
     notas: i64,
     melhor_pontuacao: i64,
+}
+
+#[derive(FromRow)]
+struct Contagem {
+    chave: String,
+    partidas: i64,
 }
 
 #[derive(FromRow)]
@@ -47,6 +53,19 @@ const POR_DIFICULDADE: &str = "
            COALESCE(MAX(pontos) FILTER (WHERE NOT derrota), 0) AS melhor_pontuacao
     FROM partidas WHERE conta_id = $1
     GROUP BY dificuldade";
+
+const POR_INSTRUMENTO: &str = "
+    SELECT instrumento AS chave, COUNT(*) AS partidas
+    FROM partidas WHERE conta_id = $1
+    GROUP BY instrumento";
+
+/// No empate, a que foi tocada por último vem primeiro.
+const CONSULTA_DAS_MAIS_TOCADAS: &str = "
+    SELECT musica_id AS chave, COUNT(*) AS partidas
+    FROM partidas WHERE conta_id = $1
+    GROUP BY musica_id
+    ORDER BY COUNT(*) DESC, MAX(jogada_em) DESC
+    LIMIT $2";
 
 const RECENTES: &str = "
     SELECT musica_id, dificuldade, pontos, acertos, total, derrota, jogada_em
@@ -94,6 +113,31 @@ impl RepositorioDoPerfil for PerfilPostgres {
                 })
             })
             .collect();
+        let por_instrumento = sqlx::query_as::<_, Contagem>(POR_INSTRUMENTO)
+            .bind(conta_id)
+            .fetch_all(&self.0)
+            .await
+            .map_err(falha)?
+            .into_iter()
+            .filter_map(|l| {
+                Some(PartidasNoInstrumento {
+                    instrumento: Instrumento::do_texto(&l.chave)?,
+                    partidas: contagem(l.partidas),
+                })
+            })
+            .collect();
+        let mais_tocadas = sqlx::query_as::<_, Contagem>(CONSULTA_DAS_MAIS_TOCADAS)
+            .bind(conta_id)
+            .bind(i64::from(MAIS_TOCADAS))
+            .fetch_all(&self.0)
+            .await
+            .map_err(falha)?
+            .into_iter()
+            .map(|l| MusicaMaisTocada {
+                musica_id: l.chave,
+                partidas: contagem(l.partidas),
+            })
+            .collect();
         let recentes = sqlx::query_as::<_, LinhaDaPartida>(RECENTES)
             .bind(conta_id)
             .bind(i64::from(recentes))
@@ -117,6 +161,8 @@ impl RepositorioDoPerfil for PerfilPostgres {
             criada_em: resumo.criada_em,
             musicas_distintas: contagem(resumo.musicas_distintas),
             por_dificuldade,
+            por_instrumento,
+            mais_tocadas,
             recentes,
         }))
     }
