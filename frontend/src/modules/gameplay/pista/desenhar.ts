@@ -36,7 +36,26 @@ const ATRAS_DA_LINHA = -0.12;
 /** Parte final do braço (perto do horizonte) que vai sumindo. */
 const TAMANHO_DO_FADE = 0.35;
 
-let gradienteDaPista: { chave: string; valor: CanvasGradient } | null = null;
+/** Gradientes só mudam com o tamanho da tela ou o star power: criar um a cada quadro pesa no canvas. */
+const gradientes = new Map<string, CanvasGradient>();
+let contextoDosGradientes: CanvasRenderingContext2D | null = null;
+const MAXIMO_DE_GRADIENTES = 32;
+
+function gradienteGuardado(c: CanvasRenderingContext2D, chave: string, criar: () => CanvasGradient) {
+  if (contextoDosGradientes !== c) {
+    gradientes.clear();
+    contextoDosGradientes = c;
+  }
+  let gradiente = gradientes.get(chave);
+  if (!gradiente) {
+    // Tamanhos antigos (a janela foi redimensionada) não voltam: limpa tudo de uma vez.
+    if (gradientes.size >= MAXIMO_DE_GRADIENTES) gradientes.clear();
+    gradiente = criar();
+    gradientes.set(chave, gradiente);
+  }
+  return gradiente;
+}
+
 let padraoDoBraco: { textura: CanvasImageSource; contexto: CanvasRenderingContext2D; valor: CanvasPattern | null } | null = null;
 
 /** Primeiro índice com tempo >= alvo, numa lista ordenada. */
@@ -78,15 +97,15 @@ export function desenharPista(
   const perto = projetar(layout, ATRAS_DA_LINHA);
   const longe = projetar(layout, 1);
 
-  // Fundo da pista: o gradiente só é recriado quando o tamanho ou o star power mudam.
-  const chave = `${largura}x${altura}:${cena.estrelaAtiva}`;
-  if (gradienteDaPista?.chave !== chave) {
+  const tamanho = `${largura}x${altura}`;
+  const comEstrela = `${tamanho}:${cena.estrelaAtiva}`;
+  const fundoDaPista = gradienteGuardado(c, `pista:${comEstrela}`, () => {
     const gradiente = c.createLinearGradient(0, longe.y, 0, perto.y);
     gradiente.addColorStop(0, comAlfa(cena.estrelaAtiva ? TRILHO_DA_ESTRELA[0] : cores.fundo, 0));
     gradiente.addColorStop(0.25, cena.estrelaAtiva ? comAlfa(TRILHO_DA_ESTRELA[1], 0.9) : comAlfa(cores.superficie, 0.95));
     gradiente.addColorStop(1, comAlfa(cena.estrelaAtiva ? TRILHO_DA_ESTRELA[2] : cores.fundo, 0.98));
-    gradienteDaPista = { chave, valor: gradiente };
-  }
+    return gradiente;
+  });
   const contornoDoBraco = () => {
     c.beginPath();
     c.moveTo(centro - metade * longe.escala, longe.y);
@@ -95,7 +114,7 @@ export function desenharPista(
     c.lineTo(centro - metade * perto.escala, perto.y);
     c.closePath();
   };
-  c.fillStyle = gradienteDaPista.valor;
+  c.fillStyle = fundoDaPista;
   contornoDoBraco();
   c.fill();
 
@@ -113,10 +132,12 @@ export function desenharPista(
     c.fillRect(centro - metade * perto.escala, longe.y, metade * perto.escala * 2, perto.y - longe.y);
     c.globalAlpha = 1;
   }
-  const luz = c.createRadialGradient(centro, linhaDeBatida, 0, centro, linhaDeBatida, layout.largura * 0.9);
-  luz.addColorStop(0, comAlfa(cena.estrelaAtiva ? COR_DA_ESTRELA : cores.destaque, 0.16));
-  luz.addColorStop(1, comAlfa(cores.destaque, 0));
-  c.fillStyle = luz;
+  c.fillStyle = gradienteGuardado(c, `luz:${comEstrela}`, () => {
+    const luz = c.createRadialGradient(centro, linhaDeBatida, 0, centro, linhaDeBatida, layout.largura * 0.9);
+    luz.addColorStop(0, comAlfa(cena.estrelaAtiva ? COR_DA_ESTRELA : cores.destaque, 0.16));
+    luz.addColorStop(1, comAlfa(cores.destaque, 0));
+    return luz;
+  });
   c.fillRect(centro - metade * perto.escala, longe.y, metade * perto.escala * 2, perto.y - longe.y);
   c.restore();
 
@@ -188,11 +209,15 @@ export function desenharPista(
       c.globalAlpha = 1;
     }
     // Aro prateado, anel na cor do traste e o miolo escuro, que acende ao apertar.
-    const cromo = c.createLinearGradient(0, linhaDeBatida - raio * 0.6, 0, linhaDeBatida + raio * 0.8);
-    cromo.addColorStop(0, cores.texto);
-    cromo.addColorStop(0.45, cores.textoSuave);
-    cromo.addColorStop(0.55, cores.borda);
-    cromo.addColorStop(1, cores.fundo);
+    // Vertical: o mesmo cromo serve para os cinco botões.
+    const cromo = gradienteGuardado(c, `cromo:${tamanho}`, () => {
+      const gradiente = c.createLinearGradient(0, linhaDeBatida - raio * 0.6, 0, linhaDeBatida + raio * 0.8);
+      gradiente.addColorStop(0, cores.texto);
+      gradiente.addColorStop(0.45, cores.textoSuave);
+      gradiente.addColorStop(0.55, cores.borda);
+      gradiente.addColorStop(1, cores.fundo);
+      return gradiente;
+    });
     c.beginPath();
     c.ellipse(x, linhaDeBatida + raio * 0.12, raio * 1.12, raio * 0.62, 0, 0, Math.PI * 2);
     c.fillStyle = cromo;
@@ -264,11 +289,13 @@ export function desenharPista(
 
   // Fade no fim do braço: apaga aos poucos tudo o que chega perto do horizonte, e o fundo da tela aparece.
   const fimDoFade = longe.y + (perto.y - longe.y) * TAMANHO_DO_FADE;
-  const fade = c.createLinearGradient(0, longe.y, 0, fimDoFade);
-  fade.addColorStop(0, comAlfa(cores.fundo, 1));
-  fade.addColorStop(1, comAlfa(cores.fundo, 0));
   c.globalCompositeOperation = "destination-out";
-  c.fillStyle = fade;
+  c.fillStyle = gradienteGuardado(c, `fade:${tamanho}`, () => {
+    const fade = c.createLinearGradient(0, longe.y, 0, fimDoFade);
+    fade.addColorStop(0, comAlfa(cores.fundo, 1));
+    fade.addColorStop(1, comAlfa(cores.fundo, 0));
+    return fade;
+  });
   c.fillRect(0, 0, largura, fimDoFade);
   c.globalCompositeOperation = "source-over";
 
