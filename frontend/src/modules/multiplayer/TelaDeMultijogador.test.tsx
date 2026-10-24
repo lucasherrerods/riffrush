@@ -180,14 +180,15 @@ describe("na sala", () => {
     expect(within(grupo).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Expert"]);
   });
 
-  it("com muitas músicas, mostra só as próximas da escolhida, sem rolagem, e as setas trocam", async () => {
+  // Antes só 3 músicas apareciam por vez: pouco para escolher numa biblioteca grande.
+  it("com muitas músicas, lista todas numa lista rolável, e as setas trocam", async () => {
     const muitas = Array.from({ length: 12 }, (_, i) => ({ ...MUSICAS_DE_TESTE[0], id: `m${i}`, titulo: `Faixa ${i}` }));
     vi.mocked(sala.useConexao).mockReturnValue({ sala: naSala(true, { musica: { tipo: "embutida", id: "m6" } }), endereco: "" });
     render(<TelaDeMultijogador personagem={lucas} musicas={muitas} volumeDosEfeitos={0} aoVoltar={vi.fn()} aoEditarPersonagem={vi.fn()} aoBuscarMusicas={vi.fn()} />);
     const usuario = userEvent.setup();
     const lista = screen.getByRole("radiogroup", { name: "Música" });
-    expect(within(lista).getAllByRole("radio")).toHaveLength(3);
-    expect(lista.className).not.toMatch(/overflow/);
+    expect(within(lista).getAllByRole("radio")).toHaveLength(12);
+    expect(lista).toHaveClass("overflow-y-auto");
     await usuario.click(screen.getByRole("button", { name: "Próxima música" }));
     expect(sala.escolher).toHaveBeenCalledWith(muitas[7], "medio");
     await usuario.click(screen.getByRole("button", { name: "Música anterior" }));

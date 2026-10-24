@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { Check, ChevronDown, ChevronUp, Globe, Loader2, Play, Smartphone, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar } from "@/modules/character";
 import { useSeguirMusica } from "@/modules/player";
 import { DIFICULDADES, dificuldadesDaMusica, type Dificuldade, type Musica } from "@/modules/songs";
-import { janelaEmVolta } from "@/shared/lib/janela";
 import { cn } from "@/shared/lib/utils";
 import { avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
@@ -14,8 +13,6 @@ import { MAXIMO_DE_JOGADORES, type EstadoDaSala } from "../protocolo";
 import { todosProntos } from "../protocolo";
 import { comecar, escolher, marcarPronto, type InfoDaSala } from "../sala";
 import { useMusicaDaSala } from "../useMusicaDaSala";
-
-const MUSICAS_VISIVEIS = 3;
 
 interface Props {
   sala: EstadoDaSala;
@@ -41,8 +38,9 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
   const musica = musicas.find((m) => m.id === sala.musica.id);
   const tituloDaMusica = musica?.titulo ?? ("titulo" in sala.musica ? sala.musica.titulo : sala.musica.id);
   const posicao = musicas.findIndex((m) => m.id === sala.musica.id);
-  // Sem rolagem: só as músicas em volta da escolhida aparecem, e as setas andam pela lista.
-  const visiveis = janelaEmVolta(musicas.length, Math.max(0, posicao), MUSICAS_VISIVEIS);
+  // A lista rola sozinha até a escolhida quando ela muda pelas setas ou pela busca.
+  const escolhidaNaLista = useRef<HTMLButtonElement>(null);
+  useEffect(() => escolhidaNaLista.current?.scrollIntoView?.({ block: "nearest" }), [sala.musica.id]);
   const escolherVizinha = (passo: number) => {
     const vizinha = musicas[posicao + passo];
     if (!vizinha) return;
@@ -106,9 +104,9 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
           })}
         </ul>
 
-        {/* Música à esquerda, dificuldade e largada à direita: lado a lado, tudo cabe sem rolagem. */}
-        <section className="grid grid-cols-2 gap-6 placa p-6 max-md:grid-cols-1">
-          <div className="flex min-w-0 flex-col gap-2">
+        {/* Música à esquerda, dificuldade e largada à direita. A lista de músicas ocupa a altura livre e rola. */}
+        <section className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-6 placa p-6 max-md:grid-cols-1 max-md:grid-rows-none">
+          <div className="flex min-h-0 min-w-0 flex-col gap-2">
             <p className="text-base font-semibold text-texto-suave">Música</p>
             {sala.souHost ? (
               <>
@@ -123,12 +121,13 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
                     <ChevronDown />
                   </Button>
                 </div>
-                <div role="radiogroup" aria-label="Música" className="flex flex-col gap-1">
-                  {musicas.slice(visiveis.inicio, visiveis.fim).map((m) => {
+                <div role="radiogroup" aria-label="Música" className="flex min-h-48 flex-1 flex-col gap-1 overflow-y-auto max-md:max-h-72">
+                  {musicas.map((m) => {
                     const escolhida = m.id === sala.musica.id;
                     return (
                       <button
                         key={m.id}
+                        ref={escolhida ? escolhidaNaLista : undefined}
                         role="radio"
                         aria-checked={escolhida}
                         aria-label={`${m.titulo} - ${m.artista}`}
