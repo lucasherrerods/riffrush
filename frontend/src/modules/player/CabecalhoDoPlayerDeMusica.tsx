@@ -1,19 +1,28 @@
-import { useState } from "react";
-import { Loader2, Music, Pause, Play, SkipBack, SkipForward } from "lucide-react";
+import { useRef, useState } from "react";
+import { Loader2, Music, Pause, Play, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Slider } from "@/shared/ui/slider";
 import { formatarTempo } from "./fila";
 import { playerDeMusica } from "./playerDeMusica";
 import { usePlayerDeMusica, usePosicaoDaMusica } from "./usePlayerDeMusica";
+import { volumeAoAlternarMudo } from "./volume";
 
-/** O player no topo das telas: mostra a música que está tocando e deixa pausar, pular e escolher o trecho. */
-/** `children` fica no canto direito (a conta, por exemplo). */
-export function CabecalhoDoPlayerDeMusica({ children }: { children?: React.ReactNode }) {
+interface Props {
+  volume: number;
+  aoMudarVolume: (volume: number) => void;
+  /** Fica no canto direito (a conta, por exemplo). */
+  children?: React.ReactNode;
+}
+
+/** O player no topo das telas: mostra a música que está tocando e deixa pausar, pular, escolher o trecho e o volume. */
+export function CabecalhoDoPlayerDeMusica({ volume, aoMudarVolume, children }: Props) {
   const { musica, tocando, carregando, duracao } = usePlayerDeMusica();
   const posicao = usePosicaoDaMusica(tocando);
   // Enquanto arrasta, o slider mostra o ponto escolhido; a música só pula ao soltar.
   const [arrastando, setArrastando] = useState<number | null>(null);
   const tempo = arrastando ?? posicao;
+  const ultimoAudivel = useRef(volume);
+  if (volume > 0) ultimoAudivel.current = volume;
 
   return (
     <header className="relative z-10 flex items-center gap-4 border-b border-borda bg-superficie px-4 py-2">
@@ -48,6 +57,25 @@ export function CabecalhoDoPlayerDeMusica({ children }: { children?: React.React
           }}
         />
         <span className="w-12 font-mono text-sm tabular-nums text-texto-suave">{formatarTempo(duracao)}</span>
+      </div>
+      <div className="flex items-center gap-1 max-sm:ml-auto">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={volume > 0 ? "Mutar" : "Tirar do mudo"}
+          onClick={() => aoMudarVolume(volumeAoAlternarMudo(volume, ultimoAudivel.current))}
+        >
+          {volume > 0 ? <Volume2 /> : <VolumeX />}
+        </Button>
+        <Slider
+          aria-label="Volume do player"
+          className="w-24 max-sm:w-16"
+          min={0}
+          max={1}
+          step={0.05}
+          value={[volume]}
+          onValueChange={([valor]) => aoMudarVolume(valor)}
+        />
       </div>
       {children && <div className="ml-auto flex items-center">{children}</div>}
     </header>

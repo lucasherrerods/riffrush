@@ -6,6 +6,8 @@ export interface Configuracoes {
   velocidade: number;
   volumeDaMusica: number;
   volumeDosEfeitos: number;
+  /** A música que toca nos menus, separada da música da partida. */
+  volumeDoPlayer: number;
   atrasoMs: number;
   semFalha: boolean;
   bot: boolean;
@@ -21,6 +23,7 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   velocidade: 6,
   volumeDaMusica: 0.8,
   volumeDosEfeitos: 0.5,
+  volumeDoPlayer: 0.3,
   atrasoMs: 0,
   semFalha: false,
   bot: false,

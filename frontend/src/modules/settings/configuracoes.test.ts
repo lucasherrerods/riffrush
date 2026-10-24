@@ -62,6 +62,14 @@ describe("antecedenciaDasNotas", () => {
   });
 });
 
+describe("volume do player", () => {
+  it("a música dos menus começa baixa, inclusive em configurações salvas antes", () => {
+    expect(CONFIGURACOES_PADRAO.volumeDoPlayer).toBeLessThan(CONFIGURACOES_PADRAO.volumeDaMusica);
+    localStorage.setItem("riffrush.configuracoes", JSON.stringify({ volumeDaMusica: 0.8 }));
+    expect(carregarConfiguracoes().volumeDoPlayer).toBe(CONFIGURACOES_PADRAO.volumeDoPlayer);
+  });
+});
+
 describe("personagem e FPS", () => {
   it("por padrão o personagem 3D aparece e o FPS fica escondido, inclusive em configurações salvas antes", () => {
     expect(CONFIGURACOES_PADRAO.personagem3d).toBe(true);
