@@ -82,6 +82,8 @@ interface Props {
   };
   aoSair: () => void;
   aoTerminar: (resultado: Resultado) => void;
+  /** O placar do ranking no canto da tela, desenhado com os pontos de agora. */
+  placar?: (pontos: number) => ReactNode;
 }
 
 interface Hud {
@@ -116,7 +118,7 @@ const LARGURA_DO_PAINEL = 250;
 const LARGURA_DO_HUD_LATERAL = 240;
 const MARGEM_DO_HUD = 16;
 
-export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, rede, aoSair, aoTerminar }: Props) {
+export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar }: Props) {
   const recordeAtual = useRef(recorde);
   recordeAtual.current = recorde;
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -566,15 +568,15 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
 
           {rede?.adversarios}
 
-          {urlDoVideo && cena.video && (
-            <motion.div
-              initial={{ opacity: 0, x: -32 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="absolute top-20 left-6 w-[min(26vw,360px)] overflow-hidden rounded-2xl border border-borda"
-            >
-              <video ref={video} src={urlDoVideo} muted playsInline className="aspect-video w-full bg-fundo object-cover" />
-            </motion.div>
-          )}
+          {/* Canto superior esquerdo: o clipe da música e, embaixo, o placar do ranking. */}
+          <div data-parte="canto-esquerdo" className="absolute top-20 left-6 flex flex-col gap-4">
+            {urlDoVideo && cena.video && (
+              <motion.div initial={{ opacity: 0, x: -32 }} animate={{ opacity: 1, x: 0 }} className="w-[min(26vw,360px)] overflow-hidden rounded-2xl border border-borda">
+                <video ref={video} src={urlDoVideo} muted playsInline className="aspect-video w-full bg-fundo object-cover" />
+              </motion.div>
+            )}
+            {placar && !estreita && <PlacarDaPartida loja={loja} placar={placar} />}
+          </div>
 
           <HudDaPartida loja={loja} layout={layout} estreita={estreita} comPalco={comPalco} pausado={pausado} derrota={derrota} personagem={cena.personagem ? personagem : null} bpm={musica.bpm || 120} aoEstrela={() => controles.current.estrela()} />
 
@@ -695,4 +697,9 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
       </AnimatePresence>
     </>
   );
+}
+/** Só o placar re-renderiza quando os pontos mudam. */
+function PlacarDaPartida({ loja, placar }: { loja: LojaDoHud<Hud>; placar: (pontos: number) => ReactNode }) {
+  const { pontos } = useLoja(loja);
+  return <>{placar(pontos)}</>;
 }

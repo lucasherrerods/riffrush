@@ -92,6 +92,20 @@ export function TelaDeSelecao(props: Props) {
     }
   });
 
+  const dados = (
+    <div className="flex min-w-0 gap-2">
+      {musica.bpm > 0 && <Dado rotulo="BPM" className="flex-1">{musica.bpm}</Dado>}
+      <Dado rotulo="Gênero" className="flex-1">{musica.genero}</Dado>
+      <Dado rotulo="Intensidade" className="flex-1 max-md:hidden">
+        <span className="flex gap-1 py-1" aria-label={`Intensidade ${musica.intensidade} de 5`}>
+          {Array.from({ length: 5 }, (_, k) => (
+            <Flame key={k} className={cn("size-4", k < musica.intensidade ? "text-destaque" : "text-borda")} />
+          ))}
+        </span>
+      </Dado>
+    </div>
+  );
+
   const detalhes = (
     <div className="placa flex min-h-0 items-end gap-4 p-4">
       <AvatarPalhetando personagem={personagem} bpm={musica.bpm || 120} className="h-40 w-auto shrink-0 max-md:hidden [@media(max-height:680px)]:h-24" />
@@ -161,18 +175,6 @@ export function TelaDeSelecao(props: Props) {
             )}
           </div>
 
-          <div className="flex min-w-0 gap-2">
-            {musica.bpm > 0 && <Dado rotulo="BPM" className="flex-1">{musica.bpm}</Dado>}
-            <Dado rotulo="Gênero" className="flex-1">{musica.genero}</Dado>
-            <Dado rotulo="Intensidade" className="flex-1 max-md:hidden">
-              <span className="flex gap-1 py-1" aria-label={`Intensidade ${musica.intensidade} de 5`}>
-                {Array.from({ length: 5 }, (_, k) => (
-                  <Flame key={k} className={cn("size-4", k < musica.intensidade ? "text-destaque" : "text-borda")} />
-                ))}
-              </span>
-            </Dado>
-          </div>
-
           {ranking ? (
             // Como no osu!: o ranking da música ao lado da roda, e os detalhes numa aba vizinha.
             <Tabs defaultValue="ranking" className="min-h-0 flex-1">
@@ -184,13 +186,18 @@ export function TelaDeSelecao(props: Props) {
                   <ListOrdered className="opacity-70" /> Ranking
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="detalhes">{detalhes}</TabsContent>
+              {/* Os dados da música ficam nesta aba para sobrar altura para o ranking. */}
+              <TabsContent value="detalhes" className="flex flex-col gap-4">
+                {dados}
+                {detalhes}
+              </TabsContent>
               <TabsContent value="ranking" className="flex min-h-0 flex-col">
                 {ranking}
               </TabsContent>
             </Tabs>
           ) : (
             <>
+              {dados}
               {detalhes}
               <div className="flex-1" />
             </>

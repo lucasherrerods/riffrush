@@ -14,7 +14,7 @@ import { TelaDeBuscaDeMusicas, baixarDoEncore, montarUrlDoChart, type OpcoesDeBa
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, type Dificuldade, type Musica } from "@/modules/songs";
-import { PainelDeRanking } from "@/modules/ranking";
+import { PainelDeRanking, PlacarAoVivo } from "@/modules/ranking";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -330,6 +330,8 @@ export function App() {
                     ? { inicio: emRede.inicio, aoAtualizar: enviarEstado, adversarios: <Adversarios sala={conexao.sala} compacto={estreita} /> }
                     : undefined
                 }
+                // Em rede o canto mostra a sala; sozinho, o ranking global da música.
+                placar={contasLigadas && !emRede ? (pontos) => <PlacarAoVivo musicaId={idDoRanking(musica)} dificuldade={dificuldadeDaPartida} pontos={pontos} /> : undefined}
                 aoSair={() => setTela(emRede ? "multijogador" : "selecao")}
                 aoTerminar={terminar}
               />

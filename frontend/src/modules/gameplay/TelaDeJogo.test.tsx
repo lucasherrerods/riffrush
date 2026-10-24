@@ -92,6 +92,23 @@ describe("TelaDeJogo", () => {
     vi.stubGlobal("AudioContext", AudioContextFalso);
   });
 
+  it("mostra o placar no canto superior esquerdo, recebendo os pontos da partida", async () => {
+    carregarCom([nota(1)]);
+    render(
+      <TelaDeJogo
+        musica={MUSICAS_DE_TESTE[0]}
+        dificuldade="medio"
+        opcoes={OPCOES_PADRAO_DA_PARTIDA}
+        personagem={PERSONAGEM_PADRAO}
+        placar={(pontos) => <p>placar com {pontos} pontos</p>}
+        aoSair={vi.fn()}
+        aoTerminar={vi.fn()}
+      />,
+    );
+    const placar = await screen.findByText("placar com 0 pontos");
+    expect(placar.closest("[data-parte='canto-esquerdo']")).toHaveClass("top-20", "left-6");
+  });
+
   it("faz a contagem regressiva antes da música", async () => {
     carregarCom([nota(1)]);
     abrir();
