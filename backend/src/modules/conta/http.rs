@@ -10,7 +10,7 @@ use uuid::Uuid;
 use super::casos_de_uso::{ErroDaConta, PartidaEnviada, XpDaPartida};
 use super::dominio::Conta;
 use super::portas::{ClienteDoGoogle, PedidoDeLogin};
-use crate::modules::progresso::{Dificuldade, Nivel, ResumoDaPartida};
+use crate::modules::progresso::{Dificuldade, Instrumento, Nivel, ResumoDaPartida};
 use crate::shared::erro::ErroDaApi;
 use crate::shared::estado::EstadoDoApp;
 
@@ -152,6 +152,10 @@ pub struct CorpoDaPartida {
     musica_id: String,
     #[schema(value_type = String, example = "medio")]
     dificuldade: Dificuldade,
+    /// Sem ele, a guitarra.
+    #[serde(default)]
+    #[schema(value_type = String, example = "guitarra")]
+    instrumento: Instrumento,
     pontos: u64,
     acertos: u32,
     total: u32,
@@ -186,6 +190,7 @@ pub async fn registrar_partida(
 ) -> Result<Json<RespostaDaPartida>, ErroDaApi> {
     let partida = PartidaEnviada {
         musica_id: corpo.musica_id,
+        instrumento: corpo.instrumento,
         pontos: corpo.pontos,
         resumo: ResumoDaPartida {
             dificuldade: corpo.dificuldade,

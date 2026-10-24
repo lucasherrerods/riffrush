@@ -1,5 +1,5 @@
 export { MUSICAS_EMBUTIDAS } from "./catalogo";
 export { carregarMusica, ehSng, ehVideo, importarArquivo } from "./carregamento";
-export { dificuldadeMaisProxima, dificuldadesDaMusica } from "./dificuldades";
+export { dificuldadeMaisProxima, dificuldadesDaMusica, instrumentoDaMusica, instrumentosDaMusica } from "./dificuldades";
 export { idDoRanking } from "./idDoRanking";
-export { DIFICULDADES, type Batida, type Dificuldade, type Musica, type MusicaCarregada, type Nota } from "./tipos";
+export { DIFICULDADES, INSTRUMENTOS, type Batida, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada, type Nota } from "./tipos";

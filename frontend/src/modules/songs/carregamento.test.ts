@@ -16,6 +16,10 @@ const CHART = `[Song]
   192 = N 0 0
   384 = N 2 0
 }
+[MediumDoubleBass]
+{
+  576 = N 1 0
+}
 `;
 
 const arquivoSng = (metadados: Record<string, string>, arquivos: Record<string, Uint8Array>, nome = "musica.sng") =>
@@ -106,10 +110,10 @@ describe("importarArquivo", () => {
   });
 
   // Bug: o chart só com Expert aparecia com as 4 dificuldades, todas tocando o Expert.
-  it("guarda só as dificuldades que o chart tem", async () => {
+  it("guarda só os instrumentos e as dificuldades que o chart tem", async () => {
     const { importarArquivo } = await importar();
     const arquivo = arquivoSng({}, { "notes.chart": new TextEncoder().encode(CHART), "song.wav": construirWav(1, 220) });
-    expect((await importarArquivo(arquivo)).dificuldades).toEqual(["expert"]);
+    expect((await importarArquivo(arquivo)).trilhas).toEqual({ guitarra: ["expert"], baixo: ["medio"] });
   });
 
   it("recusa .sng sem chart", async () => {
@@ -129,6 +133,13 @@ describe("carregarMusica (importadas)", () => {
     expect(carregada.notas.map((n) => +n.tempo.toFixed(2))).toEqual([0.4, 0.9]);
     expect(carregada.audio.numberOfChannels).toBe(2);
     expect(carregada.duracao).toBeCloseTo(2);
+  });
+
+  it("carrega as notas do instrumento escolhido", async () => {
+    const { carregarMusica, importarArquivo } = await importar();
+    const arquivo = arquivoSng({}, { "notes.chart": new TextEncoder().encode(CHART), "song.wav": construirWav(1, 220) });
+    const carregada = await carregarMusica(await importarArquivo(arquivo), "medio", "baixo");
+    expect(carregada.notas.map((n) => [n.tempo, n.pista])).toEqual([[1.5, 1]]);
   });
 
   // Bug: cada música decodificada ficava na memória para sempre; o player dos menus passa por muitas.

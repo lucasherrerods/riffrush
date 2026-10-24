@@ -24,6 +24,7 @@ export interface XpDaPartida {
 export interface PartidaParaAApi {
   musica_id: string;
   dificuldade: string;
+  instrumento: string;
   pontos: number;
   acertos: number;
   total: number;

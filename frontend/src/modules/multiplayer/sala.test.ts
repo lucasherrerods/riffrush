@@ -124,6 +124,18 @@ describe("sala", () => {
       expect(socket().enviadas.at(-1)).toMatchObject({ tipo: "sala", dificuldade: "expert" });
     });
 
+    it("o instrumento é o mesmo para a sala toda, e se ajusta ao que o chart tem", async () => {
+      const sala = await importar();
+      await sala.criarSala(PERSONAGEM_PADRAO);
+      socket().abrir();
+      socket().receber(0, { tipo: "bemVindo", id: 1 });
+      const banda = { ...MUSICAS_EMBUTIDAS[0], trilhas: { guitarra: ["expert" as const], baixo: ["facil" as const] } };
+      await sala.escolher(banda, "expert", "baixo");
+      expect(socket().enviadas.at(-1)).toMatchObject({ tipo: "sala", instrumento: "baixo", dificuldade: "facil" });
+      await sala.escolher({ ...banda, id: "outra", trilhas: { guitarra: ["medio"] } }, "facil");
+      expect(socket().enviadas.at(-1)).toMatchObject({ tipo: "sala", instrumento: "guitarra", dificuldade: "medio" });
+    });
+
     it("o host não começa enquanto algum convidado não está pronto", async () => {
       const sala = await importar();
       await sala.criarSala(PERSONAGEM_PADRAO);

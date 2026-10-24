@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { motion } from "framer-motion";
 import { Star } from "lucide-react";
 import { recordeDe, type Recordes } from "@/modules/results";
-import type { Dificuldade, Musica } from "@/modules/songs";
+import type { Dificuldade, Instrumento, Musica } from "@/modules/songs";
 import { cn } from "@/shared/lib/utils";
 import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, centroDoGrupoAberto, passosDaRoda, posicoesNoCarrossel, recuoNaCurva } from "../carrossel";
 import { Capa } from "./Capa";
@@ -11,6 +11,7 @@ interface Props {
   musicas: Musica[];
   indice: number;
   dificuldade: Dificuldade;
+  instrumento: Instrumento;
   /** As dificuldades que a música selecionada tem. */
   dificuldades: { id: Dificuldade; rotulo: string }[];
   recordes: Recordes;
@@ -38,7 +39,7 @@ const COR_DA_DIFICULDADE: Record<Dificuldade, string> = {
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 /** Lista de músicas em roda, como no osu!lazer: a selecionada fica no meio, com as dificuldades abertas embaixo. */
-export function Carrossel({ musicas, indice, dificuldade, dificuldades, recordes, aoEscolherMusica, aoEscolherDificuldade, aoJogar, aoGirar }: Props) {
+export function Carrossel({ musicas, indice, dificuldade, instrumento, dificuldades, recordes, aoEscolherMusica, aoEscolherDificuldade, aoJogar, aoGirar }: Props) {
   const giro = useRef(0);
   const posicoes = posicoesNoCarrossel(musicas.length, indice, dificuldades.length);
   const centro = centroDoGrupoAberto(dificuldades.length);
@@ -57,7 +58,7 @@ export function Carrossel({ musicas, indice, dificuldade, dificuldades, recordes
         const posicao = posicoes[i];
         if (Math.abs(posicao) > ALCANCE) return null;
         const selecionada = i === indice;
-        const recorde = recordeDe(recordes, m.id, dificuldade);
+        const recorde = recordeDe(recordes, m.id, dificuldade, instrumento);
         const x = selecionada ? -AVANCO_DA_SELECIONADA : recuoNaCurva(posicao + ALTURA_DA_MUSICA / 2 - centro);
         return (
           <motion.li
@@ -95,7 +96,7 @@ export function Carrossel({ musicas, indice, dificuldade, dificuldades, recordes
               <div role="radiogroup" aria-label="Dificuldade" className="mt-2 flex flex-col gap-2 pl-12">
                 {dificuldades.map((d) => {
                   const escolhida = d.id === dificuldade;
-                  const recordeDaDificuldade = recordeDe(recordes, m.id, d.id);
+                  const recordeDaDificuldade = recordeDe(recordes, m.id, d.id, instrumento);
                   return (
                     <motion.button
                       key={d.id}

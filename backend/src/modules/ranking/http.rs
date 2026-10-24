@@ -8,7 +8,7 @@ use utoipa::{IntoParams, ToSchema};
 use super::casos_de_uso::ErroDoRanking;
 use super::dominio::{LinhaDoRanking, Ranking};
 use crate::modules::conta::TokenOpcional;
-use crate::modules::progresso::Dificuldade;
+use crate::modules::progresso::{Dificuldade, Instrumento};
 use crate::shared::erro::ErroDaApi;
 use crate::shared::estado::EstadoDoApp;
 
@@ -26,6 +26,10 @@ pub struct PedidoDoRanking {
     musica_id: String,
     #[param(value_type = String, example = "expert")]
     dificuldade: Dificuldade,
+    /// Sem ele, o ranking da guitarra.
+    #[serde(default)]
+    #[param(value_type = Option<String>, example = "baixo")]
+    instrumento: Instrumento,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -71,14 +75,17 @@ impl From<Ranking> for RespostaDoRanking {
     }
 }
 
-/// O top de uma música e dificuldade. Com o token, vem também o recorde de quem pediu.
+/// O top de uma música, dificuldade e instrumento. Com o token, vem também o recorde de quem pediu.
 #[utoipa::path(get, path = "/ranking", params(PedidoDoRanking), responses((status = 200, body = RespostaDoRanking), (status = 400)), security((), ("token" = [])))]
 pub async fn ranking(
     State(estado): State<EstadoDoApp>,
     TokenOpcional(token): TokenOpcional,
     Query(pedido): Query<PedidoDoRanking>,
 ) -> Result<Json<RespostaDoRanking>, ErroDaApi> {
-    let ranking = estado.ranking.ranking(&pedido.musica_id, pedido.dificuldade, token.as_deref()).await?;
+    let ranking = estado
+        .ranking
+        .ranking(&pedido.musica_id, pedido.dificuldade, pedido.instrumento, token.as_deref())
+        .await?;
     Ok(Json(ranking.into()))
 }
 

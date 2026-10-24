@@ -1,6 +1,6 @@
 import type { Personagem } from "@/modules/character";
 import type { EstadoDoJogador } from "@/modules/gameplay";
-import { MUSICAS_EMBUTIDAS, type Dificuldade } from "@/modules/songs";
+import { MUSICAS_EMBUTIDAS, type Dificuldade, type Instrumento } from "@/modules/songs";
 
 /*
  * A sala em rede como função pura: recebe o estado e uma mensagem, devolve o estado novo
@@ -33,10 +33,11 @@ export type Mensagem =
   | { tipo: "semSala" }
   | { tipo: "saiu" }
   | { tipo: "oi"; personagem: Personagem }
-  | { tipo: "sala"; jogadores: Jogador[]; musica: MusicaNaRede; dificuldade: Dificuldade; prontos: number[] }
+  /** Sem `instrumento` (versão antiga do jogo), a sala toca na guitarra. */
+  | { tipo: "sala"; jogadores: Jogador[]; musica: MusicaNaRede; dificuldade: Dificuldade; instrumento?: Instrumento; prontos: number[] }
   /** O convidado já tem a música `musicaId` e está (ou deixou de estar) pronto para começar. */
   | { tipo: "pronto"; musicaId: string; pronto: boolean }
-  | { tipo: "comecar"; musica: MusicaNaRede; dificuldade: Dificuldade }
+  | { tipo: "comecar"; musica: MusicaNaRede; dificuldade: Dificuldade; instrumento?: Instrumento }
   | ({ tipo: "estado" } & EstadoDoJogador);
 
 export interface EstadoDaSala {
@@ -48,6 +49,8 @@ export interface EstadoDaSala {
   jogadores: Jogador[];
   musica: MusicaNaRede;
   dificuldade: Dificuldade;
+  /** O host escolhe e todos tocam no mesmo instrumento, para a pontuação ser comparável. */
+  instrumento: Instrumento;
   /** Convidados prontos para a música atual. O host mantém a lista e manda para todos. */
   prontos: number[];
   adversarios: Record<number, EstadoDoJogador>;
@@ -74,6 +77,7 @@ export function estadoInicial(personagem: Personagem, souHost: boolean): EstadoD
     jogadores: [],
     musica: { tipo: "embutida", id: MUSICAS_EMBUTIDAS[0].id },
     dificuldade: "medio",
+    instrumento: "guitarra",
     prontos: [],
     adversarios: {},
     partidas: 0,
@@ -86,6 +90,7 @@ const mensagemDaSala = (estado: EstadoDaSala): Mensagem => ({
   jogadores: estado.jogadores,
   musica: estado.musica,
   dificuldade: estado.dificuldade,
+  instrumento: estado.instrumento,
   prontos: estado.prontos,
 });
 
@@ -116,7 +121,15 @@ export function reduzir(estado: EstadoDaSala, de: number, mensagem: Mensagem, ag
     case "sala":
       if (estado.souHost) return nada;
       return {
-        estado: { ...estado, hostId: de, jogadores: mensagem.jogadores, musica: mensagem.musica, dificuldade: mensagem.dificuldade, prontos: mensagem.prontos ?? [] },
+        estado: {
+          ...estado,
+          hostId: de,
+          jogadores: mensagem.jogadores,
+          musica: mensagem.musica,
+          dificuldade: mensagem.dificuldade,
+          instrumento: mensagem.instrumento ?? "guitarra",
+          prontos: mensagem.prontos ?? [],
+        },
         enviar: [],
       };
     case "pronto": {
@@ -132,6 +145,7 @@ export function reduzir(estado: EstadoDaSala, de: number, mensagem: Mensagem, ag
           status: "jogando",
           musica: mensagem.musica,
           dificuldade: mensagem.dificuldade,
+          instrumento: mensagem.instrumento ?? "guitarra",
           prontos: [],
           adversarios: {},
           partidas: estado.partidas + 1,
@@ -147,11 +161,11 @@ export function reduzir(estado: EstadoDaSala, de: number, mensagem: Mensagem, ag
   }
 }
 
-export function escolherMusica(estado: EstadoDaSala, musica: MusicaNaRede, dificuldade: Dificuldade): Reacao {
+export function escolherMusica(estado: EstadoDaSala, musica: MusicaNaRede, dificuldade: Dificuldade, instrumento: Instrumento = "guitarra"): Reacao {
   if (!estado.souHost) return { estado, enviar: [] };
   // Música nova: cada convidado precisa baixar e dar pronto de novo.
   const prontos = musica.id === estado.musica.id ? estado.prontos : [];
-  const novo = { ...estado, musica, dificuldade, prontos };
+  const novo = { ...estado, musica, dificuldade, instrumento, prontos };
   return { estado: novo, enviar: [mensagemDaSala(novo)] };
 }
 
@@ -159,5 +173,5 @@ export function escolherMusica(estado: EstadoDaSala, musica: MusicaNaRede, dific
 export const todosProntos = (estado: EstadoDaSala) => estado.jogadores.every((j) => j.id === estado.hostId || estado.prontos.includes(j.id));
 
 export function comecarPartida(estado: EstadoDaSala): Mensagem[] {
-  return estado.souHost && todosProntos(estado) ? [{ tipo: "comecar", musica: estado.musica, dificuldade: estado.dificuldade }] : [];
+  return estado.souHost && todosProntos(estado) ? [{ tipo: "comecar", musica: estado.musica, dificuldade: estado.dificuldade, instrumento: estado.instrumento }] : [];
 }

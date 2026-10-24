@@ -64,6 +64,10 @@ describe("traduzir nos menus", () => {
     expect(traduzir(solto(), com(BOTOES.ESQUERDA), vazio(), "menu", mapa).eventos).toEqual([{ tipo: "keydown", code: "ArrowLeft" }]);
   });
 
+  it("Y troca o instrumento, como o Tab do teclado", () => {
+    expect(traduzir(solto(), com(BOTOES.Y), vazio(), "menu", mapa).eventos).toEqual([{ tipo: "keydown", code: "Tab" }]);
+  });
+
   // Bug evitado: trocar de tela com o botão apertado deixava a tecla da tela antiga presa.
   it("solta a mesma tecla que apertou, mesmo se o modo mudou no meio", () => {
     const apertou = traduzir(solto(), com(BOTOES.A), vazio(), "menu", mapa);
