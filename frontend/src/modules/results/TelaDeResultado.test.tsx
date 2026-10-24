@@ -107,6 +107,14 @@ describe("TelaDeResultado em rede", () => {
     expect(aoContinuar).toHaveBeenCalled();
   });
 
+  // Bug: com a sala cheia, o placar empurrava o botão de voltar para fora da tela, sem rolagem.
+  it("o placar rola e o botão de voltar fica sempre visível embaixo", () => {
+    abrir({ extra: <p>placar da sala</p>, rotuloDeContinuar: "Voltar para a sala" });
+    const conteudo = screen.getByText("placar da sala").closest(".overflow-y-auto");
+    expect(conteudo).not.toBeNull();
+    expect(conteudo).not.toContainElement(screen.getByRole("button", { name: /Voltar para a sala/ }));
+  });
+
   it("em rede não dá para tocar de novo sozinho", async () => {
     const { aoRepetir, usuario } = abrir({ rotuloDeContinuar: "Voltar para a sala" });
     expect(screen.queryByRole("button", { name: /Tocar de novo/ })).toBeNull();
