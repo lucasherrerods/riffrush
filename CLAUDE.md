@@ -45,6 +45,7 @@ Valem para o frontend e para o backend.
 - Nunca adicione co-autor nos commits nem assinatura nas descrições de PR.
 - Um PR por funcionalidade ou pedido, sem misturar contextos. Abra o PR ao terminar.
 - Cada PR parte da `main` atualizada.
+- Todo PR aponta para a `main`, nunca para a branch de outro PR. Se depender de outro PR, espere ele entrar na `main` e atualize a sua branch; PR mesclado em outra branch não chega na `main` e o trabalho se perde.
 - Mudança que precisa dos dois lados (API + tela) pode ir num PR só, desde que seja uma funcionalidade só.
 
 ## Frontend (`frontend/`)
