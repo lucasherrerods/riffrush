@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Play, Power, Search, Settings2, Shirt, Users, Zap, type LucideIcon } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
+import type { Documento } from "@/modules/legal";
 import { abrirLink, fecharJanela } from "@/modules/platform";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
@@ -15,6 +16,7 @@ interface Props {
   aoPersonagem: () => void;
   aoConfigurar: () => void;
   aoBuscarMusicas: () => void;
+  aoAbrirDocumento: (documento: Documento) => void;
 }
 
 interface Item {
@@ -25,7 +27,7 @@ interface Item {
 
 const URL_DO_PROJETO = "https://github.com/lucasherrerods/riffrush";
 
-export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusicas }: Props) {
+export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoAbrirDocumento }: Props) {
   const [selecionado, setSelecionado] = useState(0);
   const comuns: Item[] = [
     { rotulo: "Busca músicas", icone: Search, acao: aoBuscarMusicas },
@@ -104,6 +106,24 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
       </nav>
 
       <footer className="absolute right-6 bottom-6 flex items-center gap-3 text-base text-texto-suave">
+        {(
+          [
+            ["privacidade", "Privacidade"],
+            ["termos", "Termos"],
+          ] as const
+        ).map(([documento, rotulo]) => (
+          <a
+            key={documento}
+            href={`/${documento}`}
+            onClick={(evento) => {
+              evento.preventDefault();
+              aoAbrirDocumento(documento);
+            }}
+            className="opacity-70 transition-opacity hover:opacity-100"
+          >
+            {rotulo}
+          </a>
+        ))}
         <span>© 2026 Riff Rush</span>
         <a
           href={URL_DO_PROJETO}

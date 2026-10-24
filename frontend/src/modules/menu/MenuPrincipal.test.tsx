@@ -7,7 +7,7 @@ import { MenuPrincipal } from "./MenuPrincipal";
 vi.mock("@/modules/platform", () => ({ fecharJanela: vi.fn(), abrirLink: vi.fn() }));
 
 function abrir({ noCelular = false } = {}) {
-  const acoes = { aoJogar: vi.fn(), aoMultijogador: vi.fn(), aoPersonagem: vi.fn(), aoConfigurar: vi.fn(), aoBuscarMusicas: vi.fn() };
+  const acoes = { aoJogar: vi.fn(), aoMultijogador: vi.fn(), aoPersonagem: vi.fn(), aoConfigurar: vi.fn(), aoBuscarMusicas: vi.fn(), aoAbrirDocumento: vi.fn() };
   render(<MenuPrincipal volumeDosEfeitos={0} noCelular={noCelular} {...acoes} />);
   return { ...acoes, usuario: userEvent.setup() };
 }
@@ -97,5 +97,12 @@ describe("MenuPrincipal na tela estreita", () => {
   it("o subtítulo diminui o espaçamento e quebra a linha centralizado", () => {
     abrir();
     expect(screen.getByText("TOQUE ATÉ OS DEDOS SANGRAREM")).toHaveClass("max-md:tracking-[0.15em]", "text-center");
+  });
+
+  it("o rodapé abre a privacidade e os termos dentro do jogo", async () => {
+    const { aoAbrirDocumento, usuario } = abrir();
+    await usuario.click(screen.getByRole("link", { name: "Privacidade" }));
+    await usuario.click(screen.getByRole("link", { name: "Termos" }));
+    expect(aoAbrirDocumento.mock.calls).toEqual([["privacidade"], ["termos"]]);
   });
 });

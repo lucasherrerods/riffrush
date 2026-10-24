@@ -99,6 +99,15 @@ export class SessaoDaConta {
     if (token) await this.ambiente.api.sair(token).catch(() => {});
   }
 
+  /** Apaga a conta na API. Só esquece o token depois que a API confirmar. */
+  async excluirConta() {
+    const token = this.ambiente.local.getItem(CHAVE_DO_TOKEN);
+    if (!token) return;
+    await this.ambiente.api.excluirConta(token);
+    this.ambiente.local.removeItem(CHAVE_DO_TOKEN);
+    this.mudar({ conta: null });
+  }
+
   /** Manda a partida para a API e devolve o XP ganho. Sem conta, não manda nada. */
   async registrarPartida(resultado: Resultado): Promise<XpDaPartida | null> {
     const token = this.ambiente.local.getItem(CHAVE_DO_TOKEN);

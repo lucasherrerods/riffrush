@@ -13,7 +13,7 @@ class Memoria {
 
 function montar(api: Partial<ApiDaConta> = {}, busca = "") {
   const ambiente: Ambiente = {
-    api: { entrar: vi.fn(async () => ({ token: "tok", conta })), eu: vi.fn(async () => conta), sair: vi.fn(async () => {}), registrarPartida: vi.fn(), ...api },
+    api: { entrar: vi.fn(async () => ({ token: "tok", conta })), eu: vi.fn(async () => conta), sair: vi.fn(async () => {}), excluirConta: vi.fn(async () => {}), registrarPartida: vi.fn(), ...api },
     clientId: "id",
     local: new Memoria(),
     temporario: new Memoria(),
@@ -121,5 +121,24 @@ describe("SessaoDaConta", () => {
     expect(ambiente.local.getItem("riffrush:token")).toBeNull();
     expect(ambiente.api.sair).toHaveBeenCalledWith("tok");
     expect(sessao.estado().conta).toBeNull();
+  });
+
+  it("excluir a conta apaga na API, esquece o token e volta a ser convidado", async () => {
+    const { sessao, ambiente } = montar();
+    ambiente.local.setItem("riffrush:token", "tok");
+    await sessao.iniciar();
+    await sessao.excluirConta();
+    expect(ambiente.api.excluirConta).toHaveBeenCalledWith("tok");
+    expect(ambiente.local.getItem("riffrush:token")).toBeNull();
+    expect(sessao.estado().conta).toBeNull();
+  });
+
+  it("se a API falha ao excluir, a conta continua e o erro sobe", async () => {
+    const { sessao, ambiente } = montar({ excluirConta: vi.fn(async () => Promise.reject(new ErroDaApi(500, "falhou"))) });
+    ambiente.local.setItem("riffrush:token", "tok");
+    await sessao.iniciar();
+    await expect(sessao.excluirConta()).rejects.toThrow("falhou");
+    expect(ambiente.local.getItem("riffrush:token")).toBe("tok");
+    expect(sessao.estado().conta).toBe(conta);
   });
 });

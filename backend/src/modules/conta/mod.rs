@@ -14,8 +14,8 @@ pub use casos_de_uso::ServicosDaConta;
 pub use dominio::{Conta, PerfilDoGoogle};
 pub use google::{CredenciaisDoGoogle, Google};
 pub use http::{
-    __path_entrar, __path_eu, __path_registrar_partida, __path_sair, rotas, CorpoDaPartida, CorpoDoLogin, NivelDaConta, RespostaDaConta, RespostaDaPartida,
-    RespostaDoLogin,
+    __path_entrar, __path_eu, __path_excluir, __path_registrar_partida, __path_sair, excluir, rotas, CorpoDaPartida, CorpoDoLogin, NivelDaConta,
+    RespostaDaConta, RespostaDaPartida, RespostaDoLogin,
 };
 pub use portas::{
     ClienteDoGoogle, ErroDeLogin, FalhaExterna, Gerador, PartidaRegistrada, PedidoDeLogin, ProvedorDeLogin, Relogio, RepositorioDeContas, RepositorioDeSessoes,

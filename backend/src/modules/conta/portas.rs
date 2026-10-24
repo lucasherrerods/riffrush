@@ -27,6 +27,8 @@ pub trait RepositorioDeContas: Send + Sync {
     async fn ultima_partida(&self, conta_id: Uuid) -> Result<Option<DateTime<Utc>>, FalhaExterna>;
     /// Guarda a partida e soma o XP na mesma transação; devolve a conta atualizada.
     async fn registrar_partida(&self, partida: &PartidaRegistrada) -> Result<Conta, FalhaExterna>;
+    /// Apaga a conta junto com as sessões e as partidas dela.
+    async fn excluir(&self, id: Uuid) -> Result<(), FalhaExterna>;
 }
 
 #[async_trait]

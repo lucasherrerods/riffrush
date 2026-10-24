@@ -109,6 +109,12 @@ impl ServicosDaConta {
         })
     }
 
+    /// A pessoa pede para apagar tudo o que a API guarda dela (LGPD).
+    pub async fn excluir_conta(&self, token: &str) -> Result<(), ErroDaConta> {
+        let conta_id = self.id_da_sessao(token).await?;
+        Ok(self.contas.excluir(conta_id).await?)
+    }
+
     async fn id_da_sessao(&self, token: &str) -> Result<Uuid, ErroDaConta> {
         self.sessoes
             .conta_da_sessao(&hash_do_token(token), self.relogio.agora())
@@ -179,6 +185,12 @@ pub mod fakes {
             let (_, conta) = contas.get_mut(&partida.conta_id).ok_or_else(|| FalhaExterna("sem conta".into()))?;
             conta.xp_total += partida.xp_ganho;
             Ok(conta.clone())
+        }
+        async fn excluir(&self, id: Uuid) -> Result<(), FalhaExterna> {
+            self.contas.lock().unwrap().remove(&id);
+            self.sessoes.lock().unwrap().retain(|_, (conta, _)| *conta != id);
+            self.partidas.lock().unwrap().retain(|(conta, _, _)| *conta != id);
+            Ok(())
         }
     }
 
@@ -382,5 +394,28 @@ mod tests {
         ));
         relogio.andar(Duration::seconds(30));
         assert!(servicos.registrar_partida(&entrada.token, partida(10, 10)).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn excluir_apaga_a_conta_as_sessoes_e_as_partidas() {
+        let (servicos, banco, _) = servicos();
+        let entrada = servicos.entrar_com_google(&pedido("bom")).await.unwrap();
+        let outra_sessao = servicos.entrar_com_google(&pedido("bom")).await.unwrap();
+        servicos.registrar_partida(&entrada.token, partida(10, 10)).await.unwrap();
+
+        servicos.excluir_conta(&entrada.token).await.unwrap();
+
+        assert!(banco.contas.lock().unwrap().is_empty());
+        assert!(banco.partidas.lock().unwrap().is_empty());
+        assert!(matches!(servicos.conta_da_sessao(&outra_sessao.token).await, Err(ErroDaConta::SessaoInvalida)));
+        // Entrar de novo começa uma conta zerada.
+        let nova = servicos.entrar_com_google(&pedido("bom")).await.unwrap();
+        assert_eq!(nova.conta.xp_total, 0);
+    }
+
+    #[tokio::test]
+    async fn excluir_sem_sessao_e_recusado() {
+        let (servicos, _, _) = servicos();
+        assert!(matches!(servicos.excluir_conta("inventado").await, Err(ErroDaConta::SessaoInvalida)));
     }
 }

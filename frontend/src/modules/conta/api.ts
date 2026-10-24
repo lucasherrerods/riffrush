@@ -60,6 +60,7 @@ export function criarApi(base: string, buscar: typeof fetch = (...args) => fetch
       chamar<{ token: string; conta: ContaDaApi }>("POST", "/auth/google", undefined, { codigo, verificador, redirect_uri, cliente }),
     eu: (token: string) => chamar<ContaDaApi>("GET", "/eu", token),
     sair: (token: string) => chamar<void>("POST", "/auth/sair", token),
+    excluirConta: (token: string) => chamar<void>("DELETE", "/eu", token),
     registrarPartida: (token: string, partida: PartidaParaAApi) => chamar<XpDaPartida>("POST", "/partidas", token, partida),
   };
 }
