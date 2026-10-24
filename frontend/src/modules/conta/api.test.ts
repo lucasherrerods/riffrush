@@ -32,7 +32,8 @@ describe("criarApi", () => {
   it("aceita a URL da API com barra no fim sem gerar barra dupla", async () => {
     const buscar = vi.fn(async () => resposta(200, {}));
     await criarApi("http://api/", buscar).eu("t");
-    expect(buscar.mock.calls[0][0]).toBe("http://api/eu");
+    const [url] = buscar.mock.calls[0] as unknown as [string];
+    expect(url).toBe("http://api/eu");
   });
 
   it("204 não tem corpo", async () => {
