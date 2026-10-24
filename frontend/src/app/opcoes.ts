@@ -16,5 +16,6 @@ export function opcoesDaPartida(c: Configuracoes): OpcoesDaPartida {
     efeitos: c.efeitos,
     personagem: c.personagem3d,
     mostrarFps: c.mostrarFps,
+    qualidadeDoPalco: c.qualidadeDoPalco,
   };
 }

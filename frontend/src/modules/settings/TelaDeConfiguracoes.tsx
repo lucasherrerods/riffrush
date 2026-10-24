@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Gamepad2, Keyboard, Monitor, RotateCcw, Volume2 } from "lucide-react";
 import { CORES_DAS_PISTAS, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "@/modules/gameplay";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
+import { QUALIDADES_DO_PALCO } from "@/modules/stage";
+import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
 import { Switch } from "@/shared/ui/switch";
@@ -173,6 +175,14 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
             <LinhaDeOpcao rotulo="Mostrar FPS" dica="Quadros por segundo durante a música" para="mostrar-fps">
               <Switch id="mostrar-fps" checked={configuracoes.mostrarFps} onCheckedChange={(mostrarFps) => mudar({ mostrarFps })} />
             </LinhaDeOpcao>
+            <div className="py-2">
+              <GrupoDeOpcoes
+                titulo="Qualidade do palco 3D (Leve se a pista engasgar)"
+                opcoes={QUALIDADES_DO_PALCO}
+                valor={configuracoes.qualidadeDoPalco}
+                aoEscolher={(qualidadeDoPalco) => mudar({ qualidadeDoPalco })}
+              />
+            </div>
           </TabsContent>
         </div>
       </Tabs>

@@ -17,4 +17,9 @@ describe("opcoesDaPartida", () => {
     expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, personagem3d: false, mostrarFps: true })).toMatchObject({ personagem: false, mostrarFps: true });
     expect(opcoesDaPartida(CONFIGURACOES_PADRAO)).toMatchObject({ personagem: true, mostrarFps: false });
   });
+
+  it("leva a qualidade do palco, que começa na média", () => {
+    expect(opcoesDaPartida(CONFIGURACOES_PADRAO).qualidadeDoPalco).toBe("media");
+    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, qualidadeDoPalco: "leve" }).qualidadeDoPalco).toBe("leve");
+  });
 });

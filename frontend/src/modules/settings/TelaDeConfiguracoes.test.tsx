@@ -61,6 +61,13 @@ describe("TelaDeConfiguracoes", () => {
     expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ semFalha: true }));
   });
 
+  it("escolhe a qualidade do palco no vídeo", async () => {
+    const { aoMudar, usuario } = abrir();
+    await usuario.click(screen.getByRole("tab", { name: /Vídeo/ }));
+    await usuario.click(screen.getByRole("radio", { name: "Leve" }));
+    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ qualidadeDoPalco: "leve" }));
+  });
+
   it("liga a tela cheia", async () => {
     const { usuario } = abrir();
     await usuario.click(screen.getByRole("tab", { name: /Vídeo/ }));

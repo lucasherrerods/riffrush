@@ -1,3 +1,5 @@
+import type { QualidadeDoPalco } from "@/modules/stage";
+
 export interface Configuracoes {
   /** Códigos das teclas dos 5 trastes (KeyboardEvent.code). */
   teclas: string[];
@@ -15,6 +17,7 @@ export interface Configuracoes {
   /** Desligado, o personagem 3D some do palco e do HUD (bom para comparar o desempenho). */
   personagem3d: boolean;
   mostrarFps: boolean;
+  qualidadeDoPalco: QualidadeDoPalco;
 }
 
 export const CONFIGURACOES_PADRAO: Configuracoes = {
@@ -30,6 +33,7 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   efeitos: true,
   personagem3d: true,
   mostrarFps: false,
+  qualidadeDoPalco: "media",
 };
 
 const CHAVE = "riffrush.configuracoes";

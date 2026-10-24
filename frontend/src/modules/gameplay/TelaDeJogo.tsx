@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, Pause, Skull, Zap } from "lucide-react";
 import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, tocarEfeito } from "@/modules/audio";
 import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "@/modules/character";
-import { Palco, opacidadeDaPista, type EstadoDoPalco } from "@/modules/stage";
+import { Palco, opacidadeDaPista, type EstadoDoPalco, type QualidadeDoPalco } from "@/modules/stage";
 import { DIFICULDADES, carregarMusica, type Dificuldade, type Musica, type MusicaCarregada } from "@/modules/songs";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
@@ -44,6 +44,7 @@ export interface OpcoesDaPartida {
   /** Mostra o personagem 3D no palco e no HUD. */
   personagem: boolean;
   mostrarFps: boolean;
+  qualidadeDoPalco: QualidadeDoPalco;
 }
 
 export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
@@ -59,6 +60,7 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   efeitos: true,
   personagem: true,
   mostrarFps: false,
+  qualidadeDoPalco: "media",
 };
 
 interface Props {
@@ -498,7 +500,7 @@ export function TelaDeJogo({ musica, dificuldade, opcoes, personagem, recorde, r
 
   return (
     <div className="relative h-full w-full touch-none overflow-hidden select-none">
-      {comPalco && carregada && <Palco lerEstado={() => estadoDoPalco.current} comPersonagem={opcoes.personagem} />}
+      {comPalco && carregada && <Palco lerEstado={() => estadoDoPalco.current} comPersonagem={opcoes.personagem} qualidade={opcoes.qualidadeDoPalco} />}
       <canvas ref={canvas} className="absolute inset-0 h-full w-full" />
       {/* Vinheta: as bordas escurecem e a luz fica no braço, como num palco. */}
       <div

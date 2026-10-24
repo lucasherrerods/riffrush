@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { Ator, EstadoDoAvatar } from "@/modules/character";
 import { cores } from "@/shared/styles/tokens";
 import { luzesDoPalco, planoDaCamera } from "./direcao";
+import { ajustesDoPalco, type QualidadeDoPalco } from "./qualidade";
 
 /** O que o palco lê a cada quadro, vindo da partida. */
 export interface EstadoDoPalco extends EstadoDoAvatar {
@@ -14,9 +15,6 @@ export interface EstadoDoPalco extends EstadoDoAvatar {
   desdeTrovao: number;
 }
 
-/** 30 quadros por segundo e meia resolução: o palco é fundo, a GPU fica para a pista. */
-const INTERVALO_ENTRE_QUADROS = 1000 / 30;
-const RESOLUCAO = 0.6;
 const HOLOFOTES = [
   { x: -4, cor: cores.primaria },
   { x: -1.4, cor: cores.texto },
@@ -140,11 +138,15 @@ function criarHolofote(cena: THREE.Scene, x: number, cor: string) {
 interface OpcoesDoPalco {
   /** Sem ele, o palco fica sem o personagem. */
   criarAtor?: (estado: EstadoDoAvatar) => Ator;
+  qualidade?: QualidadeDoPalco;
 }
 
-export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoPalco, { criarAtor }: OpcoesDoPalco = {}) {
+export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoPalco, { criarAtor, qualidade = "media" }: OpcoesDoPalco = {}) {
+  // O palco é fundo: menos resolução e quadros que a pista deixam a GPU para ela.
+  const { resolucao, quadrosPorSegundo } = ajustesDoPalco(qualidade);
+  const intervaloEntreQuadros = 1000 / quadrosPorSegundo;
   const renderizador = new THREE.WebGLRenderer({ canvas, antialias: false });
-  renderizador.setPixelRatio(RESOLUCAO);
+  renderizador.setPixelRatio(resolucao);
   const cena = new THREE.Scene();
   cena.background = new THREE.Color(cores.fundo);
   cena.fog = new THREE.Fog(cores.fundo, 9, 24);
@@ -165,7 +167,7 @@ export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoP
   let ultimoQuadro = 0;
   const desenhar = (agora: number) => {
     quadro = requestAnimationFrame(desenhar);
-    if (agora - ultimoQuadro < INTERVALO_ENTRE_QUADROS) return;
+    if (agora - ultimoQuadro < intervaloEntreQuadros) return;
     const dt = Math.min(0.1, (agora - ultimoQuadro) / 1000);
     ultimoQuadro = agora;
 
