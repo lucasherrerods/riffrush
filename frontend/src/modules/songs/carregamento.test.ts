@@ -131,6 +131,18 @@ describe("carregarMusica (importadas)", () => {
     expect(carregada.duracao).toBeCloseTo(2);
   });
 
+  // Bug: cada música decodificada ficava na memória para sempre; o player dos menus passa por muitas.
+  it("guarda poucas músicas decodificadas: a usada há mais tempo é lida de novo", async () => {
+    const { carregarMusica, importarArquivo } = await importar();
+    const musicas = await Promise.all([0, 1, 2, 3].map((i) => importarArquivo(new File([construirWav(1, 440)], `tom${i}.wav`))));
+    const lidas = musicas.map((m) => vi.spyOn(m.arquivo!, "arrayBuffer"));
+    for (const m of musicas) await carregarMusica(m, "medio");
+    await carregarMusica(musicas[3], "medio");
+    expect(lidas[3]).toHaveBeenCalledTimes(1);
+    await carregarMusica(musicas[0], "medio");
+    expect(lidas[0]).toHaveBeenCalledTimes(2);
+  });
+
   it("gera o chart automático de um áudio comum", async () => {
     const { carregarMusica, importarArquivo } = await importar();
     const musica = await importarArquivo(new File([construirWav(2, 440)], "tom.wav"));

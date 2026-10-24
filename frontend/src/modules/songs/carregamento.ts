@@ -1,4 +1,5 @@
 import { obterContextoDeAudio } from "@/modules/audio";
+import { criarCacheLimitado } from "@/shared/lib/cacheLimitado";
 import { chartDoAudio } from "./chartAutomatico";
 import { dificuldadesDoChart, escolherDificuldade, lerChart, lerMidi, lerSng, type ChartLido, type PacoteSng } from "./cloneHero";
 import { mixarFaixas } from "./mixagem";
@@ -52,11 +53,14 @@ async function lerComProgresso(arquivo: Blob, aoProgredir: AoProgredir): Promise
 /** No .sng, ler o arquivo é metade do trabalho; decodificar as faixas é a outra metade. */
 const PESO_DA_LEITURA = 0.5;
 
-const pacotes = new Map<string, Promise<{ pacote: PacoteSng; chart: ChartLido; audio: AudioBuffer }>>();
+/** Uma música decodificada ocupa dezenas de MB: só as últimas ficam na memória. */
+const MUSICAS_NA_MEMORIA = 3;
+
+const pacotes = criarCacheLimitado<Promise<{ pacote: PacoteSng; chart: ChartLido; audio: AudioBuffer }>>(MUSICAS_NA_MEMORIA);
 
 /** Abre o .sng uma vez só: lê o pacote, o chart e mistura as faixas de áudio. */
 function abrirSng(musica: Musica, aoProgredir: AoProgredir = () => {}) {
-  let aberto = pacotes.get(musica.id);
+  let aberto = pacotes.ler(musica.id);
   if (!aberto) {
     aberto = (async () => {
       const pacote = lerSng(await lerComProgresso(musica.arquivo!, (fracao) => aoProgredir(fracao * PESO_DA_LEITURA)));
@@ -82,8 +86,8 @@ function abrirSng(musica: Musica, aoProgredir: AoProgredir = () => {}) {
       );
       return { pacote, chart, audio: criarAudio(mix, taxa) };
     })();
-    pacotes.set(musica.id, aberto);
-    aberto.catch(() => pacotes.delete(musica.id));
+    pacotes.guardar(musica.id, aberto);
+    aberto.catch(() => pacotes.apagar(musica.id));
   }
   return aberto;
 }
@@ -100,15 +104,15 @@ async function carregarSng(musica: Musica, dificuldade: Dificuldade): Promise<Mu
   };
 }
 
-const decodificados = new Map<string, Promise<AudioBuffer>>();
+const decodificados = criarCacheLimitado<Promise<AudioBuffer>>(MUSICAS_NA_MEMORIA);
 
 /** Áudio comum, importado ou embutido no jogo: decodifica uma vez e gera o chart pelos ataques do som. */
 async function carregarAudio(musica: Musica, bytes: () => Promise<ArrayBuffer>, dificuldade: Dificuldade): Promise<MusicaCarregada> {
-  let decodificado = decodificados.get(musica.id);
+  let decodificado = decodificados.ler(musica.id);
   if (!decodificado) {
     decodificado = bytes().then((lidos) => obterContextoDeAudio().decodeAudioData(lidos));
-    decodificados.set(musica.id, decodificado);
-    decodificado.catch(() => decodificados.delete(musica.id));
+    decodificados.guardar(musica.id, decodificado);
+    decodificado.catch(() => decodificados.apagar(musica.id));
   }
   const audio = await decodificado;
   return {
