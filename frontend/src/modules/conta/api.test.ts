@@ -29,6 +29,13 @@ describe("criarApi", () => {
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer t");
   });
 
+  it("aceita a URL da API com barra no fim sem gerar barra dupla", async () => {
+    const buscar = vi.fn(async () => resposta(200, {}));
+    await criarApi("http://api/", buscar).eu("t");
+    const [url] = buscar.mock.calls[0] as unknown as [string];
+    expect(url).toBe("http://api/eu");
+  });
+
   it("204 não tem corpo", async () => {
     const api = criarApi("http://api", async () => resposta(204));
     await expect(api.sair("t")).resolves.toBeUndefined();

@@ -42,6 +42,8 @@ export class ErroDaApi extends Error {
 }
 
 export function criarApi(base: string, buscar: typeof fetch = (...args) => fetch(...args)) {
+  // Com barra no fim, o endereço ficaria "//eu" e a API responderia 404.
+  base = base.replace(/\/+$/, "");
   async function chamar<T>(metodo: string, caminho: string, token?: string, corpo?: unknown): Promise<T> {
     const resposta = await buscar(`${base}${caminho}`, {
       method: metodo,
