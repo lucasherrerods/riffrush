@@ -64,7 +64,6 @@ function abrirSng(musica: Musica, aoProgredir: AoProgredir = () => {}) {
       const midi = pacote.arquivos.get("notes.mid");
       if (!texto && !midi) throw new Error("O .sng não tem chart (notes.chart ou notes.mid).");
       const chart = texto ? lerChart(new TextDecoder().decode(texto)) : lerMidi(midi!);
-      if (!dificuldadesDoChart(chart).length) throw new Error("O chart não tem notas de guitarra.");
       const faixas = [...pacote.arquivos].filter(([nome]) => AUDIO_DO_SNG.test(nome));
       if (!faixas.length) throw new Error("O .sng não tem áudio.");
       const contexto = obterContextoDeAudio();

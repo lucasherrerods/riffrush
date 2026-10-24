@@ -189,8 +189,7 @@ export function lerChart(conteudo: string): ChartLido {
 
 const NOTA_MIDI_BASE: Record<Dificuldade, number> = { facil: 60, medio: 72, dificil: 84, expert: 96 };
 const NOTA_MIDI_STAR_POWER = 116;
-/** Só a guitarra principal: "T1 GEMS" é o nome dela nos MIDIs do Guitar Hero 1 e 2. */
-const FAIXAS_DE_GUITARRA = ["PART GUITAR", "T1 GEMS"];
+const FAIXAS_PREFERIDAS = ["PART GUITAR", "T1 GEMS", "PART BASS", "PART RHYTHM", "PART KEYS"];
 
 /** Formato notes.mid, o MIDI do Rock Band e do Clone Hero. */
 export function lerMidi(dados: Uint8Array): ChartLido {
@@ -254,7 +253,9 @@ export function lerMidi(dados: Uint8Array): ChartLido {
   }
 
   const mapa = new MapaDeTempo(resolucao, andamentos);
-  const guitarra = FAIXAS_DE_GUITARRA.map((n) => faixas.find((f) => f.nome === n)).find((f) => f?.notas.length);
+  const guitarra =
+    FAIXAS_PREFERIDAS.map((n) => faixas.find((f) => f.nome === n)).find((f) => f?.notas.length) ??
+    faixas.find((f) => f.notas.some((n) => n.nota >= 60 && n.nota <= 100));
 
   const notas: ChartLido["notas"] = {};
   if (guitarra) {

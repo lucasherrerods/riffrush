@@ -110,15 +110,14 @@ describe("lerMidi", () => {
     expect(resumo(lerMidi(comBateria).notas.expert!)).toEqual(["1.000:4"]);
   });
 
-  // Bug: sem faixa de guitarra, o baixo (ou qualquer faixa com notas na mesma altura) virava a guitarra.
-  it("sem faixa de guitarra, não lê nenhuma dificuldade", () => {
+  it("sem faixa de guitarra, usa o baixo como reserva, e não a bateria", () => {
     const semGuitarra = construirMidi(
       480,
       [andamento(500000)],
-      [nomeDaFaixa("PART BASS"), notaLigada(0, 97), notaDesligada(10, 97)],
       [nomeDaFaixa("PART DRUMS"), notaLigada(0, 98), notaDesligada(10, 98)],
+      [nomeDaFaixa("PART BASS"), notaLigada(960, 97), notaDesligada(10, 97)],
     );
-    expect(lerMidi(semGuitarra).notas).toEqual({});
+    expect(resumo(lerMidi(semGuitarra).notas.expert!)).toEqual(["1.000:1"]);
   });
 
   it("recusa arquivos que não são MIDI", () => {

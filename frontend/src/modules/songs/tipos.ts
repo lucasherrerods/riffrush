@@ -38,7 +38,7 @@ export interface Musica {
   arquivoDeVideo?: Blob;
   /** Pacote do Clone Hero, com chart feito à mão. */
   sng?: boolean;
-  /** As dificuldades de guitarra que o chart do pacote tem. Sem ela, o chart é gerado nas quatro. */
+  /** As dificuldades que o chart do pacote tem. Sem ela, o chart é gerado nas quatro. */
   dificuldades?: Dificuldade[];
   imagemDeCapa?: string;
   /** O arquivo está salvo no PC e só é lido na hora de tocar. */

@@ -106,17 +106,10 @@ describe("importarArquivo", () => {
   });
 
   // Bug: o chart só com Expert aparecia com as 4 dificuldades, todas tocando o Expert.
-  it("guarda só as dificuldades de guitarra que o chart tem", async () => {
+  it("guarda só as dificuldades que o chart tem", async () => {
     const { importarArquivo } = await importar();
     const arquivo = arquivoSng({}, { "notes.chart": new TextEncoder().encode(CHART), "song.wav": construirWav(1, 220) });
     expect((await importarArquivo(arquivo)).dificuldades).toEqual(["expert"]);
-  });
-
-  it("recusa .sng sem guitarra", async () => {
-    const { importarArquivo } = await importar();
-    const soBaixo = CHART.replace("ExpertSingle", "ExpertDoubleBass");
-    const arquivo = arquivoSng({}, { "notes.chart": new TextEncoder().encode(soBaixo), "song.wav": construirWav(1, 220) });
-    await expect(importarArquivo(arquivo)).rejects.toThrow("guitarra");
   });
 
   it("recusa .sng sem chart", async () => {
