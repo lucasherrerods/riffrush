@@ -18,4 +18,11 @@ describe("criarApiDoRanking", () => {
     const [, init] = buscar.mock.calls[0] as unknown as [string, RequestInit];
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer tok");
   });
+
+  it("recusa uma resposta fora do formato, para o painel mostrar o erro em vez de quebrar a tela", async () => {
+    for (const corpo of [{}, { jogadores: 1, top: null, meu: null }, "<html>", null]) {
+      const api = criarApiDoRanking("http://api", async () => resposta(corpo));
+      await expect(api.buscar("m", "medio")).rejects.toThrow("formato");
+    }
+  });
 });
