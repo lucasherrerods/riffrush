@@ -20,15 +20,6 @@ const avatares = new Set<Avatar>();
 let quadro = 0;
 let ultimoQuadro = 0;
 
-export function suportaWebGL() {
-  try {
-    const canvas = document.createElement("canvas");
-    return !!(canvas.getContext("webgl2") ?? canvas.getContext("webgl"));
-  } catch {
-    return false;
-  }
-}
-
 /** Corpo inteiro no quadro, olhando para o meio do personagem. */
 function enquadrar(camera: THREE.PerspectiveCamera, altura: number) {
   const distancia = (altura * 0.62) / Math.tan(THREE.MathUtils.degToRad(CAMPO_DE_VISAO / 2));

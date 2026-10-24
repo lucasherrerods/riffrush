@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { criarAtor, type EstadoDoAvatar } from "@/modules/character";
+import type { Ator, EstadoDoAvatar } from "@/modules/character";
 import { cores } from "@/shared/styles/tokens";
 import { luzesDoPalco, planoDaCamera } from "./direcao";
 
@@ -137,7 +137,12 @@ function criarHolofote(cena: THREE.Scene, x: number, cor: string) {
  * Palco 3D atrás da pista: o personagem, telão, treliça, caixas de som e holofotes que
  * pulsam no ritmo, clareiam nos trovões de combo e ficam azuis no star power.
  */
-export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoPalco, { comPersonagem = true } = {}) {
+interface OpcoesDoPalco {
+  /** Sem ele, o palco fica sem o personagem. */
+  criarAtor?: (estado: EstadoDoAvatar) => Ator;
+}
+
+export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoPalco, { criarAtor }: OpcoesDoPalco = {}) {
   const renderizador = new THREE.WebGLRenderer({ canvas, antialias: false });
   renderizador.setPixelRatio(RESOLUCAO);
   const cena = new THREE.Scene();
@@ -152,7 +157,7 @@ export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoP
   const corDaEstrela = new THREE.Color(cores.estrela);
   const branco = new THREE.Color(cores.texto);
 
-  const ator = comPersonagem ? criarAtor(lerEstado()) : null;
+  const ator = criarAtor ? criarAtor(lerEstado()) : null;
   if (ator) cena.add(ator.raiz);
   const camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 60);
 

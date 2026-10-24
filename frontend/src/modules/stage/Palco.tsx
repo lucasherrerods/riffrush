@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/shared/lib/utils";
-import { criarPalco, type EstadoDoPalco } from "./cena";
+import { carregarAtor } from "@/modules/character";
+import type { EstadoDoPalco } from "./cena";
 
 interface Props {
   /** Lido a cada quadro: assim o palco acompanha o relógio da música sem re-renderizar o React. */
@@ -18,8 +19,17 @@ export function Palco({ lerEstado, className, comPersonagem = true }: Props) {
 
   useEffect(() => {
     if (!canvas.current) return;
-    const palco = criarPalco(canvas.current, () => leitura.current(), { comPersonagem });
-    return () => palco.descartar();
+    const destino = canvas.current;
+    let palco: { descartar: () => void } | null = null;
+    let desmontado = false;
+    // A cena e o personagem trazem o three.js: só baixam quando a partida abre.
+    void Promise.all([import("./cena"), comPersonagem ? carregarAtor() : undefined]).then(([{ criarPalco }, criarAtor]) => {
+      if (!desmontado) palco = criarPalco(destino, () => leitura.current(), { criarAtor });
+    });
+    return () => {
+      desmontado = true;
+      palco?.descartar();
+    };
   }, [comPersonagem]);
 
   return <canvas ref={canvas} aria-hidden="true" data-parte="palco" className={cn("pointer-events-none absolute inset-0 size-full", className)} />;

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/shared/lib/utils";
 import type { Personagem } from "./personagem";
 import type { Reacao } from "./reacao";
-import { registrarAvatar, suportaWebGL } from "./render3d/renderizador";
+import type { registrarAvatar } from "./render3d/renderizador";
+import { suportaWebGL } from "./render3d/webgl";
 
 interface Props {
   personagem: Personagem;
@@ -25,11 +26,23 @@ export function Avatar({ personagem, className, tocando = false, bpm = 120, puls
   const [comWebGL] = useState(suportaWebGL);
   const estado = { personagem, tocando, bpm, pulso, triste, reacao };
 
+  const estadoAtual = useRef(estado);
+  estadoAtual.current = estado;
+
   useEffect(() => {
     if (!comWebGL || !canvas.current) return;
-    registro.current = registrarAvatar(canvas.current, estado);
+    const destino = canvas.current;
+    let desmontado = false;
+    // O renderizador traz o three.js: só baixa quando um avatar aparece na tela.
+    void import("./render3d/renderizador").then(({ registrarAvatar }) => {
+      if (!desmontado) registro.current = registrarAvatar(destino, estadoAtual.current);
+    });
     // O registro é criado uma vez; as mudanças chegam pelo efeito abaixo.
-    return () => registro.current?.remover();
+    return () => {
+      desmontado = true;
+      registro.current?.remover();
+      registro.current = null;
+    };
   }, [comWebGL]);
 
   useEffect(() => {
