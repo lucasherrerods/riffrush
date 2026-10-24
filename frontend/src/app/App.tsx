@@ -5,9 +5,10 @@ import { ROTULOS_DOS_TRASTES, ROTULO_DA_ESTRELA, iniciarControle } from "@/modul
 import { TelaDeJogo, type Resultado } from "@/modules/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
-import { CartaoDaConta, GanhoDeXp, contasLigadas, sessaoDaConta, type XpDaPartida } from "@/modules/conta";
+import { CartaoDaConta, ExcluirConta, GanhoDeXp, contasLigadas, sessaoDaConta, type XpDaPartida } from "@/modules/conta";
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/player";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
+import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
 import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { TelaDeBuscaDeMusicas, baixarDoEncore, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
@@ -18,7 +19,7 @@ import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { opcoesDaPartida } from "./opcoes";
 
-type Tela = "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado";
+type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado";
 
 interface PartidaEmRede {
   musica: Musica;
@@ -27,7 +28,7 @@ interface PartidaEmRede {
 }
 
 export function App() {
-  const [tela, setTela] = useState<Tela>("menu");
+  const [tela, setTela] = useState<Tela>(() => documentoDoEndereco(location.pathname) ?? "menu");
   const [configuracoes, setConfiguracoes] = useState<Configuracoes>(carregarConfiguracoes);
   const [personagem, setPersonagem] = useState<Personagem>(carregarPersonagem);
   const [musicas, setMusicas] = useState<Musica[]>(MUSICAS_EMBUTIDAS);
@@ -214,7 +215,20 @@ export function App() {
                 }}
                 aoConfigurar={() => setTela("configuracoes")}
                 aoBuscarMusicas={() => setTela("buscaDeMusicas")}
+                aoAbrirDocumento={setTela}
               />
+            )}
+            {(tela === "privacidade" || tela === "termos") && (
+              <TelaDeDocumento
+                documento={tela}
+                aoVoltar={() => {
+                  // Quem chegou pelo link direto volta para o endereço do jogo.
+                  if (documentoDoEndereco(location.pathname)) history.replaceState(null, "", "/");
+                  setTela("menu");
+                }}
+              >
+                {tela === "privacidade" && contasLigadas && <ExcluirConta />}
+              </TelaDeDocumento>
             )}
             {tela === "selecao" && (
               <TelaDeSelecao
