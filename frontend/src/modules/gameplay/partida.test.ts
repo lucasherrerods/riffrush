@@ -256,3 +256,50 @@ describe("precisao", () => {
     expect(precisao(partida)).toBeCloseTo(0.75);
   });
 });
+
+describe("acerto ao soltar", () => {
+  it("soltar a tecla acerta a próxima nota da mesma pista se o aperto acertou", () => {
+    const partida = criarPartida([nota(1), nota(1.08)]);
+    tocar(partida, 0, 1);
+    soltar(partida, 0, 1.05);
+    expect(partida.notas[1].acertada).toBe(true);
+    expect(partida.acertos).toBe(2);
+  });
+
+  it("não acerta ao soltar se o aperto errou", () => {
+    const partida = criarPartida([nota(1.05)]);
+    tocar(partida, 0, 0.5);
+    soltar(partida, 0, 1.05);
+    expect(partida.notas[0].acertada).toBe(false);
+  });
+
+  it("só uma soltura por aperto: a seguinte precisa de aperto novo", () => {
+    const partida = criarPartida([nota(1), nota(1.05), nota(1.1)]);
+    tocar(partida, 0, 1);
+    soltar(partida, 0, 1.05);
+    soltar(partida, 0, 1.1);
+    expect(partida.notas[2].acertada).toBe(false);
+  });
+
+  it("não acerta nota de outra pista", () => {
+    const partida = criarPartida([nota(1), nota(1.05, 1)]);
+    tocar(partida, 0, 1);
+    soltar(partida, 0, 1.05);
+    expect(partida.notas[1].acertada).toBe(false);
+  });
+
+  it("soltar sem nota por perto não tem castigo", () => {
+    const partida = criarPartida([nota(1), nota(3)]);
+    tocar(partida, 0, 1);
+    soltar(partida, 0, 1.5);
+    expect(partida.sequencia).toBe(1);
+    expect(partida.erros).toBe(0);
+  });
+
+  it("largar um sustain antes do fim não acerta a nota seguinte", () => {
+    const partida = criarPartida([nota(1, 0, { duracao: 1 }), nota(1.5)]);
+    tocar(partida, 0, 1);
+    soltar(partida, 0, 1.5);
+    expect(partida.notas[1].acertada).toBe(false);
+  });
+});

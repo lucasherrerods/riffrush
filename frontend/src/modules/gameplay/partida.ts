@@ -57,6 +57,8 @@ export interface Partida {
   tamanhoDasFrases: Map<number, number>;
   acertosPorFrase: Map<number, number>;
   frasesFalhas: Set<number>;
+  /** Pistas cujo último aperto acertou uma nota: soltar a tecla pode acertar mais uma. */
+  armadas: Set<number>;
   eventos: Evento[];
 }
 
@@ -82,6 +84,7 @@ export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false
     tamanhoDasFrases,
     acertosPorFrase: new Map(),
     frasesFalhas: new Set(),
+    armadas: new Set(),
     eventos: [],
   };
 }
@@ -154,6 +157,15 @@ function pontuarSustain(partida: Partida, nota: NotaEmJogo, tempo: number) {
 /** Apertou a tecla da pista no instante `tempo` da música. Devolve se acertou alguma nota. */
 export function tocar(partida: Partida, pista: number, tempo: number) {
   if (partida.derrota) return false;
+  if (!acertarMaisProxima(partida, pista, tempo)) {
+    partida.armadas.delete(pista);
+    return false;
+  }
+  partida.armadas.add(pista);
+  return true;
+}
+
+function acertarMaisProxima(partida: Partida, pista: number, tempo: number) {
   let melhor: NotaEmJogo | undefined;
   let menorDistancia = JANELA_DE_ACERTO;
   for (let i = partida.primeira; i < partida.notas.length && partida.notas[i].tempo < tempo + JANELA_DE_ACERTO; i++) {
@@ -170,15 +182,21 @@ export function tocar(partida: Partida, pista: number, tempo: number) {
   return true;
 }
 
-/** Soltou a tecla da pista: larga o sustain que estava sendo segurado nela. */
+/**
+ * Soltou a tecla da pista: larga o sustain que estava sendo segurado nela e, se o aperto
+ * acertou, a soltura acerta a próxima nota da pista (facilita trechos de notas rápidas).
+ */
 export function soltar(partida: Partida, pista: number, tempo: number) {
+  const armada = partida.armadas.delete(pista);
+  let largouCedo = false;
   for (let i = partida.primeira; i < partida.notas.length && partida.notas[i].tempo <= tempo; i++) {
     const nota = partida.notas[i];
     if (!nota.segurando || nota.pista !== pista) continue;
     pontuarSustain(partida, nota, tempo);
     nota.segurando = false;
-    if (tempo < nota.tempo + nota.duracao - TOLERANCIA_DO_SUSTAIN) nota.solta = true;
+    if (tempo < nota.tempo + nota.duracao - TOLERANCIA_DO_SUSTAIN) nota.solta = largouCedo = true;
   }
+  if (armada && !largouCedo && !partida.derrota) acertarMaisProxima(partida, pista, tempo);
 }
 
 export function ativarEstrela(partida: Partida) {
