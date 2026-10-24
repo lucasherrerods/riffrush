@@ -4,6 +4,7 @@
 use chrono::{Duration, Utc};
 use riffrush_api::modules::conta::{ContasPostgres, PartidaRegistrada, PerfilDoGoogle, RepositorioDeContas, RepositorioDeSessoes};
 use riffrush_api::modules::progresso::{Dificuldade, ResumoDaPartida};
+use riffrush_api::modules::ranking::{RankingPostgres, RepositorioDoRanking};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -102,4 +103,46 @@ async fn excluir_apaga_a_conta_com_sessoes_e_partidas() {
     assert_eq!(banco.buscar(conta.id).await.unwrap(), None);
     assert_eq!(banco.conta_da_sessao(&hash, agora).await.unwrap(), None);
     assert_eq!(banco.ultima_partida(conta.id).await.unwrap(), None);
+}
+
+#[tokio::test]
+async fn ranking_pega_a_melhor_partida_terminada_de_cada_jogador() {
+    let Some(banco) = banco().await else { return };
+    let ranking = RankingPostgres(banco.0.clone());
+    // Música só deste teste, para não se misturar com as outras partidas do banco.
+    let musica = format!("teste:{}", Uuid::new_v4());
+    let agora = Utc::now();
+    let jogar = |conta_id: Uuid, pontos: u64, derrota: bool, segundos: i64| PartidaRegistrada {
+        conta_id,
+        musica_id: musica.clone(),
+        pontos,
+        resumo: ResumoDaPartida {
+            dificuldade: Dificuldade::Expert,
+            acertos: 9,
+            total: 10,
+            derrota,
+            fantasma: false,
+        },
+        xp_ganho: 0,
+        jogada_em: agora + Duration::seconds(segundos),
+    };
+    let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let caio = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    for partida in [
+        jogar(ana.id, 500, false, 0),
+        jogar(ana.id, 900, false, 1),
+        // Vaiada não conta, mesmo com mais pontos.
+        jogar(bia.id, 5000, true, 2),
+        jogar(bia.id, 700, false, 3),
+        jogar(caio.id, 100, false, 4),
+    ] {
+        banco.registrar_partida(&partida).await.unwrap();
+    }
+
+    let linhas = ranking.linhas(&musica, Dificuldade::Expert, 2, Some(caio.id)).await.unwrap();
+
+    let resumo: Vec<_> = linhas.iter().map(|l| (l.posicao, l.conta_id, l.pontos, l.jogadores)).collect();
+    assert_eq!(resumo, [(1, ana.id, 900, 3), (2, bia.id, 700, 3), (3, caio.id, 100, 3)]);
+    assert!(ranking.linhas(&musica, Dificuldade::Facil, 50, None).await.unwrap().is_empty());
 }

@@ -1,0 +1,1 @@
+export { PainelDeRanking } from "./PainelDeRanking";

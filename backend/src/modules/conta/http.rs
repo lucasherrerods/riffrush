@@ -28,18 +28,32 @@ impl From<ErroDaConta> for ErroDaApi {
 /// O token da sessão, lido do cabeçalho `Authorization: Bearer <token>`.
 pub struct Token(String);
 
+fn token_do_cabecalho(parts: &Parts) -> Option<String> {
+    parts
+        .headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|valor| valor.to_str().ok())
+        .and_then(|valor| valor.strip_prefix("Bearer "))
+        .filter(|token| !token.is_empty())
+        .map(String::from)
+}
+
 impl<S: Send + Sync> FromRequestParts<S> for Token {
     type Rejection = ErroDaApi;
 
     async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
-        parts
-            .headers
-            .get(axum::http::header::AUTHORIZATION)
-            .and_then(|valor| valor.to_str().ok())
-            .and_then(|valor| valor.strip_prefix("Bearer "))
-            .filter(|token| !token.is_empty())
-            .map(|token| Token(token.to_string()))
-            .ok_or(ErroDaApi::NaoAutorizado)
+        token_do_cabecalho(parts).map(Token).ok_or(ErroDaApi::NaoAutorizado)
+    }
+}
+
+/// Para rotas abertas que mostram algo a mais para quem está logado.
+pub struct TokenOpcional(pub Option<String>);
+
+impl<S: Send + Sync> FromRequestParts<S> for TokenOpcional {
+    type Rejection = ErroDaApi;
+
+    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+        Ok(TokenOpcional(token_do_cabecalho(parts)))
     }
 }
 

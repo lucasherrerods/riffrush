@@ -248,6 +248,19 @@ describe("App", () => {
     expect(await screen.findByText("Expert")).toBeInTheDocument();
   });
 
+  // O ranking junta quem baixou o mesmo chart: a partida vai com o md5 do Encore, não com o id local do arquivo.
+  it("a partida de uma música do Encore vai para a API com o id do ranking", async () => {
+    biblioteca.salvas = [{ ...MUSICAS_EMBUTIDAS[0], id: "arquivo:Banda - Hit.sng:9", titulo: "Do Encore", noAparelho: true, md5DoEncore: "8d63" }];
+    const usuario = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    await screen.findByRole("heading", { name: "Selecione a música" });
+    await usuario.keyboard("{ArrowUp}");
+    expect(await screen.findByRole("heading", { name: "Do Encore" })).toBeInTheDocument();
+    await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
+    await usuario.click(await screen.findByRole("button", { name: "terminar" }));
+    await waitFor(() => expect(sessaoDaConta.registrarPartida).toHaveBeenCalledWith(expect.objectContaining({ musicaId: "encore:8d63" })));
+  });
+
   it("a música guardada no PC é lida do disco antes da partida", async () => {
     biblioteca.salvas = [{ ...MUSICAS_EMBUTIDAS[0], id: "arquivo:salva", titulo: "No Disco", noAparelho: true }];
     biblioteca.prepararParaTocar.mockImplementationOnce(async (musica) => ({ ...musica, titulo: "No Disco Carregada" }));

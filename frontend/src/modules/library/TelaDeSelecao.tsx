@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, FileAudio, Flame, Play, RotateCcw, Trash2, Trophy } from "lucide-react";
+import { ArrowLeft, FileAudio, Flame, Info, ListOrdered, Play, RotateCcw, Trash2, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
@@ -10,6 +10,7 @@ import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/shared/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { AvatarPalhetando } from "./componentes/AvatarPalhetando";
 import { Capa } from "./componentes/Capa";
 import { Carrossel } from "./componentes/Carrossel";
@@ -27,13 +28,15 @@ interface Props {
   aoVoltar: () => void;
   aoImportar: (arquivos: File[]) => void;
   aoRemover: (musica: Musica) => void;
+  /** O ranking online da música, montado pelo App. Sem ele (contas desligadas), só os detalhes aparecem. */
+  ranking?: ReactNode;
 }
 
 const TIPOS_IMPORTAVEIS = "audio/*,video/*,.sng";
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 export function TelaDeSelecao(props: Props) {
-  const { musicas, indice, dificuldade, personagem, volumeDosEfeitos, aoSelecionar, aoDificuldade, aoJogar, aoVoltar, aoImportar, aoRemover } = props;
+  const { musicas, indice, dificuldade, personagem, volumeDosEfeitos, aoSelecionar, aoDificuldade, aoJogar, aoVoltar, aoImportar, aoRemover, ranking } = props;
   const recordes = carregarRecordes();
   const musica = musicas[indice];
   const dificuldades = dificuldadesDaMusica(musica);
@@ -88,6 +91,21 @@ export function TelaDeSelecao(props: Props) {
       aoVoltar();
     }
   });
+
+  const detalhes = (
+    <div className="placa flex min-h-0 items-end gap-4 p-4">
+      <AvatarPalhetando personagem={personagem} bpm={musica.bpm || 120} className="h-40 w-auto shrink-0 max-md:hidden [@media(max-height:680px)]:h-24" />
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <Dado rotulo="Dificuldade">{rotuloDaDificuldade}</Dado>
+        {recordeAtual && (
+          <p className="flex items-center gap-2 px-4 text-base text-texto-suave">
+            <Trophy className="size-4 text-ouro opacity-70" /> Recorde:
+            <span className="font-mono font-bold text-texto">{formatar(recordeAtual.pontos)}</span>
+          </p>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="relative isolate flex h-full flex-col">
@@ -155,20 +173,28 @@ export function TelaDeSelecao(props: Props) {
             </Dado>
           </div>
 
-          <div className="placa flex min-h-0 items-end gap-4 p-4">
-            <AvatarPalhetando personagem={personagem} bpm={musica.bpm || 120} className="h-40 w-auto shrink-0 max-md:hidden [@media(max-height:680px)]:h-24" />
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <Dado rotulo="Dificuldade">{rotuloDaDificuldade}</Dado>
-              {recordeAtual && (
-                <p className="flex items-center gap-2 px-4 text-base text-texto-suave">
-                  <Trophy className="size-4 text-ouro opacity-70" /> Recorde:
-                  <span className="font-mono font-bold text-texto">{formatar(recordeAtual.pontos)}</span>
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex-1" />
+          {ranking ? (
+            // Como no osu!: o ranking da música ao lado da roda, e os detalhes numa aba vizinha.
+            <Tabs defaultValue="ranking" className="min-h-0 flex-1">
+              <TabsList className="w-full">
+                <TabsTrigger value="detalhes">
+                  <Info className="opacity-70" /> Detalhes
+                </TabsTrigger>
+                <TabsTrigger value="ranking">
+                  <ListOrdered className="opacity-70" /> Ranking
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="detalhes">{detalhes}</TabsContent>
+              <TabsContent value="ranking" className="flex min-h-0 flex-col">
+                {ranking}
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <>
+              {detalhes}
+              <div className="flex-1" />
+            </>
+          )}
           {precisaReimportar ? (
             <div className="flex flex-col gap-2">
               <p className="text-base text-texto-suave">O áudio não está mais salvo neste aparelho. Escolha o arquivo de novo para tocar.</p>

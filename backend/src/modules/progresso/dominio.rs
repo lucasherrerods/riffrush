@@ -10,6 +10,16 @@ pub enum Dificuldade {
 }
 
 impl Dificuldade {
+    /// Como fica guardada no banco: igual ao JSON.
+    pub fn como_texto(self) -> &'static str {
+        match self {
+            Self::Facil => "facil",
+            Self::Medio => "medio",
+            Self::Dificil => "dificil",
+            Self::Expert => "expert",
+        }
+    }
+
     fn base(self) -> f64 {
         match self {
             Self::Facil => 50.0,
@@ -102,6 +112,13 @@ pub fn nivel_do_xp(xp_total: u64) -> Nivel {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_dificuldade_vira_o_mesmo_texto_do_json() {
+        for dificuldade in [Dificuldade::Facil, Dificuldade::Medio, Dificuldade::Dificil, Dificuldade::Expert] {
+            assert_eq!(serde_json::to_value(dificuldade).unwrap(), dificuldade.como_texto());
+        }
+    }
 
     fn partida(dificuldade: Dificuldade, acertos: u32, total: u32) -> ResumoDaPartida {
         ResumoDaPartida {

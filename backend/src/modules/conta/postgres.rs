@@ -69,10 +69,6 @@ impl RepositorioDeContas for ContasPostgres {
     async fn registrar_partida(&self, partida: &PartidaRegistrada) -> Result<Conta, FalhaExterna> {
         let mut transacao = self.0.begin().await.map_err(falha)?;
         let resumo = &partida.resumo;
-        let dificuldade = serde_json::to_value(resumo.dificuldade)
-            .ok()
-            .and_then(|v| v.as_str().map(String::from))
-            .unwrap_or_default();
         sqlx::query(
             "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
@@ -80,7 +76,7 @@ impl RepositorioDeContas for ContasPostgres {
         .bind(Uuid::new_v4())
         .bind(partida.conta_id)
         .bind(&partida.musica_id)
-        .bind(dificuldade)
+        .bind(resumo.dificuldade.como_texto())
         .bind(i64::try_from(partida.pontos).unwrap_or(i64::MAX))
         .bind(resumo.acertos as i32)
         .bind(resumo.total as i32)

@@ -61,6 +61,21 @@ describe("TelaDeSelecao", () => {
     expect(aoDificuldade).toHaveBeenCalledWith("expert");
   });
 
+  it("com ranking, abre na aba Ranking e a aba Detalhes mostra a dificuldade e o recorde local", async () => {
+    const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn() };
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} ranking={<p>top da música</p>} {...acoes} />);
+    expect(screen.getByRole("tab", { name: /Ranking/ })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("top da música")).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("tab", { name: /Detalhes/ }));
+    expect(within(screen.getByRole("region", { name: "Informações da música" })).getByText("Médio")).toBeInTheDocument();
+  });
+
+  it("sem ranking (contas desligadas), não tem abas", () => {
+    abrir();
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Informações da música" })).getByText("Médio")).toBeInTheDocument();
+  });
+
   it("Enter toca e Esc volta", async () => {
     const { aoJogar, aoVoltar, usuario } = abrir();
     await usuario.keyboard("{Enter}{Escape}");
