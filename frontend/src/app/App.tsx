@@ -115,7 +115,7 @@ export function App() {
     playerDeMusica.definirFila(filaDoPlayer);
     if (!playerDeMusica.estado().musica && filaDoPlayer[0]) playerDeMusica.seguir(filaDoPlayer[0]);
   }, [filaDoPlayer]);
-  useEffect(() => playerDeMusica.definirVolume(configuracoes.volumeDaMusica), [configuracoes.volumeDaMusica]);
+  useEffect(() => playerDeMusica.definirVolume(configuracoes.volumeDoPlayer), [configuracoes.volumeDoPlayer]);
   useEffect(() => playerDeMusica.suspender(tela === "jogo"), [tela]);
   // Na seleção o player toca a música escolhida, e avançar/voltar mexem no carrossel.
   const escolhida = musicas[indice];
@@ -192,7 +192,11 @@ export function App() {
   return (
     <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
       <Fundo tocando={tela === "jogo"} />
-      {tela !== "jogo" && <CabecalhoDoPlayerDeMusica>{contasLigadas && <CartaoDaConta />}</CabecalhoDoPlayerDeMusica>}
+      {tela !== "jogo" && (
+        <CabecalhoDoPlayerDeMusica volume={configuracoes.volumeDoPlayer} aoMudarVolume={(volumeDoPlayer) => mudarConfiguracoes({ ...configuracoes, volumeDoPlayer })}>
+          {contasLigadas && <CartaoDaConta />}
+        </CabecalhoDoPlayerDeMusica>
+      )}
       <div className="relative flex-1">
         <AnimatePresence mode="wait">
           <motion.div

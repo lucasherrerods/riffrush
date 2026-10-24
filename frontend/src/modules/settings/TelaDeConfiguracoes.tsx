@@ -149,6 +149,15 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
               formatar={porcentagem}
               aoMudar={(volumeDosEfeitos) => mudar({ volumeDosEfeitos })}
             />
+            <LinhaDeSlider
+              rotulo="Volume do player"
+              valor={configuracoes.volumeDoPlayer}
+              minimo={0}
+              maximo={1}
+              passo={0.05}
+              formatar={porcentagem}
+              aoMudar={(volumeDoPlayer) => mudar({ volumeDoPlayer })}
+            />
           </TabsContent>
 
           <TabsContent value="video" className="flex flex-col gap-2">
