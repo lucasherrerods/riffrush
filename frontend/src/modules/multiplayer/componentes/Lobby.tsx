@@ -4,7 +4,7 @@ import { Check, ChevronDown, ChevronUp, Globe, Loader2, Play, Smartphone, Users 
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar } from "@/modules/character";
 import { useSeguirMusica } from "@/modules/player";
-import { DIFICULDADES, dificuldadesDaMusica, type Dificuldade, type Musica } from "@/modules/songs";
+import { DIFICULDADES, INSTRUMENTOS, dificuldadesDaMusica, instrumentosDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { cn } from "@/shared/lib/utils";
 import { avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
@@ -29,7 +29,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
   const preparo = useMusicaDaSala(sala, musicas, endereco);
   useSeguirMusica(preparo.tipo === "pronta" ? (preparo.musica ?? null) : null);
   // Na LAN, escolher uma música importada envia o arquivo, e isso pode falhar.
-  const escolherNaSala = (m: Musica, d: Dificuldade) => void escolher(m, d).catch((erro) => avisar.error(erro instanceof Error ? erro.message : String(erro)));
+  const escolherNaSala = (m: Musica, d: Dificuldade, i: Instrumento = sala.instrumento) => void escolher(m, d, i).catch((erro) => avisar.error(erro instanceof Error ? erro.message : String(erro)));
   const convidados = sala.jogadores.filter((j) => j.id !== sala.hostId);
   const prontos = convidados.filter((j) => sala.prontos.includes(j.id)).length;
   const estouPronto = sala.prontos.includes(sala.meuId);
@@ -150,15 +150,29 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
           </div>
 
           <div className="flex min-w-0 flex-col justify-end gap-4">
+            {/* Só o host escolhe: todos tocam no mesmo instrumento, para a pontuação ser comparável. */}
             {sala.souHost ? (
-              <GrupoDeOpcoes
-                titulo="Dificuldade"
-                opcoes={(musica ? dificuldadesDaMusica(musica) : DIFICULDADES).map((d) => ({ id: d.id, rotulo: d.rotulo }))}
-                valor={sala.dificuldade}
-                aoEscolher={(dificuldade) => musica && escolherNaSala(musica, dificuldade)}
-              />
+              <>
+                {musica && instrumentosDaMusica(musica).length > 1 && (
+                  <GrupoDeOpcoes
+                    titulo="Instrumento"
+                    opcoes={instrumentosDaMusica(musica).map((i) => ({ id: i.id, rotulo: i.rotulo }))}
+                    valor={sala.instrumento}
+                    aoEscolher={(instrumento) => escolherNaSala(musica, sala.dificuldade, instrumento)}
+                  />
+                )}
+                <GrupoDeOpcoes
+                  titulo="Dificuldade"
+                  opcoes={(musica ? dificuldadesDaMusica(musica, sala.instrumento) : DIFICULDADES).map((d) => ({ id: d.id, rotulo: d.rotulo }))}
+                  valor={sala.dificuldade}
+                  aoEscolher={(dificuldade) => musica && escolherNaSala(musica, dificuldade)}
+                />
+              </>
             ) : (
-              <p className="text-base text-texto-suave">Dificuldade: {DIFICULDADES.find((d) => d.id === sala.dificuldade)?.rotulo}</p>
+              <p className="text-base text-texto-suave">
+                {sala.instrumento !== "guitarra" && <>Instrumento: {INSTRUMENTOS.find((i) => i.id === sala.instrumento)?.rotulo} · </>}
+                Dificuldade: {DIFICULDADES.find((d) => d.id === sala.dificuldade)?.rotulo}
+              </p>
             )}
 
             {sala.souHost ? (

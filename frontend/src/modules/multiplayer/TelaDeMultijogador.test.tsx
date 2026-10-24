@@ -168,9 +168,9 @@ describe("na sala", () => {
   it("o host escolhe a música e a dificuldade", async () => {
     const { usuario } = abrir({ sala: naSala(true), endereco: "" });
     await usuario.click(screen.getByRole("radio", { name: /Cosmic Riff/ }));
-    expect(sala.escolher).toHaveBeenCalledWith(MUSICAS_DE_TESTE[2], "medio");
+    expect(sala.escolher).toHaveBeenCalledWith(MUSICAS_DE_TESTE[2], "medio", "guitarra");
     await usuario.click(screen.getByRole("radio", { name: "Expert" }));
-    expect(sala.escolher).toHaveBeenCalledWith(MUSICAS_DE_TESTE[0], "expert");
+    expect(sala.escolher).toHaveBeenCalledWith(MUSICAS_DE_TESTE[0], "expert", "guitarra");
   });
 
   it("o host só vê as dificuldades que o chart da música tem", () => {
@@ -178,6 +178,35 @@ describe("na sala", () => {
     abrir({ sala: naSala(true), endereco: "" }, soExpert);
     const grupo = screen.getByRole("radiogroup", { name: "Dificuldade" });
     expect(within(grupo).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Expert"]);
+  });
+
+  describe("música com mais de um instrumento", () => {
+    const banda = [{ ...MUSICAS_DE_TESTE[0], trilhas: { guitarra: ["expert" as const], baixo: ["facil" as const, "medio" as const] } }];
+
+    it("só o host escolhe o instrumento, que vale para a sala toda", async () => {
+      const { usuario } = abrir({ sala: naSala(true), endereco: "" }, banda);
+      const grupo = screen.getByRole("radiogroup", { name: "Instrumento" });
+      expect(within(grupo).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Guitarra", "Baixo"]);
+      await usuario.click(within(grupo).getByRole("radio", { name: "Baixo" }));
+      expect(sala.escolher).toHaveBeenCalledWith(banda[0], "medio", "baixo");
+    });
+
+    it("o host vê as dificuldades do instrumento da sala", () => {
+      abrir({ sala: naSala(true, { instrumento: "baixo" }), endereco: "" }, banda);
+      const grupo = screen.getByRole("radiogroup", { name: "Dificuldade" });
+      expect(within(grupo).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Fácil", "Médio"]);
+    });
+
+    it("o convidado só vê o instrumento escolhido pelo host", () => {
+      abrir({ sala: naSala(false, { instrumento: "baixo" }), endereco: "" }, banda);
+      expect(screen.queryByRole("radiogroup", { name: "Instrumento" })).not.toBeInTheDocument();
+      expect(screen.getByText(/Instrumento: Baixo/)).toBeInTheDocument();
+    });
+  });
+
+  it("música só com guitarra não mostra a escolha de instrumento", () => {
+    abrir({ sala: naSala(true), endereco: "" });
+    expect(screen.queryByRole("radiogroup", { name: "Instrumento" })).not.toBeInTheDocument();
   });
 
   // Antes só 3 músicas apareciam por vez: pouco para escolher numa biblioteca grande.
@@ -190,9 +219,9 @@ describe("na sala", () => {
     expect(within(lista).getAllByRole("radio")).toHaveLength(12);
     expect(lista).toHaveClass("overflow-y-auto");
     await usuario.click(screen.getByRole("button", { name: "Próxima música" }));
-    expect(sala.escolher).toHaveBeenCalledWith(muitas[7], "medio");
+    expect(sala.escolher).toHaveBeenCalledWith(muitas[7], "medio", "guitarra");
     await usuario.click(screen.getByRole("button", { name: "Música anterior" }));
-    expect(sala.escolher).toHaveBeenCalledWith(muitas[5], "medio");
+    expect(sala.escolher).toHaveBeenCalledWith(muitas[5], "medio", "guitarra");
   });
 
   it("o host online vê o código para os amigos, sem QR code", () => {
