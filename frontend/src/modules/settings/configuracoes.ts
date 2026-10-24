@@ -18,6 +18,8 @@ export interface Configuracoes {
   personagem3d: boolean;
   mostrarFps: boolean;
   qualidadeDoPalco: QualidadeDoPalco;
+  /** Só a pista e o placar na partida: sem palco, personagem, clipe nem fundo. */
+  modoCompetitivo: boolean;
 }
 
 export const CONFIGURACOES_PADRAO: Configuracoes = {
@@ -34,6 +36,7 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   personagem3d: true,
   mostrarFps: false,
   qualidadeDoPalco: "media",
+  modoCompetitivo: false,
 };
 
 const CHAVE = "riffrush.configuracoes";

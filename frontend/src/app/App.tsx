@@ -66,6 +66,15 @@ export function App() {
     return comControle ? { ...base, rotulosDosTrastes: ROTULOS_DOS_TRASTES, rotuloDaTeclaDaEstrela: ROTULO_DA_ESTRELA } : base;
   }, [configuracoes, comControle]);
 
+  useTeclado((evento) => {
+    if (evento.code !== "Tab" || !evento.shiftKey) return;
+    // Sem o preventDefault, o navegador também pularia o foco para o botão anterior.
+    evento.preventDefault();
+    const modoCompetitivo = !configuracoes.modoCompetitivo;
+    mudarConfiguracoes({ ...configuracoes, modoCompetitivo });
+    avisar(modoCompetitivo ? "Modo competitivo ligado" : "Modo competitivo desligado");
+  });
+
   useTeclado(async (evento) => {
     if (evento.code !== "F11") return;
     evento.preventDefault();
@@ -205,7 +214,7 @@ export function App() {
 
   return (
     <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
-      <Fundo tocando={tela === "jogo"} />
+      {!(tela === "jogo" && configuracoes.modoCompetitivo) && <Fundo tocando={tela === "jogo"} />}
       {tela !== "jogo" && (
         <CabecalhoDoPlayerDeMusica volume={configuracoes.volumeDoPlayer} aoMudarVolume={(volumeDoPlayer) => mudarConfiguracoes({ ...configuracoes, volumeDoPlayer })}>
           {contasLigadas && <CartaoDaConta />}
