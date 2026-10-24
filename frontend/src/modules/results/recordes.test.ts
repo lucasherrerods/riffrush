@@ -75,3 +75,14 @@ describe("salvarRecorde", () => {
     expect(carregarRecordes()).toEqual({});
   });
 });
+
+describe("recordes por instrumento", () => {
+  it("cada instrumento tem o próprio recorde, e a guitarra mantém os recordes de antes", () => {
+    localStorage.setItem("riffrush.recordes", JSON.stringify({ "neon:medio": { pontos: 500, estrelas: 1, fullCombo: false } }));
+    salvarRecorde(resultado({ instrumento: "baixo", pontos: 300 }));
+    const recordes = carregarRecordes();
+    expect(recordeDe(recordes, "neon", "medio")?.pontos).toBe(500);
+    expect(recordeDe(recordes, "neon", "medio", "guitarra")?.pontos).toBe(500);
+    expect(recordeDe(recordes, "neon", "medio", "baixo")?.pontos).toBe(300);
+  });
+});

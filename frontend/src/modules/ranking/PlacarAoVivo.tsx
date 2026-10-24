@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { motion } from "framer-motion";
 import { useConta } from "@/modules/conta";
-import type { Dificuldade } from "@/modules/songs";
+import type { Dificuldade, Instrumento } from "@/modules/songs";
 import { cn } from "@/shared/lib/utils";
 import { montarPlacar, pontuacoesAcima } from "./placar";
 import { useRanking, type OpcoesDoRanking } from "./useRanking";
@@ -9,6 +9,8 @@ import { useRanking, type OpcoesDoRanking } from "./useRanking";
 interface Props extends OpcoesDoRanking {
   musicaId: string;
   dificuldade: Dificuldade;
+  /** Sem ele, o ranking da guitarra. */
+  instrumento?: Instrumento;
   /** Os pontos da partida agora. */
   pontos: number;
 }
@@ -17,8 +19,8 @@ const formatar = (n: number) => n.toLocaleString("pt-BR");
 const MOLA = { type: "spring", stiffness: 400, damping: 32 } as const;
 
 /** O placar no canto da partida, como no osu!: o ranking da música com você subindo nele ao vivo. */
-export function PlacarAoVivo({ musicaId, dificuldade, pontos, atrasoMs = 0, ...opcoes }: Props) {
-  const estado = useRanking(musicaId, dificuldade, { atrasoMs, ...opcoes });
+export function PlacarAoVivo({ musicaId, dificuldade, instrumento = "guitarra", pontos, atrasoMs = 0, ...opcoes }: Props) {
+  const estado = useRanking(musicaId, dificuldade, instrumento, { atrasoMs, ...opcoes });
   const nome = useConta().conta?.nome ?? "Você";
   // Cada vez que menos gente fica acima de você, conta uma ultrapassagem: ela dispara o brilho da sua linha.
   const acimaAntes = useRef<number | null>(null);

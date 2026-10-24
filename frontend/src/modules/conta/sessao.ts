@@ -121,6 +121,7 @@ export class SessaoDaConta {
     const xp = await this.ambiente.api.registrarPartida(token, {
       musica_id: resultado.musicaId,
       dificuldade: resultado.dificuldade,
+      instrumento: resultado.instrumento ?? "guitarra",
       pontos: resultado.pontos,
       acertos: resultado.acertos,
       total: resultado.total,

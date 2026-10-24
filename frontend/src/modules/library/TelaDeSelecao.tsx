@@ -5,10 +5,11 @@ import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
 import { carregarRecordes, recordeDe } from "@/modules/results";
-import { DIFICULDADES, dificuldadesDaMusica, type Dificuldade, type Musica } from "@/modules/songs";
+import { DIFICULDADES, dificuldadesDaMusica, instrumentoDaMusica, instrumentosDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
+import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/shared/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { AvatarPalhetando } from "./componentes/AvatarPalhetando";
@@ -20,10 +21,13 @@ interface Props {
   musicas: Musica[];
   indice: number;
   dificuldade: Dificuldade;
+  /** O instrumento escolhido; a música que não o tem mostra o primeiro que tiver. */
+  instrumento: Instrumento;
   personagem: Personagem;
   volumeDosEfeitos: number;
   aoSelecionar: (indice: number) => void;
   aoDificuldade: (dificuldade: Dificuldade) => void;
+  aoInstrumento: (instrumento: Instrumento) => void;
   aoJogar: () => void;
   aoVoltar: () => void;
   aoImportar: (arquivos: File[]) => void;
@@ -36,11 +40,13 @@ const TIPOS_IMPORTAVEIS = "audio/*,video/*,.sng";
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 export function TelaDeSelecao(props: Props) {
-  const { musicas, indice, dificuldade, personagem, volumeDosEfeitos, aoSelecionar, aoDificuldade, aoJogar, aoVoltar, aoImportar, aoRemover, ranking } = props;
+  const { musicas, indice, dificuldade, personagem, volumeDosEfeitos, aoSelecionar, aoDificuldade, aoInstrumento, aoJogar, aoVoltar, aoImportar, aoRemover, ranking } = props;
   const recordes = carregarRecordes();
   const musica = musicas[indice];
-  const dificuldades = dificuldadesDaMusica(musica);
-  const recordeAtual = recordeDe(recordes, musica.id, dificuldade);
+  const instrumentos = instrumentosDaMusica(musica);
+  const instrumento = instrumentoDaMusica(musica, props.instrumento);
+  const dificuldades = dificuldadesDaMusica(musica, instrumento);
+  const recordeAtual = recordeDe(recordes, musica.id, dificuldade, instrumento);
   const rotuloDaDificuldade = DIFICULDADES.find((d) => d.id === dificuldade)?.rotulo;
   const efeito = (nome: "mover" | "selecionar" | "voltar") => tocarEfeito(nome, volumeDosEfeitos);
   const dispositivo = useDispositivo();
@@ -53,6 +59,10 @@ export function TelaDeSelecao(props: Props) {
   const escolherDificuldade = (id: Dificuldade) => {
     efeito("mover");
     aoDificuldade(id);
+  };
+  const escolherInstrumento = (id: Instrumento) => {
+    efeito("mover");
+    aoInstrumento(id);
   };
   const reimportar = useRef<HTMLInputElement>(null);
   const precisaReimportar = semAudio(musica);
@@ -77,6 +87,12 @@ export function TelaDeSelecao(props: Props) {
     // Com o modal aberto, as teclas são dele: Esc o fecha, sem voltar ao menu.
     if (removendo) return;
     if (evento.code === "Delete" && podeRemover) return setRemovendo(true);
+    // Shift+Tab é do modo competitivo; o Tab sozinho troca o instrumento.
+    if (evento.code === "Tab" && !evento.shiftKey && instrumentos.length > 1) {
+      evento.preventDefault();
+      const atual = instrumentos.findIndex((i) => i.id === instrumento);
+      return escolherInstrumento(instrumentos[(atual + 1) % instrumentos.length].id);
+    }
     const posicao = dificuldades.findIndex((d) => d.id === dificuldade);
     if (evento.code === "ArrowDown" || evento.code === "ArrowUp") {
       evento.preventDefault();
@@ -175,6 +191,15 @@ export function TelaDeSelecao(props: Props) {
             )}
           </div>
 
+          {instrumentos.length > 1 && (
+            <GrupoDeOpcoes
+              titulo="Instrumento"
+              opcoes={instrumentos.map((i) => ({ id: i.id, rotulo: i.rotulo }))}
+              valor={instrumento}
+              aoEscolher={escolherInstrumento}
+            />
+          )}
+
           {ranking ? (
             // Como no osu!: o ranking da música ao lado da roda, e os detalhes numa aba vizinha.
             <Tabs defaultValue="ranking" className="min-h-0 flex-1">
@@ -223,6 +248,7 @@ export function TelaDeSelecao(props: Props) {
           musicas={musicas}
           indice={indice}
           dificuldade={dificuldade}
+          instrumento={instrumento}
           dificuldades={dificuldades}
           recordes={recordes}
           aoEscolherMusica={(i) => {
@@ -238,6 +264,7 @@ export function TelaDeSelecao(props: Props) {
       <footer className="flex items-center gap-8 bg-superficie px-8 py-2 max-md:hidden">
         <Comando teclas={rotuloDoComando("horizontal", dispositivo)}>Dificuldade</Comando>
         <Comando teclas={rotuloDoComando("vertical", dispositivo)}>Música</Comando>
+        {instrumentos.length > 1 && <Comando teclas={rotuloDoComando("instrumento", dispositivo)}>Instrumento</Comando>}
         <Comando teclas={rotuloDoComando("confirmar", dispositivo)}>Confirmar</Comando>
         <Comando teclas={rotuloDoComando("voltar", dispositivo)}>Voltar</Comando>
       </footer>

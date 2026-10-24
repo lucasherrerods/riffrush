@@ -1,5 +1,5 @@
 import { Loader2, Trophy, UserRound } from "lucide-react";
-import type { Dificuldade } from "@/modules/songs";
+import type { Dificuldade, Instrumento } from "@/modules/songs";
 import { cn } from "@/shared/lib/utils";
 import type { PosicaoNoRanking } from "./api";
 import { haQuantoTempo, precisaoDaPartida } from "./formatar";
@@ -9,13 +9,15 @@ interface Props extends OpcoesDoRanking {
   /** O id da música no ranking (`idDoRanking` do módulo songs). */
   musicaId: string;
   dificuldade: Dificuldade;
+  /** Sem ele, o ranking da guitarra. */
+  instrumento?: Instrumento;
 }
 
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 /** O ranking da música selecionada, como no osu!: o top rolável e o recorde pessoal fixo embaixo. */
-export function PainelDeRanking({ musicaId, dificuldade, ...opcoes }: Props) {
-  const estado = useRanking(musicaId, dificuldade, opcoes);
+export function PainelDeRanking({ musicaId, dificuldade, instrumento = "guitarra", ...opcoes }: Props) {
+  const estado = useRanking(musicaId, dificuldade, instrumento, opcoes);
 
   if (estado.tipo === "carregando") {
     return (

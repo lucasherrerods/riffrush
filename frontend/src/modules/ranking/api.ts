@@ -1,4 +1,4 @@
-import type { Dificuldade } from "@/modules/songs";
+import type { Dificuldade, Instrumento } from "@/modules/songs";
 import { criarCliente } from "@/shared/lib/api";
 
 /** Como a API devolve, em snake_case. */
@@ -31,8 +31,12 @@ function conferirRanking(corpo: unknown): RespostaDoRanking {
 export function criarApiDoRanking(base: string, buscar?: typeof fetch) {
   const chamar = criarCliente(base, buscar);
   return {
-    buscar: (musicaId: string, dificuldade: Dificuldade, { token, sinal }: { token?: string; sinal?: AbortSignal } = {}) =>
-      chamar<unknown>("GET", `/ranking?${new URLSearchParams({ musica_id: musicaId, dificuldade })}`, { token, sinal }).then(conferirRanking),
+    buscar: (
+      musicaId: string,
+      dificuldade: Dificuldade,
+      { instrumento = "guitarra", token, sinal }: { instrumento?: Instrumento; token?: string; sinal?: AbortSignal } = {},
+    ) =>
+      chamar<unknown>("GET", `/ranking?${new URLSearchParams({ musica_id: musicaId, dificuldade, instrumento })}`, { token, sinal }).then(conferirRanking),
   };
 }
 
