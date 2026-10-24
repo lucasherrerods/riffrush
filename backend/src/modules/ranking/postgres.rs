@@ -6,7 +6,7 @@ use uuid::Uuid;
 use super::dominio::LinhaDoRanking;
 use super::portas::RepositorioDoRanking;
 use crate::modules::conta::FalhaExterna;
-use crate::modules::progresso::Dificuldade;
+use crate::modules::progresso::{Dificuldade, Instrumento};
 
 pub struct RankingPostgres(pub PgPool);
 
@@ -44,7 +44,7 @@ const CONSULTA: &str = "
     WITH melhores AS (
         SELECT DISTINCT ON (conta_id) conta_id, pontos, acertos, total, jogada_em
         FROM partidas
-        WHERE musica_id = $1 AND dificuldade = $2 AND NOT derrota AND NOT fantasma
+        WHERE musica_id = $1 AND dificuldade = $2 AND instrumento = $3 AND NOT derrota AND NOT fantasma
         ORDER BY conta_id, pontos DESC, jogada_em ASC
     ),
     numerados AS (
@@ -54,15 +54,23 @@ const CONSULTA: &str = "
     SELECT n.posicao, n.jogadores, n.conta_id, c.nome, c.avatar, n.pontos, n.acertos, n.total, n.jogada_em
     FROM numerados n
     JOIN contas c ON c.id = n.conta_id
-    WHERE n.posicao <= $3 OR n.conta_id = $4
+    WHERE n.posicao <= $4 OR n.conta_id = $5
     ORDER BY n.posicao";
 
 #[async_trait]
 impl RepositorioDoRanking for RankingPostgres {
-    async fn linhas(&self, musica_id: &str, dificuldade: Dificuldade, ate: u32, conta: Option<Uuid>) -> Result<Vec<LinhaDoRanking>, FalhaExterna> {
+    async fn linhas(
+        &self,
+        musica_id: &str,
+        dificuldade: Dificuldade,
+        instrumento: Instrumento,
+        ate: u32,
+        conta: Option<Uuid>,
+    ) -> Result<Vec<LinhaDoRanking>, FalhaExterna> {
         sqlx::query_as::<_, Linha>(CONSULTA)
             .bind(musica_id)
             .bind(dificuldade.como_texto())
+            .bind(instrumento.como_texto())
             .bind(i64::from(ate))
             .bind(conta)
             .fetch_all(&self.0)

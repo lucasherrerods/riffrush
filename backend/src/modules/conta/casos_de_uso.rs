@@ -6,7 +6,7 @@ use super::dominio::{hash_do_token, pode_registrar, Conta, DURACAO_DA_SESSAO, TA
 use super::portas::{
     ErroDeLogin, FalhaExterna, Gerador, PartidaRegistrada, PedidoDeLogin, ProvedorDeLogin, Relogio, RepositorioDeContas, RepositorioDeSessoes,
 };
-use crate::modules::progresso::{nivel_do_xp, xp_da_partida, Nivel, PartidaInvalida, ResumoDaPartida};
+use crate::modules::progresso::{nivel_do_xp, xp_da_partida, Instrumento, Nivel, PartidaInvalida, ResumoDaPartida};
 
 /// As portas que os casos de uso da conta usam. O main liga os adaptadores reais; os testes, fakes.
 #[derive(Clone)]
@@ -50,6 +50,7 @@ pub struct Entrada {
 
 pub struct PartidaEnviada {
     pub musica_id: String,
+    pub instrumento: Instrumento,
     pub pontos: u64,
     pub resumo: ResumoDaPartida,
 }
@@ -96,6 +97,7 @@ impl ServicosDaConta {
             .registrar_partida(&PartidaRegistrada {
                 conta_id: conta.id,
                 musica_id: partida.musica_id,
+                instrumento: partida.instrumento,
                 pontos: partida.pontos,
                 resumo,
                 xp_ganho,
@@ -297,6 +299,7 @@ mod tests {
     fn partida(acertos: u32, total: u32) -> PartidaEnviada {
         PartidaEnviada {
             musica_id: "embutida:neon".into(),
+            instrumento: Instrumento::Guitarra,
             pontos: 1000,
             resumo: ResumoDaPartida {
                 dificuldade: Dificuldade::Medio,

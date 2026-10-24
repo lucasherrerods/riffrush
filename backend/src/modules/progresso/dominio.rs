@@ -30,6 +30,32 @@ impl Dificuldade {
     }
 }
 
+/// O instrumento tocado. Cada um tem o próprio ranking; o XP não muda com ele.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Instrumento {
+    /// O padrão: o jogo antes dos instrumentos só tinha a guitarra.
+    #[default]
+    Guitarra,
+    Baixo,
+    Ritmica,
+    Coop,
+    Teclado,
+}
+
+impl Instrumento {
+    /// Como fica guardado no banco: igual ao JSON.
+    pub fn como_texto(self) -> &'static str {
+        match self {
+            Self::Guitarra => "guitarra",
+            Self::Baixo => "baixo",
+            Self::Ritmica => "ritmica",
+            Self::Coop => "coop",
+            Self::Teclado => "teclado",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ResumoDaPartida {
     pub dificuldade: Dificuldade,
@@ -202,6 +228,20 @@ mod tests {
                 xp_para_o_proximo: 520
             }
         );
+    }
+
+    #[test]
+    fn o_instrumento_vira_o_mesmo_texto_do_json() {
+        for instrumento in [
+            Instrumento::Guitarra,
+            Instrumento::Baixo,
+            Instrumento::Ritmica,
+            Instrumento::Coop,
+            Instrumento::Teclado,
+        ] {
+            assert_eq!(serde_json::to_value(instrumento).unwrap(), instrumento.como_texto());
+        }
+        assert_eq!(Instrumento::default(), Instrumento::Guitarra);
     }
 
     #[test]
