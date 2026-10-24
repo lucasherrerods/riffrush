@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::modules::conta::ServicosDaConta;
+use crate::modules::perfil::ServicosDoPerfil;
 use crate::modules::ranking::ServicosDoRanking;
 use crate::modules::saude::VerificadorDoBanco;
 
@@ -10,4 +11,5 @@ pub struct EstadoDoApp {
     pub banco: Arc<dyn VerificadorDoBanco>,
     pub conta: ServicosDaConta,
     pub ranking: ServicosDoRanking,
+    pub perfil: ServicosDoPerfil,
 }

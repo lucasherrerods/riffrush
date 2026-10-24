@@ -26,7 +26,7 @@ impl From<ErroDaConta> for ErroDaApi {
 }
 
 /// O token da sessão, lido do cabeçalho `Authorization: Bearer <token>`.
-pub struct Token(String);
+pub struct Token(pub String);
 
 fn token_do_cabecalho(parts: &Parts) -> Option<String> {
     parts

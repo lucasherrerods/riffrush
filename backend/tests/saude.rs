@@ -26,6 +26,7 @@ async fn chamar(banco_ok: bool, caminho: &str) -> (StatusCode, Value) {
         EstadoDoApp {
             banco: Arc::new(BancoFalso(banco_ok)),
             ranking: riffrush_api::modules::ranking::fakes::servicos_do_ranking(conta.clone()).0,
+            perfil: riffrush_api::modules::perfil::fakes::servicos_do_perfil(conta.clone()).0,
             conta,
         },
         &["http://localhost:1420".into()],

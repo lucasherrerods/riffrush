@@ -1,5 +1,5 @@
 import { MUSICAS_DE_TESTE } from "@/test/musicas";
-import { idDoRanking } from "./idDoRanking";
+import { idDoRanking, tituloDaMusica } from "./idDoRanking";
 
 describe("idDoRanking", () => {
   it("música do jogo usa o próprio id, igual em todo aparelho", () => {
@@ -10,5 +10,18 @@ describe("idDoRanking", () => {
   it("música do Encore usa o md5 do chart, igual para todo mundo que baixou", () => {
     const baixada = { ...MUSICAS_DE_TESTE[0], id: "arquivo:Banda - Hit.sng:123", md5DoEncore: "8d63" };
     expect(idDoRanking(baixada)).toBe("encore:8d63");
+  });
+});
+
+describe("tituloDaMusica", () => {
+  it("acha a música pelo id do ranking, inclusive as do Encore", () => {
+    const baixada = { ...MUSICAS_DE_TESTE[0], titulo: "Hit", artista: "Banda", md5DoEncore: "8d63" };
+    expect(tituloDaMusica([baixada], "encore:8d63")).toBe("Hit — Banda");
+  });
+
+  it("sem artista mostra só o título, e música que não está na lista não tem título", () => {
+    const semArtista = { ...MUSICAS_DE_TESTE[0], titulo: "Solo", artista: "" };
+    expect(tituloDaMusica([semArtista], semArtista.id)).toBe("Solo");
+    expect(tituloDaMusica([semArtista], "outra")).toBeUndefined();
   });
 });
