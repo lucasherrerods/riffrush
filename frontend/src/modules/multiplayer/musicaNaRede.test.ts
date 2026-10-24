@@ -15,7 +15,7 @@ const importada: Musica = {
 
 describe("paraRede", () => {
   it("manda só o id das músicas embutidas", () => {
-    expect(paraRede(MUSICAS_EMBUTIDAS[2])).toEqual({ tipo: "embutida", id: "cosmic-riff" });
+    expect(paraRede(MUSICAS_EMBUTIDAS[0])).toEqual({ tipo: "embutida", id: "spektrem-shine" });
   });
 
   it("manda título, artista e nome do arquivo das importadas", () => {
@@ -25,7 +25,7 @@ describe("paraRede", () => {
 
 describe("resolverMusica", () => {
   it("acha a embutida no catálogo", async () => {
-    expect(await resolverMusica({ tipo: "embutida", id: "overdrive" }, [], "http://host")).toBe(MUSICAS_EMBUTIDAS[3]);
+    expect(await resolverMusica({ tipo: "embutida", id: "spektrem-shine" }, [], "http://host")).toBe(MUSICAS_EMBUTIDAS[0]);
   });
 
   it("usa a música local quando já tem o arquivo (é o host)", async () => {

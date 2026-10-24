@@ -26,23 +26,31 @@ beforeEach(() => {
 });
 
 describe("carregarMusica (embutidas)", () => {
-  it("gera áudio, notas e batidas", async () => {
+  // A música padrão é um arquivo do projeto: o jogo busca o áudio e gera o chart como numa importada.
+  const buscarAudio = () => vi.fn(async () => ({ blob: async () => new Blob([construirWav(2, 440)], { type: "audio/wav" }) }));
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("busca o áudio do arquivo do projeto e gera o chart automático", async () => {
+    const buscar = buscarAudio();
+    vi.stubGlobal("fetch", buscar);
     const { carregarMusica } = await importar();
     const { MUSICAS_EMBUTIDAS } = await import("./catalogo");
-    const musica = MUSICAS_EMBUTIDAS[0];
-    const carregada = await carregarMusica(musica, "medio");
-    expect(carregada.notas.length).toBeGreaterThan(50);
-    expect(carregada.audio.duration).toBeCloseTo(carregada.duracao, 1);
-    expect(carregada.batidas[1].tempo - carregada.batidas[0].tempo).toBeCloseTo(60 / musica.bpm);
+    const carregada = await carregarMusica(MUSICAS_EMBUTIDAS[0], "expert");
+    expect(buscar).toHaveBeenCalledWith(MUSICAS_EMBUTIDAS[0].audioEmbutido);
+    expect(carregada.duracao).toBeCloseTo(2);
+    expect(Array.isArray(carregada.notas)).toBe(true);
   });
 
-  it("reaproveita o áudio sintetizado ao trocar de dificuldade", async () => {
+  it("reaproveita o áudio ao trocar de dificuldade, sem buscar de novo", async () => {
+    const buscar = buscarAudio();
+    vi.stubGlobal("fetch", buscar);
     const { carregarMusica } = await importar();
     const { MUSICAS_EMBUTIDAS } = await import("./catalogo");
     const facil = await carregarMusica(MUSICAS_EMBUTIDAS[0], "facil");
     const expert = await carregarMusica(MUSICAS_EMBUTIDAS[0], "expert");
     expect(expert.audio).toBe(facil.audio);
-    expect(expert.notas.length).toBeGreaterThan(facil.notas.length);
+    expect(buscar).toHaveBeenCalledTimes(1);
   });
 });
 

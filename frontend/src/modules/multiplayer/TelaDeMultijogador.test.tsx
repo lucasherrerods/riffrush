@@ -1,13 +1,14 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
-import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { estadoInicial, type EstadoDaSala } from "./protocolo";
 import { resolverMusica } from "./musicaNaRede";
 import * as sala from "./sala";
 import { avisar } from "@/shared/ui/avisos";
 import { TelaDeMultijogador } from "./TelaDeMultijogador";
+import { MUSICAS_DE_TESTE } from "@/test/musicas";
+import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
 
 vi.mock("./sala", () => ({
   PORTA_DA_SALA: 7777,
@@ -46,11 +47,13 @@ function naSala(souHost: boolean, extra: Partial<EstadoDaSala> = {}): EstadoDaSa
       { id: 1, personagem: lucas },
       { id: 2, personagem: vitor },
     ],
+    // Os testes de tela usam a lista de músicas de teste, não o catálogo de verdade.
+    musica: { tipo: "embutida", id: MUSICAS_DE_TESTE[0].id },
     ...extra,
   };
 }
 
-function abrir(conexao: sala.Conexao, musicas = MUSICAS_EMBUTIDAS) {
+function abrir(conexao: sala.Conexao, musicas = MUSICAS_DE_TESTE) {
   vi.mocked(sala.useConexao).mockReturnValue(conexao);
   const aoVoltar = vi.fn();
   render(<TelaDeMultijogador personagem={lucas} musicas={musicas} volumeDosEfeitos={0} aoVoltar={aoVoltar} aoEditarPersonagem={vi.fn()} />);
@@ -155,13 +158,13 @@ describe("na sala", () => {
   it("o host escolhe a música e a dificuldade", async () => {
     const { usuario } = abrir({ sala: naSala(true), endereco: "" });
     await usuario.click(screen.getByRole("radio", { name: /Cosmic Riff/ }));
-    expect(sala.escolher).toHaveBeenCalledWith(MUSICAS_EMBUTIDAS[2], "medio");
+    expect(sala.escolher).toHaveBeenCalledWith(MUSICAS_DE_TESTE[2], "medio");
     await usuario.click(screen.getByRole("radio", { name: "Expert" }));
-    expect(sala.escolher).toHaveBeenCalledWith(MUSICAS_EMBUTIDAS[0], "expert");
+    expect(sala.escolher).toHaveBeenCalledWith(MUSICAS_DE_TESTE[0], "expert");
   });
 
   it("com muitas músicas, mostra só as próximas da escolhida, sem rolagem, e as setas trocam", async () => {
-    const muitas = Array.from({ length: 12 }, (_, i) => ({ ...MUSICAS_EMBUTIDAS[0], id: `m${i}`, titulo: `Faixa ${i}` }));
+    const muitas = Array.from({ length: 12 }, (_, i) => ({ ...MUSICAS_DE_TESTE[0], id: `m${i}`, titulo: `Faixa ${i}` }));
     vi.mocked(sala.useConexao).mockReturnValue({ sala: naSala(true, { musica: { tipo: "embutida", id: "m6" } }), endereco: "" });
     render(<TelaDeMultijogador personagem={lucas} musicas={muitas} volumeDosEfeitos={0} aoVoltar={vi.fn()} aoEditarPersonagem={vi.fn()} />);
     const usuario = userEvent.setup();
@@ -181,14 +184,19 @@ describe("na sala", () => {
   });
 
   it("no online, a lista só tem músicas que todo mundo consegue tocar", () => {
-    const importada = { ...MUSICAS_EMBUTIDAS[0], id: "arquivo:gravacao.wav:1", titulo: "Minha Gravação", arquivo: new File(["x"], "gravacao.wav") };
-    abrir({ sala: naSala(true), endereco: "", online: true, codigo: "K7QXM" }, [importada, ...MUSICAS_EMBUTIDAS]);
+    const importada = { ...MUSICAS_DE_TESTE[0], id: "arquivo:gravacao.wav:1", titulo: "Minha Gravação", arquivo: new File(["x"], "gravacao.wav") };
+    abrir({ sala: naSala(true), endereco: "", online: true, codigo: "K7QXM" }, [importada, ...MUSICAS_DE_TESTE]);
     expect(screen.queryByText("Minha Gravação")).not.toBeInTheDocument();
   });
 
   it("avisa quando a partida não pode começar", async () => {
     vi.mocked(sala.comecar).mockRejectedValueOnce(new Error("No modo online só dá para tocar músicas do jogo."));
-    const { usuario } = abrir({ sala: naSala(true, { prontos: [2] }), endereco: "", online: true, codigo: "K7QXM" });
+    // No modo online só começa com música do catálogo de verdade.
+    const [doJogo] = MUSICAS_EMBUTIDAS;
+    const { usuario } = abrir(
+      { sala: naSala(true, { prontos: [2], musica: { tipo: "embutida", id: doJogo.id } }), endereco: "", online: true, codigo: "K7QXM" },
+      [doJogo, ...MUSICAS_DE_TESTE],
+    );
     await usuario.click(screen.getByRole("button", { name: /Começar partida/ }));
     await waitFor(() => expect(avisar.error).toHaveBeenCalledWith("No modo online só dá para tocar músicas do jogo."));
   });
@@ -196,7 +204,7 @@ describe("na sala", () => {
   it("o host começa a partida com a música escolhida", async () => {
     const { usuario } = abrir({ sala: naSala(true, { musica: { tipo: "embutida", id: "cosmic-riff" }, prontos: [2] }), endereco: "" });
     await usuario.click(screen.getByRole("button", { name: /Começar partida/ }));
-    await waitFor(() => expect(sala.comecar).toHaveBeenCalledWith(MUSICAS_EMBUTIDAS[2]));
+    await waitFor(() => expect(sala.comecar).toHaveBeenCalledWith(MUSICAS_DE_TESTE[2]));
   });
 
   describe("pronto", () => {
@@ -215,14 +223,14 @@ describe("na sala", () => {
 
     it("o convidado baixa a música antes de poder dar pronto", async () => {
       let terminar = () => {};
-      vi.mocked(resolverMusica).mockReturnValueOnce(new Promise((resolve) => (terminar = () => resolve(MUSICAS_EMBUTIDAS[0]))));
+      vi.mocked(resolverMusica).mockReturnValueOnce(new Promise((resolve) => (terminar = () => resolve(MUSICAS_DE_TESTE[0]))));
       const { usuario } = abrir({ sala: naSala(false), endereco: "http://h:7777" });
       expect(screen.getByText(/Baixando a música/)).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Estou pronto" })).toBeNull();
       terminar();
       await usuario.click(await screen.findByRole("button", { name: "Estou pronto" }));
       expect(sala.marcarPronto).toHaveBeenCalledWith(true);
-      expect(resolverMusica).toHaveBeenCalledWith(naSala(false).musica, MUSICAS_EMBUTIDAS, "http://h:7777");
+      expect(resolverMusica).toHaveBeenCalledWith(naSala(false).musica, MUSICAS_DE_TESTE, "http://h:7777");
     });
 
     it("o convidado pronto pode desmarcar", async () => {

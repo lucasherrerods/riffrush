@@ -1,10 +1,7 @@
 import { obterContextoDeAudio } from "@/modules/audio";
-import { chartDaMelodia } from "./chart";
 import { chartDoAudio } from "./chartAutomatico";
 import { escolherDificuldade, lerChart, lerMidi, lerSng, type ChartLido, type PacoteSng } from "./cloneHero";
-import { compor, type Composicao } from "./composicao";
 import { mixarFaixas } from "./mixagem";
-import { sintetizar, TAXA_DE_AMOSTRAGEM } from "./sintetizador";
 import type { Batida, Dificuldade, Musica, MusicaCarregada } from "./tipos";
 
 const AUDIO_DO_SNG = /^(song|guitar|bass|rhythm|keys|vocals?|vocals_\d|drums(_\d)?|backing)\.(opus|ogg|mp3|wav)$/;
@@ -30,28 +27,6 @@ function batidasRegulares(duracao: number, intervalo: number, primeiraForte: num
   const batidas: Batida[] = [];
   for (let i = 0; i * intervalo <= duracao; i++) batidas.push({ tempo: i * intervalo, forte: (i - primeiraForte) % 4 === 0 });
   return batidas;
-}
-
-const embutidas = new Map<string, Promise<{ composicao: Composicao; audio: AudioBuffer }>>();
-
-async function carregarEmbutida(musica: Musica, dificuldade: Dificuldade): Promise<MusicaCarregada> {
-  let pronta = embutidas.get(musica.id);
-  if (!pronta) {
-    pronta = Promise.resolve().then(() => {
-      const composicao = compor(musica.estilo!, musica.semente ?? 1);
-      return { composicao, audio: criarAudio([sintetizar(musica.estilo!, composicao)], TAXA_DE_AMOSTRAGEM) };
-    });
-    embutidas.set(musica.id, pronta);
-  }
-  const { composicao, audio } = await pronta;
-  const batida = 60 / musica.bpm;
-  return {
-    audio,
-    notas: chartDaMelodia(composicao.melodia, dificuldade, batida),
-    // Os compassos começam depois de 2 batidas de entrada.
-    batidas: batidasRegulares(composicao.duracao, batida, 2),
-    duracao: composicao.duracao,
-  };
 }
 
 export type AoProgredir = (fracao: number) => void;
@@ -127,11 +102,13 @@ async function carregarSng(musica: Musica, dificuldade: Dificuldade): Promise<Mu
 
 const decodificados = new Map<string, Promise<AudioBuffer>>();
 
-async function carregarAudioImportado(musica: Musica, dificuldade: Dificuldade): Promise<MusicaCarregada> {
+/** Áudio comum, importado ou embutido no jogo: decodifica uma vez e gera o chart pelos ataques do som. */
+async function carregarAudio(musica: Musica, bytes: () => Promise<ArrayBuffer>, dificuldade: Dificuldade): Promise<MusicaCarregada> {
   let decodificado = decodificados.get(musica.id);
   if (!decodificado) {
-    decodificado = musica.arquivo!.arrayBuffer().then((bytes) => obterContextoDeAudio().decodeAudioData(bytes));
+    decodificado = bytes().then((lidos) => obterContextoDeAudio().decodeAudioData(lidos));
     decodificados.set(musica.id, decodificado);
+    decodificado.catch(() => decodificados.delete(musica.id));
   }
   const audio = await decodificado;
   return {
@@ -143,8 +120,10 @@ async function carregarAudioImportado(musica: Musica, dificuldade: Dificuldade):
 }
 
 export function carregarMusica(musica: Musica, dificuldade: Dificuldade) {
-  if (!musica.arquivo) return carregarEmbutida(musica, dificuldade);
-  return musica.sng ? carregarSng(musica, dificuldade) : carregarAudioImportado(musica, dificuldade);
+  const { arquivo, audioEmbutido } = musica;
+  if (arquivo) return musica.sng ? carregarSng(musica, dificuldade) : carregarAudio(musica, () => arquivo.arrayBuffer(), dificuldade);
+  if (!audioEmbutido) throw new Error(`${musica.titulo} não tem áudio.`);
+  return carregarAudio(musica, async () => (await (await fetch(audioEmbutido)).blob()).arrayBuffer(), dificuldade);
 }
 
 function musicaDoNome(arquivo: File): Musica {
