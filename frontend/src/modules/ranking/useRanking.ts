@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { sessaoDaConta, useConta } from "@/modules/conta";
 import type { Dificuldade, Instrumento } from "@/modules/songs";
-import { URL_DA_API } from "@/shared/lib/api";
 import { useValorAtrasado } from "@/shared/hooks/useValorAtrasado";
-import { criarApiDoRanking, type ApiDoRanking, type RespostaDoRanking } from "./api";
+import { apiDoRanking, type ApiDoRanking, type RespostaDoRanking } from "./api";
 
 export interface OpcoesDoRanking {
-  api?: ApiDoRanking;
+  api?: Pick<ApiDoRanking, "buscar">;
   /** Espera o pedido parar de mudar antes de buscar: girar o carrossel passa por muitas músicas. */
   atrasoMs?: number;
   lerToken?: () => string | null;
@@ -14,10 +13,8 @@ export interface OpcoesDoRanking {
 
 export type EstadoDoRanking = { tipo: "carregando" } | { tipo: "pronto"; ranking: RespostaDoRanking } | { tipo: "erro" };
 
-const apiPadrao = criarApiDoRanking(URL_DA_API);
-
 /** Busca o ranking da música; descarta respostas de pedidos que já mudaram. */
-export function useRanking(musicaId: string, dificuldade: Dificuldade, instrumento: Instrumento, { api = apiPadrao, atrasoMs = 300, lerToken = () => sessaoDaConta.token() }: OpcoesDoRanking = {}) {
+export function useRanking(musicaId: string, dificuldade: Dificuldade, instrumento: Instrumento, { api = apiDoRanking, atrasoMs = 300, lerToken = () => sessaoDaConta.token() }: OpcoesDoRanking = {}) {
   // Entrar ou sair da conta muda o recorde pessoal: a conta entra no pedido.
   const contaId = useConta().conta?.id ?? null;
   const pedido = useValorAtrasado(`${musicaId}\n${dificuldade}\n${instrumento}\n${contaId}`, atrasoMs);

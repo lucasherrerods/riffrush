@@ -12,7 +12,7 @@ use shared::estado::EstadoDoApp;
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida, modules::ranking::ranking, modules::perfil::perfil),
+    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida, modules::ranking::ranking, modules::ranking::geral, modules::perfil::perfil),
     components(schemas(
         modules::saude::RespostaDeSaude,
         modules::conta::CorpoDoLogin,
@@ -23,6 +23,8 @@ use shared::estado::EstadoDoApp;
         modules::conta::RespostaDaPartida,
         modules::ranking::RespostaDoRanking,
         modules::ranking::PosicaoNoRanking,
+        modules::ranking::RespostaDoGeral,
+        modules::ranking::PosicaoNoGeral,
         modules::perfil::RespostaDoPerfil,
         modules::perfil::DificuldadeDoPerfil,
         modules::perfil::PartidaDoPerfil,

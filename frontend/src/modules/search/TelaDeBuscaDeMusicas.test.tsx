@@ -24,7 +24,7 @@ vi.mock("@/shared/ui/avisos", () => ({ avisar: { error: vi.fn() } }));
 describe("TelaDeBuscaDeMusicas", () => {
   it("abre com o título e já lista músicas", async () => {
     abrir();
-    expect(screen.getByRole("heading", { name: "Busca músicas" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Buscar músicas" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Hit" })).toBeInTheDocument();
     expect(screen.getByText(/Fulano/)).toBeInTheDocument();
     expect(screen.getByText("2:05")).toBeInTheDocument();

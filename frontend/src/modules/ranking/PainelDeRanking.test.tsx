@@ -13,10 +13,10 @@ const posicao = (n: number, nome: string, pontos: number): PosicaoNoRanking => (
 });
 
 function apiCom(resposta: RespostaDoRanking | Promise<RespostaDoRanking>) {
-  return { buscar: vi.fn(async () => resposta) } satisfies ApiDoRanking;
+  return { buscar: vi.fn(async () => resposta) } satisfies Pick<ApiDoRanking, "buscar">;
 }
 
-function abrir(api: ApiDoRanking, { musicaId = "encore:abc", dificuldade = "expert" as const, token = null as string | null } = {}) {
+function abrir(api: Pick<ApiDoRanking, "buscar">, { musicaId = "encore:abc", dificuldade = "expert" as const, token = null as string | null } = {}) {
   return render(<PainelDeRanking musicaId={musicaId} dificuldade={dificuldade} api={api} atrasoMs={0} lerToken={() => token} />);
 }
 
@@ -65,7 +65,7 @@ describe("PainelDeRanking", () => {
           ? new Promise<RespostaDoRanking>((resolver) => (responderAntiga = resolver))
           : Promise.resolve({ jogadores: 1, top: [posicao(1, "Da Nova", 10)], meu: null }),
       ),
-    } satisfies ApiDoRanking;
+    } satisfies Pick<ApiDoRanking, "buscar">;
     const { rerender } = abrir(api, { musicaId: "antiga" });
     rerender(<PainelDeRanking musicaId="nova" dificuldade="expert" api={api} atrasoMs={0} lerToken={() => null} />);
     expect(await screen.findByText("Da Nova")).toBeInTheDocument();

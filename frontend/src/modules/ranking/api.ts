@@ -1,5 +1,5 @@
 import type { Dificuldade, Instrumento } from "@/modules/songs";
-import { criarCliente } from "@/shared/lib/api";
+import { URL_DA_API, criarCliente } from "@/shared/lib/api";
 
 /** Como a API devolve, em snake_case. */
 export interface PosicaoNoRanking {
@@ -12,16 +12,27 @@ export interface PosicaoNoRanking {
   jogada_em: string;
 }
 
-export interface RespostaDoRanking {
-  jogadores: number;
-  top: PosicaoNoRanking[];
-  /** O recorde de quem está logado, mesmo fora do top. */
-  meu: PosicaoNoRanking | null;
+/** Um jogador no ranking geral, ordenado pelo XP total. */
+export interface PosicaoNoGeral {
+  posicao: number;
+  nome: string;
+  avatar: string | null;
+  xp_total: number;
+  nivel: { nivel: number; xp_no_nivel: number; xp_para_o_proximo: number };
 }
 
+export interface RespostaDoRanking<P = PosicaoNoRanking> {
+  jogadores: number;
+  top: P[];
+  /** A linha de quem está logado, mesmo fora do top. */
+  meu: P | null;
+}
+
+export type RespostaDoGeral = RespostaDoRanking<PosicaoNoGeral>;
+
 /** Uma resposta estranha (proxy, versão antiga da API) vira erro aqui, e não uma tela quebrada no painel. */
-function conferirRanking(corpo: unknown): RespostaDoRanking {
-  const ranking = corpo as Partial<RespostaDoRanking> | null;
+function conferirRanking<P>(corpo: unknown): RespostaDoRanking<P> {
+  const ranking = corpo as Partial<RespostaDoRanking<P>> | null;
   if (!ranking || typeof ranking !== "object" || !Array.isArray(ranking.top) || typeof ranking.jogadores !== "number") {
     throw new Error("O ranking veio num formato inesperado.");
   }
@@ -36,8 +47,12 @@ export function criarApiDoRanking(base: string, buscar?: typeof fetch) {
       dificuldade: Dificuldade,
       { instrumento = "guitarra", token, sinal }: { instrumento?: Instrumento; token?: string; sinal?: AbortSignal } = {},
     ) =>
-      chamar<unknown>("GET", `/ranking?${new URLSearchParams({ musica_id: musicaId, dificuldade, instrumento })}`, { token, sinal }).then(conferirRanking),
+      chamar<unknown>("GET", `/ranking?${new URLSearchParams({ musica_id: musicaId, dificuldade, instrumento })}`, { token, sinal }).then(conferirRanking<PosicaoNoRanking>),
+    geral: ({ token, sinal }: { token?: string; sinal?: AbortSignal } = {}) =>
+      chamar<unknown>("GET", "/ranking/geral", { token, sinal }).then(conferirRanking<PosicaoNoGeral>),
   };
 }
 
 export type ApiDoRanking = ReturnType<typeof criarApiDoRanking>;
+
+export const apiDoRanking = criarApiDoRanking(URL_DA_API);

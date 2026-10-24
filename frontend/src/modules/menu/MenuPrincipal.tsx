@@ -1,21 +1,23 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Play, Power, Search, Settings2, Shirt, Users, Zap, type LucideIcon } from "lucide-react";
+import { Play, Search, Settings2, Shirt, Trophy, Users, Zap, type LucideIcon } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Documento } from "@/modules/legal";
-import { abrirLink, fecharJanela } from "@/modules/platform";
+import { abrirLink } from "@/modules/platform";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
 
 interface Props {
   volumeDosEfeitos: number;
-  /** Celular que entrou pelo QR code: o foco é a sala, e não existe "Sair" (é só fechar a aba). */
+  /** Celular que entrou pelo QR code: o foco é a sala. */
   noCelular?: boolean;
   aoJogar: () => void;
   aoMultijogador: () => void;
   aoPersonagem: () => void;
   aoConfigurar: () => void;
   aoBuscarMusicas: () => void;
+  /** Sem contas ligadas não há leaderboard, e a opção some. */
+  aoLeaderboard?: () => void;
   aoAbrirDocumento: (documento: Documento) => void;
 }
 
@@ -27,10 +29,11 @@ interface Item {
 
 const URL_DO_PROJETO = "https://github.com/lucasherrerods/riffrush";
 
-export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoAbrirDocumento }: Props) {
+export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoAbrirDocumento }: Props) {
   const [selecionado, setSelecionado] = useState(0);
   const comuns: Item[] = [
-    { rotulo: "Busca músicas", icone: Search, acao: aoBuscarMusicas },
+    ...(aoLeaderboard ? [{ rotulo: "Leaderboard", icone: Trophy, acao: aoLeaderboard }] : []),
+    { rotulo: "Buscar músicas", icone: Search, acao: aoBuscarMusicas },
     { rotulo: "Personagem", icone: Shirt, acao: aoPersonagem },
     { rotulo: "Configurações", icone: Settings2, acao: aoConfigurar },
   ];
@@ -38,9 +41,8 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
     ? [{ rotulo: "Entrar na sala", icone: Users, acao: aoMultijogador }, { rotulo: "Jogar sozinho", icone: Play, acao: aoJogar }, ...comuns]
     : [
         { rotulo: "Jogar", icone: Play, acao: aoJogar },
-        { rotulo: "Multijogador", icone: Users, acao: aoMultijogador },
+        { rotulo: "Multiplayer", icone: Users, acao: aoMultijogador },
         ...comuns,
-        { rotulo: "Sair", icone: Power, acao: () => void fecharJanela() },
       ];
 
   const escolher = (item: Item) => {

@@ -14,13 +14,13 @@ import { TelaDeBuscaDeMusicas, baixarDoEncore, montarUrlDoChart, type OpcoesDeBa
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
-import { PainelDeRanking, PlacarAoVivo } from "@/modules/ranking";
+import { PainelDeRanking, PlacarAoVivo, TelaDeLeaderboard } from "@/modules/ranking";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { opcoesDaPartida } from "./opcoes";
 
-type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil";
+type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard";
 
 interface PartidaEmRede {
   musica: Musica;
@@ -254,6 +254,7 @@ export function App() {
                   setTela("personagem");
                 }}
                 aoConfigurar={() => setTela("configuracoes")}
+                aoLeaderboard={contasLigadas ? () => setTela("leaderboard") : undefined}
                 aoBuscarMusicas={() => {
                   setVoltarDaBuscaPara("menu");
                   setTela("buscaDeMusicas");
@@ -302,6 +303,7 @@ export function App() {
             {tela === "buscaDeMusicas" && (
               <TelaDeBuscaDeMusicas aoVoltar={() => setTela(voltarDaBuscaPara)} aoBaixar={baixarMusica} baixadas={baixadasDoEncore} aoJogar={jogarBaixada} />
             )}
+            {tela === "leaderboard" && <TelaDeLeaderboard aoVoltar={() => setTela("menu")} />}
             {tela === "perfil" && (
               <TelaDePerfil aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />
             )}

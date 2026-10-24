@@ -32,7 +32,7 @@ export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVo
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
           <ArrowLeft />
         </Button>
-        <h1 className="text-4xl leading-[1.1] font-black tracking-[-0.02em] max-md:text-2xl">Multijogador</h1>
+        <h1 className="text-4xl leading-[1.1] font-black tracking-[-0.02em] max-md:text-2xl">Multiplayer</h1>
         <div className="flex-1" />
         {sala && (
           <Button variant="ghost" aria-label="Baixar músicas" onClick={aoBuscarMusicas}>

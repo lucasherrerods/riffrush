@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
-use super::dominio::LinhaDoRanking;
+use super::dominio::{LinhaDoGeral, LinhaDoRanking};
 use super::portas::RepositorioDoRanking;
 use crate::modules::conta::FalhaExterna;
 use crate::modules::progresso::{Dificuldade, Instrumento};
@@ -57,6 +57,43 @@ const CONSULTA: &str = "
     WHERE n.posicao <= $4 OR n.conta_id = $5
     ORDER BY n.posicao";
 
+#[derive(FromRow)]
+struct LinhaGeral {
+    posicao: i64,
+    jogadores: i64,
+    conta_id: Uuid,
+    nome: String,
+    avatar: Option<String>,
+    xp_total: i64,
+}
+
+impl From<LinhaGeral> for LinhaDoGeral {
+    fn from(l: LinhaGeral) -> Self {
+        LinhaDoGeral {
+            posicao: u32::try_from(l.posicao).unwrap_or(u32::MAX),
+            jogadores: u32::try_from(l.jogadores).unwrap_or(u32::MAX),
+            conta_id: l.conta_id,
+            nome: l.nome,
+            avatar: l.avatar,
+            xp_total: l.xp_total.max(0) as u64,
+        }
+    }
+}
+
+/// Só contas que já ganharam XP. No empate, quem chegou antes fica na frente.
+const CONSULTA_DO_GERAL: &str = "
+    WITH numerados AS (
+        SELECT id AS conta_id, nome, avatar, xp_total,
+               ROW_NUMBER() OVER (ORDER BY xp_total DESC, criada_em ASC) AS posicao,
+               COUNT(*) OVER () AS jogadores
+        FROM contas
+        WHERE xp_total > 0
+    )
+    SELECT posicao, jogadores, conta_id, nome, avatar, xp_total
+    FROM numerados
+    WHERE posicao <= $1 OR conta_id = $2
+    ORDER BY posicao";
+
 #[async_trait]
 impl RepositorioDoRanking for RankingPostgres {
     async fn linhas(
@@ -76,6 +113,16 @@ impl RepositorioDoRanking for RankingPostgres {
             .fetch_all(&self.0)
             .await
             .map(|linhas| linhas.into_iter().map(LinhaDoRanking::from).collect())
+            .map_err(|erro| FalhaExterna(format!("banco: {erro}")))
+    }
+
+    async fn geral(&self, ate: u32, conta: Option<Uuid>) -> Result<Vec<LinhaDoGeral>, FalhaExterna> {
+        sqlx::query_as::<_, LinhaGeral>(CONSULTA_DO_GERAL)
+            .bind(i64::from(ate))
+            .bind(conta)
+            .fetch_all(&self.0)
+            .await
+            .map(|linhas| linhas.into_iter().map(LinhaDoGeral::from).collect())
             .map_err(|erro| FalhaExterna(format!("banco: {erro}")))
     }
 }

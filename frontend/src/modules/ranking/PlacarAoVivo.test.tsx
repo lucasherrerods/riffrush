@@ -4,7 +4,7 @@ import { PlacarAoVivo } from "./PlacarAoVivo";
 
 const posicao = (n: number, nome: string, pontos: number): PosicaoNoRanking => ({ posicao: n, nome, avatar: null, pontos, acertos: 1, total: 1, jogada_em: "" });
 
-const api = { buscar: vi.fn(async () => ({ jogadores: 3, top: [posicao(1, "Ana", 9000), posicao(2, "Bia", 5000), posicao(3, "Caio", 1000)], meu: null })) } satisfies ApiDoRanking;
+const api = { buscar: vi.fn(async () => ({ jogadores: 3, top: [posicao(1, "Ana", 9000), posicao(2, "Bia", 5000), posicao(3, "Caio", 1000)], meu: null })) } satisfies Pick<ApiDoRanking, "buscar">;
 
 const abrir = (pontos: number) => <PlacarAoVivo musicaId="encore:abc" dificuldade="expert" pontos={pontos} api={api} lerToken={() => null} />;
 

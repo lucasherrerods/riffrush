@@ -31,4 +31,12 @@ describe("criarApiDoRanking", () => {
       await expect(api.buscar("m", "medio")).rejects.toThrow("formato");
     }
   });
+
+  it("o geral é um GET em /ranking/geral com o token, quando há", async () => {
+    const buscar = vi.fn(async () => resposta({ jogadores: 1, top: [], meu: null }));
+    expect(await criarApiDoRanking("http://api", buscar).geral({ token: "tok" })).toEqual({ jogadores: 1, top: [], meu: null });
+    const [url, init] = buscar.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("http://api/ranking/geral");
+    expect((init.headers as Record<string, string>).authorization).toBe("Bearer tok");
+  });
 });

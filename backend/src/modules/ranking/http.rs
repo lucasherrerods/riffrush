@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use super::casos_de_uso::ErroDoRanking;
-use super::dominio::{LinhaDoRanking, Ranking};
-use crate::modules::conta::TokenOpcional;
-use crate::modules::progresso::{Dificuldade, Instrumento};
+use super::dominio::{LinhaDoGeral, LinhaDoRanking, Ranking};
+use crate::modules::conta::{NivelDaConta, TokenOpcional};
+use crate::modules::progresso::{nivel_do_xp, Dificuldade, Instrumento};
 use crate::shared::erro::ErroDaApi;
 use crate::shared::estado::EstadoDoApp;
 
@@ -75,6 +75,51 @@ impl From<Ranking> for RespostaDoRanking {
     }
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct PosicaoNoGeral {
+    posicao: u32,
+    nome: String,
+    avatar: Option<String>,
+    xp_total: u64,
+    nivel: NivelDaConta,
+}
+
+impl From<LinhaDoGeral> for PosicaoNoGeral {
+    fn from(l: LinhaDoGeral) -> Self {
+        Self {
+            posicao: l.posicao,
+            nome: l.nome,
+            avatar: l.avatar,
+            nivel: nivel_do_xp(l.xp_total).into(),
+            xp_total: l.xp_total,
+        }
+    }
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct RespostaDoGeral {
+    jogadores: u32,
+    top: Vec<PosicaoNoGeral>,
+    /// A posição de quem mandou o token, mesmo fora do top.
+    meu: Option<PosicaoNoGeral>,
+}
+
+impl From<Ranking<LinhaDoGeral>> for RespostaDoGeral {
+    fn from(r: Ranking<LinhaDoGeral>) -> Self {
+        Self {
+            jogadores: r.jogadores,
+            top: r.top.into_iter().map(Into::into).collect(),
+            meu: r.meu.map(Into::into),
+        }
+    }
+}
+
+/// Os jogadores com mais XP. Com o token, vem também a posição de quem pediu.
+#[utoipa::path(get, path = "/ranking/geral", responses((status = 200, body = RespostaDoGeral)), security((), ("token" = [])))]
+pub async fn geral(State(estado): State<EstadoDoApp>, TokenOpcional(token): TokenOpcional) -> Result<Json<RespostaDoGeral>, ErroDaApi> {
+    Ok(Json(estado.ranking.geral(token.as_deref()).await?.into()))
+}
+
 /// O top de uma música, dificuldade e instrumento. Com o token, vem também o recorde de quem pediu.
 #[utoipa::path(get, path = "/ranking", params(PedidoDoRanking), responses((status = 200, body = RespostaDoRanking), (status = 400)), security((), ("token" = [])))]
 pub async fn ranking(
@@ -90,5 +135,5 @@ pub async fn ranking(
 }
 
 pub fn rotas() -> Router<EstadoDoApp> {
-    Router::new().route("/ranking", get(ranking))
+    Router::new().route("/ranking", get(ranking)).route("/ranking/geral", get(geral))
 }
