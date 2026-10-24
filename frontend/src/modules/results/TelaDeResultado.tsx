@@ -60,60 +60,65 @@ export function TelaDeResultado(props: Props) {
   ];
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-8 p-8">
-      <div className="text-center">
-        <p className="text-base font-semibold tracking-[0.3em] text-texto-suave">RESULTADO</p>
-        <h1 className="mt-2 text-5xl leading-[1.1] font-black tracking-[-0.02em]">{titulo}</h1>
-        <p className="mt-1 text-base text-texto-suave">{artista}</p>
-      </div>
+    <div className="flex h-full flex-col">
+      {/* Com a sala cheia o placar não cabe: o conteúdo rola e os botões ficam fixos embaixo. */}
+      <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto p-8 max-md:p-4">
+        <div className="my-auto flex w-full flex-col items-center gap-8">
+          <div className="text-center">
+            <p className="text-base font-semibold tracking-[0.3em] text-texto-suave">RESULTADO</p>
+            <h1 className="mt-2 text-5xl leading-[1.1] font-black tracking-[-0.02em]">{titulo}</h1>
+            <p className="mt-1 text-base text-texto-suave">{artista}</p>
+          </div>
 
-      <div role="img" aria-label={`${estrelas} de 5 estrelas`} className="flex gap-4">
-        {Array.from({ length: 5 }, (_, i) => (
-          <motion.div
-            key={i}
-            initial={{ scale: 0, rotate: -180 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ delay: 0.4 + i * 0.15, type: "spring", stiffness: 200 }}
-          >
-            <Star className={i < estrelas ? "size-16 fill-ouro text-ouro" : "size-16 text-borda"} />
-          </motion.div>
-        ))}
-      </div>
+          <div role="img" aria-label={`${estrelas} de 5 estrelas`} className="flex gap-4">
+            {Array.from({ length: 5 }, (_, i) => (
+              <motion.div
+                key={i}
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.4 + i * 0.15, type: "spring", stiffness: 200 }}
+              >
+                <Star className={i < estrelas ? "size-16 fill-ouro text-ouro" : "size-16 text-borda"} />
+              </motion.div>
+            ))}
+          </div>
 
-      <div className="flex flex-col items-center gap-4">
-        <p aria-label={`${formatar(resultado.pontos)} pontos`} className="font-mono text-7xl font-black tabular-nums">
-          {formatar(pontosNaTela)}
-        </p>
-        <p className="text-base font-bold tracking-[0.2em] text-texto-suave">
-          PRECISÃO{" "}
-          <span aria-label="Precisão" className={cn("font-titulo text-4xl tracking-normal tabular-nums", corDaPrecisao(precisao / 100))}>
-            {precisao}%
-          </span>
-        </p>
-        {(recordeNovo || fullCombo) && (
-          <div className="flex gap-2">
-            {recordeNovo && (
-              <span className="flex items-center gap-2 rounded-full bg-destaque px-4 py-2 text-base font-black text-fundo">
-                <Trophy className="size-4 opacity-70" /> Novo recorde
+          <div className="flex flex-col items-center gap-4">
+            <p aria-label={`${formatar(resultado.pontos)} pontos`} className="font-mono text-7xl font-black tabular-nums">
+              {formatar(pontosNaTela)}
+            </p>
+            <p className="text-base font-bold tracking-[0.2em] text-texto-suave">
+              PRECISÃO{" "}
+              <span aria-label="Precisão" className={cn("font-titulo text-4xl tracking-normal tabular-nums", corDaPrecisao(precisao / 100))}>
+                {precisao}%
               </span>
+            </p>
+            {(recordeNovo || fullCombo) && (
+              <div className="flex gap-2">
+                {recordeNovo && (
+                  <span className="flex items-center gap-2 rounded-full bg-destaque px-4 py-2 text-base font-black text-fundo">
+                    <Trophy className="size-4 opacity-70" /> Novo recorde
+                  </span>
+                )}
+                {fullCombo && <span className="rounded-full bg-primaria px-4 py-2 text-base font-black">Full combo!</span>}
+              </div>
             )}
-            {fullCombo && <span className="rounded-full bg-primaria px-4 py-2 text-base font-black">Full combo!</span>}
           </div>
-        )}
+
+          {extra}
+
+          <dl className="grid grid-cols-4 gap-4 max-md:grid-cols-2">
+            {estatisticas.map((e) => (
+              <div key={e.rotulo} className="chapa w-40 p-4 text-center">
+                <dd className="text-2xl font-black">{e.valor}</dd>
+                <dt className="text-base text-texto-suave">{e.rotulo}</dt>
+              </div>
+            ))}
+          </dl>
+        </div>
       </div>
 
-      {extra}
-
-      <dl className="grid grid-cols-4 gap-4 max-md:grid-cols-2">
-        {estatisticas.map((e) => (
-          <div key={e.rotulo} className="chapa w-40 p-4 text-center">
-            <dd className="text-2xl font-black">{e.valor}</dd>
-            <dt className="text-base text-texto-suave">{e.rotulo}</dt>
-          </div>
-        ))}
-      </dl>
-
-      <div className="flex gap-4">
+      <div className="flex justify-center gap-4 px-8 pt-4 pb-8 max-md:px-4 max-md:pb-4">
         {podeRepetir && (
           <Button size="lg" variant="outline" onClick={aoRepetir}>
             <RotateCcw className="opacity-70" /> Tocar de novo{dispositivo === "teclado" && " (R)"}
