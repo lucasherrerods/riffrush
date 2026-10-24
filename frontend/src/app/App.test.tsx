@@ -68,7 +68,7 @@ vi.mock("@/modules/multiplayer", async (original) => ({
 
 vi.mock("@/modules/conta", async (original) => ({
   ...(await original<typeof import("@/modules/conta")>()),
-  sessaoDaConta: { iniciar: vi.fn(async () => {}), registrarPartida: vi.fn(async () => null) },
+  sessaoDaConta: { iniciar: vi.fn(async () => {}), registrarPartida: vi.fn(async () => null), token: vi.fn(() => null) },
 }));
 
 // Sem isso o player sintetizaria a primeira música a cada teste.
