@@ -75,6 +75,12 @@ describe("lerRespostaDaBusca", () => {
     });
   });
 
+  it("charts só de bateria não aparecem: o jogo ainda não tem bateria", () => {
+    const soBateria = { ...itemDaApi, md5: "0".repeat(32), notesData: { instruments: ["drums"] } };
+    const { resultados } = lerRespostaDaBusca({ found: 2, data: [soBateria, itemDaApi] });
+    expect(resultados.map((r) => r.md5)).toEqual([itemDaApi.md5]);
+  });
+
   it("campos faltando viram valores vazios", () => {
     const [r] = lerRespostaDaBusca({ found: 1, data: [{ md5: itemDaApi.md5, name: "X", artist: null }] }).resultados;
     expect(r).toMatchObject({ artista: "", charter: "", duracaoMs: 0, capa: undefined, instrumentos: [], versaoDoEncoder: 0, temVideo: false });
