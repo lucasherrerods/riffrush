@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { Check, ChevronDown, ChevronUp, Globe, Loader2, Play, Smartphone, UserX, Users } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Globe, Loader2, Play, Smartphone, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar } from "@/modules/character";
 import { PainelDeChat } from "@/modules/chat";
@@ -12,6 +12,7 @@ import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { MAXIMO_DE_JOGADORES, type EstadoDaSala } from "../protocolo";
 import { todosProntos } from "../protocolo";
+import { IconeDeChute } from "./IconeDeChute";
 import { comecar, enviarChat, escolher, expulsar, marcarPronto, type InfoDaSala } from "../sala";
 import { useMusicaDaSala } from "../useMusicaDaSala";
 
@@ -90,10 +91,10 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
                         variant="ghost"
                         size="icon"
                         aria-label={`Expulsar ${jogador.personagem.nome}`}
-                        className="absolute top-2 right-2 text-texto-suave hover:text-perigo"
+                        className="absolute top-2 right-2 size-12 text-texto-suave hover:text-perigo"
                         onClick={() => expulsar(jogador.id)}
                       >
-                        <UserX />
+                        <IconeDeChute className="size-8" />
                       </Button>
                     )}
                     <Avatar personagem={jogador.personagem} className="h-24 w-auto" />
