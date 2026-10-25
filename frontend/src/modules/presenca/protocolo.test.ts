@@ -1,4 +1,5 @@
-import { aplicarMensagem, entradasDoLote, entradasParaOLote, ordenarPessoas, urlDaPresenca, urlDaTransmissao, type PessoaOnline } from "./protocolo";
+import {
+  lerAvisoDeEspectadores, aplicarMensagem, entradasDoLote, entradasParaOLote, ordenarPessoas, urlDaPresenca, urlDaTransmissao, type PessoaOnline } from "./protocolo";
 
 const pessoa = (id: string, nome: string, estado: PessoaOnline["estado"] = { tipo: "menu" }): PessoaOnline => ({ id, nome, avatar: null, estado });
 const tocando = (transmitindo: boolean): PessoaOnline["estado"] => ({
@@ -58,5 +59,17 @@ describe("urls", () => {
     expect(urlDaPresenca("wss://relay/", "a.b")).toBe("wss://relay/presenca?ficha=a.b");
     expect(urlDaTransmissao("wss://relay", "id-1")).toBe("wss://relay/transmissao/id-1");
     expect(urlDaTransmissao("wss://relay", "id-1", "a+b")).toBe("wss://relay/transmissao/id-1?ficha=a%2Bb");
+  });
+});
+
+describe("lerAvisoDeEspectadores", () => {
+  it("lê quantas pessoas estão assistindo", () => {
+    expect(lerAvisoDeEspectadores(JSON.stringify({ tipo: "espectadores", quantos: 2 }))).toBe(2);
+  });
+
+  it("ignora outras mensagens e números estranhos", () => {
+    expect(lerAvisoDeEspectadores(JSON.stringify({ tipo: "fim" }))).toBeNull();
+    expect(lerAvisoDeEspectadores(JSON.stringify({ tipo: "espectadores", quantos: -1 }))).toBeNull();
+    expect(lerAvisoDeEspectadores("{quebrado")).toBeNull();
   });
 });

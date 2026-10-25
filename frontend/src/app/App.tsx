@@ -169,17 +169,22 @@ export function App() {
         : { tipo: "menu" },
     );
   }, [tela, assistindo, musica, dificuldadeDaPartida, instrumentoDaPartida, transmitindo]);
+  /** Quantas pessoas estão assistindo a partida transmitida agora. */
+  const [espectadores, setEspectadores] = useState(0);
   // Uma transmissão por partida: recomeçar a música dentro dela manda um início novo pela mesma.
   const transmissao = useMemo(
     () =>
       transmitindo && conta
-        ? transmitirPartida({
-            contaId: conta.id,
-            musica: idDoRanking(musica),
-            dificuldade: dificuldadeDaPartida,
-            instrumento: instrumentoDaPartida,
-            urlDoEncore: musica.urlDoEncore,
-          })
+        ? transmitirPartida(
+            {
+              contaId: conta.id,
+              musica: idDoRanking(musica),
+              dificuldade: dificuldadeDaPartida,
+              instrumento: instrumentoDaPartida,
+              urlDoEncore: musica.urlDoEncore,
+            },
+            setEspectadores,
+          )
         : undefined,
     // A partida (contador) entra para uma partida nova ganhar uma transmissão nova.
     [transmitindo, conta?.id, partida],
@@ -477,6 +482,7 @@ export function App() {
                 aoSair={assistindo ? sairDoReplay : () => setTela(emRede ? "multijogador" : "selecao")}
                 aoTerminar={assistindo ? sairDoReplay : terminar}
                 transmissao={transmissao}
+                espectadores={transmissao ? espectadores : 0}
               />
             )}
             {tela === "resultado" && resultado && (

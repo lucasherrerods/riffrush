@@ -66,6 +66,17 @@ export function ordenarPessoas(pessoas: PessoaOnline[], euId: string | null): Pe
 export const entradasParaOLote = (entradas: EntradaDoReplay[]): [number, number][] => entradas.map((e) => [emTicks(e.tempo), codigoDaEntrada(e)]);
 export const entradasDoLote = (lote: [number, number][]): EntradaDoReplay[] => lote.map(([ticks, codigo]) => entradaDoCodigo(ticks, codigo));
 
+/** O relay conta a quem joga quantas pessoas estão assistindo. Outra mensagem dá `null`. */
+export function lerAvisoDeEspectadores(bruta: unknown): number | null {
+  if (typeof bruta !== "string") return null;
+  try {
+    const msg = JSON.parse(bruta);
+    return msg?.tipo === "espectadores" && Number.isInteger(msg.quantos) && msg.quantos >= 0 ? msg.quantos : null;
+  } catch {
+    return null;
+  }
+}
+
 export function lerMensagemDaTransmissao(bruta: string): MensagemDaTransmissao | null {
   try {
     const msg = JSON.parse(bruta);
