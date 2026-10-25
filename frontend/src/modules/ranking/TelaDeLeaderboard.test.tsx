@@ -17,6 +17,7 @@ const musicas: MusicaNoRanking[] = [
   { posicao: 1, musica_id: "encore:abc", partidas: 30, jogadores: 4 },
   { posicao: 2, musica_id: "encore:xyz", partidas: 1, jogadores: 1 },
   { posicao: 3, musica_id: "encore:goofy", partidas: 1, jogadores: 1, titulo: "Goofy Goober Rock", artista: "Tom Rothrock", capa: "https://files.enchor.us/capa.jpg" },
+  { posicao: 4, musica_id: "embutida:shine", partidas: 1, jogadores: 1, titulo: "Embutida", artista: "Riff Rush" },
 ];
 
 const tituloDaMusica = (id: string) => (id === "encore:abc" ? "Shine — Spektrem" : undefined);
@@ -26,6 +27,17 @@ function abrir(props: Partial<React.ComponentProps<typeof TelaDeLeaderboard>> = 
   render(<TelaDeLeaderboard aoVoltar={() => {}} tituloDaMusica={tituloDaMusica} carregarPlayers={async () => ranking} carregarMusicas={carregarMusicas} {...props} />);
   return { carregarMusicas, usuario: userEvent.setup() };
 }
+
+describe("TelaDeLeaderboard: baixar as músicas do Encore", () => {
+  it("clicar numa música do Encore abre a janela de baixar dela; as outras não são clicáveis", async () => {
+    const aoAbrirMusicaDoEncore = vi.fn();
+    const { usuario } = abrir({ aoAbrirMusicaDoEncore });
+    await usuario.click(screen.getByRole("tab", { name: "Músicas" }));
+    await usuario.click(await screen.findByRole("button", { name: "Baixar Goofy Goober Rock — Tom Rothrock" }));
+    expect(aoAbrirMusicaDoEncore).toHaveBeenCalledWith("goofy");
+    expect(screen.queryByRole("button", { name: /Embutida/ })).not.toBeInTheDocument();
+  });
+});
 
 describe("TelaDeLeaderboard", () => {
   it("abre na aba Players, com o top por XP e a própria posição fora do top embaixo", async () => {

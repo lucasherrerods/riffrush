@@ -173,6 +173,24 @@ export async function buscarNoEncore(
   return lerRespostaDaBusca(await resposta.json());
 }
 
+/**
+ * Acha um chart do Encore pelo md5 (o que o ranking guarda em `encore:<md5>`), com a pasta e o vídeo
+ * que o download precisa. Devolve null se o Encore não tem mais esse chart.
+ */
+export async function buscarChartPeloMd5(md5: string, { buscar = fetch, sinal }: { buscar?: typeof fetch; sinal?: AbortSignal } = {}): Promise<ResultadoDaBusca | null> {
+  if (!MD5.test(md5)) return null;
+  const { search: _, ...comum } = montarCorpoDaBusca(FILTROS_PADRAO, 1);
+  const resposta = await buscar(`${URL_DA_API}/search/advanced`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...comum, hash: md5 }),
+    signal: sinal,
+  });
+  if (resposta.status === 429) throw new Error("Muitas buscas seguidas. Espere um pouco e tente de novo.");
+  if (!resposta.ok) throw new Error("O Encore está indisponível agora. Tente de novo mais tarde.");
+  return lerRespostaDaBusca(await resposta.json()).resultados.find((r) => r.md5 === md5) ?? null;
+}
+
 /** Mesmo caminho que o site monta. Por padrão baixa a versão sem vídeo, que é bem menor. */
 export function montarUrlDoChart(resultado: ResultadoDaBusca, { comVideo = false } = {}): string {
   const pasta = resultado.versaoDoEncoder > 0 ? `charts/v${resultado.versaoDoEncoder}/` : "";
