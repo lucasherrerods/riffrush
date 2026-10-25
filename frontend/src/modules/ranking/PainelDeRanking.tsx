@@ -11,12 +11,14 @@ interface Props extends OpcoesDoRanking {
   dificuldade: Dificuldade;
   /** Sem ele, o ranking da guitarra. */
   instrumento?: Instrumento;
+  /** Clicar numa linha abre a partida dela. */
+  aoAbrirPartida?: (partidaId: string) => void;
 }
 
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 /** O ranking da música selecionada, como no osu!: o top rolável e o recorde pessoal fixo embaixo. */
-export function PainelDeRanking({ musicaId, dificuldade, instrumento = "guitarra", ...opcoes }: Props) {
+export function PainelDeRanking({ musicaId, dificuldade, instrumento = "guitarra", aoAbrirPartida, ...opcoes }: Props) {
   const estado = useRanking(musicaId, dificuldade, instrumento, opcoes);
 
   if (estado.tipo === "carregando") {
@@ -40,7 +42,7 @@ export function PainelDeRanking({ musicaId, dificuldade, instrumento = "guitarra
       {top.length ? (
         <ol aria-label="Ranking" className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1">
           {top.map((linha) => (
-            <LinhaDoRanking key={linha.posicao} linha={linha} minha={!!meu && meu.posicao === linha.posicao} />
+            <LinhaDoRanking key={linha.posicao} linha={linha} minha={!!meu && meu.posicao === linha.posicao} aoAbrir={aoAbrirPartida} />
           ))}
         </ol>
       ) : (
@@ -52,7 +54,7 @@ export function PainelDeRanking({ musicaId, dificuldade, instrumento = "guitarra
             Recorde pessoal (#{formatar(meu.posicao)} de {formatar(jogadores)})
           </p>
           <ol>
-            <LinhaDoRanking linha={meu} minha />
+            <LinhaDoRanking linha={meu} minha aoAbrir={aoAbrirPartida} />
           </ol>
         </section>
       )}
@@ -60,7 +62,7 @@ export function PainelDeRanking({ musicaId, dificuldade, instrumento = "guitarra
   );
 }
 
-function LinhaDoRanking({ linha, minha }: { linha: PosicaoNoRanking; minha: boolean }) {
+function LinhaDoRanking({ linha, minha, aoAbrir }: { linha: PosicaoNoRanking; minha: boolean; aoAbrir?: (partidaId: string) => void }) {
   return (
     <LinhaComPosicao
       posicao={linha.posicao}
@@ -69,6 +71,7 @@ function LinhaDoRanking({ linha, minha }: { linha: PosicaoNoRanking; minha: bool
       minha={minha}
       detalhe={`${precisaoDaPartida(linha.acertos, linha.total)} · ${haQuantoTempo(linha.jogada_em)}`}
       valor={formatar(linha.pontos)}
+      aoClicar={aoAbrir && (() => aoAbrir(linha.partida_id))}
     />
   );
 }

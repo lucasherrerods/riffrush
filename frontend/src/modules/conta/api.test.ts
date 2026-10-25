@@ -6,7 +6,7 @@ describe("criarApi", () => {
   it("manda o token no cabeçalho e o corpo em JSON", async () => {
     const buscar = vi.fn(async () => resposta(200, { xp_ganho: 10 }));
     const api = criarApi("http://api", buscar);
-    await api.registrarPartida("t", { musica_id: "m", dificuldade: "medio", instrumento: "guitarra", pontos: 1, acertos: 1, total: 1, derrota: false, fantasma: false });
+    await api.registrarPartida("t", { musica_id: "m", dificuldade: "medio", instrumento: "guitarra", pontos: 1, acertos: 1, total: 1, derrota: false, fantasma: false, maior_sequencia: 1 });
     const [url, init] = buscar.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("http://api/partidas");
     expect(init.method).toBe("POST");

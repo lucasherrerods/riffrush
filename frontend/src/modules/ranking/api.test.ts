@@ -47,3 +47,12 @@ describe("criarApiDoRanking", () => {
     await expect(criarApiDoRanking("http://api", async () => resposta({ erro: 1 })).musicas()).rejects.toThrow();
   });
 });
+
+describe("partida do ranking", () => {
+  it("busca a partida pelo id", async () => {
+    const buscar = vi.fn(async () => new Response(JSON.stringify({ id: "p1", nome: "Srr 4", pontos: 10 }), { status: 200 }));
+    const api = criarApiDoRanking("https://api.teste", buscar as unknown as typeof fetch);
+    expect(await api.partida("p1")).toMatchObject({ id: "p1", nome: "Srr 4" });
+    expect(String((buscar.mock.calls[0] as unknown[])[0])).toBe("https://api.teste/partidas/p1");
+  });
+});

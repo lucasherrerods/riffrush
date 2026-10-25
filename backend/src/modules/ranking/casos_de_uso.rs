@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::dominio::{montar_ranking, LinhaDoGeral, MusicaPopular, Ranking, TAMANHO_DO_TOP};
+use super::dominio::{montar_ranking, LinhaDoGeral, MusicaPopular, PartidaPublica, Ranking, TAMANHO_DO_TOP};
 use super::portas::RepositorioDoRanking;
 use crate::modules::conta::{FalhaExterna, ServicosDaConta, TAMANHO_MAXIMO_DO_ID_DA_MUSICA};
 use crate::modules::progresso::{Dificuldade, Instrumento};
@@ -16,6 +16,8 @@ pub struct ServicosDoRanking {
 pub enum ErroDoRanking {
     #[error("o id da música é inválido")]
     MusicaInvalida,
+    #[error("a partida não existe")]
+    PartidaNaoEncontrada,
     #[error(transparent)]
     Falha(#[from] FalhaExterna),
 }
@@ -40,6 +42,11 @@ impl ServicosDoRanking {
     /// As músicas com mais partidas, somando todos os jogadores.
     pub async fn musicas(&self) -> Result<Vec<MusicaPopular>, ErroDoRanking> {
         Ok(self.repositorio.musicas(TAMANHO_DO_TOP).await?)
+    }
+
+    /// A partida que alguém abriu no ranking. É pública, como o próprio ranking.
+    pub async fn partida(&self, id: uuid::Uuid) -> Result<PartidaPublica, ErroDoRanking> {
+        self.repositorio.partida(id).await?.ok_or(ErroDoRanking::PartidaNaoEncontrada)
     }
 
     /// Sessão vencida ou inválida não esconde o ranking: só fica sem a linha pessoal.
@@ -68,6 +75,7 @@ pub mod fakes {
         pub linhas: Mutex<Vec<(String, Dificuldade, Instrumento, LinhaDoRanking)>>,
         pub geral: Mutex<Vec<LinhaDoGeral>>,
         pub musicas: Mutex<Vec<MusicaPopular>>,
+        pub partidas: Mutex<Vec<PartidaPublica>>,
         /// O limite do último pedido, para conferir que o caso de uso pede o top inteiro.
         pub ultimo_limite: Mutex<Option<u32>>,
     }
@@ -119,6 +127,10 @@ pub mod fakes {
             *self.ultimo_limite.lock().unwrap() = Some(ate);
             Ok(self.musicas.lock().unwrap().iter().filter(|m| m.posicao <= ate).cloned().collect())
         }
+
+        async fn partida(&self, id: Uuid) -> Result<Option<PartidaPublica>, FalhaExterna> {
+            Ok(self.partidas.lock().unwrap().iter().find(|p| p.id == id).cloned())
+        }
     }
 }
 
@@ -137,6 +149,7 @@ mod tests {
             posicao,
             jogadores: 60,
             conta_id,
+            partida_id: Uuid::nil(),
             nome: "alguém".into(),
             avatar: None,
             pontos: 1000,
@@ -235,5 +248,11 @@ mod tests {
         }];
         assert_eq!(servicos.musicas().await.unwrap().len(), 1);
         assert_eq!(*repositorio.ultimo_limite.lock().unwrap(), Some(TAMANHO_DO_TOP));
+    }
+
+    #[tokio::test]
+    async fn partida_que_nao_existe_e_nao_encontrada() {
+        let (servicos, _) = servicos_do_ranking(servicos().0);
+        assert!(matches!(servicos.partida(Uuid::nil()).await, Err(ErroDoRanking::PartidaNaoEncontrada)));
     }
 }

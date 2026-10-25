@@ -33,6 +33,7 @@ export interface PartidaParaAApi {
   total: number;
   derrota: boolean;
   fantasma: boolean;
+  maior_sequencia: number;
 }
 
 export interface DificuldadeDoPerfil {

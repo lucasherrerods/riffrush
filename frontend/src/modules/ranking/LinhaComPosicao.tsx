@@ -12,13 +12,14 @@ interface Props {
   detalhe: React.ReactNode;
   /** O número que decide a posição (pontos, XP). */
   valor: React.ReactNode;
+  /** Com ele, a linha vira um botão. */
+  aoClicar?: () => void;
 }
 
 /** Uma linha de ranking: posição, foto, nome e o número que ordena. */
-export function LinhaComPosicao({ posicao, nome, avatar, minha, detalhe, valor }: Props) {
-  return (
-    // Compacta: a 720p cabem várias linhas no espaço que sobra ao lado da roda.
-    <li className={cn("chapa flex items-center gap-2 px-2 py-1 pr-4", minha ? "border-primaria bg-superficie-elevada" : "border-borda bg-superficie")}>
+export function LinhaComPosicao({ posicao, nome, avatar, minha, detalhe, valor, aoClicar }: Props) {
+  const conteudo = (
+    <>
       <span className={cn("w-12 shrink-0 text-center font-titulo text-xl", posicao <= 3 ? "text-ouro" : "text-texto-suave")}>#{posicao}</span>
       {avatar ? (
         <img src={avatar} alt="" referrerPolicy="no-referrer" className="size-8 shrink-0 rounded-sm" />
@@ -31,6 +32,16 @@ export function LinhaComPosicao({ posicao, nome, avatar, minha, detalhe, valor }
       </span>
       {posicao === 1 && <Trophy className="size-4 shrink-0 text-ouro opacity-70" aria-label="Primeiro lugar" />}
       <span className="shrink-0 font-mono text-xl font-black tabular-nums">{valor}</span>
+    </>
+  );
+  // Compacta: a 720p cabem várias linhas no espaço que sobra ao lado da roda.
+  const classe = cn("chapa flex items-center gap-2 px-2 py-1 pr-4", minha ? "border-primaria bg-superficie-elevada" : "border-borda bg-superficie");
+  if (!aoClicar) return <li className={classe}>{conteudo}</li>;
+  return (
+    <li>
+      <button type="button" aria-label={`Ver a partida de ${nome}`} onClick={aoClicar} className={cn(classe, "w-full cursor-pointer text-left hover:bg-superficie-elevada")}>
+        {conteudo}
+      </button>
     </li>
   );
 }

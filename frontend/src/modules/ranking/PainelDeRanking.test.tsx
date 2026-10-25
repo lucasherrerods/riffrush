@@ -10,6 +10,7 @@ const posicao = (n: number, nome: string, pontos: number): PosicaoNoRanking => (
   acertos: 9948,
   total: 10000,
   jogada_em: new Date().toISOString(),
+  partida_id: `partida-${n}`,
 });
 
 function apiCom(resposta: RespostaDoRanking | Promise<RespostaDoRanking>) {
@@ -21,6 +22,22 @@ function abrir(api: Pick<ApiDoRanking, "buscar">, { musicaId = "encore:abc", dif
 }
 
 describe("PainelDeRanking", () => {
+  it("clicar numa linha abre a partida dela", async () => {
+    const aoAbrirPartida = vi.fn();
+    render(
+      <PainelDeRanking
+        musicaId="encore:abc"
+        dificuldade="expert"
+        api={apiCom({ jogadores: 1, top: [posicao(1, "Srr 4", 1_099_340)], meu: null })}
+        atrasoMs={0}
+        lerToken={() => null}
+        aoAbrirPartida={aoAbrirPartida}
+      />,
+    );
+    (await screen.findByRole("button", { name: "Ver a partida de Srr 4" })).click();
+    expect(aoAbrirPartida).toHaveBeenCalledWith("partida-1");
+  });
+
   it("lista o top com posição, nome, precisão e pontos", async () => {
     abrir(apiCom({ jogadores: 2, top: [posicao(1, "Srr 4", 1_099_340), posicao(2, "Cohue", 1_043_725)], meu: null }));
     const lista = await screen.findByRole("list", { name: "Ranking" });

@@ -74,8 +74,8 @@ impl RepositorioDeContas for ContasPostgres {
         let mut transacao = self.0.begin().await.map_err(falha)?;
         let resumo = &partida.resumo;
         sqlx::query(
-            "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, instrumento, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+            "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, instrumento, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em, maior_sequencia)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
         )
         .bind(Uuid::new_v4())
         .bind(partida.conta_id)
@@ -89,6 +89,7 @@ impl RepositorioDeContas for ContasPostgres {
         .bind(resumo.fantasma)
         .bind(partida.xp_ganho as i64)
         .bind(partida.jogada_em)
+        .bind(resumo.maior_sequencia.map(|s| s as i32))
         .execute(&mut *transacao)
         .await
         .map_err(falha)?;

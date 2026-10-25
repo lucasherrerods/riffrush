@@ -1,6 +1,8 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+use crate::modules::progresso::{Dificuldade, Instrumento};
+
 /// Como no osu!: o top da música, sem rolar uma lista infinita.
 pub const TAMANHO_DO_TOP: u32 = 50;
 
@@ -11,6 +13,8 @@ pub struct LinhaDoRanking {
     /// Quantos jogadores têm recorde nesta música e dificuldade.
     pub jogadores: u32,
     pub conta_id: Uuid,
+    /// A partida que deu o recorde, para abrir as estatísticas dela.
+    pub partida_id: Uuid,
     pub nome: String,
     pub avatar: Option<String>,
     pub pontos: u64,
@@ -29,6 +33,25 @@ pub struct LinhaDoGeral {
     pub nome: String,
     pub avatar: Option<String>,
     pub xp_total: u64,
+}
+
+/// Uma partida aberta pelo ranking: só o que a tela de resultado mostra, sem dados privados da conta.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PartidaPublica {
+    pub id: Uuid,
+    pub nome: String,
+    pub avatar: Option<String>,
+    pub musica_id: String,
+    pub dificuldade: Dificuldade,
+    pub instrumento: Instrumento,
+    pub pontos: u64,
+    pub acertos: u32,
+    pub total: u32,
+    /// Partidas de antes da coluna não têm.
+    pub maior_sequencia: Option<u32>,
+    pub derrota: bool,
+    pub fantasma: bool,
+    pub jogada_em: DateTime<Utc>,
 }
 
 /// Uma música no ranking das mais jogadas, contando as partidas de todo mundo.
@@ -97,6 +120,7 @@ mod tests {
             posicao,
             jogadores: 100,
             conta_id: Uuid::from_u128(conta),
+            partida_id: Uuid::from_u128(conta),
             nome: format!("jogador {conta}"),
             avatar: None,
             pontos: 1000 - u64::from(posicao),

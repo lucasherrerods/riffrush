@@ -312,6 +312,7 @@ mod tests {
                 total,
                 derrota: false,
                 fantasma: false,
+                maior_sequencia: None,
             },
         }
     }

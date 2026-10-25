@@ -11,7 +11,7 @@ export type Recordes = Record<string, Recorde>;
 
 const CHAVE = "riffrush.recordes";
 /** A mesma escala da barra da partida. Quem termina a música sem derrota leva pelo menos 1 estrela. */
-export function estrelasDoResultado(resultado: Resultado) {
+export function estrelasDoResultado(resultado: Pick<Resultado, "derrota" | "total" | "pontos">) {
   if (resultado.derrota || resultado.total === 0) return 0;
   return Math.max(1, estrelasPorPontos(resultado.pontos, resultado.total));
 }

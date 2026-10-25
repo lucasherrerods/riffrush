@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use super::dominio::{LinhaDoGeral, LinhaDoRanking, MusicaPopular};
+use super::dominio::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, PartidaPublica};
 use crate::modules::conta::FalhaExterna;
 use crate::modules::progresso::{Dificuldade, Instrumento};
 
@@ -22,4 +22,7 @@ pub trait RepositorioDoRanking: Send + Sync {
 
     /// As `ate` músicas com mais partidas, já numeradas.
     async fn musicas(&self, ate: u32) -> Result<Vec<MusicaPopular>, FalhaExterna>;
+
+    /// Uma partida com o nome e o avatar de quem jogou.
+    async fn partida(&self, id: Uuid) -> Result<Option<PartidaPublica>, FalhaExterna>;
 }
