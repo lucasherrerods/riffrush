@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Abertura, capasDaAbertura, deveMostrarAbertura, marcarAberturaVista } from "@/modules/abertura";
 import { IndicadorDeVolume, definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/character";
 import { iniciarControle, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
@@ -67,6 +68,18 @@ export function App() {
 
   const biblioteca = useBiblioteca();
   const { salvas } = biblioteca;
+  // A abertura espera as capas da biblioteca, mas não para sempre: sem armazenamento, vai com as do jogo.
+  const [abertura, setAbertura] = useState(() => tela === "menu" && !ehClienteWebDaSala() && deveMostrarAbertura());
+  const [esperouABiblioteca, setEsperouABiblioteca] = useState(false);
+  useEffect(() => {
+    if (!abertura) return;
+    const espera = setTimeout(() => setEsperouABiblioteca(true), 1500);
+    return () => clearTimeout(espera);
+  }, [abertura]);
+  const capasDaAberturaProntas = useMemo(
+    () => (salvas !== null || esperouABiblioteca ? capasDaAbertura([...(salvas ?? []), ...MUSICAS_EMBUTIDAS]) : null),
+    [salvas, esperouABiblioteca],
+  );
   // As músicas de outras sessões chegam depois de abrir o armazenamento.
   useEffect(() => {
     if (salvas?.length) setMusicas((atuais) => juntarMusicas(atuais, salvas));
@@ -322,6 +335,18 @@ export function App() {
 
   return (
     <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
+      {abertura &&
+        (capasDaAberturaProntas ? (
+          <Abertura
+            capas={capasDaAberturaProntas}
+            aoTerminar={() => {
+              marcarAberturaVista();
+              setAbertura(false);
+            }}
+          />
+        ) : (
+          <div className="fixed inset-0 z-[100] bg-black" />
+        ))}
       {!(naPista && configuracoes.modoCompetitivo) && <Fundo tocando={naPista} />}
       {!naPista && (
         <CabecalhoDoPlayerDeMusica volume={volumeGeral} aoMudarVolume={definirVolumeGeral}>
