@@ -303,7 +303,7 @@ export function App() {
             {tela === "buscaDeMusicas" && (
               <TelaDeBuscaDeMusicas aoVoltar={() => setTela(voltarDaBuscaPara)} aoBaixar={baixarMusica} baixadas={baixadasDoEncore} aoJogar={jogarBaixada} />
             )}
-            {tela === "leaderboard" && <TelaDeLeaderboard aoVoltar={() => setTela("menu")} />}
+            {tela === "leaderboard" && <TelaDeLeaderboard aoVoltar={() => setTela("menu")} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />}
             {tela === "perfil" && (
               <TelaDePerfil aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />
             )}

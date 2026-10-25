@@ -39,4 +39,11 @@ describe("criarApiDoRanking", () => {
     expect(url).toBe("http://api/ranking/geral");
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer tok");
   });
+
+  it("as músicas mais jogadas são um GET em /ranking/musicas, e formato estranho vira erro", async () => {
+    const buscar = vi.fn(async () => resposta([{ posicao: 1, musica_id: "m", partidas: 3, jogadores: 2 }]));
+    expect(await criarApiDoRanking("http://api", buscar).musicas()).toHaveLength(1);
+    expect((buscar.mock.calls[0] as unknown as [string])[0]).toBe("http://api/ranking/musicas");
+    await expect(criarApiDoRanking("http://api", async () => resposta({ erro: 1 })).musicas()).rejects.toThrow();
+  });
 });

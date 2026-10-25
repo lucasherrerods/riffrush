@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
-use super::dominio::{LinhaDoGeral, LinhaDoRanking};
+use super::dominio::{LinhaDoGeral, LinhaDoRanking, MusicaPopular};
 use super::portas::RepositorioDoRanking;
 use crate::modules::conta::FalhaExterna;
 use crate::modules::progresso::{Dificuldade, Instrumento};
@@ -94,6 +94,23 @@ const CONSULTA_DO_GERAL: &str = "
     WHERE posicao <= $1 OR conta_id = $2
     ORDER BY posicao";
 
+#[derive(FromRow)]
+struct LinhaDaMusica {
+    posicao: i64,
+    musica_id: String,
+    partidas: i64,
+    jogadores: i64,
+}
+
+/// No empate, a que tem mais jogadores diferentes fica na frente.
+const CONSULTA_DAS_MUSICAS: &str = "
+    SELECT ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC, COUNT(DISTINCT conta_id) DESC, musica_id) AS posicao,
+           musica_id, COUNT(*) AS partidas, COUNT(DISTINCT conta_id) AS jogadores
+    FROM partidas
+    GROUP BY musica_id
+    ORDER BY posicao
+    LIMIT $1";
+
 #[async_trait]
 impl RepositorioDoRanking for RankingPostgres {
     async fn linhas(
@@ -123,6 +140,26 @@ impl RepositorioDoRanking for RankingPostgres {
             .fetch_all(&self.0)
             .await
             .map(|linhas| linhas.into_iter().map(LinhaDoGeral::from).collect())
+            .map_err(|erro| FalhaExterna(format!("banco: {erro}")))
+    }
+
+    async fn musicas(&self, ate: u32) -> Result<Vec<MusicaPopular>, FalhaExterna> {
+        let contagem = |n: i64| u32::try_from(n).unwrap_or(u32::MAX);
+        sqlx::query_as::<_, LinhaDaMusica>(CONSULTA_DAS_MUSICAS)
+            .bind(i64::from(ate))
+            .fetch_all(&self.0)
+            .await
+            .map(|linhas| {
+                linhas
+                    .into_iter()
+                    .map(|l| MusicaPopular {
+                        posicao: contagem(l.posicao),
+                        musica_id: l.musica_id,
+                        partidas: contagem(l.partidas),
+                        jogadores: contagem(l.jogadores),
+                    })
+                    .collect()
+            })
             .map_err(|erro| FalhaExterna(format!("banco: {erro}")))
     }
 }

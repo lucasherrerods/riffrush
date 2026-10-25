@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Loader2, RotateCcw } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { DIFICULDADES, INSTRUMENTOS } from "@/modules/songs";
+import { useCarregamento } from "@/shared/hooks/useCarregamento";
 import { haQuantoTempo, porcentagem, precisaoDaPartida } from "@/shared/lib/formatar";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
+import { ComCarregamento } from "@/shared/ui/ComCarregamento";
 import type { PerfilDaApi } from "./api";
 import { FotoDaConta } from "./FotoDaConta";
 import { sessaoDaConta } from "./sessao";
@@ -15,8 +16,6 @@ interface Props {
   tituloDaMusica: (id: string) => string | undefined;
   carregar?: (sinal: AbortSignal) => Promise<PerfilDaApi>;
 }
-
-type Estado = { tipo: "carregando" } | { tipo: "pronto"; perfil: PerfilDaApi } | { tipo: "erro" };
 
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 const rotuloDa = (dificuldade: string) => DIFICULDADES.find((d) => d.id === dificuldade)?.rotulo ?? dificuldade;
@@ -36,19 +35,7 @@ function Numero({ rotulo, valor, detalhe }: { rotulo: string; valor: string; det
 
 /** O perfil de quem está logado: nível, números das partidas, desempenho por dificuldade e as últimas jogadas. */
 export function TelaDePerfil({ aoVoltar, tituloDaMusica, carregar = (sinal) => sessaoDaConta.perfil(sinal) }: Props) {
-  const [estado, setEstado] = useState<Estado>({ tipo: "carregando" });
-  const [tentativa, setTentativa] = useState(0);
-  const tentarDeNovo = useCallback(() => setTentativa((t) => t + 1), []);
-
-  useEffect(() => {
-    const controle = new AbortController();
-    setEstado({ tipo: "carregando" });
-    carregar(controle.signal)
-      .then((perfil) => !controle.signal.aborted && setEstado({ tipo: "pronto", perfil }))
-      .catch(() => !controle.signal.aborted && setEstado({ tipo: "erro" }));
-    return () => controle.abort();
-    // `carregar` muda a cada render quando vem do padrão; só a tentativa pede de novo.
-  }, [tentativa]);
+  const { estado, tentarDeNovo } = useCarregamento(carregar);
 
   return (
     <div className="flex h-full flex-col gap-4 p-6">
@@ -60,16 +47,9 @@ export function TelaDePerfil({ aoVoltar, tituloDaMusica, carregar = (sinal) => s
       </header>
 
       <div className="sem-barra-de-rolagem mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-4 overflow-y-auto">
-        {estado.tipo === "carregando" && <Loader2 aria-label="Carregando o perfil" className="m-auto size-6 animate-spin text-texto-suave" />}
-        {estado.tipo === "erro" && (
-          <div className="m-auto flex flex-col items-center gap-4 text-center">
-            <p className="text-base text-texto-suave">Não deu para carregar o perfil agora.</p>
-            <Button variant="outline" onClick={tentarDeNovo}>
-              <RotateCcw className="opacity-70" /> Tentar de novo
-            </Button>
-          </div>
-        )}
-        {estado.tipo === "pronto" && <Conteudo perfil={estado.perfil} tituloDaMusica={tituloDaMusica} />}
+        <ComCarregamento estado={estado} tentarDeNovo={tentarDeNovo} oQue="o perfil">
+          {(perfil) => <Conteudo perfil={perfil} tituloDaMusica={tituloDaMusica} />}
+        </ComCarregamento>
       </div>
     </div>
   );

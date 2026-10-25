@@ -11,7 +11,7 @@ use http_body_util::BodyExt;
 use riffrush_api::modules::conta::fakes::{pedido, servicos};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento};
 use riffrush_api::modules::ranking::fakes::{servicos_do_ranking, RankingEmMemoria};
-use riffrush_api::modules::ranking::{LinhaDoGeral, LinhaDoRanking};
+use riffrush_api::modules::ranking::{LinhaDoGeral, LinhaDoRanking, MusicaPopular};
 use riffrush_api::modules::saude::VerificadorDoBanco;
 use riffrush_api::shared::estado::EstadoDoApp;
 use serde_json::Value;
@@ -176,4 +176,23 @@ async fn o_geral_traz_o_top_por_xp_com_nivel_e_a_propria_posicao() {
     assert_eq!(corpo["meu"]["posicao"], 63);
     assert!(chamar(&app, "/ranking/geral", None).await.1["meu"].is_null());
     assert!(chamar(&app, "/openapi.json", None).await.1["paths"]["/ranking/geral"]["get"].is_object());
+}
+
+#[tokio::test]
+async fn as_musicas_mais_jogadas_vem_com_partidas_e_jogadores() {
+    let (app, _, repositorio) = app().await;
+    *repositorio.musicas.lock().unwrap() = vec![MusicaPopular {
+        posicao: 1,
+        musica_id: "encore:abc".into(),
+        partidas: 30,
+        jogadores: 4,
+    }];
+
+    let (status, corpo) = chamar(&app, "/ranking/musicas", None).await;
+
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(corpo[0]["musica_id"], "encore:abc");
+    assert_eq!(corpo[0]["partidas"], 30);
+    assert_eq!(corpo[0]["jogadores"], 4);
+    assert!(chamar(&app, "/openapi.json", None).await.1["paths"]["/ranking/musicas"]["get"].is_object());
 }

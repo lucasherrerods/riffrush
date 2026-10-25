@@ -4,7 +4,8 @@ import { cn } from "@/shared/lib/utils";
 interface Props {
   posicao: number;
   nome: string;
-  avatar: string | null;
+  /** Sem a propriedade, a linha não tem espaço de foto (músicas). */
+  avatar?: string | null;
   /** A linha de quem está logado ganha destaque. */
   minha: boolean;
   /** Texto menor ao lado do nome. */
@@ -22,7 +23,7 @@ export function LinhaComPosicao({ posicao, nome, avatar, minha, detalhe, valor }
       {avatar ? (
         <img src={avatar} alt="" referrerPolicy="no-referrer" className="size-8 shrink-0 rounded-sm" />
       ) : (
-        <UserRound className="size-8 shrink-0 text-texto-suave opacity-70" aria-hidden />
+        avatar === null && <UserRound className="size-8 shrink-0 text-texto-suave opacity-70" aria-hidden />
       )}
       <span className="flex min-w-0 flex-1 items-baseline gap-2">
         <span className="truncate text-base font-bold">{nome}</span>
