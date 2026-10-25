@@ -121,6 +121,14 @@ describe("SessaoDaConta", () => {
     expect(ambiente.api.registrarPartida).not.toHaveBeenCalled();
   });
 
+  it("manda o replay em base64 junto com a partida", async () => {
+    const { sessao, ambiente } = montar({ registrarPartida: vi.fn(async () => ({ xp_ganho: 0, antes: conta.nivel, depois: conta.nivel })) });
+    ambiente.local.setItem("riffrush:token", "tok");
+    await sessao.iniciar();
+    await sessao.registrarPartida(resultado, Uint8Array.of(1, 255, 0));
+    expect(vi.mocked(ambiente.api.registrarPartida).mock.calls[0][1].replay).toBe("Af8A");
+  });
+
   it("o perfil vai para a API com o token de quem está logado", async () => {
     const perfil = vi.fn(async () => ({ nome: "Lucas" }) as never);
     const { sessao, ambiente } = montar({ perfil });

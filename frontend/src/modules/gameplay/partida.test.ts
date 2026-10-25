@@ -303,3 +303,56 @@ describe("acerto ao soltar", () => {
     expect(partida.notas[1].acertada).toBe(false);
   });
 });
+
+describe("independência dos frames", () => {
+  // Uma música com acordes, sustains, frases de star power e notas perdidas de propósito.
+  const notas: Nota[] = Array.from({ length: 240 }, (_, i) => ({
+    tempo: 1 + i * 0.137 + (i % 3) * 0.011,
+    pista: (i * 7) % 5,
+    duracao: i % 9 === 0 ? 0.6 : 0,
+    frase: i < 120 ? Math.floor(i / 6) : -1,
+  }));
+  type Entrada = { tempo: number; tipo: "tocar" | "soltar" | "estrela"; pista: number };
+  const entradas: Entrada[] = notas
+    .flatMap((n, i): Entrada[] =>
+      i % 11 === 5
+        ? []
+        : [
+            { tempo: n.tempo + ((i % 5) - 2) * 0.017, tipo: "tocar", pista: n.pista },
+            { tempo: n.tempo + Math.max(0.05, n.duracao * (i % 2 ? 1 : 0.5)), tipo: "soltar", pista: n.pista },
+          ],
+    )
+    .concat([10, 22].map((tempo) => ({ tempo, tipo: "estrela" as const, pista: 0 })))
+    .sort((a, b) => a.tempo - b.tempo);
+
+  function jogar(passo: number) {
+    const partida = criarPartida(notas);
+    let proxima = 0;
+    const aplicarAte = (tempo: number) => {
+      for (; proxima < entradas.length && entradas[proxima].tempo <= tempo; proxima++) {
+        const e = entradas[proxima];
+        if (e.tipo === "tocar") tocar(partida, e.pista, e.tempo);
+        else if (e.tipo === "soltar") soltar(partida, e.pista, e.tempo);
+        else {
+          avancar(partida, e.tempo);
+          ativarEstrela(partida);
+        }
+      }
+    };
+    for (let t = 0; t < 40; t += passo) {
+      aplicarAte(t);
+      avancar(partida, t);
+    }
+    aplicarAte(40);
+    avancar(partida, 40);
+    const { pontos, acertos, erros, sequencia, maiorSequencia, estrela, estrelaAtiva, vida } = partida;
+    return { pontos, acertos, erros, sequencia, maiorSequencia, estrela, estrelaAtiva, vida };
+  }
+
+  it("a mesma partida dá o mesmo resultado a 60 fps, 144 fps, 37 fps ou sem frames no meio", () => {
+    const base = jogar(40);
+    expect(base.acertos).toBeGreaterThan(150);
+    expect(base.erros).toBeGreaterThan(10);
+    for (const fps of [60, 144, 37]) expect(jogar(1 / fps)).toEqual(base);
+  });
+});

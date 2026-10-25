@@ -1,4 +1,6 @@
 use axum::extract::{Path, Query, State};
+use axum::http::header;
+use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Json, Router};
 use chrono::{DateTime, Utc};
@@ -181,6 +183,8 @@ pub struct PartidaDoRanking {
     derrota: bool,
     fantasma: bool,
     jogada_em: DateTime<Utc>,
+    /// Se dá para assistir em `/partidas/{id}/replay`.
+    tem_replay: bool,
 }
 
 impl From<PartidaPublica> for PartidaDoRanking {
@@ -199,8 +203,16 @@ impl From<PartidaPublica> for PartidaDoRanking {
             derrota: p.derrota,
             fantasma: p.fantasma,
             jogada_em: p.jogada_em,
+            tem_replay: p.tem_replay,
         }
     }
+}
+
+/// O replay comprimido da partida, no formato do app.
+#[utoipa::path(get, path = "/partidas/{id}/replay", params(("id" = Uuid, Path)), responses((status = 200, content_type = "application/octet-stream", body = Vec<u8>), (status = 404)))]
+pub async fn replay(State(estado): State<EstadoDoApp>, Path(id): Path<Uuid>) -> Result<impl IntoResponse, ErroDaApi> {
+    let bytes = estado.ranking.replay(id).await?;
+    Ok(([(header::CONTENT_TYPE, "application/octet-stream")], bytes))
 }
 
 /// As estatísticas de uma partida do ranking, para qualquer um ver.
@@ -215,4 +227,5 @@ pub fn rotas() -> Router<EstadoDoApp> {
         .route("/ranking/geral", get(geral))
         .route("/ranking/musicas", get(musicas))
         .route("/partidas/{id}", get(partida))
+        .route("/partidas/{id}/replay", get(replay))
 }

@@ -223,6 +223,7 @@ async fn a_partida_do_ranking_e_publica_e_traz_as_estatisticas() {
         derrota: false,
         fantasma: false,
         jogada_em: DateTime::UNIX_EPOCH,
+        tem_replay: true,
     }];
 
     let (status, corpo) = chamar(&app, &format!("/partidas/{id}"), None).await;
@@ -233,6 +234,7 @@ async fn a_partida_do_ranking_e_publica_e_traz_as_estatisticas() {
     assert_eq!(corpo["instrumento"], "baixo");
     assert_eq!(corpo["maior_sequencia"], 7);
     assert_eq!(corpo["acertos"], 9);
+    assert_eq!(corpo["tem_replay"], true);
 }
 
 #[tokio::test]
@@ -242,4 +244,23 @@ async fn partida_que_nao_existe_e_404() {
     assert_eq!(status, StatusCode::NOT_FOUND);
     let (status, _) = chamar(&app, "/partidas/nao-e-uuid", None).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn o_replay_da_partida_vem_em_bytes_e_sem_replay_e_404() {
+    let (app, _, repositorio) = app().await;
+    let id = Uuid::from_u128(42);
+    *repositorio.replays.lock().unwrap() = vec![(id, vec![1, 9, 8, 7])];
+
+    let resposta = app
+        .clone()
+        .oneshot(Request::get(format!("/partidas/{id}/replay")).body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(resposta.status(), StatusCode::OK);
+    assert_eq!(resposta.headers()["content-type"], "application/octet-stream");
+    assert_eq!(resposta.into_body().collect().await.unwrap().to_bytes().as_ref(), [1, 9, 8, 7]);
+
+    let (status, _) = chamar(&app, &format!("/partidas/{}/replay", Uuid::from_u128(1)), None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
 }

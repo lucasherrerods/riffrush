@@ -3,6 +3,7 @@ use axum::http::request::Parts;
 use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use base64::prelude::{Engine, BASE64_STANDARD};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -167,6 +168,9 @@ pub struct CorpoDaPartida {
     /// Apps antigos não mandam.
     #[serde(default)]
     maior_sequencia: Option<u32>,
+    /// As entradas da partida comprimidas, em base64. Só em partida que vale para o ranking.
+    #[serde(default)]
+    replay: Option<String>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -193,6 +197,10 @@ pub async fn registrar_partida(
     Token(token): Token,
     Json(corpo): Json<CorpoDaPartida>,
 ) -> Result<Json<RespostaDaPartida>, ErroDaApi> {
+    let replay = match corpo.replay {
+        Some(texto) => Some(BASE64_STANDARD.decode(texto).map_err(|_| ErroDaApi::Invalido("o replay não é base64".into()))?),
+        None => None,
+    };
     let partida = PartidaEnviada {
         musica_id: corpo.musica_id,
         instrumento: corpo.instrumento,
@@ -205,6 +213,7 @@ pub async fn registrar_partida(
             fantasma: corpo.fantasma,
             maior_sequencia: corpo.maior_sequencia,
         },
+        replay,
     };
     Ok(Json(estado.conta.registrar_partida(&token, partida).await?.into()))
 }

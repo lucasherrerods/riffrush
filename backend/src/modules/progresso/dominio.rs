@@ -87,6 +87,21 @@ pub enum PartidaInvalida {
     AcertosDemais,
     #[error("a maior sequência passa dos acertos")]
     SequenciaDemais,
+    #[error("o replay é inválido")]
+    ReplayInvalido,
+}
+
+/// O app manda a versão do formato no primeiro byte, fora da compressão.
+pub const VERSAO_DO_REPLAY: u8 = 1;
+/// Uma música inteira fica com menos de 10 KB; o limite deixa folga sem abrir espaço para abuso.
+pub const TAMANHO_MAXIMO_DO_REPLAY: usize = 64 * 1024;
+
+/// A API não abre o replay: confere só o tamanho e a versão.
+pub fn validar_replay(bytes: &[u8]) -> Result<(), PartidaInvalida> {
+    if bytes.len() < 2 || bytes.len() > TAMANHO_MAXIMO_DO_REPLAY || bytes[0] != VERSAO_DO_REPLAY {
+        return Err(PartidaInvalida::ReplayInvalido);
+    }
+    Ok(())
 }
 
 /// Bem acima do chart mais longo; acima disso é cliente mentindo.
@@ -294,5 +309,14 @@ mod tests {
     fn dificuldade_vem_do_json_como_no_jogo() {
         let d: Dificuldade = serde_json::from_str("\"expert\"").unwrap();
         assert_eq!(d, Dificuldade::Expert);
+    }
+
+    #[test]
+    fn replay_precisa_da_versao_certa_e_caber_no_limite() {
+        assert!(validar_replay(&[VERSAO_DO_REPLAY, 0, 1]).is_ok());
+        assert_eq!(validar_replay(&[VERSAO_DO_REPLAY]), Err(PartidaInvalida::ReplayInvalido));
+        assert_eq!(validar_replay(&[9, 0, 1]), Err(PartidaInvalida::ReplayInvalido));
+        let grande = vec![VERSAO_DO_REPLAY; TAMANHO_MAXIMO_DO_REPLAY + 1];
+        assert_eq!(validar_replay(&grande), Err(PartidaInvalida::ReplayInvalido));
     }
 }

@@ -174,7 +174,7 @@ describe("App", () => {
     await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
     await usuario.click(await screen.findByRole("button", { name: "terminar" }));
     expect(await screen.findByText("+150 XP")).toBeInTheDocument();
-    expect(sessaoDaConta.registrarPartida).toHaveBeenCalledWith(expect.objectContaining({ pontos: 777, acertos: 9, total: 10 }));
+    expect(sessaoDaConta.registrarPartida).toHaveBeenCalledWith(expect.objectContaining({ pontos: 777, acertos: 9, total: 10 }), undefined);
   });
 
   it("as configurações ficam salvas", async () => {
@@ -258,7 +258,7 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { name: "Do Encore" })).toBeInTheDocument();
     await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
     await usuario.click(await screen.findByRole("button", { name: "terminar" }));
-    await waitFor(() => expect(sessaoDaConta.registrarPartida).toHaveBeenCalledWith(expect.objectContaining({ musicaId: "encore:8d63" })));
+    await waitFor(() => expect(sessaoDaConta.registrarPartida).toHaveBeenCalledWith(expect.objectContaining({ musicaId: "encore:8d63" }), undefined));
   });
 
   it("a música guardada no PC é lida do disco antes da partida", async () => {

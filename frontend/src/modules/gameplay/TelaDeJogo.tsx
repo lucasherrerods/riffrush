@@ -18,7 +18,8 @@ import { BarraDeEstrelas } from "./componentes/BarraDeEstrelas";
 import { progressoDasEstrelas } from "./estrelas";
 import { criarLojaDoHud, useLoja, type LojaDoHud } from "./lojaDoHud";
 import { NOMES_DAS_PISTAS } from "./cores";
-import { ativarEstrela, avancar, criarPartida, multiplicador, precisao, retirarEventos, soltar, tocar } from "./partida";
+import { avancar, criarPartida, multiplicador, precisao, retirarEventos } from "./partida";
+import { aplicarEntradas, criarGravador, empacotarReplay, hashDoChart, type Replay } from "./replay";
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { forcaDoTrovao } from "./pista/efeitos";
 import { criarContadorDeFps } from "./fps";
@@ -83,7 +84,10 @@ interface Props {
     adversarios?: ReactNode;
   };
   aoSair: () => void;
-  aoTerminar: (resultado: Resultado) => void;
+  /** `gerarReplay` só vem quando a partida vale para o ranking: sem bot, sem derrota e sem ser um replay. */
+  aoTerminar: (resultado: Resultado, gerarReplay?: () => Promise<Uint8Array>) => void;
+  /** Assiste a uma partida gravada: as entradas vêm do replay e o teclado só pausa. */
+  replay?: Replay;
   /** O placar do ranking no canto da tela, desenhado com os pontos de agora. */
   placar?: (pontos: number) => ReactNode;
 }
@@ -120,7 +124,7 @@ const LARGURA_DO_PAINEL = 250;
 const LARGURA_DO_HUD_LATERAL = 240;
 const MARGEM_DO_HUD = 16;
 
-export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar }: Props) {
+export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar, replay }: Props) {
   const recordeAtual = useRef(recorde);
   recordeAtual.current = recorde;
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -171,12 +175,18 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   useEffect(() => {
     let cancelado = false;
     carregarMusica(musica, dificuldade, instrumento)
+      .then(async (m) => {
+        if (replay && (await hashDoChart(m.notas)) !== replay.hashDoChart) {
+          throw new Error("Este replay foi gravado com outra versão do chart desta música.");
+        }
+        return m;
+      })
       .then((m) => !cancelado && setCarregada(m))
-      .catch((e) => !cancelado && setErro(String(e)));
+      .catch((e) => !cancelado && setErro(e instanceof Error ? e.message : String(e)));
     return () => {
       cancelado = true;
     };
-  }, [musica, dificuldade, instrumento]);
+  }, [musica, dificuldade, instrumento, replay]);
 
   useEffect(() => {
     const fonte = musica.arquivoDeVideo ?? (musica.video ? musica.arquivo : undefined);
@@ -208,8 +218,12 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     else fonte.start(agora + 0.05, agora + 0.05 - inicio);
 
     // Em rede ninguém sai da música: quem zera a vida vira fantasma e segue pontuando.
-    const partida = criarPartida(carregada.notas, { semFalha: opcoes.semFalha, fantasma: inicioEmRede !== undefined });
-    const bot = opcoes.bot ? criarBot() : null;
+    const partida = replay
+      ? criarPartida(carregada.notas, { semFalha: replay.semFalha, fantasma: replay.fantasma })
+      : criarPartida(carregada.notas, { semFalha: opcoes.semFalha, fantasma: inicioEmRede !== undefined });
+    const bot = opcoes.bot && !replay ? criarBot() : null;
+    const gravador = criarGravador(partida);
+    let proximaEntrada = 0;
     const sprites = criarSprites();
     const contexto2d = canvas.current?.getContext("2d") ?? null;
     // O tamanho vem do ResizeObserver: ler clientWidth no loop, logo depois de mudar a opacidade, força um layout por quadro.
@@ -236,7 +250,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     let quadro = 0;
     let ultimoHud = HUD_INICIAL;
     // Com o bot o recorde não vale, então também não tem festa.
-    let recordeBatido = opcoes.bot;
+    let recordeBatido = opcoes.bot || !!replay;
     let ultimaSincroniaDoVideo = 0;
     let idDoAviso = 0;
     let ultimoEnvio = 0;
@@ -262,7 +276,16 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         tocarEfeito("erro", opcoes.volumeDosEfeitos);
         setDerrota(true);
       } else {
-        aoTerminar(resultadoDaPartida(partida, musica.id, dificuldade, instrumento));
+        const resultado = resultadoDaPartida(partida, musica.id, dificuldade, instrumento);
+        const valeParaORanking = !bot && !replay && !partida.fantasma;
+        const gerarReplay = async () =>
+          empacotarReplay({
+            semFalha: opcoes.semFalha,
+            fantasma: inicioEmRede !== undefined,
+            hashDoChart: await hashDoChart(carregada.notas),
+            entradas: gravador.entradas,
+          });
+        aoTerminar(resultado, valeParaORanking ? gerarReplay : undefined);
       }
     };
 
@@ -323,19 +346,21 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       publicar(true);
       aoTerminar(resultadoDaPartida(partida, musica.id, dificuldade, instrumento));
     };
-    Object.assign(controles.current, { pausar, continuar, desistir, estrela: () => ativarEstrela(partida) });
+    const estrela = () => !replay && gravador.ativarEstrela();
+    Object.assign(controles.current, { pausar, continuar, desistir, estrela });
 
     /** Teclado e toque apertam do mesmo jeito: o instante vem do próprio evento. */
     const apertar = (pista: number, evento: Event) => {
-      if (pausadoAgora || terminou) return;
+      if (pausadoAgora || terminou || replay) return;
       apertados[pista] = true;
       const tempo = tempoDaMusica(momentoDoEvento(audio, evento));
-      tocar(partida, pista, tempo);
+      gravador.tocar(pista, tempo);
       tratarEventos(tempo);
     };
     const largar = (pista: number) => {
+      if (replay) return;
       apertados[pista] = false;
-      soltar(partida, pista, tempoDaMusica(agoraNoAudio(audio)));
+      gravador.soltar(pista, tempoDaMusica(agoraNoAudio(audio)));
     };
     controles.current.apertar = apertar;
     controles.current.largar = largar;
@@ -354,7 +379,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         if (!evento.repeat) apertar(pista, evento);
       } else if (evento.code === opcoes.teclaDaEstrela) {
         evento.preventDefault();
-        ativarEstrela(partida);
+        estrela();
       }
     };
     const aoSoltar = (evento: KeyboardEvent) => {
@@ -375,6 +400,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
 
       if (!pausadoAgora && !terminou) {
         if (bot) jogarSozinho(bot, partida, tempo).forEach((apertado, i) => (apertados[i] = apertado));
+        if (replay) proximaEntrada = aplicarEntradas(partida, replay.entradas, proximaEntrada, tempo, apertados);
         avancar(partida, tempo);
         tratarEventos(tempo);
         if (!terminou && tempo >= carregada.duracao) terminar();
@@ -481,7 +507,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       video.current?.pause();
       void audio.resume();
     };
-  }, [carregada, rodada, opcoes, musica.id, dificuldade, instrumento, aoTerminar, inicioEmRede]);
+  }, [carregada, rodada, opcoes, musica.id, dificuldade, instrumento, aoTerminar, inicioEmRede, replay]);
 
   const recomecar = () => {
     setPausado(false);
@@ -536,7 +562,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
               <h1 className="truncate text-lg font-bold">{musica.titulo}</h1>
               <p className="truncate text-base text-texto-suave">
                 {musica.artista} · {rotuloDaDificuldade}
-                {opcoes.bot && <span className="ml-2 rounded bg-estrela px-2 font-black text-fundo">BOT</span>}
+                {opcoes.bot && !replay && <span className="ml-2 rounded bg-estrela px-2 font-black text-fundo">BOT</span>}
+                {replay && <span className="ml-2 rounded bg-primaria px-2 font-black">REPLAY</span>}
                 {opcoes.mostrarFps && <span className="ml-2 font-mono tabular-nums">{fps ?? "–"} FPS</span>}
               </p>
             </div>
