@@ -12,7 +12,7 @@ import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
 import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { ChatGlobal, TelaDeEspectador, TelaOnline, presenca, presencaDisponivel, transmitirPartida, usePresenca, useSouDaModeracao, type PessoaOnline } from "@/modules/presenca";
-import { TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
+import { JanelaDoChart, TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
@@ -33,6 +33,8 @@ interface PartidaEmRede {
 
 export function App() {
   const [tela, setTela] = useState<Tela>(() => documentoDoEndereco(location.pathname) ?? "menu");
+  /** md5 do chart do Encore aberto na janela de baixar do leaderboard. */
+  const [chartDoLeaderboard, setChartDoLeaderboard] = useState<string | null>(null);
   const [configuracoes, setConfiguracoes] = useState<Configuracoes>(() => {
     const salvas = carregarConfiguracoes();
     // O volume geral vive no módulo de áudio; ao abrir, ele começa no que estava salvo.
@@ -309,6 +311,12 @@ export function App() {
     await importar([arquivo], { md5DoEncore: md5, urlDoEncore: url });
   };
 
+  const abrirNaSelecao = (md5: string) => {
+    const posicao = musicas.findIndex((m) => m.md5DoEncore === md5);
+    if (posicao >= 0) setIndice(posicao);
+    setTela("selecao");
+  };
+
   const jogarBaixada = (md5: string) => {
     const posicao = musicas.findIndex((m) => m.md5DoEncore === md5);
     // Veio do lobby: volta para a sala, e o host já deixa a música escolhida para todos.
@@ -317,8 +325,7 @@ export function App() {
       if (posicao >= 0 && sala?.souHost) escolherNaSala(musicas[posicao], sala.dificuldade).catch((erro) => avisar.error(erro instanceof Error ? erro.message : String(erro)));
       return setTela("multijogador");
     }
-    if (posicao >= 0) setIndice(posicao);
-    setTela("selecao");
+    abrirNaSelecao(md5);
   };
 
   return (
@@ -462,7 +469,21 @@ export function App() {
                 aoBaixar={baixarParaAssistir}
               />
             )}
-            {tela === "leaderboard" && <TelaDeLeaderboard aoVoltar={() => setTela("menu")} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />}
+            {tela === "leaderboard" && (
+              <TelaDeLeaderboard aoVoltar={() => setTela("menu")} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} aoAbrirMusicaDoEncore={setChartDoLeaderboard} />
+            )}
+            {tela === "leaderboard" && chartDoLeaderboard && (
+              <JanelaDoChart
+                md5={chartDoLeaderboard}
+                aoFechar={() => setChartDoLeaderboard(null)}
+                aoBaixar={baixarMusica}
+                baixadas={baixadasDoEncore}
+                aoJogar={(md5) => {
+                  setChartDoLeaderboard(null);
+                  abrirNaSelecao(md5);
+                }}
+              />
+            )}
             {tela === "perfil" && (
               <TelaDePerfil mod={souDaModeracao} aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />
             )}
