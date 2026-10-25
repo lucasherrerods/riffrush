@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
+  <g transform="translate(3 6)">
+  <!-- a ponta da palheta (em cima, à esquerda) é o lugar do clique -->
+  <path d="M2 2 C12 0 30 4 34 12 C36 20 26 32 18 34 C10 32 3 20 2 2 Z" fill="#111" stroke="#dc2626" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M6 6 C14 5 27 8 30 13" fill="none" stroke="#f87171" stroke-width="0.8" opacity="0.6"/>
+  <!-- caveira -->
+  <g fill="#dc2626">
+    <circle cx="20" cy="18" r="5.5"/>
+    <rect x="17" y="21.5" width="6" height="4" rx="1"/>
+  </g>
+  <g fill="#111"><circle cx="18" cy="18" r="1.5"/><circle cx="22" cy="18" r="1.5"/><path d="M20 20.2 L19.2 21.6 H20.8 Z"/>
+    <rect x="18.3" y="24" width="0.6" height="1.5"/><rect x="19.7" y="24" width="0.6" height="1.5"/><rect x="21.1" y="24" width="0.6" height="1.5"/></g>
+</g>
+</svg>

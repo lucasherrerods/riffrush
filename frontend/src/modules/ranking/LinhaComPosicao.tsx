@@ -43,7 +43,7 @@ export function LinhaComPosicao({ posicao, nome, avatar, semFoto: SemFoto = User
   if (!aoClicar) return <li className={classe}>{conteudo}</li>;
   return (
     <li>
-      <button type="button" aria-label={rotuloDoClique} onClick={aoClicar} className={cn(classe, "w-full cursor-pointer text-left hover:bg-superficie-elevada")}>
+      <button type="button" aria-label={rotuloDoClique} onClick={aoClicar} className={cn(classe, "w-full text-left hover:bg-superficie-elevada")}>
         {conteudo}
       </button>
     </li>
