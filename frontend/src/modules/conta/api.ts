@@ -55,6 +55,10 @@ export interface PartidaDoPerfil {
   total: number;
   derrota: boolean;
   jogada_em: string;
+  /** Do catálogo da API. Sem eles, vale o nome da biblioteca. */
+  titulo?: string | null;
+  artista?: string | null;
+  capa?: string | null;
 }
 
 export interface InstrumentoDoPerfil {
@@ -65,6 +69,9 @@ export interface InstrumentoDoPerfil {
 export interface MusicaDoPerfil {
   musica_id: string;
   partidas: number;
+  titulo?: string | null;
+  artista?: string | null;
+  capa?: string | null;
 }
 
 export interface PerfilDaApi {

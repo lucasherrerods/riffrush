@@ -1,5 +1,5 @@
 import { ArrowLeft } from "lucide-react";
-import { DIFICULDADES, INSTRUMENTOS } from "@/modules/songs";
+import { CapaPequena, DIFICULDADES, INSTRUMENTOS, nomeDaMusica } from "@/modules/songs";
 import { useCarregamento } from "@/shared/hooks/useCarregamento";
 import { haQuantoTempo, porcentagem, precisaoDaPartida } from "@/shared/lib/formatar";
 import { cn } from "@/shared/lib/utils";
@@ -131,7 +131,8 @@ function Conteudo({ perfil, tituloDaMusica }: { perfil: PerfilDaApi; tituloDaMus
                   {perfil.mais_tocadas.map((m, posicao) => (
                     <li key={m.musica_id} className="flex items-center gap-4">
                       <span className="w-6 font-titulo text-2xl leading-none text-destaque">{posicao + 1}</span>
-                      <span className="min-w-0 flex-1 truncate text-base font-bold">{tituloDaMusica(m.musica_id) ?? m.musica_id}</span>
+                      <CapaPequena capa={m.capa} />
+                      <span className="min-w-0 flex-1 truncate text-base font-bold">{nomeDaMusica(m, tituloDaMusica)}</span>
                       <span className="text-sm whitespace-nowrap text-texto-suave tabular-nums">{vezes(m.partidas)}</span>
                     </li>
                   ))}
@@ -144,8 +145,9 @@ function Conteudo({ perfil, tituloDaMusica }: { perfil: PerfilDaApi; tituloDaMus
             <h3 className="mb-2 font-titulo text-2xl leading-none tracking-wide">Últimas partidas</h3>
             {perfil.recentes.map((p) => (
               <div key={`${p.musica_id}-${p.jogada_em}`} className="chapa flex items-center gap-4 bg-superficie px-4 py-2">
+                <CapaPequena capa={p.capa} />
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-base font-bold">{tituloDaMusica(p.musica_id) ?? p.musica_id}</span>
+                  <span className="truncate text-base font-bold">{nomeDaMusica(p, tituloDaMusica)}</span>
                   <span className="text-sm text-texto-suave">
                     {rotuloDa(p.dificuldade)} · {haQuantoTempo(p.jogada_em)}
                     {p.derrota && <span className="ml-2 text-perigo">Vaiada</span>}

@@ -12,6 +12,8 @@ pub use casos_de_uso::{ErroDoPerfil, ServicosDoPerfil};
 pub use dominio::{
     montar_perfil, DadosDoPerfil, EstatisticasDaDificuldade, MusicaMaisTocada, PartidaRecente, PartidasNoInstrumento, Perfil, MAIS_TOCADAS, PARTIDAS_RECENTES,
 };
-pub use http::{__path_perfil, perfil, rotas, DificuldadeDoPerfil, InstrumentoDoPerfil, MusicaDoPerfil, PartidaDoPerfil, RespostaDoPerfil};
+pub use http::{
+    __path_perfil, perfil, rotas, DadosDaMusicaNoPerfil, DificuldadeDoPerfil, InstrumentoDoPerfil, MusicaDoPerfil, PartidaDoPerfil, RespostaDoPerfil,
+};
 pub use portas::RepositorioDoPerfil;
 pub use postgres::PerfilPostgres;

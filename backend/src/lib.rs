@@ -32,7 +32,8 @@ use shared::estado::EstadoDoApp;
         modules::perfil::DificuldadeDoPerfil,
         modules::perfil::PartidaDoPerfil,
         modules::perfil::InstrumentoDoPerfil,
-        modules::perfil::MusicaDoPerfil
+        modules::perfil::MusicaDoPerfil,
+        modules::perfil::DadosDaMusicaNoPerfil
     )),
     modifiers(&Token)
 )]
