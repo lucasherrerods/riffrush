@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Eye, Loader2, Pause, Skull, Zap } from "lucide-react";
 import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
 import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "@/modules/character";
 import { cenaDaPartida } from "./cena";
 import { Palco, opacidadeDaPista, type EstadoDoPalco, type QualidadeDoPalco } from "@/modules/stage";
-import { DIFICULDADES, INSTRUMENTOS, carregarMusica, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada } from "@/modules/songs";
+import { DIFICULDADES, INSTRUMENTOS, PISTA_ABERTA, carregarMusica, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada } from "@/modules/songs";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -54,7 +54,7 @@ export interface OpcoesDaPartida {
 const INTERVALO_DO_LOTE_MS = 1000;
 
 export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
-  teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"],
+  teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL", "KeyD"],
   teclaDaEstrela: "Space",
   rotuloDaTeclaDaEstrela: "Espaço",
   antecedencia: 1.46,
@@ -125,6 +125,8 @@ interface Hud {
 const ENTRADA = 2.5;
 const HUD_INICIAL: Hud = { pontos: 0, sequencia: 0, multiplicador: 1, vida: 0.5, estrela: 0, estrelaAtiva: false, progresso: 0, precisao: 1, contagem: 3, pulso: 0, estrelas: 0, estrelasDoRecorde: 0, reacao: null, fantasma: false };
 const MAXIMO_DE_EXPLOSOES = 20;
+/** Altura da faixa de toque da nota aberta, no pé da tela. */
+const ALTURA_DA_FAIXA_ABERTA = 64;
 const MAXIMO_DE_TROVOES = 4;
 const SINCRONIA_DO_VIDEO = 0.15;
 const INTERVALO_DO_ENVIO_MS = 125;
@@ -173,6 +175,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   const transmissaoAtual = useRef(transmissao);
   transmissaoAtual.current = transmissao;
   const [carregada, setCarregada] = useState<MusicaCarregada | null>(null);
+  const temAberta = useMemo(() => !!carregada?.notas.some((n) => n.pista === PISTA_ABERTA), [carregada]);
   const [erro, setErro] = useState<string | null>(null);
   const [urlDoVideo, setUrlDoVideo] = useState<string | null>(null);
   const [loja] = useState(() => criarLojaDoHud<Hud>(HUD_INICIAL));
@@ -273,7 +276,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
             medida.altura = entrada.contentRect.height;
           });
     if (canvas.current) observador?.observe(canvas.current);
-    const apertados = [false, false, false, false, false];
+    const apertados = Array<boolean>(PISTA_ABERTA + 1).fill(false);
     const explosoes: Cena["explosoes"] = [];
     const trovoes: Cena["trovoes"] = [];
     let estrelaDesde: number | null = null;
@@ -660,8 +663,13 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
 
           {/* Áreas de toque: uma embaixo de cada traste (funcionam com o mouse também). */}
           <div
-            className="absolute bottom-0 flex"
-            style={{ left: layout.centro - layout.largura / 2, width: layout.largura, top: layout.linhaDeBatida - layout.larguraDoTraste * 0.45 }}
+            className="absolute flex"
+            style={{
+              left: layout.centro - layout.largura / 2,
+              width: layout.largura,
+              top: layout.linhaDeBatida - layout.larguraDoTraste * 0.45,
+              bottom: temAberta ? ALTURA_DA_FAIXA_ABERTA : 0,
+            }}
           >
             {NOMES_DAS_PISTAS.map((nome, pista) => (
               <div
@@ -682,6 +690,26 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
               </div>
             ))}
           </div>
+
+          {/* A nota aberta não tem traste: no toque, ela tem uma faixa própria no pé da tela. */}
+          {temAberta && (
+            <div
+              role="button"
+              aria-label="Nota aberta"
+              className="absolute bottom-0 flex items-center justify-center border-t border-borda bg-superficie/60"
+              style={{ left: layout.centro - layout.largura / 2, width: layout.largura, height: ALTURA_DA_FAIXA_ABERTA }}
+              onPointerDown={(e) => {
+                e.currentTarget.setPointerCapture?.(e.pointerId);
+                controles.current.apertar(PISTA_ABERTA, e.nativeEvent);
+              }}
+              onPointerUp={() => controles.current.largar(PISTA_ABERTA)}
+              onPointerCancel={() => controles.current.largar(PISTA_ABERTA)}
+            >
+              <span className="font-titulo text-lg tracking-wide text-texto-suave">
+                Aberta{opcoes.rotulosDosTrastes && ` · ${opcoes.rotulosDosTrastes[PISTA_ABERTA]}`}
+              </span>
+            </div>
+          )}
 
           {rede?.adversarios}
 

@@ -1,5 +1,5 @@
 import { dificuldadeMaisProxima } from "./dificuldades";
-import { DIFICULDADES, INSTRUMENTOS, type Batida, type Dificuldade, type Instrumento, type Nota, type Trilhas } from "./tipos";
+import { DIFICULDADES, INSTRUMENTOS, PISTA_ABERTA, type Batida, type Dificuldade, type Instrumento, type Nota, type TipoDaNota, type Trilhas } from "./tipos";
 
 /*
  * Formatos do Clone Hero.
@@ -116,7 +116,46 @@ interface NotaEmTicks {
   duracao: number;
 }
 
-function montarNotas(brutas: NotaEmTicks[], frases: { tick: number; duracao: number }[], mapa: MapaDeTempo, resolucao: number): Nota[] {
+/** O que o chart diz sobre todas as notas de um mesmo tick. */
+interface Marcas {
+  /** .chart: o marcador 5 inverte o HOPO natural. */
+  inverter?: boolean;
+  /** .mid: as notas de forçar dizem direto se é HOPO ou comum. */
+  forcar?: "hopo" | "comum";
+  tap?: boolean;
+}
+
+type NotaClassificada = NotaEmTicks & { tipo?: TipoDaNota };
+
+/**
+ * Decide o tipo de cada acorde, como o Clone Hero: nota simples perto da anterior (até `limiar` ticks)
+ * e que não estava nela é HOPO natural; as marcas do chart mudam isso, e o tap vale por cima de tudo.
+ * Uma nota aberta junto com trastes não existe no Clone Hero: fica só o traste.
+ */
+function classificar(brutas: NotaEmTicks[], limiar: number, marcasEm: (tick: number) => Marcas): NotaClassificada[] {
+  const porTick = new Map<number, NotaEmTicks[]>();
+  for (const nota of brutas) porTick.set(nota.tick, [...(porTick.get(nota.tick) ?? []), nota]);
+  const saida: NotaClassificada[] = [];
+  let anterior: { tick: number; pistas: Set<number> } | null = null;
+  for (const tick of [...porTick.keys()].sort((a, b) => a - b)) {
+    let acorde = porTick.get(tick)!;
+    if (acorde.length > 1) acorde = acorde.filter((n) => n.pista !== PISTA_ABERTA);
+    const pistas = new Set(acorde.map((n) => n.pista));
+    const natural = pistas.size === 1 && anterior !== null && tick - anterior.tick <= limiar && !anterior.pistas.has(acorde[0].pista);
+    const marcas = marcasEm(tick);
+    const hopo = marcas.forcar ? marcas.forcar === "hopo" : natural !== !!marcas.inverter;
+    const tipo: TipoDaNota | undefined = marcas.tap ? "tap" : hopo ? "hopo" : undefined;
+    for (const nota of acorde) saida.push(tipo ? { ...nota, tipo } : nota);
+    anterior = { tick, pistas };
+  }
+  return saida;
+}
+
+/** Trechos marcados por notas MIDI ou sysex: vale do início até antes do fim (ou só o tick, se não durar nada). */
+const dentro = (trechos: { tick: number; duracao: number }[], tick: number) =>
+  trechos.some((t) => tick >= t.tick && (tick < t.tick + t.duracao || (t.duracao === 0 && tick === t.tick)));
+
+function montarNotas(brutas: NotaClassificada[], frases: { tick: number; duracao: number }[], mapa: MapaDeTempo, resolucao: number): Nota[] {
   brutas.sort((a, b) => a.tick - b.tick || a.pista - b.pista);
   // Sustains muito curtos viram notas simples, como no Clone Hero.
   const sustainMinimo = resolucao / 3;
@@ -125,6 +164,7 @@ function montarNotas(brutas: NotaEmTicks[], frases: { tick: number; duracao: num
     return {
       tempo,
       pista: n.pista,
+      ...(n.tipo && { tipo: n.tipo }),
       frase: frases.findIndex((f) => n.tick >= f.tick && n.tick < f.tick + f.duracao),
       duracao: n.duracao >= sustainMinimo ? mapa.emSegundos(n.tick + n.duracao) - tempo : 0,
     };
@@ -144,6 +184,10 @@ const INSTRUMENTOS_DO_CHART: Record<Instrumento, string> = {
 function guardarTrilha(notas: ChartLido["notas"], instrumento: Instrumento, dificuldade: Dificuldade, trilha: Nota[]) {
   (notas[instrumento] ??= {})[dificuldade] = trilha;
 }
+
+/** Distância máxima, em semínimas, para uma nota virar HOPO natural (os padrões do Clone Hero). */
+const LIMIAR_DO_HOPO_NO_CHART = 65 / 192;
+const LIMIAR_DO_HOPO_NO_MIDI = 170 / 480;
 
 /** Formato .chart, em texto. */
 export function lerChart(conteudo: string): ChartLido {
@@ -179,23 +223,35 @@ export function lerChart(conteudo: string): ChartLido {
     if (!linhas) continue;
     const brutas: NotaEmTicks[] = [];
     const frases: { tick: number; duracao: number }[] = [];
+    const marcas = new Map<number, Marcas>();
     for (const linha of linhas) {
       const encontrado = linha.match(/^(\d+)\s*=\s*([NS])\s+(\d+)\s+(\d+)/);
       if (!encontrado) continue;
       const tick = Number(encontrado[1]);
       const valor = Number(encontrado[3]);
       const duracao = Number(encontrado[4]);
-      // N 0 a 4 são os trastes; 5 e 6 são marcadores e 7 é a nota aberta, que ainda não usamos.
+      // N 0 a 4 são os trastes e 7 a nota aberta; 5 inverte o HOPO e 6 é o tap das notas do mesmo tick.
       if (encontrado[2] === "N" && valor <= 4) brutas.push({ tick, pista: valor, duracao });
+      else if (encontrado[2] === "N" && valor === 7) brutas.push({ tick, pista: PISTA_ABERTA, duracao });
+      else if (encontrado[2] === "N" && (valor === 5 || valor === 6)) marcas.set(tick, { ...marcas.get(tick), [valor === 5 ? "inverter" : "tap"]: true });
       else if (encontrado[2] === "S" && valor === 2) frases.push({ tick, duracao });
     }
-    if (brutas.length) guardarTrilha(notas, instrumento, dificuldade, montarNotas(brutas, frases, mapa, resolucao));
+    const classificadas = classificar(brutas, LIMIAR_DO_HOPO_NO_CHART * resolucao, (tick) => marcas.get(tick) ?? {});
+    if (classificadas.length) guardarTrilha(notas, instrumento, dificuldade, montarNotas(classificadas, frases, mapa, resolucao));
   }
   return { notas, mapa };
 }
 
 const NOTA_MIDI_BASE: Record<Dificuldade, number> = { facil: 60, medio: 72, dificil: 84, expert: 96 };
 const NOTA_MIDI_STAR_POWER = 116;
+/** Somadas à base da dificuldade: forçam HOPO ou nota comum. */
+const FORCAR_HOPO = 5;
+const FORCAR_COMUM = 6;
+const NOTA_MIDI_TAP = 104;
+/** Dificuldade nos sysex do Phase Shift: 0 é o fácil, 3 o expert, 0xFF todas. */
+const DIFICULDADE_DO_SYSEX: Record<Dificuldade, number> = { facil: 0, medio: 1, dificil: 2, expert: 3 };
+const SYSEX_ABERTA = 1;
+const SYSEX_TAP = 4;
 const FAIXAS_DO_MIDI: Record<string, Instrumento> = {
   "PART GUITAR": "guitarra",
   "T1 GEMS": "guitarra",
@@ -215,7 +271,12 @@ export function lerMidi(dados: Uint8Array): ChartLido {
 
   let posicao = 8 + vista.getUint32(4);
   const andamentos: { tick: number; microssegundosPorSeminima: number }[] = [];
-  const faixas: { nome: string; notas: { tick: number; nota: number; duracao: number }[] }[] = [];
+  const faixas: {
+    nome: string;
+    notas: { tick: number; nota: number; duracao: number }[];
+    aberturasMelhoradas: boolean;
+    sysex: { tick: number; dificuldade: number; tipo: number; duracao: number }[];
+  }[] = [];
 
   for (let f = 0; f < quantidadeDeFaixas && posicao < dados.length; f++) {
     let p = posicao + 8;
@@ -226,6 +287,9 @@ export function lerMidi(dados: Uint8Array): ChartLido {
     let nome = "";
     const abertas = new Map<number, number>();
     const notas: { tick: number; nota: number; duracao: number }[] = [];
+    let aberturasMelhoradas = false;
+    const sysex: (typeof faixas)[number]["sysex"] = [];
+    const sysexLigados = new Map<string, number>();
     const quantidadeVariavel = () => {
       let valor = 0;
       let byte: number;
@@ -244,10 +308,24 @@ export function lerMidi(dados: Uint8Array): ChartLido {
         const tipo = dados[p++];
         const tamanho = quantidadeVariavel();
         if (tipo === 0x03) nome = decodificador.decode(dados.subarray(p, p + tamanho));
+        // Com este texto, a nota logo abaixo do verde de cada dificuldade é a aberta.
+        if (tipo === 0x01 && decodificador.decode(dados.subarray(p, p + tamanho)).includes("ENHANCED_OPENS")) aberturasMelhoradas = true;
         if (tipo === 0x51) andamentos.push({ tick, microssegundosPorSeminima: (dados[p] << 16) | (dados[p + 1] << 8) | dados[p + 2] });
         p += tamanho;
       } else if (status === 0xf0 || status === 0xf7) {
-        p += quantidadeVariavel();
+        const tamanho = quantidadeVariavel();
+        // Phase Shift: "PS", 0, 0, dificuldade, tipo, liga/desliga. Marca trechos de notas abertas ou tap.
+        if (tamanho >= 7 && dados[p] === 0x50 && dados[p + 1] === 0x53 && dados[p + 2] === 0 && dados[p + 3] === 0) {
+          const [dificuldade, tipoDoSysex, liga] = [dados[p + 4], dados[p + 5], dados[p + 6]];
+          const chave = `${dificuldade}:${tipoDoSysex}`;
+          const inicio = sysexLigados.get(chave);
+          if (liga) sysexLigados.set(chave, tick);
+          else if (inicio !== undefined) {
+            sysex.push({ tick: inicio, dificuldade, tipo: tipoDoSysex, duracao: tick - inicio });
+            sysexLigados.delete(chave);
+          }
+        }
+        p += tamanho;
       } else {
         const tipo = status & 0xf0;
         const nota = dados[p++];
@@ -263,7 +341,7 @@ export function lerMidi(dados: Uint8Array): ChartLido {
         }
       }
     }
-    faixas.push({ nome: nome.trim().toUpperCase(), notas });
+    faixas.push({ nome: nome.trim().toUpperCase(), notas, aberturasMelhoradas, sysex });
   }
 
   const mapa = new MapaDeTempo(resolucao, andamentos);
@@ -283,11 +361,27 @@ export function lerMidi(dados: Uint8Array): ChartLido {
     const faixa = porInstrumento.get(instrumento);
     if (!faixa) continue;
     const frases = faixa.notas.filter((n) => n.nota === NOTA_MIDI_STAR_POWER).map((n) => ({ tick: n.tick, duracao: n.duracao }));
+    const taps = faixa.notas.filter((n) => n.nota === NOTA_MIDI_TAP);
     for (const [dificuldade, base] of Object.entries(NOTA_MIDI_BASE) as [Dificuldade, number][]) {
-      const brutas = faixa.notas
-        .filter((n) => n.nota >= base && n.nota <= base + 4)
-        .map((n) => ({ tick: n.tick, pista: n.nota - base, duracao: n.duracao }));
-      if (brutas.length) guardarTrilha(notas, instrumento, dificuldade, montarNotas(brutas, frases, mapa, resolucao));
+      const doSysex = (tipo: number) => faixa.sysex.filter((s) => s.tipo === tipo && (s.dificuldade === DIFICULDADE_DO_SYSEX[dificuldade] || s.dificuldade === 0xff));
+      const trechosAbertos = doSysex(SYSEX_ABERTA);
+      const trechosDeTap = [...taps, ...doSysex(SYSEX_TAP)];
+      const forcaHopo = faixa.notas.filter((n) => n.nota === base + FORCAR_HOPO);
+      const forcaComum = faixa.notas.filter((n) => n.nota === base + FORCAR_COMUM);
+      const brutas: NotaEmTicks[] = [];
+      for (const n of faixa.notas) {
+        if (faixa.aberturasMelhoradas && n.nota === base - 1) brutas.push({ tick: n.tick, pista: PISTA_ABERTA, duracao: n.duracao });
+        else if (n.nota >= base && n.nota <= base + 4) {
+          // No sysex do Phase Shift, a aberta vem escrita como verde dentro do trecho.
+          const aberta = n.nota === base && dentro(trechosAbertos, n.tick);
+          brutas.push({ tick: n.tick, pista: aberta ? PISTA_ABERTA : n.nota - base, duracao: n.duracao });
+        }
+      }
+      const classificadas = classificar(brutas, LIMIAR_DO_HOPO_NO_MIDI * resolucao, (tick) => ({
+        tap: dentro(trechosDeTap, tick),
+        forcar: dentro(forcaHopo, tick) ? "hopo" : dentro(forcaComum, tick) ? "comum" : undefined,
+      }));
+      if (classificadas.length) guardarTrilha(notas, instrumento, dificuldade, montarNotas(classificadas, frases, mapa, resolucao));
     }
   }
   return { notas, mapa };

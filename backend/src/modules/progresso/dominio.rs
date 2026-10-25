@@ -92,13 +92,14 @@ pub enum PartidaInvalida {
 }
 
 /// O app manda a versão do formato no primeiro byte, fora da compressão.
-pub const VERSAO_DO_REPLAY: u8 = 1;
+/// A 2 trouxe a nota aberta; os replays da 1 continuam guardados e valendo.
+pub const VERSOES_DO_REPLAY: [u8; 2] = [1, 2];
 /// Uma música inteira fica com menos de 10 KB; o limite deixa folga sem abrir espaço para abuso.
 pub const TAMANHO_MAXIMO_DO_REPLAY: usize = 64 * 1024;
 
 /// A API não abre o replay: confere só o tamanho e a versão.
 pub fn validar_replay(bytes: &[u8]) -> Result<(), PartidaInvalida> {
-    if bytes.len() < 2 || bytes.len() > TAMANHO_MAXIMO_DO_REPLAY || bytes[0] != VERSAO_DO_REPLAY {
+    if bytes.len() < 2 || bytes.len() > TAMANHO_MAXIMO_DO_REPLAY || !VERSOES_DO_REPLAY.contains(&bytes[0]) {
         return Err(PartidaInvalida::ReplayInvalido);
     }
     Ok(())
@@ -313,10 +314,12 @@ mod tests {
 
     #[test]
     fn replay_precisa_da_versao_certa_e_caber_no_limite() {
-        assert!(validar_replay(&[VERSAO_DO_REPLAY, 0, 1]).is_ok());
-        assert_eq!(validar_replay(&[VERSAO_DO_REPLAY]), Err(PartidaInvalida::ReplayInvalido));
+        assert!(validar_replay(&[1, 0, 1]).is_ok());
+        assert!(validar_replay(&[2, 0, 1]).is_ok());
+        assert_eq!(validar_replay(&[3, 0, 1]), Err(PartidaInvalida::ReplayInvalido));
+        assert_eq!(validar_replay(&[2]), Err(PartidaInvalida::ReplayInvalido));
         assert_eq!(validar_replay(&[9, 0, 1]), Err(PartidaInvalida::ReplayInvalido));
-        let grande = vec![VERSAO_DO_REPLAY; TAMANHO_MAXIMO_DO_REPLAY + 1];
+        let grande = vec![2; TAMANHO_MAXIMO_DO_REPLAY + 1];
         assert_eq!(validar_replay(&grande), Err(PartidaInvalida::ReplayInvalido));
     }
 }

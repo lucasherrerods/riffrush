@@ -1,14 +1,18 @@
-import type { Nota } from "@/modules/songs";
+import { PISTA_ABERTA, type Nota } from "@/modules/songs";
 import { ativarEstrela, avancar, quantizar, soltar, tocar, type Partida } from "./partida";
 
 /**
  * Um replay guarda só as entradas do jogador (como o .osr do osu!), não vídeo: a partida é
  * determinística, então reaplicar as entradas sobre o mesmo chart reproduz tudo, ponto por ponto.
  */
-export const VERSAO_DO_REPLAY = 1;
+export const VERSAO_DO_REPLAY = 2;
 const TICKS_POR_SEGUNDO = 1000;
-const CODIGOS = 11;
+/** Quantos códigos de tecla cada versão tem: a 2 ganhou os da nota aberta. */
+const CODIGOS_DA_VERSAO: Record<number, number> = { 1: 11, 2: 13 };
+const CODIGOS = CODIGOS_DA_VERSAO[VERSAO_DO_REPLAY];
 const ESTRELA = 10;
+const APERTA_A_ABERTA = 11;
+const SOLTA_A_ABERTA = 12;
 const BYTES_DO_HASH = 16;
 
 export interface EntradaDoReplay {
@@ -106,7 +110,8 @@ export async function empacotarReplay(replay: Replay) {
 }
 
 export async function desempacotarReplay(pacote: Uint8Array): Promise<Replay> {
-  if (pacote[0] !== VERSAO_DO_REPLAY) throw new Error(`Replay de uma versão que este app não conhece (${pacote[0]}).`);
+  const codigos = CODIGOS_DA_VERSAO[pacote[0]];
+  if (!codigos) throw new Error(`Replay de uma versão que este app não conhece (${pacote[0]}).`);
   const bytes = await transformar(pacote.slice(1), new DecompressionStream("deflate-raw"));
   const leitor = { bytes, posicao: 0 };
   const opcoes = bytes[leitor.posicao++];
@@ -118,8 +123,8 @@ export async function desempacotarReplay(pacote: Uint8Array): Promise<Replay> {
   const entradas: EntradaDoReplay[] = [];
   for (let i = 0; i < quantas; i++) {
     const valor = lerVarint(leitor);
-    const codigo = valor % CODIGOS;
-    ticks += (valor - codigo) / CODIGOS;
+    const codigo = valor % codigos;
+    ticks += (valor - codigo) / codigos;
     entradas.push(entradaDoCodigo(ticks, codigo));
   }
   return { semFalha: !!(opcoes & 1), fantasma: !!(opcoes & 2), hashDoChart: hash, entradas };
@@ -127,15 +132,21 @@ export async function desempacotarReplay(pacote: Uint8Array): Promise<Replay> {
 
 export const emTicks = (tempo: number) => Math.round(tempo * TICKS_POR_SEGUNDO);
 
-/** 0 a 4 aperta a pista, 5 a 9 solta, 10 ativa o star power. O mesmo código vai no replay e na transmissão ao vivo. */
-export const codigoDaEntrada = (e: EntradaDoReplay) => (e.tipo === "estrela" ? ESTRELA : e.tipo === "tocar" ? e.pista : 5 + e.pista);
+/**
+ * 0 a 4 aperta a pista, 5 a 9 solta, 10 ativa o star power, 11 aperta e 12 solta a nota aberta.
+ * O mesmo código vai no replay e na transmissão ao vivo; a aberta entrou no fim para os antigos não mudarem.
+ */
+export function codigoDaEntrada(e: EntradaDoReplay) {
+  if (e.tipo === "estrela") return ESTRELA;
+  if (e.pista === PISTA_ABERTA) return e.tipo === "tocar" ? APERTA_A_ABERTA : SOLTA_A_ABERTA;
+  return e.tipo === "tocar" ? e.pista : 5 + e.pista;
+}
 
 export function entradaDoCodigo(ticks: number, codigo: number): EntradaDoReplay {
-  return {
-    tempo: ticks / TICKS_POR_SEGUNDO,
-    tipo: codigo === ESTRELA ? "estrela" : codigo < 5 ? "tocar" : "soltar",
-    pista: codigo === ESTRELA ? 0 : codigo % 5,
-  };
+  const tempo = ticks / TICKS_POR_SEGUNDO;
+  if (codigo === ESTRELA) return { tempo, tipo: "estrela", pista: 0 };
+  if (codigo === APERTA_A_ABERTA || codigo === SOLTA_A_ABERTA) return { tempo, tipo: codigo === APERTA_A_ABERTA ? "tocar" : "soltar", pista: PISTA_ABERTA };
+  return { tempo, tipo: codigo < 5 ? "tocar" : "soltar", pista: codigo % 5 };
 }
 
 /** Varint sem sinal com multiplicação, e não deslocamento: os números passam de 32 bits. */

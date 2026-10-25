@@ -479,6 +479,22 @@ describe("TelaDeJogo com toque", () => {
     expect(areas.map((a) => a.getAttribute("aria-label"))).toEqual(["Traste Verde", "Traste Vermelho", "Traste Amarelo", "Traste Azul", "Traste Laranja"]);
   });
 
+  it("sem nota aberta na música, não tem a faixa dela", async () => {
+    carregarCom([nota(5)]);
+    abrir();
+    await partidaPronta();
+    expect(screen.queryByRole("button", { name: "Nota aberta" })).not.toBeInTheDocument();
+  });
+
+  it("com nota aberta, tocar na faixa do pé da tela acerta a aberta", async () => {
+    carregarCom([nota(0.5, 5)]);
+    abrir();
+    await partidaPronta();
+    irPara(0.55);
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Nota aberta" }));
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
+  });
+
   it("tocar na área do traste acerta a nota", async () => {
     carregarCom([nota(0.5, 2)]);
     abrir();

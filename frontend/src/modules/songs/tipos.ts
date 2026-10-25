@@ -21,9 +21,21 @@ export const INSTRUMENTOS: { id: Instrumento; rotulo: string }[] = [
 /** As dificuldades que o chart tem em cada instrumento. */
 export type Trilhas = Partial<Record<Instrumento, Dificuldade[]>>;
 
+/** A nota aberta (corda solta, sem traste) fica numa pista própria, depois dos 5 trastes. */
+export const PISTA_ABERTA = 5;
+
+/**
+ * Como o chart marca a nota, igual ao Clone Hero: HOPO (dispensa a palheta depois de um acerto) e
+ * tap (dispensa sempre). Aqui as duas mudam só o visual: o Riff Rush não tem palheta.
+ */
+export type TipoDaNota = "hopo" | "tap";
+
 export interface Nota {
   tempo: number;
+  /** 0 a 4 são os trastes; `PISTA_ABERTA` é a nota aberta. */
   pista: number;
+  /** Sem tipo é a nota comum, que no Clone Hero precisa de palheta. */
+  tipo?: TipoDaNota;
   /** Notas da mesma frase de star power têm o mesmo id; -1 é nota comum. */
   frase: number;
   /** Segundos de sustain; 0 é nota simples. */

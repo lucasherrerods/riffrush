@@ -1,5 +1,5 @@
 export { criarBot, jogarSozinho, type Bot } from "./bot";
-export { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "./cores";
+export { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ABERTA, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "./cores";
 export {
   JANELA_DE_ACERTO,
   ativarEstrela,

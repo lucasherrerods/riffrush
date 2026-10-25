@@ -17,6 +17,13 @@ describe("carregarConfiguracoes", () => {
     expect(carregarConfiguracoes()).toEqual({ ...CONFIGURACOES_PADRAO, velocidade: 3 });
   });
 
+  it("quem salvou antes da nota aberta ganha a tecla e o botão dela, sem perder os trastes escolhidos", () => {
+    localStorage.setItem("riffrush.configuracoes", JSON.stringify({ teclas: ["KeyQ", "KeyW", "KeyE", "KeyR", "KeyT"], botoesDoControle: [1, 2, 3, 4, 5] }));
+    const carregadas = carregarConfiguracoes();
+    expect(carregadas.teclas).toEqual(["KeyQ", "KeyW", "KeyE", "KeyR", "KeyT", CONFIGURACOES_PADRAO.teclas[5]]);
+    expect(carregadas.botoesDoControle).toEqual([1, 2, 3, 4, 5, CONFIGURACOES_PADRAO.botoesDoControle[5]]);
+  });
+
   it("ignora dados corrompidos", () => {
     localStorage.setItem("riffrush.configuracoes", "{quebrado");
     expect(carregarConfiguracoes()).toEqual(CONFIGURACOES_PADRAO);
@@ -33,26 +40,31 @@ describe("trocarTecla", () => {
     expect(teclas.slice(0, 2)).toEqual(["KeyS", "KeyA"]);
   });
 
-  it("o índice 5 é a tecla do star power", () => {
-    expect(trocarTecla(CONFIGURACOES_PADRAO, 5, "KeyE").teclaDaEstrela).toBe("KeyE");
+  it("o índice 5 é a nota aberta, e ela troca de lugar com um traste como os outros", () => {
+    expect(trocarTecla(CONFIGURACOES_PADRAO, 5, "KeyE").teclas[5]).toBe("KeyE");
+    expect(trocarTecla(CONFIGURACOES_PADRAO, 5, "KeyA").teclas.slice(0, 1)).toEqual([CONFIGURACOES_PADRAO.teclas[5]]);
+  });
+
+  it("o índice 6 é a tecla do star power", () => {
+    expect(trocarTecla(CONFIGURACOES_PADRAO, 6, "KeyE").teclaDaEstrela).toBe("KeyE");
   });
 });
 
 describe("trocarBotao", () => {
-  // Padrão: LT(6), LB(4), RB(5), RT(7) e A(0) nos trastes, Select(8) no star power.
+  // Padrão: LT(6), LB(4), RB(5), RT(7) e A(0) nos trastes, X(2) na aberta, Select(8) no star power.
   it("troca o botão do traste no controle sem mexer nas teclas", () => {
-    const trocada = trocarBotao(CONFIGURACOES_PADRAO, 0, 2);
-    expect(trocada.botoesDoControle).toEqual([2, 4, 5, 7, 0]);
+    const trocada = trocarBotao(CONFIGURACOES_PADRAO, 0, 1);
+    expect(trocada.botoesDoControle).toEqual([1, 4, 5, 7, 0, 2]);
     expect(trocada.teclas).toEqual(CONFIGURACOES_PADRAO.teclas);
   });
 
   it("se o botão já estava em outro traste, os dois trocam de lugar", () => {
-    expect(trocarBotao(CONFIGURACOES_PADRAO, 0, 4).botoesDoControle).toEqual([4, 6, 5, 7, 0]);
+    expect(trocarBotao(CONFIGURACOES_PADRAO, 0, 4).botoesDoControle).toEqual([4, 6, 5, 7, 0, 2]);
   });
 
-  it("o índice 5 é o star power, e ele também troca com um traste", () => {
-    expect(trocarBotao(CONFIGURACOES_PADRAO, 5, 3).botaoDaEstrela).toBe(3);
-    const comTraste = trocarBotao(CONFIGURACOES_PADRAO, 5, 6);
+  it("o índice 6 é o star power, e ele também troca com um traste", () => {
+    expect(trocarBotao(CONFIGURACOES_PADRAO, 6, 3).botaoDaEstrela).toBe(3);
+    const comTraste = trocarBotao(CONFIGURACOES_PADRAO, 6, 6);
     expect(comTraste.botaoDaEstrela).toBe(6);
     expect(comTraste.botoesDoControle[0]).toBe(8);
   });

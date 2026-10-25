@@ -38,7 +38,7 @@ describe("TelaDeConfiguracoes", () => {
     await usuario.click(screen.getByRole("button", { name: "Tecla do traste Verde" }));
     expect(screen.getByRole("button", { name: "Tecla do traste Verde" })).toHaveTextContent("Aperte...");
     await usuario.keyboard("q");
-    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ teclas: ["KeyQ", "KeyS", "KeyJ", "KeyK", "KeyL"] }));
+    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ teclas: ["KeyQ", "KeyS", "KeyJ", "KeyK", "KeyL", "KeyD"] }));
   });
 
   it("Esc cancela a troca sem sair da tela", async () => {
@@ -130,7 +130,7 @@ describe("TelaDeConfiguracoes", () => {
     const escolher = vi.mocked(capturarBotao).mock.lastCall![0];
     escolher(2);
 
-    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ botoesDoControle: [2, 4, 5, 7, 0], teclas: CONFIGURACOES_PADRAO.teclas }));
+    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ botoesDoControle: [2, 4, 5, 7, 0, 6], teclas: CONFIGURACOES_PADRAO.teclas }));
     vi.mocked(useControleConectado).mockReturnValue(false);
   });
 });

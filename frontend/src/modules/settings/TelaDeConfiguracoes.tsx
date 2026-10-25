@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Gamepad2, Keyboard, Monitor, RotateCcw, Volume2 } from "lucide-react";
 import { capturarBotao, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
-import { CORES_DAS_PISTAS, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "@/modules/gameplay";
+import { CORES_DAS_PISTAS, COR_DA_ABERTA, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "@/modules/gameplay";
+import { PISTA_ABERTA } from "@/modules/songs";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { QUALIDADES_DO_PALCO } from "@/modules/stage";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
@@ -12,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Calibracao } from "./componentes/Calibracao";
 import { LinhaDeOpcao } from "./componentes/LinhaDeOpcao";
 import { LinhaDeSlider } from "./componentes/LinhaDeSlider";
-import { CONFIGURACOES_PADRAO, nomeDaTecla, trocarBotao, trocarTecla, type Configuracoes } from "./configuracoes";
+import { CONFIGURACOES_PADRAO, INDICE_DA_ESTRELA, nomeDaTecla, trocarBotao, trocarTecla, type Configuracoes } from "./configuracoes";
 
 interface Props {
   configuracoes: Configuracoes;
@@ -20,7 +21,6 @@ interface Props {
   aoVoltar: () => void;
 }
 
-const INDICE_DA_ESTRELA = 5;
 const porcentagem = (valor: number) => `${Math.round(valor * 100)}%`;
 
 export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props) {
@@ -136,6 +136,9 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
                 {comandos(i, `do traste ${nome}`, configuracoes.teclas[i], configuracoes.botoesDoControle[i], CORES_DAS_PISTAS[i])}
               </LinhaDeOpcao>
             ))}
+            <LinhaDeOpcao rotulo="Nota aberta" dica="A barra roxa que atravessa a pista: toque sem nenhum traste">
+              {comandos(PISTA_ABERTA, "da nota aberta", configuracoes.teclas[PISTA_ABERTA], configuracoes.botoesDoControle[PISTA_ABERTA], COR_DA_ABERTA)}
+            </LinhaDeOpcao>
             <LinhaDeOpcao rotulo="Star Power" dica="Ativa o bônus quando a barra passa da metade">
               {comandos(INDICE_DA_ESTRELA, "do star power", configuracoes.teclaDaEstrela, configuracoes.botaoDaEstrela, COR_DA_ESTRELA)}
             </LinhaDeOpcao>

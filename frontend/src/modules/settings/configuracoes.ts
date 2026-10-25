@@ -2,10 +2,10 @@ import { BOTAO_DA_ESTRELA_PADRAO, BOTOES_DOS_TRASTES_PADRAO } from "@/modules/ga
 import type { QualidadeDoPalco } from "@/modules/stage";
 
 export interface Configuracoes {
-  /** Códigos das teclas dos 5 trastes (KeyboardEvent.code). */
+  /** Códigos das teclas dos 5 trastes e da nota aberta, nesta ordem (KeyboardEvent.code). */
   teclas: string[];
   teclaDaEstrela: string;
-  /** Índices (Gamepad API) dos botões do controle de cada traste, na mesma ordem das teclas. */
+  /** Índices (Gamepad API) dos botões do controle de cada traste e da aberta, na mesma ordem das teclas. */
   botoesDoControle: number[];
   botaoDaEstrela: number;
   /** De 1 a 10. */
@@ -35,7 +35,7 @@ export interface Configuracoes {
 }
 
 export const CONFIGURACOES_PADRAO: Configuracoes = {
-  teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"],
+  teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL", "KeyD"],
   teclaDaEstrela: "Space",
   botoesDoControle: BOTOES_DOS_TRASTES_PADRAO,
   botaoDaEstrela: BOTAO_DA_ESTRELA_PADRAO,
@@ -58,11 +58,15 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
 };
 
 const CHAVE = "riffrush.configuracoes";
-const INDICE_DA_ESTRELA = 5;
+export const INDICE_DA_ESTRELA = 6;
+
+/** Configurações salvas antes da nota aberta têm só os 5 trastes: a aberta entra com o padrão. */
+const completar = <T>(salvos: T[], padrao: T[]) => [...salvos, ...padrao.slice(salvos.length)];
 
 export function carregarConfiguracoes(): Configuracoes {
   try {
-    return { ...CONFIGURACOES_PADRAO, ...JSON.parse(localStorage.getItem(CHAVE) ?? "{}") };
+    const salvas: Configuracoes = { ...CONFIGURACOES_PADRAO, ...JSON.parse(localStorage.getItem(CHAVE) ?? "{}") };
+    return { ...salvas, teclas: completar(salvas.teclas, CONFIGURACOES_PADRAO.teclas), botoesDoControle: completar(salvas.botoesDoControle, CONFIGURACOES_PADRAO.botoesDoControle) };
   } catch {
     return CONFIGURACOES_PADRAO;
   }
@@ -76,7 +80,7 @@ export function salvarConfiguracoes(configuracoes: Configuracoes) {
   }
 }
 
-/** Troca a tecla de um traste (0 a 4) ou do star power (5). Uma tecla já usada troca de lugar com a antiga. */
+/** Troca a tecla de um traste (0 a 4), da nota aberta (5) ou do star power (6). Uma tecla já usada troca de lugar com a antiga. */
 export function trocarTecla(configuracoes: Configuracoes, indice: number, codigo: string): Configuracoes {
   if (indice === INDICE_DA_ESTRELA) return { ...configuracoes, teclaDaEstrela: codigo };
   const teclas = [...configuracoes.teclas];
@@ -87,7 +91,7 @@ export function trocarTecla(configuracoes: Configuracoes, indice: number, codigo
 }
 
 /**
- * Troca o botão do controle de um traste (0 a 4) ou do star power (5).
+ * Troca o botão do controle de um traste (0 a 4), da nota aberta (5) ou do star power (6).
  * Um botão já usado troca de lugar com o antigo, para nenhum botão fazer duas coisas.
  */
 export function trocarBotao(configuracoes: Configuracoes, indice: number, botao: number): Configuracoes {
