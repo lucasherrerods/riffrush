@@ -1350,6 +1350,7 @@ dependencies = [
  "chrono",
  "dotenvy",
  "hex",
+ "hmac",
  "http-body-util",
  "rand 0.8.8",
  "reqwest",

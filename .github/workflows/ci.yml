@@ -28,6 +28,24 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  relay:
+    name: Testes do relay
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend/relay
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/relay/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+
   rust:
     name: Testes do Rust
     runs-on: ubuntu-latest

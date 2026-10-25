@@ -10,6 +10,8 @@ pub struct Config {
     pub google_client_secret: String,
     /// Client do tipo "App para computador"; opcional, sem ele o login no desktop fica desligado.
     pub google_desktop: Option<(String, String)>,
+    /// O mesmo segredo configurado no relay; sem ele, a lista de quem está online fica desligada.
+    pub segredo_do_relay: Option<String>,
 }
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -42,7 +44,9 @@ impl Config {
         let google_client_id = variavel("GOOGLE_CLIENT_ID").ok_or(ErroDeConfig::Faltando("GOOGLE_CLIENT_ID"))?;
         let google_client_secret = variavel("GOOGLE_CLIENT_SECRET").ok_or(ErroDeConfig::Faltando("GOOGLE_CLIENT_SECRET"))?;
         let google_desktop = variavel("GOOGLE_DESKTOP_CLIENT_ID").zip(variavel("GOOGLE_DESKTOP_CLIENT_SECRET"));
+        let segredo_do_relay = variavel("SEGREDO_DO_RELAY").filter(|s| !s.is_empty());
         Ok(Self {
+            segredo_do_relay,
             endereco,
             url_do_banco,
             origens_permitidas,

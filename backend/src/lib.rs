@@ -12,7 +12,7 @@ use shared::estado::EstadoDoApp;
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida, modules::ranking::ranking, modules::ranking::geral, modules::ranking::musicas, modules::ranking::partida, modules::ranking::replay, modules::perfil::perfil),
+    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida, modules::ranking::ranking, modules::ranking::geral, modules::ranking::musicas, modules::ranking::partida, modules::ranking::replay, modules::perfil::perfil, modules::presenca::ficha),
     components(schemas(
         modules::saude::RespostaDeSaude,
         modules::conta::CorpoDoLogin,
@@ -28,6 +28,7 @@ use shared::estado::EstadoDoApp;
         modules::ranking::MusicaNoRanking,
         modules::ranking::PartidaDoRanking,
         modules::perfil::RespostaDoPerfil,
+        modules::presenca::RespostaDaFicha,
         modules::perfil::DificuldadeDoPerfil,
         modules::perfil::PartidaDoPerfil,
         modules::perfil::InstrumentoDoPerfil,
@@ -62,6 +63,7 @@ pub fn app(estado: EstadoDoApp, origens_permitidas: &[String]) -> Router {
         .merge(modules::conta::rotas())
         .merge(modules::ranking::rotas())
         .merge(modules::perfil::rotas())
+        .merge(modules::presenca::rotas())
         .route("/openapi.json", get(|| async { Json(Documentacao::openapi()) }))
         .with_state(estado)
         .layer(cors)
