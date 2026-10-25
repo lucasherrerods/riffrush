@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Gamepad2, Keyboard, Monitor, RotateCcw, Volume2 } from "lucide-react";
+import { capturarBotao, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
 import { CORES_DAS_PISTAS, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "@/modules/gameplay";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { QUALIDADES_DO_PALCO } from "@/modules/stage";
@@ -11,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Calibracao } from "./componentes/Calibracao";
 import { LinhaDeOpcao } from "./componentes/LinhaDeOpcao";
 import { LinhaDeSlider } from "./componentes/LinhaDeSlider";
-import { CONFIGURACOES_PADRAO, nomeDaTecla, trocarTecla, type Configuracoes } from "./configuracoes";
+import { CONFIGURACOES_PADRAO, nomeDaTecla, trocarBotao, trocarTecla, type Configuracoes } from "./configuracoes";
 
 interface Props {
   configuracoes: Configuracoes;
@@ -25,6 +26,9 @@ const porcentagem = (valor: number) => `${Math.round(valor * 100)}%`;
 export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props) {
   /** Qual tecla está esperando a nova: 0 a 4 são os trastes, 5 é o star power. */
   const [trocando, setTrocando] = useState<number | null>(null);
+  /** Qual botão do controle está esperando o novo, com os mesmos índices. */
+  const [trocandoNoControle, setTrocandoNoControle] = useState<number | null>(null);
+  const comControle = useControleConectado();
   const [telaCheia, setTelaCheia] = useState(false);
   const mudar = (parcial: Partial<Configuracoes>) => aoMudar({ ...configuracoes, ...parcial });
 
@@ -34,8 +38,20 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (trocandoNoControle === null) return;
+    return capturarBotao((botao) => {
+      aoMudar(trocarBotao(configuracoes, trocandoNoControle, botao));
+      setTrocandoNoControle(null);
+    });
+  }, [trocandoNoControle, configuracoes, aoMudar]);
+
   useTeclado((evento) => {
-    if (trocando !== null) {
+    if (trocandoNoControle !== null) {
+      // Esc no teclado cancela; o controle está ocupado escolhendo o botão.
+      if (evento.code === "Escape") setTrocandoNoControle(null);
+      evento.preventDefault();
+    } else if (trocando !== null) {
       evento.preventDefault();
       if (evento.code !== "Escape") aoMudar(trocarTecla(configuracoes, trocando, evento.code));
       setTrocando(null);
@@ -58,6 +74,25 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
     >
       {trocando === indice ? "Aperte..." : nomeDaTecla(codigo)}
     </button>
+  );
+
+  const botaoDoControle = (indice: number, nome: string, botao: number, cor: string) => (
+    <button
+      aria-label={`Botão do controle ${nome}`}
+      onClick={() => setTrocandoNoControle(trocandoNoControle === indice ? null : indice)}
+      className="min-w-28 rounded-lg border-2 bg-superficie px-4 py-2 font-mono text-base font-bold transition-colors hover:bg-superficie-elevada"
+      style={{ borderColor: trocandoNoControle === indice ? "var(--cor-texto)" : cor }}
+    >
+      {trocandoNoControle === indice ? "Aperte..." : nomeDoBotao(botao)}
+    </button>
+  );
+
+  /** Com controle ligado, cada linha mostra a tecla e o botão do controle lado a lado. */
+  const comandos = (indice: number, nome: string, codigo: string, botao: number, cor: string) => (
+    <div className="flex gap-2">
+      {botaoDeTecla(indice, nome, codigo, cor)}
+      {comControle && botaoDoControle(indice, nome, botao, cor)}
+    </div>
   );
 
   return (
@@ -91,14 +126,18 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
 
         <div className="mt-2 min-h-0 flex-1 placa p-2">
           <TabsContent value="controles" className="flex flex-col gap-2">
-            <p className="px-4 py-2 text-base text-texto-suave">Clique numa tecla e aperte a nova. Esc cancela.</p>
+            <p className="px-4 py-2 text-base text-texto-suave">
+              {comControle
+                ? "Clique numa tecla ou num botão do controle e aperte o novo. Esc cancela. O direcional e o Start ficam fixos."
+                : "Clique numa tecla e aperte a nova. Esc cancela. Conecte um controle e aperte um botão dele para trocar os botões também."}
+            </p>
             {NOMES_DAS_PISTAS.map((nome, i) => (
               <LinhaDeOpcao key={nome} rotulo={`Traste ${nome}`}>
-                {botaoDeTecla(i, `do traste ${nome}`, configuracoes.teclas[i], CORES_DAS_PISTAS[i])}
+                {comandos(i, `do traste ${nome}`, configuracoes.teclas[i], configuracoes.botoesDoControle[i], CORES_DAS_PISTAS[i])}
               </LinhaDeOpcao>
             ))}
             <LinhaDeOpcao rotulo="Star Power" dica="Ativa o bônus quando a barra passa da metade">
-              {botaoDeTecla(INDICE_DA_ESTRELA, "do star power", configuracoes.teclaDaEstrela, COR_DA_ESTRELA)}
+              {comandos(INDICE_DA_ESTRELA, "do star power", configuracoes.teclaDaEstrela, configuracoes.botaoDaEstrela, COR_DA_ESTRELA)}
             </LinhaDeOpcao>
           </TabsContent>
 

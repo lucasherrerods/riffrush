@@ -16,6 +16,7 @@ const ranking: RespostaDoGeral = { jogadores: 120, top: [posicao(1, "Ana", 9000)
 const musicas: MusicaNoRanking[] = [
   { posicao: 1, musica_id: "encore:abc", partidas: 30, jogadores: 4 },
   { posicao: 2, musica_id: "encore:xyz", partidas: 1, jogadores: 1 },
+  { posicao: 3, musica_id: "encore:goofy", partidas: 1, jogadores: 1, titulo: "Goofy Goober Rock", artista: "Tom Rothrock", capa: "https://files.enchor.us/capa.jpg" },
 ];
 
 const tituloDaMusica = (id: string) => (id === "encore:abc" ? "Shine — Spektrem" : undefined);
@@ -36,6 +37,7 @@ describe("TelaDeLeaderboard", () => {
     expect(within(top).getByText("9.000 XP")).toBeInTheDocument();
     expect(within(top).getByText("Nv 9")).toBeInTheDocument();
     expect(screen.getByText("Sua posição (#87 de 120)")).toBeInTheDocument();
+    expect(screen.getByText("Jogadores com mais XP")).toBeInTheDocument();
     // A aba de músicas só pede à API quando é aberta.
     expect(carregarMusicas).not.toHaveBeenCalled();
   });
@@ -51,7 +53,7 @@ describe("TelaDeLeaderboard", () => {
     await usuario.click(screen.getByRole("tab", { name: "Músicas" }));
 
     const lista = await screen.findByRole("list", { name: "Músicas" });
-    const [primeira, segunda] = within(lista).getAllByRole("listitem");
+    const [primeira, segunda, terceira] = within(lista).getAllByRole("listitem");
     expect(primeira).toHaveTextContent("Shine — Spektrem");
     expect(primeira).toHaveTextContent("4 jogadores");
     expect(primeira).toHaveTextContent("30 partidas");
@@ -59,6 +61,9 @@ describe("TelaDeLeaderboard", () => {
     expect(segunda).toHaveTextContent("encore:xyz");
     expect(segunda).toHaveTextContent("1 jogador");
     expect(segunda).toHaveTextContent("1 partida");
+    // Fora da biblioteca, mas a API achou nome, banda e capa.
+    expect(terceira).toHaveTextContent("Goofy Goober Rock — Tom Rothrock");
+    expect(terceira.querySelector("img")).toHaveAttribute("src", "https://files.enchor.us/capa.jpg");
   });
 
   it("sem dados, cada aba explica o que falta", async () => {

@@ -1,11 +1,13 @@
-import { Trophy, UserRound } from "lucide-react";
+import { Trophy, UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 
 interface Props {
   posicao: number;
   nome: string;
-  /** Sem a propriedade, a linha não tem espaço de foto (músicas). */
+  /** A foto (ou capa). `null` mostra o ícone no lugar; sem a propriedade, a linha não tem espaço de foto. */
   avatar?: string | null;
+  /** O ícone quando não há foto. */
+  semFoto?: LucideIcon;
   /** A linha de quem está logado ganha destaque. */
   minha: boolean;
   /** Texto menor ao lado do nome. */
@@ -17,14 +19,14 @@ interface Props {
 }
 
 /** Uma linha de ranking: posição, foto, nome e o número que ordena. */
-export function LinhaComPosicao({ posicao, nome, avatar, minha, detalhe, valor, aoClicar }: Props) {
+export function LinhaComPosicao({ posicao, nome, avatar, semFoto: SemFoto = UserRound, minha, detalhe, valor, aoClicar }: Props) {
   const conteudo = (
     <>
       <span className={cn("w-12 shrink-0 text-center font-titulo text-xl", posicao <= 3 ? "text-ouro" : "text-texto-suave")}>#{posicao}</span>
       {avatar ? (
         <img src={avatar} alt="" referrerPolicy="no-referrer" className="size-8 shrink-0 rounded-sm" />
       ) : (
-        avatar === null && <UserRound className="size-8 shrink-0 text-texto-suave opacity-70" aria-hidden />
+        avatar === null && <SemFoto className="size-8 shrink-0 text-texto-suave opacity-70" aria-hidden />
       )}
       <span className="flex min-w-0 flex-1 items-baseline gap-2">
         <span className="truncate text-base font-bold">{nome}</span>

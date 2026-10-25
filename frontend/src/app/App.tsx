@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/character";
-import { ROTULOS_DOS_TRASTES, ROTULO_DA_ESTRELA, iniciarControle } from "@/modules/gamepad";
+import { iniciarControle, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
 import { TelaDeJogo, type Resultado, desempacotarReplay, type Replay } from "@/modules/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
@@ -71,10 +71,11 @@ export function App() {
   const dificuldadeDaSelecao = dificuldadeMaisProxima(dificuldades, dificuldade) ?? dificuldade;
   const dificuldadeDaPartida = assistindo?.dificuldade ?? emRede?.dificuldade ?? dificuldadeDaSelecao;
   const instrumentoDaPartida = assistindo?.instrumento ?? emRede?.instrumento ?? instrumentoDaSelecao;
-  const [comControle, setComControle] = useState(() => Array.from(navigator.getGamepads?.() ?? []).some((c) => c));
+  const comControle = useControleConectado();
   const opcoes = useMemo(() => {
     const base = opcoesDaPartida(configuracoes);
-    return comControle ? { ...base, rotulosDosTrastes: ROTULOS_DOS_TRASTES, rotuloDaTeclaDaEstrela: ROTULO_DA_ESTRELA } : base;
+    if (!comControle) return base;
+    return { ...base, rotulosDosTrastes: configuracoes.botoesDoControle.map(nomeDoBotao), rotuloDaTeclaDaEstrela: nomeDoBotao(configuracoes.botaoDaEstrela) };
   }, [configuracoes, comControle]);
 
   useTeclado((evento) => {
@@ -98,12 +99,10 @@ export function App() {
   configuracoesAtuais.current = configuracoes;
   useEffect(() => {
     const aoConectar = () => {
-      setComControle(true);
-      avisar(`Controle conectado! Trastes: ${ROTULOS_DOS_TRASTES.join(" ")}`);
+      const { botoesDoControle } = configuracoesAtuais.current;
+      avisar(`Controle conectado! Trastes: ${botoesDoControle.map(nomeDoBotao).join(" ")}`);
     };
-    const aoDesconectar = () => setComControle(Array.from(navigator.getGamepads?.() ?? []).some((c) => c));
     window.addEventListener("gamepadconnected", aoConectar);
-    window.addEventListener("gamepaddisconnected", aoDesconectar);
     const parar = iniciarControle({
       modo: () => (telaAtual.current === "jogo" ? "jogo" : "menu"),
       mapa: () => configuracoesAtuais.current,
@@ -111,7 +110,6 @@ export function App() {
     return () => {
       parar();
       window.removeEventListener("gamepadconnected", aoConectar);
-      window.removeEventListener("gamepaddisconnected", aoDesconectar);
     };
   }, []);
 

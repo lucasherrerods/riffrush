@@ -1,5 +1,5 @@
 import { marcarComoDoControle, registrarUso } from "./dispositivo";
-import { DIRECIONAL, direcoesDoAnalogico, juntarAnalogico, traduzir, type Mapa, type Modo } from "./mapeamento";
+import { DIRECIONAL, direcoesDoAnalogico, juntarAnalogico, podeSerEscolhido, traduzir, type Mapa, type Modo } from "./mapeamento";
 
 interface Opcoes {
   modo: () => Modo;
@@ -19,6 +19,19 @@ const apertar = (tipo: "keydown" | "keyup", code: string, repeat = false) => {
   window.dispatchEvent(evento);
 };
 
+let aoCapturar: ((botao: number) => void) | null = null;
+
+/**
+ * O próximo botão que o jogador apertar vai para `aoEscolher`, em vez de virar tecla.
+ * Assim, escolher o A para um traste não aperta também o Enter da tela. Devolve como cancelar.
+ */
+export function capturarBotao(aoEscolher: (botao: number) => void) {
+  aoCapturar = aoEscolher;
+  return () => {
+    if (aoCapturar === aoEscolher) aoCapturar = null;
+  };
+}
+
 /** Lê o controle e transforma os botões em teclas, então todo o jogo funciona sem mudar nada. */
 export function iniciarControle({ modo, mapa }: Opcoes) {
   let antes: boolean[] = [];
@@ -33,6 +46,18 @@ export function iniciarControle({ modo, mapa }: Opcoes) {
     const modoAtual = modo();
     direcoes = direcoesDoAnalogico(controle?.axes ?? [], direcoes);
     const agora = juntarAnalogico(controle ? controle.buttons.map((b) => b.pressed) : [], direcoes, modoAtual);
+    if (aoCapturar) {
+      const escolhido = agora.findIndex((apertado, botao) => apertado && !antes[botao] && podeSerEscolhido(botao));
+      if (escolhido >= 0) {
+        const escolher = aoCapturar;
+        aoCapturar = null;
+        registrarUso("controle");
+        escolher(escolhido);
+      }
+      // O botão escolhido continua apertado: o próximo quadro já o vê como segurado e não o transforma em tecla.
+      antes = agora;
+      return;
+    }
     const traducao = traduzir(antes, agora, emitidos, modoAtual, mapa());
     for (const { tipo, code } of traducao.eventos) apertar(tipo, code);
 

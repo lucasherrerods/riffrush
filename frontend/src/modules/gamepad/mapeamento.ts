@@ -16,10 +16,29 @@ export const BOTOES = {
   DIREITA: 15,
 } as const;
 
-/** Verde, vermelho, amarelo, azul e laranja. */
-const TRASTES = [BOTOES.LT, BOTOES.LB, BOTOES.RB, BOTOES.RT, BOTOES.A];
-export const ROTULOS_DOS_TRASTES = ["LT", "LB", "RB", "RT", "A"];
-export const ROTULO_DA_ESTRELA = "Select";
+/** Os botões do jogo quando o jogador não escolheu outros: verde, vermelho, amarelo, azul e laranja, e o star power. */
+export const BOTOES_DOS_TRASTES_PADRAO = [BOTOES.LT, BOTOES.LB, BOTOES.RB, BOTOES.RT, BOTOES.A];
+export const BOTAO_DA_ESTRELA_PADRAO = BOTOES.SELECT;
+
+const NOMES_DOS_BOTOES: Record<number, string> = {
+  [BOTOES.A]: "A",
+  [BOTOES.B]: "B",
+  [BOTOES.X]: "X",
+  [BOTOES.Y]: "Y",
+  [BOTOES.LB]: "LB",
+  [BOTOES.RB]: "RB",
+  [BOTOES.LT]: "LT",
+  [BOTOES.RT]: "RT",
+  [BOTOES.SELECT]: "Select",
+  [BOTOES.START]: "Start",
+  10: "L3",
+  11: "R3",
+  16: "Guia",
+};
+
+/** O nome que aparece na tela. Controles fora do padrão têm botões sem nome conhecido. */
+export const nomeDoBotao = (botao: number) => NOMES_DOS_BOTOES[botao] ?? `Botão ${botao + 1}`;
+
 const PALHETADAS = [BOTOES.CIMA, BOTOES.BAIXO];
 const SETAS: Record<number, string> = {
   [BOTOES.CIMA]: "ArrowUp",
@@ -32,6 +51,9 @@ export type Modo = "jogo" | "menu";
 
 /** Cima, baixo, esquerda e direita: a mesma ordem dos botões do direcional. */
 export const DIRECIONAL = [BOTOES.CIMA, BOTOES.BAIXO, BOTOES.ESQUERDA, BOTOES.DIREITA];
+
+/** O direcional palheta e navega, e o Start pausa: esses não viram traste nem star power. */
+export const podeSerEscolhido = (botao: number) => !DIRECIONAL.includes(botao as (typeof DIRECIONAL)[number]) && botao !== BOTOES.START;
 /** Aperta depois do meio do curso e só solta perto do centro, para o analógico tremendo não apertar de novo. */
 const LIMIAR_PARA_APERTAR = 0.5;
 const LIMIAR_PARA_SOLTAR = 0.3;
@@ -54,6 +76,9 @@ export function juntarAnalogico(botoes: readonly boolean[], direcoes: readonly b
 export interface Mapa {
   teclas: string[];
   teclaDaEstrela: string;
+  /** Índices dos botões do controle de cada traste, na mesma ordem das teclas. */
+  botoesDoControle: number[];
+  botaoDaEstrela: number;
 }
 
 export interface EventoDeTecla {
@@ -69,12 +94,14 @@ function teclasDoBotao(botao: number, modo: Modo, mapa: Mapa): string[] {
     if (botao === BOTOES.Y) return ["Tab"];
     return [];
   }
-  const pista = TRASTES.indexOf(botao as (typeof TRASTES)[number]);
+  const teclas: string[] = [];
+  const pista = mapa.botoesDoControle.indexOf(botao);
+  if (pista >= 0) teclas.push(mapa.teclas[pista]);
+  if (botao === mapa.botaoDaEstrela) teclas.push(mapa.teclaDaEstrela);
   // A também confirma, para o menu de pausa; o jogo ignora o Enter.
-  if (pista >= 0) return botao === BOTOES.A ? [mapa.teclas[pista], "Enter"] : [mapa.teclas[pista]];
-  if (botao === BOTOES.SELECT) return [mapa.teclaDaEstrela];
-  if (botao === BOTOES.START) return ["Escape"];
-  return [];
+  if (botao === BOTOES.A) teclas.push("Enter");
+  if (botao === BOTOES.START) teclas.push("Escape");
+  return teclas;
 }
 
 /**
@@ -98,7 +125,7 @@ export function traduzir(antes: boolean[], agora: boolean[], emitidos: string[][
 
   const palhetou = modo === "jogo" && PALHETADAS.some((b) => agora[b] && !antes[b]);
   if (palhetou) {
-    TRASTES.forEach((botao, pista) => {
+    mapa.botoesDoControle.forEach((botao, pista) => {
       if (!antes[botao] || !agora[botao]) return;
       const code = mapa.teclas[pista];
       eventos.push({ tipo: "keyup", code }, { tipo: "keydown", code });

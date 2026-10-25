@@ -59,6 +59,11 @@ export interface MusicaNoRanking {
   partidas: number;
   /** Quantos jogadores diferentes tocaram. */
   jogadores: number;
+  /** Do Encore ou do nome do arquivo. Sem eles, vale o nome da biblioteca. */
+  titulo?: string | null;
+  artista?: string | null;
+  /** Endereço da imagem da capa. */
+  capa?: string | null;
 }
 
 function conferirMusicas(corpo: unknown): MusicaNoRanking[] {

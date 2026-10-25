@@ -188,7 +188,7 @@ async fn as_musicas_mais_jogadas_vem_com_partidas_e_jogadores() {
     let (app, _, repositorio) = app().await;
     *repositorio.musicas.lock().unwrap() = vec![MusicaPopular {
         posicao: 1,
-        musica_id: "encore:abc".into(),
+        musica_id: "arquivo:Rush - Tom Sawyer.sng:19724630".into(),
         partidas: 30,
         jogadores: 4,
     }];
@@ -196,7 +196,10 @@ async fn as_musicas_mais_jogadas_vem_com_partidas_e_jogadores() {
     let (status, corpo) = chamar(&app, "/ranking/musicas", None).await;
 
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(corpo[0]["musica_id"], "encore:abc");
+    assert_eq!(corpo[0]["musica_id"], "arquivo:Rush - Tom Sawyer.sng:19724630");
+    assert_eq!(corpo[0]["titulo"], "Tom Sawyer");
+    assert_eq!(corpo[0]["artista"], "Rush");
+    assert!(corpo[0]["capa"].is_null());
     assert_eq!(corpo[0]["partidas"], 30);
     assert_eq!(corpo[0]["jogadores"], 4);
     assert!(chamar(&app, "/openapi.json", None).await.1["paths"]["/ranking/musicas"]["get"].is_object());

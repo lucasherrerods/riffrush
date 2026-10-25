@@ -1,9 +1,16 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { capturarBotao, useControleConectado } from "@/modules/gamepad";
 import { definirTelaCheia } from "@/modules/platform";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { CONFIGURACOES_PADRAO } from "./configuracoes";
 import { TelaDeConfiguracoes } from "./TelaDeConfiguracoes";
+
+vi.mock("@/modules/gamepad", async (original) => ({
+  ...(await original<typeof import("@/modules/gamepad")>()),
+  useControleConectado: vi.fn(() => false),
+  capturarBotao: vi.fn(() => () => {}),
+}));
 
 vi.mock("@/modules/platform", () => ({
   estaEmTelaCheia: vi.fn(async () => false),
@@ -97,5 +104,26 @@ describe("TelaDeConfiguracoes", () => {
     await usuario.click(screen.getByRole("tab", { name: /Vídeo/ }));
     await usuario.click(screen.getByRole("switch", { name: "Modo competitivo" }));
     expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ modoCompetitivo: true }));
+  });
+
+  it("sem controle, não mostra os botões do controle", () => {
+    abrir();
+    expect(screen.queryByRole("button", { name: "Botão do controle do traste Verde" })).not.toBeInTheDocument();
+  });
+
+  it("com controle, troca o botão do traste pelo próximo botão apertado no controle", async () => {
+    vi.mocked(useControleConectado).mockReturnValue(true);
+    const { aoMudar, usuario } = abrir();
+    const botao = screen.getByRole("button", { name: "Botão do controle do traste Verde" });
+    expect(botao).toHaveTextContent("LT");
+
+    await usuario.click(botao);
+    expect(botao).toHaveTextContent("Aperte...");
+    // O controle devolve o X (índice 2).
+    const escolher = vi.mocked(capturarBotao).mock.lastCall![0];
+    escolher(2);
+
+    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ botoesDoControle: [2, 4, 5, 7, 0], teclas: CONFIGURACOES_PADRAO.teclas }));
+    vi.mocked(useControleConectado).mockReturnValue(false);
   });
 });

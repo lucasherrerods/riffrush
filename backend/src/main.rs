@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use riffrush_api::modules::catalogo::{CatalogoPostgres, Encore, ServicosDoCatalogo};
 use riffrush_api::modules::conta::{ContasPostgres, CredenciaisDoGoogle, GeradorAleatorio, Google, RelogioDoSistema, ServicosDaConta};
 use riffrush_api::modules::perfil::{PerfilPostgres, ServicosDoPerfil};
 use riffrush_api::modules::presenca::ServicosDePresenca;
@@ -39,9 +40,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         relogio: Arc::new(RelogioDoSistema),
         gerador: Arc::new(GeradorAleatorio),
     };
+    let catalogo = ServicosDoCatalogo {
+        repositorio: Arc::new(CatalogoPostgres(banco.clone())),
+        encore: Arc::new(Encore { http: reqwest::Client::new() }),
+    };
     let ranking = ServicosDoRanking {
         repositorio: Arc::new(RankingPostgres(banco.clone())),
         conta: conta.clone(),
+        catalogo,
     };
     let perfil = ServicosDoPerfil {
         repositorio: Arc::new(PerfilPostgres(banco.clone())),

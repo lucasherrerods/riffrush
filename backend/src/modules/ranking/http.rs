@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use super::casos_de_uso::ErroDoRanking;
 use super::dominio::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, PartidaPublica, Ranking};
+use crate::modules::catalogo::DadosDaMusica;
 use crate::modules::conta::{NivelDaConta, TokenOpcional};
 use crate::modules::progresso::{nivel_do_xp, Dificuldade, Instrumento};
 use crate::shared::erro::ErroDaApi;
@@ -132,15 +133,23 @@ pub struct MusicaNoRanking {
     musica_id: String,
     partidas: u32,
     jogadores: u32,
+    /// Do Encore ou do nome do arquivo. Sem eles (músicas do jogo, não achadas), o app usa a biblioteca.
+    titulo: Option<String>,
+    artista: Option<String>,
+    /// Endereço da imagem da capa.
+    capa: Option<String>,
 }
 
-impl From<MusicaPopular> for MusicaNoRanking {
-    fn from(m: MusicaPopular) -> Self {
+impl From<(MusicaPopular, DadosDaMusica)> for MusicaNoRanking {
+    fn from((m, dados): (MusicaPopular, DadosDaMusica)) -> Self {
         Self {
             posicao: m.posicao,
             musica_id: m.musica_id,
             partidas: m.partidas,
             jogadores: m.jogadores,
+            titulo: dados.titulo,
+            artista: dados.artista,
+            capa: dados.capa,
         }
     }
 }

@@ -1,5 +1,5 @@
-import { BOTOES } from "./mapeamento";
-import { iniciarControle } from "./controle";
+import { BOTAO_DA_ESTRELA_PADRAO, BOTOES, BOTOES_DOS_TRASTES_PADRAO } from "./mapeamento";
+import { capturarBotao, iniciarControle } from "./controle";
 import { dispositivoAtual, registrarUso } from "./dispositivo";
 
 function controleFalso() {
@@ -23,7 +23,7 @@ function ouvirTeclas() {
   };
 }
 
-const MAPA = { teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"], teclaDaEstrela: "Space" };
+const MAPA = { teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"], teclaDaEstrela: "Space", botoesDoControle: BOTOES_DOS_TRASTES_PADRAO, botaoDaEstrela: BOTAO_DA_ESTRELA_PADRAO };
 
 const proximoQuadro = () => vi.advanceTimersByTime(5);
 
@@ -95,7 +95,7 @@ describe("iniciarControle", () => {
   it("apertar um botão avisa que o jogador está usando o controle", () => {
     registrarUso("teclado");
     const { botoes } = controleFalso();
-    const parar = iniciarControle({ modo: () => "menu", mapa: () => ({ teclas: [], teclaDaEstrela: "Space" }) });
+    const parar = iniciarControle({ modo: () => "menu", mapa: () => ({ ...MAPA, teclas: [] }) });
 
     botoes[BOTOES.A].pressed = true;
     proximoQuadro();
@@ -106,8 +106,44 @@ describe("iniciarControle", () => {
 
   it("funciona sem controle conectado", () => {
     vi.stubGlobal("navigator", { ...navigator, getGamepads: () => [null] });
-    const parar = iniciarControle({ modo: () => "menu", mapa: () => ({ teclas: [], teclaDaEstrela: "Space" }) });
+    const parar = iniciarControle({ modo: () => "menu", mapa: () => ({ ...MAPA, teclas: [] }) });
     expect(() => proximoQuadro()).not.toThrow();
     parar();
+  });
+
+  it("capturando, o próximo botão vai para a escolha e não vira tecla", () => {
+    const { botoes } = controleFalso();
+    const ouvinte = ouvirTeclas();
+    const parar = iniciarControle({ modo: () => "menu", mapa: () => MAPA });
+    const escolher = vi.fn();
+    capturarBotao(escolher);
+
+    // O direcional não pode ser escolhido: continua navegando.
+    botoes[BOTOES.BAIXO].pressed = true;
+    proximoQuadro();
+    botoes[BOTOES.A].pressed = true;
+    proximoQuadro();
+    botoes[BOTOES.A].pressed = false;
+    proximoQuadro();
+
+    expect(escolher).toHaveBeenCalledExactlyOnceWith(BOTOES.A);
+    expect(ouvinte.teclas).not.toContain("keydown:Enter");
+    parar();
+    ouvinte.parar();
+  });
+
+  it("cancelar a captura volta a transformar os botões em teclas", () => {
+    const { botoes } = controleFalso();
+    const ouvinte = ouvirTeclas();
+    const parar = iniciarControle({ modo: () => "menu", mapa: () => MAPA });
+    const cancelar = capturarBotao(vi.fn());
+
+    cancelar();
+    botoes[BOTOES.A].pressed = true;
+    proximoQuadro();
+
+    expect(ouvinte.teclas).toContain("keydown:Enter");
+    parar();
+    ouvinte.parar();
   });
 });
