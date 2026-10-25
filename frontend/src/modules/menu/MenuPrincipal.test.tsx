@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { abrirLink } from "@/modules/platform";
@@ -6,7 +7,7 @@ import { MenuPrincipal } from "./MenuPrincipal";
 
 vi.mock("@/modules/platform", () => ({ abrirLink: vi.fn() }));
 
-function abrir({ noCelular = false, comLeaderboard = true } = {}) {
+function abrir({ noCelular = false, comLeaderboard = true, chat }: { noCelular?: boolean; comLeaderboard?: boolean; chat?: ReactNode } = {}) {
   const acoes = {
     aoJogar: vi.fn(),
     aoMultijogador: vi.fn(),
@@ -16,7 +17,7 @@ function abrir({ noCelular = false, comLeaderboard = true } = {}) {
     aoLeaderboard: comLeaderboard ? vi.fn() : undefined,
     aoAbrirDocumento: vi.fn(),
   };
-  render(<MenuPrincipal volumeDosEfeitos={0} noCelular={noCelular} {...acoes} />);
+  render(<MenuPrincipal volumeDosEfeitos={0} noCelular={noCelular} chat={chat} {...acoes} />);
   return { ...acoes, usuario: userEvent.setup() };
 }
 
@@ -135,5 +136,10 @@ describe("MenuPrincipal na tela estreita", () => {
     await usuario.click(screen.getByRole("link", { name: "Privacidade" }));
     await usuario.click(screen.getByRole("link", { name: "Termos" }));
     expect(aoAbrirDocumento.mock.calls).toEqual([["privacidade"], ["termos"]]);
+  });
+
+  it("mostra o chat no canto de baixo, à esquerda", () => {
+    abrir({ chat: <p>o chat</p> });
+    expect(screen.getByRole("complementary", { name: "Chat" })).toHaveTextContent("o chat");
   });
 });

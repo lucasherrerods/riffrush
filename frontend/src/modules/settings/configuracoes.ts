@@ -30,6 +30,8 @@ export interface Configuracoes {
   mostrarOnline: boolean | null;
   /** Quem está online pode assistir às partidas ao vivo. */
   permitirEspectadores: boolean;
+  /** O chat global no canto do menu principal (precisa de conta). */
+  chatGlobal: boolean;
 }
 
 export const CONFIGURACOES_PADRAO: Configuracoes = {
@@ -52,6 +54,7 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   modoCompetitivo: false,
   mostrarOnline: null,
   permitirEspectadores: true,
+  chatGlobal: true,
 };
 
 const CHAVE = "riffrush.configuracoes";

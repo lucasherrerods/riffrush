@@ -11,7 +11,7 @@ import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusi
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
 import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
-import { TelaDeEspectador, TelaOnline, presenca, presencaDisponivel, transmitirPartida, usePresenca, type PessoaOnline } from "@/modules/presenca";
+import { ChatGlobal, TelaDeEspectador, TelaOnline, presenca, presencaDisponivel, transmitirPartida, usePresenca, type PessoaOnline } from "@/modules/presenca";
 import { TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
@@ -359,6 +359,7 @@ export function App() {
                 aoConfigurar={() => setTela("configuracoes")}
                 aoLeaderboard={contasLigadas ? () => setTela("leaderboard") : undefined}
                 aoOnline={presencaDisponivel && contasLigadas ? () => setTela("online") : undefined}
+                chat={presencaDisponivel && contasLigadas && configuracoes.chatGlobal && !ehClienteWebDaSala() ? <ChatGlobal className="w-full" /> : undefined}
                 aoBuscarMusicas={() => {
                   setVoltarDaBuscaPara("menu");
                   setTela("buscaDeMusicas");

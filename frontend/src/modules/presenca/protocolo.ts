@@ -39,6 +39,8 @@ const semBarraNoFim = (url: string) => url.replace(/\/+$/, "");
 
 export const urlDaPresenca = (relay: string, ficha: string) => `${semBarraNoFim(relay)}/presenca?ficha=${encodeURIComponent(ficha)}`;
 
+export const urlDoChat = (relay: string, ficha: string) => `${semBarraNoFim(relay)}/chat?ficha=${encodeURIComponent(ficha)}`;
+
 /** Com a ficha, quem joga transmite; sem ela, quem assiste só recebe. */
 export const urlDaTransmissao = (relay: string, contaId: string, ficha?: string) =>
   `${semBarraNoFim(relay)}/transmissao/${contaId}${ficha ? `?ficha=${encodeURIComponent(ficha)}` : ""}`;

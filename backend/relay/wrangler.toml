@@ -19,6 +19,10 @@ class_name = "Presenca"
 name = "TRANSMISSOES"
 class_name = "Transmissao"
 
+[[durable_objects.bindings]]
+name = "CHAT"
+class_name = "ChatGlobal"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Sala"]
@@ -30,3 +34,7 @@ new_sqlite_classes = ["Diretorio"]
 [[migrations]]
 tag = "v3"
 new_sqlite_classes = ["Presenca", "Transmissao"]
+
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["ChatGlobal"]

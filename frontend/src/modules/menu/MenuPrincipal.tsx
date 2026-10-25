@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Play, Radio, Search, Settings2, Shirt, Trophy, Users, Zap, type LucideIcon } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
@@ -21,6 +21,8 @@ interface Props {
   /** Sem o relay ou sem contas não há quem está online, e a opção some. */
   aoOnline?: () => void;
   aoAbrirDocumento: (documento: Documento) => void;
+  /** O chat global, no canto de baixo à esquerda. */
+  chat?: ReactNode;
 }
 
 interface Item {
@@ -31,7 +33,7 @@ interface Item {
 
 const URL_DO_PROJETO = "https://github.com/lucasherrerods/riffrush";
 
-export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento }: Props) {
+export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat }: Props) {
   const [selecionado, setSelecionado] = useState(0);
   const comuns: Item[] = [
     ...(aoLeaderboard ? [{ rotulo: "Leaderboard", icone: Trophy, acao: aoLeaderboard }] : []),
@@ -109,6 +111,12 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
           );
         })}
       </nav>
+
+      {chat && (
+        <aside aria-label="Chat" className="absolute bottom-6 left-6 flex h-80 w-[26rem] max-lg:hidden">
+          {chat}
+        </aside>
+      )}
 
       <footer className="absolute right-6 bottom-6 flex items-center gap-3 text-base text-texto-suave">
         {(

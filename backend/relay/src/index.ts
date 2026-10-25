@@ -12,6 +12,7 @@ import {
   type EntradaDaSala,
   type Janela,
 } from "./regras";
+import { BALDE_CHEIO, MENSAGENS_GUARDADAS, chaveDaMensagem, gastarDoBalde, lerTextoDoChat, type Autor, type Balde, type MensagemDoChat, type MensagemDoChatGlobal } from "./chat";
 import { avisoDeEspectadores, lerEstado, lerMensagemDaTransmissao, verificarFicha, type MensagemDaPresenca, type Pessoa, type PessoaOnline } from "./presenca";
 
 interface Env {
@@ -19,6 +20,7 @@ interface Env {
   DIRETORIO: DurableObjectNamespace<Diretorio>;
   PRESENCA: DurableObjectNamespace<Presenca>;
   TRANSMISSOES: DurableObjectNamespace<Transmissao>;
+  CHAT: DurableObjectNamespace<ChatGlobal>;
   /** O mesmo SEGREDO_DO_RELAY da API (`npx wrangler secret put SEGREDO_DA_PRESENCA`). */
   SEGREDO_DA_PRESENCA?: string;
 }
@@ -354,6 +356,61 @@ export class Transmissao extends DurableObject<Env> {
   }
 }
 
+const QUEM_CONVERSA = "conversa";
+
+/**
+ * O chat global: um só para o relay todo. Só entra quem tem conta (a ficha da API), então o nome
+ * de quem escreve vem assinado e ninguém fala pelo outro. As últimas mensagens ficam guardadas
+ * para quem chega ver a conversa.
+ */
+export class ChatGlobal extends DurableObject<Env> {
+  /**
+   * O limite de cada conta. Some quando o objeto hiberna, e tudo bem: ele só hiberna depois de
+   * alguns segundos sem mensagens, e aí o balde de todo mundo já estaria cheio de novo.
+   */
+  private baldes = new Map<string, Balde>();
+
+  async fetch(pedido: Request): Promise<Response> {
+    if (pedido.headers.get("Upgrade") !== "websocket") return new Response("Esperava um WebSocket.", { status: 426 });
+    const pessoa = JSON.parse(pedido.headers.get(CABECALHO_DA_PESSOA) ?? "null") as Pessoa;
+    // Uma conexão por conta: abrir outra não multiplica o limite de mensagens.
+    for (const antiga of this.ctx.getWebSockets(QUEM_CONVERSA)) {
+      if ((antiga.deserializeAttachment() as Autor).id === pessoa.id) fechar(antiga, "outroAparelho");
+    }
+    const [cliente, servidor] = Object.values(new WebSocketPair());
+    this.ctx.acceptWebSocket(servidor, [QUEM_CONVERSA]);
+    servidor.serializeAttachment({ id: pessoa.id, nome: pessoa.nome } satisfies Autor);
+    const mensagens = [...(await this.ctx.storage.list<MensagemDoChat>({ prefix: "msg:" })).values()];
+    enviar(servidor, JSON.stringify({ tipo: "historico", mensagens } satisfies MensagemDoChatGlobal));
+    return new Response(null, { status: 101, webSocket: cliente });
+  }
+
+  async webSocketMessage(socket: WebSocket, bruta: string | ArrayBuffer) {
+    if (typeof bruta !== "string") return;
+    const autor = socket.deserializeAttachment() as Autor;
+    const agora = Date.now();
+    const limite = gastarDoBalde(this.baldes.get(autor.id) ?? BALDE_CHEIO, agora);
+    this.baldes.set(autor.id, limite.balde);
+    if (!limite.passa) return;
+    const texto = lerTextoDoChat(bruta);
+    if (!texto) return;
+    const n = ((await this.ctx.storage.get<number>("ultima")) ?? 0) + 1;
+    const mensagem: MensagemDoChat = { n, autor, texto, em: agora };
+    await this.ctx.storage.put({ ultima: n, [chaveDaMensagem(n)]: mensagem });
+    if (n > MENSAGENS_GUARDADAS) await this.ctx.storage.delete(chaveDaMensagem(n - MENSAGENS_GUARDADAS));
+    const saida = JSON.stringify({ tipo: "mensagem", mensagem } satisfies MensagemDoChatGlobal);
+    for (const conectado of this.ctx.getWebSockets(QUEM_CONVERSA)) enviar(conectado, saida);
+  }
+
+  async webSocketClose(socket: WebSocket) {
+    fechar(socket, "saiu");
+  }
+
+  async webSocketError(socket: WebSocket) {
+    fechar(socket, "saiu");
+  }
+}
+
 /** Confere a ficha da URL e passa a pessoa para o Durable Object num cabeçalho que o cliente não consegue mandar. */
 async function comPessoa(pedido: Request, env: Env) {
   const ficha = new URL(pedido.url).searchParams.get("ficha") ?? "";
@@ -393,6 +450,12 @@ export default {
       const autenticado = await comPessoa(pedido, env);
       if (!autenticado) return new Response("Ficha inválida.", { status: 401 });
       return env.PRESENCA.get(env.PRESENCA.idFromName("presenca")).fetch(autenticado.pedido);
+    }
+
+    if (pathname === "/chat") {
+      const autenticado = await comPessoa(pedido, env);
+      if (!autenticado) return new Response("Ficha inválida.", { status: 401 });
+      return env.CHAT.get(env.CHAT.idFromName("chat")).fetch(autenticado.pedido);
     }
 
     const transmissao = /^\/transmissao\/([0-9a-f-]{36})$/.exec(pathname);
