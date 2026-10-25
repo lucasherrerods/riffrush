@@ -427,7 +427,7 @@ interface Conversando {
 /**
  * O chat global: um só para o relay todo. Só entra quem tem conta (a ficha da API), então o nome
  * de quem escreve vem assinado e ninguém fala pelo outro. Aqui ficam só as mensagens (24 horas):
- * quem é da equipe, quem está banido e as denúncias ficam no banco da API.
+ * quem é da moderação, quem está banido e as denúncias ficam no banco da API.
  */
 export class ChatGlobal extends DurableObject<Env> {
   /**
@@ -444,7 +444,7 @@ export class ChatGlobal extends DurableObject<Env> {
       if ((antiga.deserializeAttachment() as Conversando).autor.id === pessoa.id) fechar(antiga, "outroAparelho");
     }
     const conversando: Conversando = {
-      autor: { id: pessoa.id, nome: nomeParaMostrar(pessoa.nome, pessoa.admin), ...(pessoa.admin && { equipe: true as const }) },
+      autor: { id: pessoa.id, nome: nomeParaMostrar(pessoa.nome, pessoa.admin), ...(pessoa.admin && { moderacao: true as const }) },
       nivel: pessoa.nivel,
       admin: pessoa.admin,
       banido: pessoa.banido,
@@ -484,13 +484,13 @@ export class ChatGlobal extends DurableObject<Env> {
       return;
     }
 
-    // Apagar uma mensagem é da equipe e vale só aqui, onde as mensagens ficam.
+    // Apagar uma mensagem é da moderação e vale só aqui, onde as mensagens ficam.
     if (!quem.admin) return;
     await this.ctx.storage.delete(chaveDaMensagem(comando.n));
     this.paraTodos({ tipo: "apagadas", ns: [comando.n] });
   }
 
-  /** A API avisa quando a equipe bane ou desbane: quem já está conectado muda na hora. */
+  /** A API avisa quando a moderação bane ou desbane: quem já está conectado muda na hora. */
   async moderar(aviso: AvisoDaApi) {
     const banido = aviso.tipo === "banir";
     if (banido) {
@@ -539,7 +539,7 @@ const permissoes = (quem: Conversando): Permissoes => ({
   nivelParaEscrever: NIVEL_PARA_ESCREVER,
 });
 
-/** Manda a cópia da mensagem denunciada para a API, onde a equipe vê. Sem a API configurada, a denúncia não sai. */
+/** Manda a cópia da mensagem denunciada para a API, onde a moderação vê. Sem a API configurada, a denúncia não sai. */
 async function enviarDenuncia(env: Env, mensagem: MensagemDoChat, denunciante: string) {
   const segredo = env.SEGREDO_DA_PRESENCA ?? "";
   if (!env.URL_DA_API || !segredo) return;

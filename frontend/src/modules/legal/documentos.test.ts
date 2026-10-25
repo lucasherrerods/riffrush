@@ -21,6 +21,6 @@ describe("DOCUMENTOS", () => {
 
   it("a política e os termos falam do chat", () => {
     expect(JSON.stringify(DOCUMENTOS.privacidade)).toContain("chat global");
-    expect(JSON.stringify(DOCUMENTOS.termos)).toContain("selo Equipe");
+    expect(JSON.stringify(DOCUMENTOS.termos)).toContain("selo Moderação");
   });
 });

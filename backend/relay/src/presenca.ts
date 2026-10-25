@@ -10,7 +10,7 @@ export interface Pessoa {
 
 /**
  * Quem a ficha diz que é, com o que vale no chat global: o nível (escrever pede um mínimo),
- * se é da equipe e se está banido. Quem decide é a API, que assina a ficha.
+ * se é da moderação e se está banido. Quem decide é a API, que assina a ficha.
  */
 export type PessoaDaFicha = Pessoa & { nivel: number; admin: boolean; banido: boolean };
 

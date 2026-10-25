@@ -12,7 +12,7 @@ use crate::modules::moderacao::ServicosDeModeracao;
 pub struct ServicosDePresenca {
     /// Para achar a conta pela sessão e ler o relógio.
     pub conta: ServicosDaConta,
-    /// Se a pessoa é da equipe ou está banida do chat: vai na ficha.
+    /// Se a pessoa é da moderação ou está banida do chat: vai na ficha.
     pub moderacao: ServicosDeModeracao,
     /// O mesmo segredo do relay. Sem ele, a presença fica desligada.
     pub segredo: Option<Arc<Vec<u8>>>,

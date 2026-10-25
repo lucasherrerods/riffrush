@@ -22,7 +22,7 @@ pub struct Denuncia {
     pub denunciante_id: Uuid,
 }
 
-/// Para a tela da equipe: a denúncia com o nome de quem denunciou.
+/// Para a tela da moderação: a denúncia com o nome de quem denunciou.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DenunciaRecebida {
     pub denuncia: Denuncia,
@@ -36,7 +36,7 @@ pub struct Banido {
     pub nome: String,
 }
 
-/// O que a equipe vê de uma vez.
+/// O que a moderação vê de uma vez.
 pub const DENUNCIAS_NA_TELA: u32 = 200;
 /// Os mesmos limites do chat (backend/relay/src/chat.ts).
 pub const TAMANHO_MAXIMO_DO_TEXTO: usize = 200;

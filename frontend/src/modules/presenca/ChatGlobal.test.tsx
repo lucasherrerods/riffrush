@@ -18,7 +18,7 @@ vi.mock("./presenca", async () => {
 const logado = (id = "eu") => vi.mocked(useConta).mockReturnValue({ conta: { id, nome: "Eu" } as never, carregando: false });
 const PODE = { podeEscrever: true, admin: false, banido: false, nivelParaEscrever: 2 };
 const ana = { n: 1, autor: { id: "a", nome: "Ana" }, texto: "spam", em: 0 };
-const bia = { n: 2, autor: { id: "b", nome: "Bia", equipe: true as const }, texto: "oi", em: 0 };
+const bia = { n: 2, autor: { id: "b", nome: "Bia", moderacao: true as const }, texto: "oi", em: 0 };
 
 /** Põe o estado como se tivesse vindo do relay. */
 function chegou(parcial: Partial<EstadoDoChatGlobal>) {
@@ -46,21 +46,21 @@ describe("ChatGlobal", () => {
     logado();
     const usar = vi.spyOn(chatGlobal, "usar");
     const { aoResponder } = abrir(null);
-    expect(screen.getByText(/A equipe nunca pede senha/)).toBeInTheDocument();
+    expect(screen.getByText(/A moderação nunca pede senha/)).toBeInTheDocument();
     expect(usar).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Ligar o chat" }));
     expect(aoResponder).toHaveBeenCalledWith(true);
   });
 
-  it("aceito, liga a conexão, mostra o selo da equipe e o aviso fixo", () => {
+  it("aceito, liga a conexão, mostra o selo da moderação e o aviso fixo", () => {
     logado();
     const usar = vi.spyOn(chatGlobal, "usar");
     abrir();
     expect(usar).toHaveBeenCalledTimes(1);
     chegou({});
     expect(screen.getByRole("log", { name: "Chat global" })).toHaveTextContent("Ana: spam");
-    expect(screen.getByText("Equipe")).toBeInTheDocument();
-    expect(screen.getByText(/Só quem tem o selo Equipe/)).toBeInTheDocument();
+    expect(screen.getByText("Moderação")).toBeInTheDocument();
+    expect(screen.getByText(/Só quem tem o selo Moderação/)).toBeInTheDocument();
   });
 
   it("abaixo do nível, lê mas não escreve; banido, avisa", () => {
@@ -98,7 +98,7 @@ describe("ChatGlobal", () => {
     expect(screen.getByText("spam")).toBeInTheDocument();
   });
 
-  it("quem não é da equipe não vê os botões de moderação", () => {
+  it("quem não é da moderação não vê os botões de moderação", () => {
     logado();
     abrir();
     chegou({});
@@ -106,14 +106,14 @@ describe("ChatGlobal", () => {
     expect(screen.queryByRole("button", { name: /Moderação/ })).not.toBeInTheDocument();
   });
 
-  it("a equipe vê as denúncias e os banidos da API, e bane e desbane por ela", async () => {
+  it("a moderação vê as denúncias e os banidos da API, e bane e desbane por ela", async () => {
     logado();
     const denuncia = { mensagem_n: 1, autor_id: "a", autor_nome: "Ana", texto: "spam", mensagem_em: "", denunciante_nome: "Caio", criada_em: "" };
     vi.mocked(apiDaPresenca.denuncias).mockResolvedValue([denuncia]);
     vi.mocked(apiDaPresenca.banidos).mockResolvedValue([{ conta_id: "x", nome: "Xis" }]);
     abrir();
     chegou({ voce: { ...PODE, admin: true } });
-    // Ninguém da equipe é banido pelo botão.
+    // Ninguém da moderação é banido pelo botão.
     expect(screen.queryByRole("button", { name: "Banir Bia" })).not.toBeInTheDocument();
     await userEvent.click(await screen.findByRole("button", { name: /Moderação \(1\)/ }));
     const dialogo = screen.getByRole("dialog");

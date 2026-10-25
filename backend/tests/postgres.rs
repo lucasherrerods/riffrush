@@ -456,7 +456,7 @@ async fn catalogo_guarda_atualiza_e_busca_varias_musicas() {
 }
 
 #[tokio::test]
-async fn moderacao_guarda_equipe_banidos_e_denuncias_e_limpa_com_a_conta() {
+async fn moderacao_guarda_moderadores_banidos_e_denuncias_e_limpa_com_a_conta() {
     let Some(banco) = banco().await else { return };
     let moderacao = ModeracaoPostgres(banco.0.clone());
     let admin = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();

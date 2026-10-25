@@ -7,8 +7,8 @@ import { SocketComFicha, type DependenciasDoSocket } from "./socketComFicha";
 export interface AutorGlobal {
   id: string;
   nome: string;
-  /** Conta da equipe: aparece com o selo. */
-  equipe?: true;
+  /** Conta da moderação: aparece com o selo. */
+  moderacao?: true;
 }
 
 export interface MensagemGlobal {
@@ -39,7 +39,7 @@ function lerAutor(valor: unknown): AutorGlobal | null {
   if (!ehObjeto(valor) || typeof valor.id !== "string") return null;
   const nome = limparTexto(valor.nome)?.slice(0, TAMANHO_MAXIMO_DO_NOME);
   if (!nome) return null;
-  return { id: valor.id, nome, ...(valor.equipe === true && { equipe: true as const }) };
+  return { id: valor.id, nome, ...(valor.moderacao === true && { moderacao: true as const }) };
 }
 
 /** O relay já limpa, mas quem recebe confere de novo: o que aparece na tela nunca depende só do servidor. */
@@ -146,9 +146,9 @@ export class ConexaoDoChatGlobal {
     return this.comando({ tipo: "mensagem", texto: limpo });
   }
 
-  /** O relay manda a cópia verdadeira da mensagem para a API, onde a equipe vê. */
+  /** O relay manda a cópia verdadeira da mensagem para a API, onde a moderação vê. */
   denunciar = (n: number) => this.comando({ tipo: "denunciar", n });
-  /** Só a equipe: as mensagens ficam no relay, então apagar é por aqui. Banir é pela API. */
+  /** Só a moderação: as mensagens ficam no relay, então apagar é por aqui. Banir é pela API. */
   apagar = (n: number) => this.comando({ tipo: "apagar", n });
 
   private comando(comando: object) {
