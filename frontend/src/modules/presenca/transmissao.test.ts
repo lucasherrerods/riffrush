@@ -37,6 +37,17 @@ describe("criarTransmissao", () => {
     expect(socket.fechado).toBe(true);
   });
 
+  it("o link do chart do Encore vai junto no início", async () => {
+    const transmitir = criarTransmissao(
+      { ...partida, urlDoEncore: "https://files.enchor.us/x.sng" },
+      { urlDoRelay: "wss://relay", pedirFicha: async () => "ficha", criarSocket: (url) => new WebSocketFalso(url) },
+    );
+    transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false });
+    await umInstante();
+    WebSocketFalso.ultimo!.abrir();
+    expect(WebSocketFalso.ultimo!.enviadas[0]).toMatchObject({ partida: { urlDoEncore: "https://files.enchor.us/x.sng" } });
+  });
+
   it("recomeçar depois do fim abre uma transmissão nova", async () => {
     const transmitir = montar();
     transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false });

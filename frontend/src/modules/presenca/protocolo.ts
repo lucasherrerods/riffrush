@@ -24,6 +24,8 @@ export interface PartidaTransmitida {
   instrumento: Instrumento;
   hashDoChart: string;
   semFalha: boolean;
+  /** O .sng no Encore, para quem assiste baixar com um clique. Só confiável depois de `linkDoChartConfere`. */
+  urlDoEncore?: string;
 }
 
 export type MensagemDaTransmissao =

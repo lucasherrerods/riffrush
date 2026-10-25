@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Eye, Loader2, Search } from "lucide-react";
+import { ArrowLeft, Download, Eye, Loader2, Search } from "lucide-react";
 import type { Personagem } from "@/modules/character";
 import { TelaDeJogo, type OpcoesDaPartida, type Replay } from "@/modules/gameplay";
 import { URL_DO_RELAY } from "@/modules/multiplayer";
+import { linkDoChartConfere } from "@/modules/search";
 import { idDoRanking, type Musica } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
@@ -16,16 +17,22 @@ interface Props {
   personagem: Personagem;
   aoSair: () => void;
   aoBuscarMusicas: () => void;
+  /** Baixa e importa o chart do Encore; quando a música aparece em `musicas`, a partida começa sozinha. */
+  aoBaixar: (url: string, md5: string) => Promise<void>;
   urlDoRelay?: string;
   criarSocket?: Parameters<typeof assistirTransmissao>[3];
 }
 
 type Fase = "conectando" | "semPartida" | "semMusica" | "esperando" | "assistindo" | "pausado" | "fim";
 
-interface Assistindo {
-  musica: Musica;
+/** A transmissão recebida até agora. As entradas chegam mesmo sem a música, para quem baixa no meio entrar já sincronizado. */
+interface Transmissao {
   partida: PartidaTransmitida;
   replay: Replay;
+}
+
+interface Assistindo extends Transmissao {
+  musica: Musica;
   /** performance.now em que a música começa para quem assiste. */
   inicio: number;
   /** Muda a cada sincronização: a partida de quem assiste recomeça no ponto certo. */
@@ -33,16 +40,34 @@ interface Assistindo {
 }
 
 /** A partida de outra pessoa ao vivo, montada a partir das entradas dela, `ATRASO_AO_VIVO` segundos atrás. */
-export function TelaDeEspectador({ pessoa, musicas, opcoes, personagem, aoSair, aoBuscarMusicas, urlDoRelay = URL_DO_RELAY, criarSocket }: Props) {
+export function TelaDeEspectador({ pessoa, musicas, opcoes, personagem, aoSair, aoBuscarMusicas, aoBaixar, urlDoRelay = URL_DO_RELAY, criarSocket }: Props) {
   const [fase, setFase] = useState<Fase>("conectando");
   const [assistindo, setAssistindo] = useState<Assistindo | null>(null);
-  const musicasAtuais = useRef(musicas);
-  musicasAtuais.current = musicas;
+  const [transmissao, setTransmissao] = useState<Transmissao | null>(null);
+  const [baixando, setBaixando] = useState(false);
+  const [erroAoBaixar, setErroAoBaixar] = useState<string | null>(null);
+  // Lidos pelo socket, que vive o tempo todo da tela.
+  const musicaDaPartida = useRef<Musica | null>(null);
+  const precisaRecomecar = useRef(true);
+  const chave = useRef(0);
+
+  const acharMusica = (partida: PartidaTransmitida) => musicas.find((m) => idDoRanking(m) === partida.musica) ?? null;
+  const acharMusicaAtual = useRef(acharMusica);
+  acharMusicaAtual.current = acharMusica;
 
   useEffect(() => {
-    let atual: Assistindo | null = null;
-    let precisaRecomecar = true;
+    let atual: Transmissao | null = null;
+    let inicioAtual = 0;
     let fimAgendado: ReturnType<typeof setTimeout> | undefined;
+
+    const comecar = (ate: number) => {
+      if (!atual || !musicaDaPartida.current) return;
+      precisaRecomecar.current = false;
+      inicioAtual = inicioParaAssistir(performance.now(), ate);
+      setAssistindo({ ...atual, musica: musicaDaPartida.current, inicio: inicioAtual, chave: ++chave.current });
+      setFase("assistindo");
+    };
+
     const fechar = assistirTransmissao(
       urlDoRelay,
       pessoa.id,
@@ -50,31 +75,23 @@ export function TelaDeEspectador({ pessoa, musicas, opcoes, personagem, aoSair, 
         if (mensagem.tipo === "semPartida") return setFase("semPartida");
         if (mensagem.tipo === "inicio") {
           clearTimeout(fimAgendado);
-          const musica = musicasAtuais.current.find((m) => idDoRanking(m) === mensagem.partida.musica);
-          if (!musica) {
-            atual = null;
-            return setFase("semMusica");
-          }
           const replay: Replay = { semFalha: mensagem.partida.semFalha, fantasma: false, hashDoChart: mensagem.partida.hashDoChart, entradas: [], ateAgora: 0 };
-          atual = { musica, partida: mensagem.partida, replay, inicio: 0, chave: (atual?.chave ?? 0) + 1 };
-          precisaRecomecar = true;
-          return setFase("esperando");
+          atual = { partida: mensagem.partida, replay };
+          setTransmissao(atual);
+          musicaDaPartida.current = acharMusicaAtual.current(mensagem.partida);
+          precisaRecomecar.current = true;
+          return setFase(musicaDaPartida.current ? "esperando" : "semMusica");
         }
         if (!atual) return;
         if (mensagem.tipo === "lote") {
           // A mesma lista que a partida lê a cada quadro: as entradas novas valem sem remontar nada.
           atual.replay.entradas.push(...entradasDoLote(mensagem.entradas));
           atual.replay.ateAgora = mensagem.ate;
-          const agora = performance.now();
-          if (precisaRecomecar || precisaSincronizar(agora, atual.inicio, mensagem.ate)) {
-            precisaRecomecar = false;
-            atual = { ...atual, inicio: inicioParaAssistir(agora, mensagem.ate), chave: atual.chave + 1 };
-            setAssistindo(atual);
-            setFase("assistindo");
-          }
+          if (!musicaDaPartida.current) return;
+          if (precisaRecomecar.current || precisaSincronizar(performance.now(), inicioAtual, mensagem.ate)) comecar(mensagem.ate);
         } else if (mensagem.tipo === "pausa") {
-          if (!mensagem.pausado) return;
-          precisaRecomecar = true;
+          if (!mensagem.pausado || !musicaDaPartida.current) return;
+          precisaRecomecar.current = true;
           setFase("pausado");
         } else if (mensagem.tipo === "fim") {
           // Quem assiste está atrás: ainda falta ver o finalzinho.
@@ -88,6 +105,16 @@ export function TelaDeEspectador({ pessoa, musicas, opcoes, personagem, aoSair, 
       fechar();
     };
   }, [pessoa.id, urlDoRelay, criarSocket]);
+
+  // A música baixada entrou na biblioteca: a partida começa no próximo lote, já no ponto certo.
+  useEffect(() => {
+    if (fase !== "semMusica" || !transmissao) return;
+    const musica = acharMusica(transmissao.partida);
+    if (!musica) return;
+    musicaDaPartida.current = musica;
+    precisaRecomecar.current = true;
+    setFase("esperando");
+  }, [musicas, fase, transmissao]);
 
   useTeclado((evento) => fase !== "assistindo" && evento.code === "Escape" && aoSair());
 
@@ -114,7 +141,17 @@ export function TelaDeEspectador({ pessoa, musicas, opcoes, personagem, aoSair, 
     );
   }
 
-  const encore = fase === "semMusica" && pessoa.estado.tipo === "tocando" && pessoa.estado.musica.startsWith("encore:");
+  // O app confere o link de novo, sem confiar só no relay: tem que ser um chart do Encore e desta música.
+  const link = fase === "semMusica" && transmissao && linkDoChartConfere(transmissao.partida.urlDoEncore, transmissao.partida.musica) ? transmissao.partida.urlDoEncore : null;
+  const doEncore = fase === "semMusica" && !!transmissao?.partida.musica.startsWith("encore:");
+  const baixar = (url: string) => {
+    setBaixando(true);
+    setErroAoBaixar(null);
+    aoBaixar(url, transmissao!.partida.musica.slice("encore:".length))
+      .catch((erro) => setErroAoBaixar(erro instanceof Error ? erro.message : String(erro)))
+      .finally(() => setBaixando(false));
+  };
+
   const mensagens: Record<Exclude<Fase, "assistindo">, string> = {
     conectando: `Conectando à partida de ${pessoa.nome}...`,
     esperando: `Conectando à partida de ${pessoa.nome}...`,
@@ -130,14 +167,25 @@ export function TelaDeEspectador({ pessoa, musicas, opcoes, personagem, aoSair, 
         {carregando && <Loader2 className="size-6 animate-spin opacity-70" aria-hidden />}
         {mensagens[fase === "assistindo" ? "esperando" : fase]}
       </p>
-      {encore && <p className="text-base text-texto-suave">Ela é do Encore: baixe pela busca de músicas e volte para assistir.</p>}
+      {link && <p className="text-base text-texto-suave">Ela é do Encore: baixe agora e a partida começa sozinha, ao vivo.</p>}
+      {!link && doEncore && <p className="text-base text-texto-suave">Ela é do Encore: baixe pela busca de músicas e volte para assistir.</p>}
+      {erroAoBaixar && (
+        <p role="alert" className="text-base text-texto-suave">
+          {erroAoBaixar}
+        </p>
+      )}
       <div className="flex gap-4">
-        {encore && (
+        {link && (
+          <Button size="lg" disabled={baixando} onClick={() => baixar(link)}>
+            {baixando ? <Loader2 className="animate-spin opacity-70" /> : <Download className="opacity-70" />} {baixando ? "Baixando..." : "Baixar e assistir"}
+          </Button>
+        )}
+        {!link && doEncore && (
           <Button size="lg" variant="outline" onClick={aoBuscarMusicas}>
             <Search className="opacity-70" /> Buscar músicas
           </Button>
         )}
-        <Button size="lg" onClick={aoSair}>
+        <Button size="lg" variant={link ? "outline" : "default"} onClick={aoSair}>
           <ArrowLeft className="opacity-70" /> Voltar
         </Button>
       </div>

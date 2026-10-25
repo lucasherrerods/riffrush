@@ -143,6 +143,19 @@ export function nomeDoArquivo(resultado: ResultadoDaBusca): string {
   return `${partes.join(" - ") || resultado.md5}.sng`;
 }
 
+/** Só o caminho de um chart no servidor de arquivos do Encore. Mesma regra do relay (backend/relay/src/presenca.ts). */
+const CHART_DO_ENCORE = /^https:\/\/files\.enchor\.us\/(?:charts\/v\d{1,3}\/)?([0-9a-f]{32})(?:_novideo)?\.sng$/;
+
+/**
+ * Link que outra pessoa mandou para quem assiste baixar: só vale se for um chart do Encore
+ * e da mesma música (`encore:<md5>`) que está sendo tocada.
+ */
+export function linkDoChartConfere(url: unknown, musica: string): url is string {
+  if (typeof url !== "string") return false;
+  const md5 = CHART_DO_ENCORE.exec(url)?.[1];
+  return !!md5 && musica === `encore:${md5}`;
+}
+
 /** No online o host manda a URL do chart: só baixamos se ela for mesmo um .sng do Encore. */
 export function ehUrlDoEncore(texto: string): boolean {
   try {

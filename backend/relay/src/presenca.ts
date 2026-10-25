@@ -64,6 +64,18 @@ export interface PartidaTransmitida {
   instrumento: string;
   hashDoChart: string;
   semFalha: boolean;
+  /** O .sng da música no Encore, para quem assiste baixar com um clique. */
+  urlDoEncore?: string;
+}
+
+/** Só o caminho de um chart no servidor de arquivos do Encore, sem nada além disso. */
+const CHART_DO_ENCORE = /^https:\/\/files\.enchor\.us\/(?:charts\/v\d{1,3}\/)?([0-9a-f]{32})(?:_novideo)?\.sng$/;
+
+/** O link só vale se for um chart do Encore e da mesma música que está sendo tocada. */
+export function linkDoChartConfere(url: unknown, musica: string): url is string {
+  if (typeof url !== "string") return false;
+  const md5 = CHART_DO_ENCORE.exec(url)?.[1];
+  return !!md5 && musica === `encore:${md5}`;
 }
 
 /**
@@ -105,7 +117,10 @@ export function lerMensagemDaTransmissao(bruta: string): MensagemDaTransmissao |
     const instrumento = texto(p?.instrumento, 20);
     const hash = texto(p?.hashDoChart, 32);
     if (musica === null || dificuldade === null || instrumento === null || hash === null || !/^[0-9a-f]{32}$/.test(hash)) return null;
-    return { tipo: "inicio", partida: { musica, dificuldade, instrumento, hashDoChart: hash, semFalha: p?.semFalha === true } };
+    const partida: PartidaTransmitida = { musica, dificuldade, instrumento, hashDoChart: hash, semFalha: p?.semFalha === true };
+    // Link estranho não derruba a transmissão: só não vai junto.
+    if (linkDoChartConfere(p?.urlDoEncore, musica)) partida.urlDoEncore = p.urlDoEncore;
+    return { tipo: "inicio", partida };
   }
   return null;
 }

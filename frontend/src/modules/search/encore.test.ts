@@ -1,4 +1,4 @@
-import { FILTROS_PADRAO, buscarNoEncore, formatarDuracao, lerRespostaDaBusca, montarCorpoDaBusca, montarUrlDoChart, nomeDoArquivo, urlDaCapa, ehUrlDoEncore, type ResultadoDaBusca } from "./encore";
+import { FILTROS_PADRAO, buscarNoEncore, formatarDuracao, lerRespostaDaBusca, montarCorpoDaBusca, montarUrlDoChart, nomeDoArquivo, urlDaCapa, ehUrlDoEncore, linkDoChartConfere, type ResultadoDaBusca } from "./encore";
 
 const itemDaApi = {
   name: "Enter Sandman",
@@ -146,5 +146,27 @@ describe("ehUrlDoEncore", () => {
     expect(ehUrlDoEncore("http://files.enchor.us/a.sng")).toBe(false);
     expect(ehUrlDoEncore("https://files.enchor.us/a.exe")).toBe(false);
     expect(ehUrlDoEncore("isso não é url")).toBe(false);
+  });
+});
+
+describe("linkDoChartConfere", () => {
+  const md5 = "0123456789abcdef0123456789abcdef";
+
+  it("aceita o chart do Encore da mesma música", () => {
+    expect(linkDoChartConfere(`https://files.enchor.us/${md5}.sng`, `encore:${md5}`)).toBe(true);
+    expect(linkDoChartConfere(`https://files.enchor.us/charts/v3/${md5}_novideo.sng`, `encore:${md5}`)).toBe(true);
+  });
+
+  it("recusa outro site, truques na URL e chart de outra música", () => {
+    for (const url of [
+      `https://evil.com/${md5}.sng`,
+      `https://files.enchor.us.evil.com/${md5}.sng`,
+      `https://files.enchor.us@evil.com/${md5}.sng`,
+      `https://files.enchor.us/${md5}.sng#x`,
+      `https://files.enchor.us/${"f".repeat(32)}.sng`,
+      42,
+    ]) {
+      expect(linkDoChartConfere(url, `encore:${md5}`)).toBe(false);
+    }
   });
 });

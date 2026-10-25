@@ -16,6 +16,8 @@ export interface PartidaParaTransmitir {
   musica: string;
   dificuldade: Dificuldade;
   instrumento: Instrumento;
+  /** As músicas do Encore guardam o link do chart; vai junto para quem assiste baixar. */
+  urlDoEncore?: string;
 }
 
 export interface DependenciasDaTransmissao {
@@ -81,7 +83,14 @@ export function criarTransmissao(partida: PartidaParaTransmitir, deps: Dependenc
       desistiu = false;
       mandar({
         tipo: "inicio",
-        partida: { musica: partida.musica, dificuldade: partida.dificuldade, instrumento: partida.instrumento, hashDoChart: evento.hashDoChart, semFalha: evento.semFalha },
+        partida: {
+          musica: partida.musica,
+          dificuldade: partida.dificuldade,
+          instrumento: partida.instrumento,
+          hashDoChart: evento.hashDoChart,
+          semFalha: evento.semFalha,
+          ...(partida.urlDoEncore && { urlDoEncore: partida.urlDoEncore }),
+        },
       });
       void abrir();
     } else if (evento.tipo === "lote") {
