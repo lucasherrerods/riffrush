@@ -40,7 +40,10 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
   const posicao = musicas.findIndex((m) => m.id === sala.musica.id);
   // A lista rola sozinha até a escolhida quando ela muda pelas setas ou pela busca.
   const escolhidaNaLista = useRef<HTMLButtonElement>(null);
-  useEffect(() => escolhidaNaLista.current?.scrollIntoView?.({ block: "nearest" }), [sala.musica.id]);
+  // Com chaves: no Chrome o scrollIntoView devolve uma Promise, e um efeito só pode devolver a função de limpeza.
+  useEffect(() => {
+    escolhidaNaLista.current?.scrollIntoView?.({ block: "nearest" });
+  }, [sala.musica.id]);
   const escolherVizinha = (passo: number) => {
     const vizinha = musicas[posicao + passo];
     if (!vizinha) return;

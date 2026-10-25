@@ -147,7 +147,9 @@ export function App() {
     playerDeMusica.definirFila(filaDoPlayer);
     if (!playerDeMusica.estado().musica && filaDoPlayer[0]) playerDeMusica.seguir(filaDoPlayer[0]);
   }, [filaDoPlayer]);
-  useEffect(() => playerDeMusica.definirVolume(configuracoes.volumeDoPlayer), [configuracoes.volumeDoPlayer]);
+  useEffect(() => {
+    playerDeMusica.definirVolume(configuracoes.volumeDoPlayer);
+  }, [configuracoes.volumeDoPlayer]);
   // O atalho muda o volume de qualquer tela, direto no módulo de áudio; aqui ele só é guardado nas configurações.
   const { volume: volumeGeral } = useVolumeGeral();
   useEffect(() => {
@@ -160,7 +162,9 @@ export function App() {
   }, [volumeGeral]);
   // Assistir ao vivo também é uma partida na tela: sem o player do menu e sem o cabeçalho.
   const naPista = tela === "jogo" || tela === "espectador";
-  useEffect(() => playerDeMusica.suspender(naPista), [naPista]);
+  useEffect(() => {
+    playerDeMusica.suspender(naPista);
+  }, [naPista]);
 
   // Só aparece online quem aceitou, com conta e com o relay configurado.
   const online = presencaDisponivel && contasLigadas && !!conta && configuracoes.mostrarOnline === true;

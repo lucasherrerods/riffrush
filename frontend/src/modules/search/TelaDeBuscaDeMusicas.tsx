@@ -86,7 +86,9 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
     setPagina(1);
   };
 
-  useEffect(() => setPagina(1), [textoAtrasado]);
+  useEffect(() => {
+    setPagina(1);
+  }, [textoAtrasado]);
 
   useEffect(() => {
     const controle = new AbortController();
