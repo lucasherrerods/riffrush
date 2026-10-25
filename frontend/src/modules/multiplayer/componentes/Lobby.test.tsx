@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { MUSICAS_DE_TESTE } from "@/test/musicas";
 import { estadoInicial, type EstadoDaSala } from "../protocolo";
-import { expulsar, passarLideranca } from "../sala";
+import { enviarChat, expulsar, passarLideranca } from "../sala";
 import { Lobby } from "./Lobby";
 
 vi.mock("@/modules/character", async (original) => ({
@@ -11,7 +11,7 @@ vi.mock("@/modules/character", async (original) => ({
   Avatar: () => null,
 }));
 vi.mock("@/modules/player", () => ({ useSeguirMusica: () => {} }));
-vi.mock("../sala", async (original) => ({ ...(await original<typeof import("../sala")>()), expulsar: vi.fn(), passarLideranca: vi.fn() }));
+vi.mock("../sala", async (original) => ({ ...(await original<typeof import("../sala")>()), expulsar: vi.fn(), enviarChat: vi.fn(() => true), passarLideranca: vi.fn() }));
 
 const [primeira, segunda] = MUSICAS_DE_TESTE;
 
@@ -77,5 +77,18 @@ describe("Lobby", () => {
   it("convidado não vê o botão de expulsar", () => {
     render(lobby(primeira.id, { souHost: false, meuId: 2, jogadores: [{ id: 1, personagem: PERSONAGEM_PADRAO }, { id: 2, personagem: vitor }] }));
     expect(screen.queryByRole("button", { name: /^Expulsar/ })).not.toBeInTheDocument();
+  });
+
+  it("tem o chat da sala, com a minha mensagem marcada, e manda pelo protocolo", async () => {
+    const chat = [
+      { n: 1, de: 2, autor: "Vitor", texto: "bora?" },
+      { n: 2, de: 1, autor: "Rockstar", texto: "bora" },
+    ];
+    render(lobby(primeira.id, { chat }));
+    const log = screen.getByRole("log", { name: "Chat da sala" });
+    expect(log).toHaveTextContent("Vitor: bora?");
+    expect(log).toHaveTextContent("Rockstar: bora");
+    await userEvent.type(screen.getByRole("textbox", { name: "Mensagem" }), "vamo{Enter}");
+    expect(enviarChat).toHaveBeenCalledWith("vamo");
   });
 });

@@ -1,5 +1,6 @@
 import type { Personagem } from "@/modules/character";
 import type { EstadoDoJogador } from "@/modules/gameplay";
+import { BALDE_CHEIO, adicionarMensagem, gastarDoBalde, limparTexto, type Balde } from "@/modules/chat";
 import { MUSICAS_EMBUTIDAS, type Dificuldade, type Instrumento } from "@/modules/songs";
 
 /*
@@ -52,7 +53,16 @@ export type Mensagem =
   /** O convidado já tem a música `musicaId` e está (ou deixou de estar) pronto para começar. */
   | { tipo: "pronto"; musicaId: string; pronto: boolean }
   | { tipo: "comecar"; musica: MusicaNaRede; dificuldade: Dificuldade; instrumento?: Instrumento }
-  | ({ tipo: "estado" } & EstadoDoJogador);
+  | ({ tipo: "estado" } & EstadoDoJogador)
+  | { tipo: "chat"; texto: string };
+
+export interface MensagemDaSala {
+  /** Ordem de chegada, para a tela. */
+  n: number;
+  de: number;
+  autor: string;
+  texto: string;
+}
 
 export interface EstadoDaSala {
   status: "conectando" | "naSala" | "jogando";
@@ -74,6 +84,9 @@ export interface EstadoDaSala {
   partidas: number;
   /** Instante (performance.now) em que a música começa para todos. */
   inicio: number;
+  chat: MensagemDaSala[];
+  /** O limite do chat de cada jogador, contado por quem recebe: um cliente modificado não inunda a sala. */
+  baldesDoChat: Record<number, Balde>;
 }
 
 export interface Reacao {
@@ -99,6 +112,8 @@ export function estadoInicial(personagem: PersonagemNaSala, souHost: boolean): E
     adversarios: {},
     partidas: 0,
     inicio: 0,
+    chat: [],
+    baldesDoChat: {},
   };
 }
 
@@ -184,6 +199,17 @@ export function reduzir(estado: EstadoDaSala, de: number, mensagem: Mensagem, ag
       if (de === estado.meuId || de === SERVIDOR) return nada;
       const { tipo: _, ...jogada } = mensagem;
       return { estado: { ...estado, adversarios: { ...estado.adversarios, [de]: jogada } }, enviar: [] };
+    }
+    case "chat": {
+      // O "de" vem do servidor, então ninguém fala pelo outro; só vale quem está na sala.
+      const autor = estado.jogadores.find((j) => j.id === de)?.personagem.nome;
+      const texto = limparTexto(mensagem.texto);
+      if (!autor || !texto) return nada;
+      const limite = gastarDoBalde(estado.baldesDoChat[de] ?? BALDE_CHEIO, agora);
+      const baldesDoChat = { ...estado.baldesDoChat, [de]: limite.balde };
+      if (!limite.passa) return { estado: { ...estado, baldesDoChat }, enviar: [] };
+      const n = (estado.chat.at(-1)?.n ?? 0) + 1;
+      return { estado: { ...estado, baldesDoChat, chat: adicionarMensagem(estado.chat, { n, de, autor, texto }) }, enviar: [] };
     }
   }
 }

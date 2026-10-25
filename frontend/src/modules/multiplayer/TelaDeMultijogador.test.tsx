@@ -26,6 +26,7 @@ vi.mock("./sala", () => ({
   entrarNaSalaOnline: vi.fn(),
   procurarSalasOnline: vi.fn(async () => []),
   marcarPronto: vi.fn(),
+  enviarChat: vi.fn(() => true),
 }));
 
 vi.mock("./musicaNaRede", () => ({ resolverMusica: vi.fn(async () => ({})) }));
