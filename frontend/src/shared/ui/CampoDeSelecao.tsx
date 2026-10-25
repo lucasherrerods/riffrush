@@ -28,7 +28,7 @@ export function CampoDeSelecao<T extends string>({ titulo, opcoes, valor, aoEsco
           id={id}
           value={valor}
           onChange={(evento) => aoEscolher(evento.target.value as T)}
-          className="h-10 w-full min-w-40 cursor-pointer appearance-none rounded-md border border-borda bg-superficie pr-10 pl-3 text-base text-texto outline-none hover:bg-superficie-elevada focus-visible:border-primaria"
+          className="h-10 w-full min-w-40 appearance-none rounded-md border border-borda bg-superficie pr-10 pl-3 text-base text-texto outline-none hover:bg-superficie-elevada focus-visible:border-primaria"
         >
           {opcoes.map((opcao) => (
             <option key={opcao.id} value={opcao.id} className="bg-superficie text-texto">

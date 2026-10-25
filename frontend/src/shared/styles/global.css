@@ -305,3 +305,25 @@ h1 {
     display: none;
   }
 }
+
+/* Cursor de palheta no app todo: cinza no geral, vermelha nos clicáveis. */
+@layer base {
+  html,
+  body {
+    cursor: url("/cursores/palheta-normal.svg") 5 8, auto;
+  }
+
+  :where(a[href], button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], [role="switch"], [role="checkbox"], [role="radio"], label[for], select, summary, input[type="checkbox"], input[type="radio"], input[type="range"]):not(:disabled, [aria-disabled="true"]) {
+    cursor: url("/cursores/palheta.svg") 5 8, pointer;
+  }
+
+  input:not([type="checkbox"], [type="radio"], [type="range"]),
+  textarea {
+    cursor: text;
+  }
+
+  :disabled,
+  [aria-disabled="true"] {
+    cursor: url("/cursores/palheta-normal.svg") 5 8, not-allowed;
+  }
+}
