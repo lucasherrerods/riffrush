@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { Check, ChevronDown, ChevronUp, Globe, Loader2, Play, Smartphone, Users } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Crown, Globe, Loader2, Play, Smartphone, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar } from "@/modules/character";
 import { PainelDeChat } from "@/modules/chat";
@@ -9,11 +9,12 @@ import { DIFICULDADES, INSTRUMENTOS, dificuldadesDaMusica, instrumentosDaMusica,
 import { cn } from "@/shared/lib/utils";
 import { avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/shared/ui/dialog";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { MAXIMO_DE_JOGADORES, type EstadoDaSala } from "../protocolo";
 import { todosProntos } from "../protocolo";
 import { IconeDeChute } from "./IconeDeChute";
-import { comecar, enviarChat, escolher, expulsar, marcarPronto, type InfoDaSala } from "../sala";
+import { comecar, enviarChat, escolher, expulsar, marcarPronto, passarLideranca, type InfoDaSala } from "../sala";
 import { useMusicaDaSala } from "../useMusicaDaSala";
 
 interface Props {
@@ -37,6 +38,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
   const estouPronto = sala.prontos.includes(sala.meuId);
   const [qr, setQr] = useState("");
   const [comecando, setComecando] = useState(false);
+  const [novoLider, setNovoLider] = useState<{ id: number; nome: string } | null>(null);
   const musica = musicas.find((m) => m.id === sala.musica.id);
   const tituloDaMusica = musica?.titulo ?? ("titulo" in sala.musica ? sala.musica.titulo : sala.musica.id);
   const posicao = musicas.findIndex((m) => m.id === sala.musica.id);
@@ -87,15 +89,29 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
                 {jogador ? (
                   <>
                     {sala.souHost && jogador.id !== sala.meuId && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`Expulsar ${jogador.personagem.nome}`}
-                        className="absolute top-2 right-2 size-12 text-texto-suave hover:text-perigo"
-                        onClick={() => expulsar(jogador.id)}
-                      >
-                        <IconeDeChute className="size-8" />
-                      </Button>
+                      <div className="absolute top-2 right-2 flex flex-col">
+                        {/* Só no online: na LAN a sala e a música importada moram no PC de quem criou. */}
+                        {codigo && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Passar a liderança para ${jogador.personagem.nome}`}
+                            className="size-12 text-ouro"
+                            onClick={() => setNovoLider({ id: jogador.id, nome: jogador.personagem.nome })}
+                          >
+                            <Crown className="size-8" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Expulsar ${jogador.personagem.nome}`}
+                          className="size-12 text-texto-suave hover:text-perigo"
+                          onClick={() => expulsar(jogador.id)}
+                        >
+                          <IconeDeChute className="size-8" />
+                        </Button>
+                      </div>
                     )}
                     <Avatar personagem={jogador.personagem} className="h-24 w-auto" />
                     <p className="mt-2 truncate text-base font-bold">{jogador.personagem.nome}</p>
@@ -264,6 +280,25 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
           aoEnviar={enviarChat}
         />
       </div>
+      <Dialog open={!!novoLider} onOpenChange={(aberto) => !aberto && setNovoLider(null)}>
+        <DialogContent>
+          <DialogTitle>Passar a liderança para {novoLider?.nome}?</DialogTitle>
+          <DialogDescription>Quem lidera escolhe a música e dá a largada. Você continua na sala como convidado.</DialogDescription>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost">Cancelar</Button>
+            </DialogClose>
+            <Button
+              onClick={() => {
+                if (novoLider) passarLideranca(novoLider.id);
+                setNovoLider(null);
+              }}
+            >
+              <Crown className="text-ouro" /> Passar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
