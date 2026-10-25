@@ -44,11 +44,14 @@ describe("TelaDeBuscaDeMusicas", () => {
     expect(buscar.mock.calls.map((c) => (c as unknown as [FiltrosDaBusca])[0].texto)).toEqual(["", "abc"]);
   });
 
-  it("os filtros de instrumento e dificuldade entram na busca", async () => {
+  it("os filtros de instrumento, dificuldade e gênero são selects e entram na busca", async () => {
     const { buscar, usuario } = abrir();
-    await usuario.click(screen.getByRole("radio", { name: "Bateria" }));
-    await usuario.click(screen.getByRole("radio", { name: "Expert" }));
-    await waitFor(() => expect(ultimaChamada(buscar)[0]).toMatchObject({ instrumento: "bateria", dificuldade: "expert" }));
+    await usuario.selectOptions(screen.getByRole("combobox", { name: "Instrumento" }), "bateria");
+    await usuario.selectOptions(screen.getByRole("combobox", { name: "Dificuldade" }), "expert");
+    await usuario.selectOptions(screen.getByRole("combobox", { name: "Gênero" }), "metal");
+    await waitFor(() => expect(ultimaChamada(buscar)[0]).toMatchObject({ instrumento: "bateria", dificuldade: "expert", genero: "metal" }));
+    // Com gênero, o texto procura só no nome da música.
+    expect(screen.getByRole("searchbox", { name: "Buscar músicas" })).toHaveAttribute("placeholder", "Nome da música");
   });
 
   it("pagina os resultados", async () => {

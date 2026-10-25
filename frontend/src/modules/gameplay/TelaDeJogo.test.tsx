@@ -160,9 +160,28 @@ describe("TelaDeJogo", () => {
     await usuario.keyboard("{Escape}");
     expect(await screen.findByRole("heading", { name: "Pausado" })).toBeInTheDocument();
     expect(audio().suspend).toHaveBeenCalled();
+    audio().resume.mockClear();
     await usuario.click(screen.getByRole("button", { name: /Continuar/ }));
-    expect(audio().resume).toHaveBeenCalled();
-  });
+    // Como no começo: 3, 2, 1, e só depois a música volta.
+    expect(await screen.findByRole("timer", { name: "Volta em 3" })).toBeInTheDocument();
+    expect(audio().resume).not.toHaveBeenCalled();
+    await waitFor(() => expect(audio().resume).toHaveBeenCalled(), { timeout: 4500 });
+  }, 8000);
+
+  it("Esc durante a contagem da volta pausa de novo, sem a música voltar", async () => {
+    carregarCom([nota(5)]);
+    const { usuario } = abrir();
+    await partidaPronta();
+    await usuario.keyboard("{Escape}");
+    await screen.findByRole("heading", { name: "Pausado" });
+    audio().resume.mockClear();
+    await usuario.click(screen.getByRole("button", { name: /Continuar/ }));
+    await screen.findByRole("timer", { name: "Volta em 3" });
+    await usuario.keyboard("{Escape}");
+    expect(await screen.findByRole("heading", { name: "Pausado" })).toBeInTheDocument();
+    await new Promise((fim) => setTimeout(fim, 3500));
+    expect(audio().resume).not.toHaveBeenCalled();
+  }, 8000);
 
   it("perder o foco da janela pausa", async () => {
     carregarCom([nota(5)]);

@@ -3,7 +3,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Disc3, Download, LoaderCircle, Pl
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useValorAtrasado } from "@/shared/hooks/useValorAtrasado";
 import { Button } from "@/shared/ui/button";
-import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
+import { CampoDeSelecao } from "@/shared/ui/CampoDeSelecao";
 import { Input } from "@/shared/ui/input";
 import { Switch } from "@/shared/ui/switch";
 import { avisar } from "@/shared/ui/avisos";
@@ -14,6 +14,7 @@ import {
   buscarNoEncore,
   formatarDuracao,
   type DificuldadeDaBusca,
+  type Genero,
   type FiltrosDaBusca,
   type Instrumento,
   type RespostaDaBusca,
@@ -66,6 +67,24 @@ const OPCOES_DE_DIFICULDADE: { id: DificuldadeDaBusca | "todas"; rotulo: string 
   { id: "medio", rotulo: "Médio" },
   { id: "dificil", rotulo: "Difícil" },
   { id: "expert", rotulo: "Expert" },
+];
+
+const OPCOES_DE_GENERO: { id: Genero | "todos"; rotulo: string }[] = [
+  { id: "todos", rotulo: "Todos" },
+  { id: "rock", rotulo: "Rock" },
+  { id: "metal", rotulo: "Metal" },
+  { id: "punk", rotulo: "Punk" },
+  { id: "pop", rotulo: "Pop" },
+  { id: "alternativo", rotulo: "Alternativo" },
+  { id: "indie", rotulo: "Indie" },
+  { id: "progressivo", rotulo: "Progressivo" },
+  { id: "eletronica", rotulo: "Eletrônica" },
+  { id: "hip-hop", rotulo: "Hip hop" },
+  { id: "funk", rotulo: "Funk" },
+  { id: "blues", rotulo: "Blues" },
+  { id: "jazz", rotulo: "Jazz" },
+  { id: "country", rotulo: "Country" },
+  { id: "reggae", rotulo: "Reggae" },
 ];
 
 type Estado = { tipo: "carregando" } | { tipo: "pronto"; resposta: RespostaDaBusca } | { tipo: "erro"; mensagem: string };
@@ -144,7 +163,7 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
           <Input
             type="search"
             aria-label="Buscar músicas"
-            placeholder="Nome da música, artista, álbum ou charter"
+            placeholder={filtros.genero === "todos" ? "Nome da música, artista, álbum ou charter" : "Nome da música"}
             value={texto}
             onChange={(evento) => setTexto(evento.target.value)}
             className="h-12 pl-12 text-base md:text-base"
@@ -152,8 +171,9 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
           />
         </div>
         <div className="flex flex-wrap gap-8 max-md:gap-4">
-          <GrupoDeOpcoes titulo="Instrumento" opcoes={OPCOES_DE_INSTRUMENTO} valor={filtros.instrumento} aoEscolher={(instrumento) => mudarFiltros({ instrumento })} />
-          <GrupoDeOpcoes titulo="Dificuldade" opcoes={OPCOES_DE_DIFICULDADE} valor={filtros.dificuldade} aoEscolher={(dificuldade) => mudarFiltros({ dificuldade })} />
+          <CampoDeSelecao titulo="Instrumento" opcoes={OPCOES_DE_INSTRUMENTO} valor={filtros.instrumento} aoEscolher={(instrumento) => mudarFiltros({ instrumento })} />
+          <CampoDeSelecao titulo="Dificuldade" opcoes={OPCOES_DE_DIFICULDADE} valor={filtros.dificuldade} aoEscolher={(dificuldade) => mudarFiltros({ dificuldade })} />
+          <CampoDeSelecao titulo="Gênero" opcoes={OPCOES_DE_GENERO} valor={filtros.genero} aoEscolher={(genero) => mudarFiltros({ genero })} />
           {aoBaixar && (
             <label className="flex items-center gap-2 self-end py-2 text-base text-texto-suave">
               <Switch aria-label="Baixar com vídeo de fundo" checked={comVideo} onCheckedChange={setComVideo} />

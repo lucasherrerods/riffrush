@@ -310,4 +310,19 @@ describe("TelaDeSelecao removendo músicas", () => {
     expect(aoSelecionar).not.toHaveBeenCalled();
     expect(aoJogar).not.toHaveBeenCalled();
   });
+
+  it("favorita pelo coração ou pela tecla F, marca no carrossel e lembra depois", async () => {
+    const { usuario } = abrir({ indice: 0 });
+    const coracao = screen.getByRole("button", { name: "Favoritar" });
+    expect(coracao).toHaveAttribute("aria-pressed", "false");
+
+    await usuario.click(coracao);
+    expect(screen.getByRole("button", { name: "Tirar das favoritas" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(screen.getByRole("list", { name: "Músicas" })).getAllByLabelText("Favorita")).toHaveLength(1);
+
+    await usuario.keyboard("f");
+    expect(screen.getByRole("button", { name: "Favoritar" })).toHaveAttribute("aria-pressed", "false");
+    await usuario.keyboard("f");
+    expect(JSON.parse(localStorage.getItem("riffrush:favoritas")!)).toEqual([MUSICAS_DE_TESTE[0].id]);
+  });
 });

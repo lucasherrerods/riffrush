@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
-import { MessageSquare, Send, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronUp, MessageSquare, Send, type LucideIcon } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { TAMANHO_MAXIMO_DO_TEXTO, limparTexto } from "./chat";
@@ -32,18 +32,22 @@ interface Props {
   aviso?: ReactNode;
   /** Ao lado do título, à direita. */
   extra?: ReactNode;
+  /** Com ela, uma setinha no cabeçalho esconde as mensagens e o campo, e só o título fica. */
+  minimizar?: { minimizado: boolean; aoAlternar: (minimizado: boolean) => void };
   className?: string;
 }
 
 /** Chat de texto puro: nada vira link nem HTML, e as teclas digitadas não acionam os atalhos das telas. */
-export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMensagem, aviso, extra, className }: Props) {
+export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMensagem, aviso, extra, minimizar, className }: Props) {
   const [texto, setTexto] = useState("");
   const [devagar, setDevagar] = useState(false);
   const lista = useRef<HTMLOListElement>(null);
 
+  const minimizado = minimizar?.minimizado ?? false;
+
   useEffect(() => {
     if (lista.current) lista.current.scrollTop = lista.current.scrollHeight;
-  }, [mensagens]);
+  }, [mensagens, minimizado]);
 
   const enviar = (evento: FormEvent) => {
     evento.preventDefault();
@@ -61,60 +65,76 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
   };
 
   return (
-    <section aria-label={titulo} className={cn("flex min-h-0 flex-col gap-2 placa p-4", className)}>
+    <section aria-label={titulo} className={cn("flex min-h-0 flex-col gap-2 placa p-4", className, minimizado && "flex-none")}>
       <div className="flex items-center gap-2">
         <p className="flex flex-1 items-center gap-2 text-base font-bold">
           <MessageSquare className="size-4 text-primaria opacity-70" aria-hidden /> {titulo}
         </p>
-        {extra}
+        {!minimizado && extra}
+        {minimizar && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            aria-label={minimizado ? `Abrir o ${titulo.toLowerCase()}` : `Minimizar o ${titulo.toLowerCase()}`}
+            aria-expanded={!minimizado}
+            onClick={() => minimizar.aoAlternar(!minimizado)}
+          >
+            {minimizado ? <ChevronUp /> : <ChevronDown />}
+          </Button>
+        )}
       </div>
-      <ol ref={lista} role="log" aria-label={titulo} className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto text-base">
-        {mensagens.length === 0 && !bloqueado && <li className="text-texto-suave">Nenhuma mensagem ainda.</li>}
-        {mensagens.map((m) => (
-          <li key={m.id} className="group flex items-start gap-1 break-words">
-            <p className="min-w-0 flex-1">
-              <span className={cn("font-bold", m.minha ? "text-destaque" : "text-texto")}>{m.autor}</span>
-              {m.selo && <span className="ml-1 rounded-full bg-ouro px-2 text-base font-bold text-fundo">{m.selo}</span>}
-              <span className="text-texto-suave">: </span>
-              <span>{m.texto}</span>
-            </p>
-            {acoesDaMensagem?.(m).map(({ rotulo, icone: Icone, aoClicar }) => (
-              <button
-                key={rotulo}
-                type="button"
-                aria-label={rotulo}
-                title={rotulo}
-                onClick={aoClicar}
-                className="shrink-0 text-texto-suave opacity-0 group-hover:opacity-100 hover:text-perigo focus-visible:opacity-100"
-              >
-                <Icone className="size-4" aria-hidden />
-              </button>
+      {!minimizado && (
+        <>
+          <ol ref={lista} role="log" aria-label={titulo} className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto text-base">
+            {mensagens.length === 0 && !bloqueado && <li className="text-texto-suave">Nenhuma mensagem ainda.</li>}
+            {mensagens.map((m) => (
+              <li key={m.id} className="group flex items-start gap-1 break-words">
+                <p className="min-w-0 flex-1">
+                  <span className={cn("font-bold", m.minha ? "text-destaque" : "text-texto")}>{m.autor}</span>
+                  {m.selo && <span className="ml-1 rounded-full bg-ouro px-2 text-base font-bold text-fundo">{m.selo}</span>}
+                  <span className="text-texto-suave">: </span>
+                  <span>{m.texto}</span>
+                </p>
+                {acoesDaMensagem?.(m).map(({ rotulo, icone: Icone, aoClicar }) => (
+                  <button
+                    key={rotulo}
+                    type="button"
+                    aria-label={rotulo}
+                    title={rotulo}
+                    onClick={aoClicar}
+                    className="shrink-0 text-texto-suave opacity-0 group-hover:opacity-100 hover:text-perigo focus-visible:opacity-100"
+                  >
+                    <Icone className="size-4" aria-hidden />
+                  </button>
+                ))}
+              </li>
             ))}
-          </li>
-        ))}
-      </ol>
-      {aviso && <p className="text-base text-texto-suave">{aviso}</p>}
-      {bloqueado ? (
-        <p className="text-base text-texto-suave">{bloqueado}</p>
-      ) : (
-        <form onSubmit={enviar} className="flex flex-col gap-1">
-          <div className="flex gap-2">
-            <input
-              aria-label="Mensagem"
-              value={texto}
-              maxLength={TAMANHO_MAXIMO_DO_TEXTO}
-              autoComplete="off"
-              placeholder="Escreva uma mensagem"
-              onChange={(e) => setTexto(e.target.value)}
-              onKeyDown={segurarTeclas}
-              className="h-9 min-w-0 flex-1 rounded-md border border-borda bg-fundo px-3 text-base outline-none placeholder:text-texto-suave focus-visible:border-primaria"
-            />
-            <Button type="submit" size="icon" variant="ghost" aria-label="Enviar">
-              <Send />
-            </Button>
-          </div>
-          {devagar && <p className="text-base text-texto-suave">Mais devagar: espere um pouco para mandar de novo.</p>}
-        </form>
+          </ol>
+          {aviso && <p className="text-base text-texto-suave">{aviso}</p>}
+          {bloqueado ? (
+            <p className="text-base text-texto-suave">{bloqueado}</p>
+          ) : (
+            <form onSubmit={enviar} className="flex flex-col gap-1">
+              <div className="flex gap-2">
+                <input
+                  aria-label="Mensagem"
+                  value={texto}
+                  maxLength={TAMANHO_MAXIMO_DO_TEXTO}
+                  autoComplete="off"
+                  placeholder="Escreva uma mensagem"
+                  onChange={(e) => setTexto(e.target.value)}
+                  onKeyDown={segurarTeclas}
+                  className="h-9 min-w-0 flex-1 rounded-md border border-borda bg-fundo px-3 text-base outline-none placeholder:text-texto-suave focus-visible:border-primaria"
+                />
+                <Button type="submit" size="icon" variant="ghost" aria-label="Enviar">
+                  <Send />
+                </Button>
+              </div>
+              {devagar && <p className="text-base text-texto-suave">Mais devagar: espere um pouco para mandar de novo.</p>}
+            </form>
+          )}
+        </>
       )}
     </section>
   );

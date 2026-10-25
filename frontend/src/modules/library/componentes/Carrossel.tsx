@@ -1,6 +1,6 @@
 import { useRef, type ReactNode } from "react";
 import { motion } from "framer-motion";
-import { Star } from "lucide-react";
+import { Heart, Star } from "lucide-react";
 import { recordeDe, type Recordes } from "@/modules/results";
 import type { Dificuldade, Instrumento, Musica } from "@/modules/songs";
 import { cn } from "@/shared/lib/utils";
@@ -15,6 +15,8 @@ interface Props {
   /** As dificuldades que a música selecionada tem. */
   dificuldades: { id: Dificuldade; rotulo: string }[];
   recordes: Recordes;
+  /** Ids das músicas favoritas, marcadas com um coração. */
+  favoritas?: Set<string>;
   aoEscolherMusica: (indice: number) => void;
   aoEscolherDificuldade: (dificuldade: Dificuldade) => void;
   aoJogar: () => void;
@@ -41,7 +43,7 @@ const COR_DA_DIFICULDADE: Record<Dificuldade, string> = {
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 /** Lista de músicas em roda, como no osu!lazer: a selecionada fica no meio, com as dificuldades abertas embaixo. */
-export function Carrossel({ musicas, indice, dificuldade, instrumento, dificuldades, recordes, aoEscolherMusica, aoEscolherDificuldade, aoJogar, aoGirar, menuDaSelecionada }: Props) {
+export function Carrossel({ musicas, indice, dificuldade, instrumento, dificuldades, recordes, favoritas, aoEscolherMusica, aoEscolherDificuldade, aoJogar, aoGirar, menuDaSelecionada }: Props) {
   const giro = useRef(0);
   const posicoes = posicoesNoCarrossel(musicas.length, indice, dificuldades.length);
   const centro = centroDoGrupoAberto(dificuldades.length);
@@ -84,7 +86,10 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
             >
               <Capa musica={m} decorativa className="size-14 rounded-sm" />
               <span className="min-w-0 flex-1">
-                <span className={cn("block truncate font-titulo text-2xl leading-[1.1] tracking-wide", selecionada && "text-destaque")}>{m.titulo}</span>
+                <span className={cn("flex items-center gap-2 font-titulo text-2xl leading-[1.1] tracking-wide", selecionada && "text-destaque")}>
+                  {favoritas?.has(m.id) && <Heart className="size-4 shrink-0 fill-primaria text-primaria" aria-label="Favorita" />}
+                  <span className="truncate">{m.titulo}</span>
+                </span>
                 <span className="block truncate text-base text-texto-suave">{m.artista}</span>
               </span>
               {recorde && (

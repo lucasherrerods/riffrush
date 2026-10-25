@@ -82,4 +82,21 @@ describe("PainelDeChat", () => {
     render(<PainelDeChat titulo="Chat" mensagens={[]} aoEnviar={vi.fn()} aviso="A moderação nunca pede senha." />);
     expect(screen.getByText("A moderação nunca pede senha.")).toBeInTheDocument();
   });
+
+  it("com minimizar, a setinha esconde as mensagens e o campo, e mostra de novo", async () => {
+    const aoAlternar = vi.fn();
+    const { rerender } = render(<PainelDeChat titulo="Chat global" mensagens={[{ id: "1", autor: "Ana", texto: "oi" }]} aoEnviar={vi.fn()} minimizar={{ minimizado: false, aoAlternar }} />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Minimizar o chat global" }));
+    expect(aoAlternar).toHaveBeenCalledWith(true);
+
+    rerender(<PainelDeChat titulo="Chat global" mensagens={[{ id: "1", autor: "Ana", texto: "oi" }]} aoEnviar={vi.fn()} minimizar={{ minimizado: true, aoAlternar }} />);
+    expect(screen.queryByRole("log")).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Mensagem" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Abrir o chat global" })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("sem minimizar, não tem setinha", () => {
+    render(<PainelDeChat titulo="Chat da sala" mensagens={[]} aoEnviar={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: /Minimizar/ })).not.toBeInTheDocument();
+  });
 });

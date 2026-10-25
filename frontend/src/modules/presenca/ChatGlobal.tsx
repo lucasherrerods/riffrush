@@ -10,6 +10,24 @@ import { apiDaPresenca, type BanidoDaModeracao, type DenunciaDaModeracao } from 
 import { chatGlobal } from "./presenca";
 
 const CHAVE_DOS_SILENCIADOS = "riffrush:chat:silenciados";
+const CHAVE_DO_MINIMIZADO = "riffrush:chat:minimizado";
+
+/** Minimizado fica guardado: o chat volta do jeito que a pessoa deixou. */
+function lerMinimizado() {
+  try {
+    return localStorage.getItem(CHAVE_DO_MINIMIZADO) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function guardarMinimizado(minimizado: boolean) {
+  try {
+    localStorage.setItem(CHAVE_DO_MINIMIZADO, minimizado ? "1" : "0");
+  } catch {
+    // Sem armazenamento: vale só até fechar o app.
+  }
+}
 
 function lerSilenciados(): string[] {
   try {
@@ -82,6 +100,7 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
   const estado = useSyncExternalStore(chatGlobal.inscrever, chatGlobal.estado);
   const [silenciados, setSilenciados] = useState(lerSilenciados);
   const [moderando, setModerando] = useState(false);
+  const [minimizado, setMinimizado] = useState(lerMinimizado);
   const moderacao = useModeracao(ligado && !!estado.voce?.admin);
 
   useEffect(() => (ligado ? chatGlobal.usar() : undefined), [ligado]);
@@ -144,6 +163,13 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
           .map((m) => ({ id: String(m.n), autor: m.autor.nome, texto: m.texto, minha: m.autor.id === conta?.id, selo: m.autor.moderacao ? "Moderação" : undefined }))}
         aoEnviar={(texto) => chatGlobal.enviar(texto)}
         acoesDaMensagem={acoes}
+        minimizar={{
+          minimizado,
+          aoAlternar: (novo) => {
+            setMinimizado(novo);
+            guardarMinimizado(novo);
+          },
+        }}
         extra={
           <>
             {silenciados.length > 0 && (

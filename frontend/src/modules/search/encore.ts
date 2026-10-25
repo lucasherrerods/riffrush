@@ -22,16 +22,54 @@ export const DIFICULDADES = {
   facil: "easy",
 } as const;
 
+/**
+ * Os gêneros do filtro, como o Encore os escreve. A busca procura o pedaço do nome,
+ * então "Metal" também traz Death Metal e Metalcore.
+ */
+export const GENEROS = {
+  rock: "Rock",
+  metal: "Metal",
+  punk: "Punk",
+  pop: "Pop",
+  alternativo: "Alternative",
+  indie: "Indie",
+  progressivo: "Progressive",
+  eletronica: "Electronic",
+  "hip-hop": "Hip Hop",
+  funk: "Funk",
+  blues: "Blues",
+  jazz: "Jazz",
+  country: "Country",
+  reggae: "Reggae",
+} as const;
+
 export type Instrumento = keyof typeof INSTRUMENTOS;
 export type DificuldadeDaBusca = keyof typeof DIFICULDADES;
+export type Genero = keyof typeof GENEROS;
 
 export interface FiltrosDaBusca {
   texto: string;
   instrumento: Instrumento | "todos";
   dificuldade: DificuldadeDaBusca | "todas";
+  genero: Genero | "todos";
 }
 
-export const FILTROS_PADRAO: FiltrosDaBusca = { texto: "", instrumento: "todos", dificuldade: "todas" };
+export const FILTROS_PADRAO: FiltrosDaBusca = { texto: "", instrumento: "todos", dificuldade: "todas", genero: "todos" };
+
+const contem = (valor: string) => ({ value: valor, exact: false, exclude: false });
+
+/**
+ * O gênero só existe na busca avançada, que não tem o campo de texto livre:
+ * com gênero, o texto procura no nome da música.
+ */
+export function montarCorpoDaBuscaAvancada(filtros: FiltrosDaBusca, pagina: number) {
+  const { search: texto, ...comum } = montarCorpoDaBusca(filtros, pagina);
+  return {
+    ...comum,
+    ...(filtros.genero !== "todos" && { genre: contem(GENEROS[filtros.genero]) }),
+    ...(texto && { name: contem(texto) }),
+  };
+}
 
 export interface ResultadoDaBusca {
   md5: string;
@@ -117,10 +155,11 @@ export async function buscarNoEncore(
   pagina: number,
   { buscar = fetch, sinal }: { buscar?: typeof fetch; sinal?: AbortSignal } = {},
 ): Promise<RespostaDaBusca> {
-  const resposta = await buscar(`${URL_DA_API}/search`, {
+  const avancada = filtros.genero !== "todos";
+  const resposta = await buscar(`${URL_DA_API}/search${avancada ? "/advanced" : ""}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(montarCorpoDaBusca(filtros, pagina)),
+    body: JSON.stringify(avancada ? montarCorpoDaBuscaAvancada(filtros, pagina) : montarCorpoDaBusca(filtros, pagina)),
     signal: sinal,
   });
   if (resposta.status === 429) throw new Error("Muitas buscas seguidas. Espere um pouco e tente de novo.");

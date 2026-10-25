@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Ellipsis, FileAudio, Flame, Info, ListOrdered, Play, RotateCcw, Trash2, Trophy } from "lucide-react";
+import { ArrowLeft, Ellipsis, FileAudio, Flame, Heart, Info, ListOrdered, Play, RotateCcw, Trash2, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { AvatarPalhetando } from "./componentes/AvatarPalhetando";
 import { Capa } from "./componentes/Capa";
 import { Carrossel } from "./componentes/Carrossel";
+import { alternarFavorita, carregarFavoritas, salvarFavoritas } from "./favoritas";
 import { ehImportada, semAudio } from "./storage/historico";
 
 interface Props {
@@ -77,6 +78,15 @@ export function TelaDeSelecao(props: Props) {
     campo.value = "";
   };
 
+  const [favoritas, setFavoritas] = useState(carregarFavoritas);
+  const favorita = favoritas.has(musica.id);
+  const alternarFavoritaAtual = () => {
+    efeito("mover");
+    const novas = alternarFavorita(favoritas, musica.id);
+    setFavoritas(novas);
+    salvarFavoritas(novas);
+  };
+
   const [removendo, setRemovendo] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
   const podeRemover = ehImportada(musica);
@@ -89,6 +99,7 @@ export function TelaDeSelecao(props: Props) {
     // Com o modal ou o menu de opções aberto, as teclas são dele: Esc o fecha, sem voltar ao menu.
     if (removendo || menuAberto) return;
     if (evento.code === "Delete" && podeRemover) return setRemovendo(true);
+    if (evento.code === "KeyF") return alternarFavoritaAtual();
     // Shift+Tab é do modo competitivo; o Tab sozinho troca o instrumento.
     if (evento.code === "Tab" && !evento.shiftKey && instrumentos.length > 1) {
       evento.preventDefault();
@@ -186,6 +197,16 @@ export function TelaDeSelecao(props: Props) {
               <h2 className="truncate text-4xl leading-[1.1] max-md:text-2xl">{musica.titulo}</h2>
               <p className="truncate text-lg text-texto-suave">{musica.artista}</p>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={favorita ? "Tirar das favoritas" : "Favoritar"}
+              aria-pressed={favorita}
+              title="Favoritar (F)"
+              onClick={alternarFavoritaAtual}
+            >
+              <Heart className={cn(favorita ? "fill-primaria text-primaria" : "opacity-70")} />
+            </Button>
           </div>
 
           {instrumentos.length > 1 && (
@@ -248,6 +269,7 @@ export function TelaDeSelecao(props: Props) {
           instrumento={instrumento}
           dificuldades={dificuldades}
           recordes={recordes}
+          favoritas={favoritas}
           aoEscolherMusica={(i) => {
             efeito("mover");
             aoSelecionar(i);
@@ -279,6 +301,7 @@ export function TelaDeSelecao(props: Props) {
         <Comando teclas={rotuloDoComando("vertical", dispositivo)}>Música</Comando>
         {instrumentos.length > 1 && <Comando teclas={rotuloDoComando("instrumento", dispositivo)}>Instrumento</Comando>}
         <Comando teclas={rotuloDoComando("confirmar", dispositivo)}>Confirmar</Comando>
+        {dispositivo === "teclado" && <Comando teclas="F">Favoritar</Comando>}
         <Comando teclas={rotuloDoComando("voltar", dispositivo)}>Voltar</Comando>
       </footer>
       <Dialog open={removendo} onOpenChange={setRemovendo}>

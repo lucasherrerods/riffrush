@@ -70,6 +70,9 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   modoCompetitivo: false,
 };
 
+
+/** Ao despausar, a música volta depois de 3, 2, 1. */
+const SEGUNDOS_PARA_RETOMAR = 3;
 interface Props {
   musica: Musica;
   dificuldade: Dificuldade;
@@ -174,6 +177,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   const [urlDoVideo, setUrlDoVideo] = useState<string | null>(null);
   const [loja] = useState(() => criarLojaDoHud<Hud>(HUD_INICIAL));
   const [pausado, setPausado] = useState(false);
+  /** Ao despausar: segundos que faltam para a música voltar (3, 2, 1), ou 0. */
+  const [retomando, setRetomando] = useState(0);
   const pausadoNaTela = useRef(false);
   pausadoNaTela.current = pausado;
   const [derrota, setDerrota] = useState(false);
@@ -357,10 +362,23 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       }
     };
 
+    /** O 3, 2, 1 antes de a música voltar, como no começo. Enquanto conta, a partida segue pausada. */
+    let retomada: ReturnType<typeof setTimeout> | null = null;
+    const cancelarRetomada = () => {
+      if (retomada) clearTimeout(retomada);
+      retomada = null;
+      setRetomando(0);
+    };
+
     // Em rede a música dos outros não para: a pausa só abre o menu.
     const pausar = () => {
       if (terminou) return;
       if (inicioEmRede !== undefined) return setPausado(true);
+      // Pausar no meio da contagem: a música nem voltou, só reabre o menu.
+      if (retomada) {
+        cancelarRetomada();
+        return setPausado(true);
+      }
       if (pausadoAgora) return;
       pausadoAgora = true;
       void audio.suspend();
@@ -370,10 +388,19 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     };
     const continuar = () => {
       setPausado(false);
-      if (!pausadoAgora) return;
-      pausadoAgora = false;
-      void audio.resume();
-      transmitir({ tipo: "pausa", pausado: false });
+      if (!pausadoAgora || retomada) return;
+      const contar = (falta: number) => {
+        setRetomando(falta);
+        retomada = setTimeout(() => {
+          if (falta > 1) return contar(falta - 1);
+          retomada = null;
+          setRetomando(0);
+          pausadoAgora = false;
+          void audio.resume();
+          transmitir({ tipo: "pausa", pausado: false });
+        }, 1000);
+      };
+      contar(SEGUNDOS_PARA_RETOMAR);
     };
     const desistir = () => {
       partida.derrota = true;
@@ -404,7 +431,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     const aoApertar = (evento: KeyboardEvent) => {
       if (evento.code === "Escape") {
         evento.preventDefault();
-        if (pausadoAgora || (inicioEmRede !== undefined && pausadoNaTela.current)) continuar();
+        if (retomada) pausar();
+        else if (pausadoAgora || (inicioEmRede !== undefined && pausadoNaTela.current)) continuar();
         else pausar();
         return;
       }
@@ -537,6 +565,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     quadro = requestAnimationFrame(desenhar);
 
     return () => {
+      cancelarRetomada();
       encerrarTransmissao();
       cancelAnimationFrame(quadro);
       observador?.disconnect();
@@ -556,6 +585,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
 
   const recomecar = () => {
     setPausado(false);
+    setRetomando(0);
     setDerrota(false);
     loja.definir(HUD_INICIAL);
     setAviso(null);
@@ -686,10 +716,14 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       )}
 
       <AnimatePresence>
+        {retomando > 0 && !pausado && <NumeroDaContagem key={`retomada-${retomando}`} valor={retomando} />}
+      </AnimatePresence>
+      <AnimatePresence>
         {(pausado || derrota) && (
           <MenuDePausa
             derrota={derrota}
             emRede={emRede}
+            aoVivo={replay?.ateAgora !== undefined}
             aoContinuar={() => controles.current.continuar()}
             aoRecomecar={recomecar}
             aoSair={aoSair}
@@ -770,21 +804,27 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
       )}
 
       <AnimatePresence>
-        {hud.contagem > 0 && !pausado && (
-          <motion.p
-            key={hud.contagem}
-            initial={{ scale: 2, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.5, opacity: 0 }}
-            className="pointer-events-none absolute inset-0 flex items-center justify-center text-8xl font-black"
-          >
-            {hud.contagem}
-          </motion.p>
-        )}
+        {hud.contagem > 0 && !pausado && <NumeroDaContagem key={hud.contagem} valor={hud.contagem} />}
       </AnimatePresence>
     </>
   );
 }
+/** O número grande do 3, 2, 1: no começo da música e ao voltar da pausa. */
+function NumeroDaContagem({ valor }: { valor: number }) {
+  return (
+    <motion.p
+      role="timer"
+      aria-label={`Volta em ${valor}`}
+      initial={{ scale: 2, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      exit={{ scale: 0.5, opacity: 0 }}
+      className="pointer-events-none absolute inset-0 flex items-center justify-center text-8xl font-black"
+    >
+      {valor}
+    </motion.p>
+  );
+}
+
 /** Só o placar re-renderiza quando os pontos mudam. */
 function PlacarDaPartida({ loja, placar }: { loja: LojaDoHud<Hud>; placar: (pontos: number) => ReactNode }) {
   const { pontos } = useLoja(loja);
