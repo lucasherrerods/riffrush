@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::dominio::{montar_ranking, LinhaDoGeral, Ranking, TAMANHO_DO_TOP};
+use super::dominio::{montar_ranking, LinhaDoGeral, MusicaPopular, Ranking, TAMANHO_DO_TOP};
 use super::portas::RepositorioDoRanking;
 use crate::modules::conta::{FalhaExterna, ServicosDaConta, TAMANHO_MAXIMO_DO_ID_DA_MUSICA};
 use crate::modules::progresso::{Dificuldade, Instrumento};
@@ -37,6 +37,11 @@ impl ServicosDoRanking {
         Ok(montar_ranking(linhas, conta))
     }
 
+    /// As músicas com mais partidas, somando todos os jogadores.
+    pub async fn musicas(&self) -> Result<Vec<MusicaPopular>, ErroDoRanking> {
+        Ok(self.repositorio.musicas(TAMANHO_DO_TOP).await?)
+    }
+
     /// Sessão vencida ou inválida não esconde o ranking: só fica sem a linha pessoal.
     async fn conta_de(&self, token: Option<&str>) -> Option<uuid::Uuid> {
         match token {
@@ -62,6 +67,7 @@ pub mod fakes {
     pub struct RankingEmMemoria {
         pub linhas: Mutex<Vec<(String, Dificuldade, Instrumento, LinhaDoRanking)>>,
         pub geral: Mutex<Vec<LinhaDoGeral>>,
+        pub musicas: Mutex<Vec<MusicaPopular>>,
         /// O limite do último pedido, para conferir que o caso de uso pede o top inteiro.
         pub ultimo_limite: Mutex<Option<u32>>,
     }
@@ -107,6 +113,11 @@ pub mod fakes {
                 .filter(|l| l.posicao <= ate || Some(l.conta_id) == conta)
                 .cloned()
                 .collect())
+        }
+
+        async fn musicas(&self, ate: u32) -> Result<Vec<MusicaPopular>, FalhaExterna> {
+            *self.ultimo_limite.lock().unwrap() = Some(ate);
+            Ok(self.musicas.lock().unwrap().iter().filter(|m| m.posicao <= ate).cloned().collect())
         }
     }
 }
@@ -211,5 +222,18 @@ mod tests {
         assert_eq!(ranking.meu.map(|l| l.posicao), Some(77));
         assert_eq!(*repositorio.ultimo_limite.lock().unwrap(), Some(TAMANHO_DO_TOP));
         assert_eq!(servicos.geral(None).await.unwrap().meu, None);
+    }
+
+    #[tokio::test]
+    async fn as_musicas_mais_jogadas_pedem_o_top_inteiro() {
+        let (servicos, repositorio) = servicos_do_ranking(servicos().0);
+        *repositorio.musicas.lock().unwrap() = vec![MusicaPopular {
+            posicao: 1,
+            musica_id: "encore:abc".into(),
+            partidas: 30,
+            jogadores: 4,
+        }];
+        assert_eq!(servicos.musicas().await.unwrap().len(), 1);
+        assert_eq!(*repositorio.ultimo_limite.lock().unwrap(), Some(TAMANHO_DO_TOP));
     }
 }

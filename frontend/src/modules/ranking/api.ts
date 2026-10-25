@@ -30,6 +30,20 @@ export interface RespostaDoRanking<P = PosicaoNoRanking> {
 
 export type RespostaDoGeral = RespostaDoRanking<PosicaoNoGeral>;
 
+/** Uma música no ranking das mais jogadas, somando todos os jogadores. */
+export interface MusicaNoRanking {
+  posicao: number;
+  musica_id: string;
+  partidas: number;
+  /** Quantos jogadores diferentes tocaram. */
+  jogadores: number;
+}
+
+function conferirMusicas(corpo: unknown): MusicaNoRanking[] {
+  if (!Array.isArray(corpo)) throw new Error("As músicas mais jogadas vieram num formato inesperado.");
+  return corpo;
+}
+
 /** Uma resposta estranha (proxy, versão antiga da API) vira erro aqui, e não uma tela quebrada no painel. */
 function conferirRanking<P>(corpo: unknown): RespostaDoRanking<P> {
   const ranking = corpo as Partial<RespostaDoRanking<P>> | null;
@@ -50,6 +64,7 @@ export function criarApiDoRanking(base: string, buscar?: typeof fetch) {
       chamar<unknown>("GET", `/ranking?${new URLSearchParams({ musica_id: musicaId, dificuldade, instrumento })}`, { token, sinal }).then(conferirRanking<PosicaoNoRanking>),
     geral: ({ token, sinal }: { token?: string; sinal?: AbortSignal } = {}) =>
       chamar<unknown>("GET", "/ranking/geral", { token, sinal }).then(conferirRanking<PosicaoNoGeral>),
+    musicas: ({ sinal }: { sinal?: AbortSignal } = {}) => chamar<unknown>("GET", "/ranking/musicas", { sinal }).then(conferirMusicas),
   };
 }
 

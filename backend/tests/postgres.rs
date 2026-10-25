@@ -256,6 +256,45 @@ async fn ranking_geral_ordena_por_xp_e_ignora_quem_nao_jogou() {
 }
 
 #[tokio::test]
+async fn musicas_mais_jogadas_contam_partidas_e_jogadores_diferentes() {
+    let Some(banco) = banco().await else { return };
+    let ranking = RankingPostgres(banco.0.clone());
+    // Música só deste teste, com partidas suficientes para ficar no topo do banco de testes.
+    let musica = format!("teste:{}", Uuid::new_v4());
+    let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let agora = Utc::now();
+    for (i, conta) in [ana.id, ana.id, bia.id].into_iter().cycle().take(300).enumerate() {
+        banco
+            .registrar_partida(&PartidaRegistrada {
+                conta_id: conta,
+                musica_id: musica.clone(),
+                instrumento: Instrumento::Guitarra,
+                pontos: 10,
+                resumo: ResumoDaPartida {
+                    dificuldade: Dificuldade::Facil,
+                    acertos: 1,
+                    total: 1,
+                    derrota: false,
+                    fantasma: false,
+                },
+                xp_ganho: 0,
+                jogada_em: agora + Duration::seconds(i as i64),
+            })
+            .await
+            .unwrap();
+    }
+
+    let musicas = ranking.musicas(1).await.unwrap();
+
+    assert_eq!(musicas.len(), 1);
+    assert_eq!(
+        (musicas[0].posicao, musicas[0].musica_id.as_str(), musicas[0].partidas, musicas[0].jogadores),
+        (1, musica.as_str(), 300, 2)
+    );
+}
+
+#[tokio::test]
 async fn ranking_geral_da_a_posicao_certa_fora_do_top_e_no_empate() {
     let Some(banco) = banco().await else { return };
     let ranking = RankingPostgres(banco.0.clone());

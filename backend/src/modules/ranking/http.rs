@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use super::casos_de_uso::ErroDoRanking;
-use super::dominio::{LinhaDoGeral, LinhaDoRanking, Ranking};
+use super::dominio::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, Ranking};
 use crate::modules::conta::{NivelDaConta, TokenOpcional};
 use crate::modules::progresso::{nivel_do_xp, Dificuldade, Instrumento};
 use crate::shared::erro::ErroDaApi;
@@ -120,6 +120,31 @@ pub async fn geral(State(estado): State<EstadoDoApp>, TokenOpcional(token): Toke
     Ok(Json(estado.ranking.geral(token.as_deref()).await?.into()))
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct MusicaNoRanking {
+    posicao: u32,
+    musica_id: String,
+    partidas: u32,
+    jogadores: u32,
+}
+
+impl From<MusicaPopular> for MusicaNoRanking {
+    fn from(m: MusicaPopular) -> Self {
+        Self {
+            posicao: m.posicao,
+            musica_id: m.musica_id,
+            partidas: m.partidas,
+            jogadores: m.jogadores,
+        }
+    }
+}
+
+/// As músicas com mais partidas, somando todos os jogadores.
+#[utoipa::path(get, path = "/ranking/musicas", responses((status = 200, body = Vec<MusicaNoRanking>)))]
+pub async fn musicas(State(estado): State<EstadoDoApp>) -> Result<Json<Vec<MusicaNoRanking>>, ErroDaApi> {
+    Ok(Json(estado.ranking.musicas().await?.into_iter().map(Into::into).collect()))
+}
+
 /// O top de uma música, dificuldade e instrumento. Com o token, vem também o recorde de quem pediu.
 #[utoipa::path(get, path = "/ranking", params(PedidoDoRanking), responses((status = 200, body = RespostaDoRanking), (status = 400)), security((), ("token" = [])))]
 pub async fn ranking(
@@ -135,5 +160,8 @@ pub async fn ranking(
 }
 
 pub fn rotas() -> Router<EstadoDoApp> {
-    Router::new().route("/ranking", get(ranking)).route("/ranking/geral", get(geral))
+    Router::new()
+        .route("/ranking", get(ranking))
+        .route("/ranking/geral", get(geral))
+        .route("/ranking/musicas", get(musicas))
 }

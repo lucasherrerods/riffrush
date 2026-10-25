@@ -31,6 +31,16 @@ pub struct LinhaDoGeral {
     pub xp_total: u64,
 }
 
+/// Uma música no ranking das mais jogadas, contando as partidas de todo mundo.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MusicaPopular {
+    pub posicao: u32,
+    pub musica_id: String,
+    pub partidas: u32,
+    /// Quantas contas diferentes jogaram.
+    pub jogadores: u32,
+}
+
 /// O que o ranking da música e o geral têm em comum para separar o top da linha de quem pediu.
 pub trait Posicionada: Clone {
     fn posicao(&self) -> u32;

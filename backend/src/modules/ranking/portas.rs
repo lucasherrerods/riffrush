@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use super::dominio::{LinhaDoGeral, LinhaDoRanking};
+use super::dominio::{LinhaDoGeral, LinhaDoRanking, MusicaPopular};
 use crate::modules::conta::FalhaExterna;
 use crate::modules::progresso::{Dificuldade, Instrumento};
 
@@ -19,4 +19,7 @@ pub trait RepositorioDoRanking: Send + Sync {
 
     /// As contas com XP até a posição `ate` e, se `conta` tiver XP, a linha dela, já numeradas.
     async fn geral(&self, ate: u32, conta: Option<Uuid>) -> Result<Vec<LinhaDoGeral>, FalhaExterna>;
+
+    /// As `ate` músicas com mais partidas, já numeradas.
+    async fn musicas(&self, ate: u32) -> Result<Vec<MusicaPopular>, FalhaExterna>;
 }
