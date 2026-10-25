@@ -97,7 +97,6 @@ export function TelaDePersonagem({ personagem, aoSalvar, aoVoltar, nomeDaConta }
             {nomeDaConta ? (
               <>
                 <Input id="nome-do-personagem" value={nomeDaConta} readOnly disabled className="max-w-xs text-base" />
-                <p className="mt-2 text-base text-texto-suave">Com a conta conectada, o nome é o da sua conta Google.</p>
               </>
             ) : (
               <Input id="nome-do-personagem" value={rascunho.nome} maxLength={16} onChange={(e) => mudar({ nome: e.target.value })} className="max-w-xs text-base" />
