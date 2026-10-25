@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { obterContextoDeAudio } from "@/modules/audio";
+import { instalarAtalhosDeVolume, obterContextoDeAudio } from "@/modules/audio";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { carregarMusica, type Nota } from "@/modules/songs";
 import { AudioContextFalso } from "@/test/audioFalso";
@@ -170,6 +170,32 @@ describe("TelaDeJogo", () => {
     await partidaPronta();
     act(() => void window.dispatchEvent(new Event("blur")));
     expect(await screen.findByRole("heading", { name: "Pausado" })).toBeInTheDocument();
+  });
+
+  it("soltar o Alt depois de mexer no volume não pausa, mesmo se o Windows tirar o foco da janela", async () => {
+    const desinstalar = instalarAtalhosDeVolume(window);
+    carregarCom([nota(5)]);
+    abrir();
+    await partidaPronta();
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Alt", code: "AltLeft", altKey: true }));
+      document.body.dispatchEvent(new WheelEvent("wheel", { deltaY: -100, altKey: true, bubbles: true, cancelable: true }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { key: "Alt", code: "AltLeft" }));
+      window.dispatchEvent(new Event("blur"));
+    });
+    expect(screen.queryByRole("heading", { name: "Pausado" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Recomeçar/ })).not.toBeInTheDocument();
+    desinstalar();
+  });
+
+  it("o menu de pausa abre sem nenhum botão em foco, para uma tecla do jogo não recomeçar a partida", async () => {
+    carregarCom([nota(5)]);
+    const { usuario } = abrir();
+    await partidaPronta();
+    screen.getByRole("button", { name: "Pausar" }).focus();
+    await usuario.keyboard("{Escape}");
+    await screen.findByRole("heading", { name: "Pausado" });
+    expect(document.activeElement).toBe(document.body);
   });
 
   it("Sair da música avisa a tela de cima", async () => {

@@ -1,6 +1,6 @@
 import { AudioContextFalso } from "@/test/audioFalso";
 import { obterContextoDeAudio } from "./contexto";
-import { definirVolumeGeral, instalarAtalhosDeVolume, lerVolumeGeral, proximoVolume, saidaDeAudio, volumeGeral } from "./volume";
+import { definirVolumeGeral, focoSaiuPeloAlt, instalarAtalhosDeVolume, lerVolumeGeral, proximoVolume, saidaDeAudio, volumeGeral } from "./volume";
 
 vi.stubGlobal("AudioContext", AudioContextFalso);
 
@@ -96,13 +96,37 @@ describe("atalhos de volume", () => {
     window.removeEventListener("keydown", daTela);
   });
 
-  it("soltar o Alt depois de mexer no volume não abre a barra de menu do navegador", () => {
-    tecla("keydown", { key: "Alt", code: "AltLeft", altKey: true });
+  it("o Alt nunca faz o que faria no navegador: nem ao apertar, nem ao soltar", () => {
+    expect(tecla("keydown", { key: "Alt", code: "AltLeft", altKey: true }).defaultPrevented).toBe(true);
     rodar(-100, { altKey: true });
     expect(tecla("keyup", { key: "Alt", code: "AltLeft" }).defaultPrevented).toBe(true);
-    // Um Alt sozinho, sem mexer no volume, segue normal.
+    // Mesmo sem mexer no volume.
     tecla("keydown", { key: "Alt", code: "AltLeft", altKey: true });
-    expect(tecla("keyup", { key: "Alt", code: "AltLeft" }).defaultPrevented).toBe(false);
+    expect(tecla("keyup", { key: "Alt", code: "AltLeft" }).defaultPrevented).toBe(true);
+  });
+
+  it("o foco que sai logo depois de soltar o Alt é do Alt (modo menu), não de trocar de janela", () => {
+    tecla("keydown", { key: "Alt", code: "AltLeft", altKey: true });
+    rodar(-100, { altKey: true });
+    tecla("keyup", { key: "Alt", code: "AltLeft" });
+    const agora = performance.now();
+    expect(focoSaiuPeloAlt(agora)).toBe(true);
+    expect(focoSaiuPeloAlt(agora + 600)).toBe(false);
+  });
+
+  it("no Alt+Tab o foco sai com o Alt ainda segurado: aí não é o Alt", () => {
+    tecla("keydown", { key: "Alt", code: "AltLeft", altKey: true });
+    expect(focoSaiuPeloAlt()).toBe(false);
+  });
+
+  it("outra tecla depois do Alt, ou a janela voltar, zera o Alt", () => {
+    tecla("keydown", { key: "Alt", code: "AltLeft", altKey: true });
+    tecla("keyup", { key: "Alt", code: "AltLeft" });
+    tecla("keydown", { key: "a", code: "KeyA" });
+    expect(focoSaiuPeloAlt()).toBe(false);
+    tecla("keyup", { key: "Alt", code: "AltLeft" });
+    window.dispatchEvent(new Event("focus"));
+    expect(focoSaiuPeloAlt()).toBe(false);
   });
 
   it("a mudança pelo atalho marca que é para mostrar o indicador", () => {

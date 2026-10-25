@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { ListOrdered, LogOut, Play, RotateCcw, Skull } from "lucide-react";
 import { Button } from "@/shared/ui/button";
@@ -13,6 +14,11 @@ interface Props {
 }
 
 export function MenuDePausa({ derrota, emRede, aoContinuar, aoRecomecar, aoSair, aoDesistir }: Props) {
+  // Nenhum botão abre com foco: uma tecla do jogo (Espaço, Enter) apertada na hora não pode recomeçar a partida.
+  useEffect(() => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  }, []);
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 flex items-center justify-center bg-fundo/80">
       <motion.div

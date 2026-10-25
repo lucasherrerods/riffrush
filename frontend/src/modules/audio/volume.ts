@@ -55,13 +55,25 @@ export function saidaDeAudio(contexto: AudioContext = obterContextoDeAudio()): A
   return mestre;
 }
 
+/** Depois de soltar o Alt sozinho, o Windows pode tirar o foco da janela (modo menu) por este tempo. */
+const JANELA_DO_ALT_MS = 500;
+let altSoltoEm = -Infinity;
+
+/**
+ * O foco acabou de sair por causa do Alt solto sozinho (o modo menu da janela no Windows),
+ * e não porque a pessoa trocou de janela. No Alt+Tab o foco sai com o Alt ainda segurado.
+ */
+export const focoSaiuPeloAlt = (agora = performance.now()) => agora - altSoltoEm < JANELA_DO_ALT_MS;
+
 /**
  * Alt + roda muda o volume em qualquer tela, como no osu!. Instale antes de as telas existirem:
  * o atalho é ouvido na captura da janela e não chega nas telas.
+ *
+ * O jogo não usa o Alt sozinho, então o padrão dele é sempre bloqueado: soltar o Alt não abre a
+ * barra de menu do navegador nem põe a janela em modo menu (que tiraria o foco e pausaria a partida).
+ * Alt+Tab e Alt+F4 continuam valendo: quem trata esses é o sistema.
  */
 export function instalarAtalhosDeVolume(janela: Window = window) {
-  // Mexeu no volume com o Alt: soltar o Alt não pode abrir a barra de menu do navegador.
-  let altUsado = false;
 
   const aoRodar = (evento: WheelEvent) => {
     if (!evento.altKey) return;
@@ -70,31 +82,32 @@ export function instalarAtalhosDeVolume(janela: Window = window) {
     // Com o Shift junto, alguns navegadores mandam a roda no eixo X.
     const delta = evento.deltaY || evento.deltaX;
     if (!delta) return;
-    altUsado = true;
     mudar(proximoVolume(estadoAtual.volume, delta < 0 ? 1 : -1), true);
   };
 
   const aoApertar = (evento: KeyboardEvent) => {
-    if (evento.key === "Alt") altUsado = false;
+    // Outra tecla depois do Alt: o foco que sair agora não é mais culpa do Alt.
+    altSoltoEm = -Infinity;
+    if (evento.key === "Alt") evento.preventDefault();
   };
 
   const aoSoltar = (evento: KeyboardEvent) => {
-    if (evento.key !== "Alt" || !altUsado) return;
-    altUsado = false;
+    if (evento.key !== "Alt") return;
     evento.preventDefault();
+    altSoltoEm = performance.now();
   };
 
-  // A janela perdeu o foco no meio do gesto: o próximo Alt começa do zero.
-  const aoPerderFoco = () => (altUsado = false);
+  // A janela voltou: o próximo foco perdido começa do zero.
+  const aoVoltarOFoco = () => (altSoltoEm = -Infinity);
 
   janela.addEventListener("wheel", aoRodar, { capture: true, passive: false });
   janela.addEventListener("keydown", aoApertar, { capture: true });
   janela.addEventListener("keyup", aoSoltar, { capture: true });
-  janela.addEventListener("blur", aoPerderFoco);
+  janela.addEventListener("focus", aoVoltarOFoco);
   return () => {
     janela.removeEventListener("wheel", aoRodar, { capture: true });
     janela.removeEventListener("keydown", aoApertar, { capture: true });
     janela.removeEventListener("keyup", aoSoltar, { capture: true });
-    janela.removeEventListener("blur", aoPerderFoco);
+    janela.removeEventListener("focus", aoVoltarOFoco);
   };
 }
