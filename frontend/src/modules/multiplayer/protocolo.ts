@@ -45,6 +45,8 @@ export type Mensagem =
   | { tipo: "oi"; personagem: PersonagemNaSala }
   /** O host tirou o jogador `id` da sala. */
   | { tipo: "expulsar"; id: number }
+  /** O host passou a liderança para o jogador `id` (só no online). Os expulsos continuam de fora. */
+  | { tipo: "transferirHost"; id: number; expulsos: number[] }
   /** Sem `instrumento` (versão antiga do jogo), a sala toca na guitarra. */
   | { tipo: "sala"; jogadores: Jogador[]; musica: MusicaNaRede; dificuldade: Dificuldade; instrumento?: Instrumento; prontos: number[] }
   /** O convidado já tem a música `musicaId` e está (ou deixou de estar) pronto para começar. */
@@ -171,6 +173,13 @@ export function reduzir(estado: EstadoDaSala, de: number, mensagem: Mensagem, ag
     case "expulsar":
       if (estado.souHost || de !== estado.hostId || mensagem.id !== estado.meuId) return nada;
       return { ...nada, sair: "O host tirou você da sala." };
+    case "transferirHost": {
+      if (de !== estado.hostId || estado.souHost) return nada;
+      if (mensagem.id !== estado.meuId) return { estado: { ...estado, hostId: mensagem.id }, enviar: [] };
+      // O antigo host vira convidado e também precisa dar pronto: a lista começa de novo.
+      const novo = { ...estado, souHost: true, hostId: estado.meuId, expulsos: mensagem.expulsos.filter(Number.isInteger), prontos: [] };
+      return { estado: novo, enviar: [mensagemDaSala(novo)] };
+    }
     case "estado": {
       if (de === estado.meuId || de === SERVIDOR) return nada;
       const { tipo: _, ...jogada } = mensagem;
@@ -197,6 +206,12 @@ export function expulsarJogador(estado: EstadoDaSala, id: number): Reacao {
     expulsos: [...estado.expulsos, id],
   };
   return { estado: novo, enviar: [{ tipo: "expulsar", id }, mensagemDaSala(novo)] };
+}
+
+/** Só o host, no lobby: passa a liderança para outro jogador da sala e vira convidado. */
+export function transferirHost(estado: EstadoDaSala, id: number): Reacao {
+  if (!estado.souHost || estado.status !== "naSala" || id === estado.meuId || !estado.jogadores.some((j) => j.id === id)) return { estado, enviar: [] };
+  return { estado: { ...estado, souHost: false, hostId: id, prontos: [] }, enviar: [{ tipo: "transferirHost", id, expulsos: estado.expulsos }] };
 }
 
 /** Todos os convidados já têm a música e deram pronto. O host não precisa: ele dá a largada. */

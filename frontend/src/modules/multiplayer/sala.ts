@@ -5,7 +5,7 @@ import type { EstadoDoJogador } from "@/modules/gameplay";
 import { dificuldadeMaisProxima, dificuldadesDaMusica, instrumentoDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { paraRede } from "./musicaNaRede";
 import { URL_DO_RELAY, deveEnviarEstado, lerSalasOnline, normalizarCodigo, podeTocarOnline, urlDasSalas, urlParaCriarSala, urlParaEntrarNaSala, type SalaOnline } from "./online";
-import { comecarPartida, escolherMusica, estadoInicial, expulsarJogador, reduzir, todosProntos, type EstadoDaSala, type Mensagem } from "./protocolo";
+import { comecarPartida, escolherMusica, estadoInicial, expulsarJogador, reduzir, todosProntos, transferirHost, type EstadoDaSala, type Mensagem } from "./protocolo";
 
 export const PORTA_DA_SALA = 7777;
 
@@ -159,6 +159,14 @@ export async function escolher(musica: Musica, dificuldade: Dificuldade, instrum
 export function expulsar(id: number) {
   if (!conexao.sala) return;
   const reacao = expulsarJogador(conexao.sala, id);
+  atualizar({ sala: reacao.estado });
+  enviar(reacao.enviar);
+}
+
+/** Só o host, no online: passa a liderança para o jogador `id`. Na LAN a sala mora no PC de quem criou. */
+export function passarLideranca(id: number) {
+  if (!conexao.sala || !conexao.online) return;
+  const reacao = transferirHost(conexao.sala, id);
   atualizar({ sala: reacao.estado });
   enviar(reacao.enviar);
 }

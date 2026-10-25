@@ -33,6 +33,20 @@ export function embrulhar(de: number, mensagem: string): string | null {
   return `{"de":${de},"msg":${mensagem}}`;
 }
 
+/**
+ * Quem passa a ser o host se `de` mandou `mensagem`: só o host atual transfere, e só para quem está na sala.
+ * O relay precisa saber, porque a sala fecha quando o host sai.
+ */
+export function novoHost(de: number, hostAtual: number, mensagem: string, presentes: number[]): number | null {
+  if (de !== hostAtual) return null;
+  try {
+    const { tipo, id } = JSON.parse(mensagem) as { tipo?: unknown; id?: unknown };
+    return tipo === "transferirHost" && typeof id === "number" && id !== de && presentes.includes(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
 export type MensagemDoServidor = { tipo: "bemVindo"; id: number; codigo: string } | { tipo: "cheia" } | { tipo: "semSala" } | { tipo: "saiu" };
 
 export const mensagemDoServidor = (msg: MensagemDoServidor, de = SERVIDOR) => JSON.stringify({ de, msg });

@@ -10,6 +10,7 @@ import {
   estadoInicial,
   reduzir,
   todosProntos,
+  transferirHost,
   type EstadoDaSala,
 } from "./protocolo";
 
@@ -227,6 +228,48 @@ describe("expulsar", () => {
     // Expulsar outro, ou um pedido que não veio do host, não tira ninguém.
     expect(reduzir(convidado, 1, { tipo: "expulsar", id: 3 }, 0).sair).toBeUndefined();
     expect(reduzir(convidado, 3, { tipo: "expulsar", id: 2 }, 0).sair).toBeUndefined();
+  });
+});
+
+describe("transferir o host", () => {
+  const lucas = { ...PERSONAGEM_PADRAO, nome: "Lucas" };
+  const vitor = { ...PERSONAGEM_PADRAO, nome: "Vitor" };
+  const hostComVitor = () => {
+    const host = { ...estadoInicial(lucas, true), status: "naSala" as const, meuId: 1, hostId: 1, jogadores: [{ id: 1, personagem: lucas }], expulsos: [3] };
+    return reduzir(host, 2, { tipo: "oi", personagem: vitor }, 0).estado;
+  };
+  const convidadoVitor = () => ({ ...estadoInicial(vitor, false), status: "naSala" as const, meuId: 2, hostId: 1, jogadores: [{ id: 1, personagem: lucas }, { id: 2, personagem: vitor }] });
+
+  it("o host passa a liderança e vira convidado, levando junto quem foi expulso", () => {
+    const { estado, enviar } = transferirHost(hostComVitor(), 2);
+    expect(estado).toMatchObject({ souHost: false, hostId: 2 });
+    expect(enviar).toEqual([{ tipo: "transferirHost", id: 2, expulsos: [3] }]);
+  });
+
+  it("só o host transfere, só para quem está na sala, e nunca para si mesmo", () => {
+    expect(transferirHost(hostComVitor(), 1).enviar).toEqual([]);
+    expect(transferirHost(hostComVitor(), 9).enviar).toEqual([]);
+    expect(transferirHost(convidadoVitor(), 1).enviar).toEqual([]);
+  });
+
+  it("o escolhido vira host: manda na sala, nos prontos e nos expulsos", () => {
+    const { estado, enviar } = reduzir(convidadoVitor(), 1, { tipo: "transferirHost", id: 2, expulsos: [3] }, 0);
+    expect(estado).toMatchObject({ souHost: true, hostId: 2, expulsos: [3], prontos: [] });
+    expect(enviar[0]).toMatchObject({ tipo: "sala" });
+    expect(reduzir(estado, 1, { tipo: "pronto", musicaId: estado.musica.id, pronto: true }, 0).estado.prontos).toEqual([1]);
+    expect(reduzir(estado, 3, { tipo: "oi", personagem: lucas }, 0).estado.jogadores).toHaveLength(2);
+  });
+
+  it("os outros só trocam quem é o host; pedido que não veio do host é ignorado", () => {
+    const outro = { ...convidadoVitor(), meuId: 4 };
+    expect(reduzir(outro, 1, { tipo: "transferirHost", id: 2, expulsos: [] }, 0).estado).toMatchObject({ souHost: false, hostId: 2 });
+    expect(reduzir(convidadoVitor(), 4, { tipo: "transferirHost", id: 2, expulsos: [] }, 0).estado.souHost).toBe(false);
+  });
+
+  it("o antigo host, agora convidado, aceita a sala do novo host", () => {
+    const antigo = transferirHost(hostComVitor(), 2).estado;
+    const { estado } = reduzir(antigo, 2, { tipo: "sala", jogadores: antigo.jogadores, musica: antigo.musica, dificuldade: "dificil", prontos: [] }, 0);
+    expect(estado.dificuldade).toBe("dificil");
   });
 });
 
