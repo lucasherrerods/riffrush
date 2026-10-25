@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, FileAudio, Flame, Info, ListOrdered, Play, RotateCcw, Trash2, Trophy } from "lucide-react";
+import { ArrowLeft, Ellipsis, FileAudio, Flame, Info, ListOrdered, Play, RotateCcw, Trash2, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
@@ -8,6 +8,7 @@ import { carregarRecordes, recordeDe } from "@/modules/results";
 import { DIFICULDADES, dificuldadesDaMusica, instrumentoDaMusica, instrumentosDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu";
 import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/shared/ui/dialog";
@@ -77,6 +78,7 @@ export function TelaDeSelecao(props: Props) {
   };
 
   const [removendo, setRemovendo] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(false);
   const podeRemover = ehImportada(musica);
   const confirmarRemocao = () => {
     setRemovendo(false);
@@ -84,8 +86,8 @@ export function TelaDeSelecao(props: Props) {
   };
 
   useTeclado((evento) => {
-    // Com o modal aberto, as teclas são dele: Esc o fecha, sem voltar ao menu.
-    if (removendo) return;
+    // Com o modal ou o menu de opções aberto, as teclas são dele: Esc o fecha, sem voltar ao menu.
+    if (removendo || menuAberto) return;
     if (evento.code === "Delete" && podeRemover) return setRemovendo(true);
     // Shift+Tab é do modo competitivo; o Tab sozinho troca o instrumento.
     if (evento.code === "Tab" && !evento.shiftKey && instrumentos.length > 1) {
@@ -184,11 +186,6 @@ export function TelaDeSelecao(props: Props) {
               <h2 className="truncate text-4xl leading-[1.1] max-md:text-2xl">{musica.titulo}</h2>
               <p className="truncate text-lg text-texto-suave">{musica.artista}</p>
             </div>
-            {podeRemover && (
-              <Button variant="ghost" size="icon" onClick={() => setRemovendo(true)} aria-label={`Remover ${musica.titulo}`} className="shrink-0">
-                <Trash2 className="opacity-70" />
-              </Button>
-            )}
           </div>
 
           {instrumentos.length > 1 && (
@@ -258,6 +255,22 @@ export function TelaDeSelecao(props: Props) {
           aoEscolherDificuldade={escolherDificuldade}
           aoJogar={jogar}
           aoGirar={andar}
+          menuDaSelecionada={
+            podeRemover && (
+              <DropdownMenu open={menuAberto} onOpenChange={setMenuAberto}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" aria-label={`Opções de ${musica.titulo}`}>
+                    <Ellipsis />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem variant="perigo" onSelect={() => setRemovendo(true)}>
+                    <Trash2 /> Apagar música
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )
+          }
         />
       </div>
 

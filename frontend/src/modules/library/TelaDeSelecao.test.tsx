@@ -262,12 +262,21 @@ describe("TelaDeSelecao removendo músicas", () => {
 
   it("música embutida não pode ser removida", () => {
     abrir();
-    expect(screen.queryByRole("button", { name: /Remover/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Remover|Opções/ })).not.toBeInTheDocument();
+  });
+
+  it("com o menu de opções aberto, o Enter não começa a música", async () => {
+    const { aoJogar, usuario } = abrir({ musicas: [importada] });
+    await usuario.click(screen.getByRole("button", { name: "Opções de Riff" }));
+    await usuario.keyboard("{Enter}");
+    expect(aoJogar).not.toHaveBeenCalled();
   });
 
   it("abre um modal de confirmação antes de remover a música importada", async () => {
     const { aoRemover, usuario } = abrir({ musicas: [importada] });
-    await usuario.click(screen.getByRole("button", { name: /Remover Riff/ }));
+    expect(screen.queryByRole("button", { name: /Remover Riff/ })).not.toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Opções de Riff" }));
+    await usuario.click(screen.getByRole("menuitem", { name: /Apagar música/ }));
     const modal = screen.getByRole("dialog", { name: /Remover Riff/ });
     expect(aoRemover).not.toHaveBeenCalled();
     await usuario.click(within(modal).getByRole("button", { name: "Remover" }));
@@ -277,7 +286,8 @@ describe("TelaDeSelecao removendo músicas", () => {
 
   it("Cancelar fecha o modal sem remover", async () => {
     const { aoRemover, usuario } = abrir({ musicas: [importada] });
-    await usuario.click(screen.getByRole("button", { name: /Remover Riff/ }));
+    await usuario.click(screen.getByRole("button", { name: "Opções de Riff" }));
+    await usuario.click(screen.getByRole("menuitem", { name: /Apagar música/ }));
     await usuario.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(aoRemover).not.toHaveBeenCalled();
