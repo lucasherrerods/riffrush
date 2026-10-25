@@ -1,34 +1,6 @@
-import { DURACAO, DURACAO_TOTAL, capasDaAbertura, corteNoTempo, deveMostrarAbertura, marcarAberturaVista, roteiroDaAbertura, vermelhoNoTempo } from "./roteiro";
+import { DURACAO, DURACAO_TOTAL, corteNoTempo, deveMostrarAbertura, marcarAberturaVista, roteiroDaAbertura, vermelhoNoTempo } from "./roteiro";
 
 beforeEach(() => localStorage.clear());
-
-describe("capasDaAbertura", () => {
-  it("põe as imagens primeiro, sem repetir, e completa com gradientes", () => {
-    const capas = capasDaAbertura(
-      [
-        { capa: ["#000", "#111"] },
-        { imagemDeCapa: "blob:a", capa: ["#222", "#333"] },
-        { imagemDeCapa: "blob:a", capa: ["#444", "#555"] },
-      ],
-      4,
-    );
-    expect(capas).toEqual([
-      { tipo: "imagem", url: "blob:a" },
-      { tipo: "gradiente", cores: ["#000", "#111"] },
-      { tipo: "gradiente", cores: ["#222", "#333"] },
-      { tipo: "gradiente", cores: ["#444", "#555"] },
-    ]);
-  });
-
-  it("sem música nenhuma, ainda tem capas", () => {
-    expect(capasDaAbertura([], 8)).toHaveLength(8);
-  });
-
-  it("com imagens de sobra, não mistura gradientes", () => {
-    const musicas = Array.from({ length: 20 }, (_, i) => ({ imagemDeCapa: `blob:${i}`, capa: ["#000", "#111"] as [string, string] }));
-    expect(capasDaAbertura(musicas).every((c) => c.tipo === "imagem")).toBe(true);
-  });
-});
 
 describe("roteiroDaAbertura", () => {
   const cortes = roteiroDaAbertura(10, 42);

@@ -1,6 +1,3 @@
-/** Uma capa da abertura: a imagem do álbum ou, sem ela, o gradiente da música. */
-export type CapaDaAbertura = { tipo: "imagem"; url: string } | { tipo: "gradiente"; cores: [string, string] };
-
 /** Um corte: a capa que aparece a partir de `inicio`, com o zoom, o giro e o deslocamento dela. */
 export interface Corte {
   inicio: number;
@@ -20,25 +17,6 @@ export const DURACAO = {
   saida: 0.8,
 };
 export const DURACAO_TOTAL = DURACAO.cortes + DURACAO.nome + DURACAO.saida;
-
-/** Gradientes para completar quando a biblioteca tem poucas capas. */
-const GRADIENTES_EXTRAS: [string, string][] = [
-  ["#7f1d1d", "#f97316"],
-  ["#1e1b4b", "#db2777"],
-  ["#052e16", "#eab308"],
-  ["#0c4a6e", "#a855f7"],
-  ["#450a0a", "#fde047"],
-  ["#111827", "#ef4444"],
-];
-
-/** As capas com imagem vêm primeiro; o resto completa até `minimo` com os gradientes das músicas e os extras. */
-export function capasDaAbertura(musicas: { imagemDeCapa?: string; capa: [string, string] }[], minimo = 12): CapaDaAbertura[] {
-  const imagens: CapaDaAbertura[] = [...new Set(musicas.flatMap((m) => (m.imagemDeCapa ? [m.imagemDeCapa] : [])))].map((url) => ({ tipo: "imagem", url }));
-  const gradientes: CapaDaAbertura[] = [...musicas.map((m) => m.capa), ...GRADIENTES_EXTRAS].map((cores) => ({ tipo: "gradiente", cores }));
-  const capas = [...imagens];
-  for (let i = 0; capas.length < minimo && gradientes.length; i++) capas.push(gradientes[i % gradientes.length]);
-  return capas;
-}
 
 /** Gerador simples com semente: a mesma semente monta a mesma abertura (e os testes ficam estáveis). */
 function sorteador(semente: number) {

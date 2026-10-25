@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Abertura, capasDaAbertura, deveMostrarAbertura, marcarAberturaVista } from "@/modules/abertura";
+import { Abertura, MINIMO_DE_CAPAS, carregarCapas, deveMostrarAbertura, marcarAberturaVista } from "@/modules/abertura";
 import { IndicadorDeVolume, definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/character";
 import { iniciarControle, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
@@ -68,18 +68,22 @@ export function App() {
 
   const biblioteca = useBiblioteca();
   const { salvas } = biblioteca;
-  // A abertura espera as capas da biblioteca, mas não para sempre: sem armazenamento, vai com as do jogo.
+  // A abertura espera as capas das bandas chegarem; sem capas suficientes (offline na primeira vez), ela não passa.
   const [abertura, setAbertura] = useState(() => tela === "menu" && !ehClienteWebDaSala() && deveMostrarAbertura());
-  const [esperouABiblioteca, setEsperouABiblioteca] = useState(false);
+  const [capasDaAbertura, setCapasDaAbertura] = useState<HTMLImageElement[] | null>(null);
   useEffect(() => {
     if (!abertura) return;
-    const espera = setTimeout(() => setEsperouABiblioteca(true), 1500);
-    return () => clearTimeout(espera);
+    let cancelado = false;
+    void carregarCapas().then((capas) => {
+      if (cancelado) return;
+      if (capas.length < MINIMO_DE_CAPAS) setAbertura(false);
+      else setCapasDaAbertura(capas);
+    });
+    return () => {
+      cancelado = true;
+    };
   }, [abertura]);
-  const capasDaAberturaProntas = useMemo(
-    () => (salvas !== null || esperouABiblioteca ? capasDaAbertura([...(salvas ?? []), ...MUSICAS_EMBUTIDAS]) : null),
-    [salvas, esperouABiblioteca],
-  );
+
   // As músicas de outras sessões chegam depois de abrir o armazenamento.
   useEffect(() => {
     if (salvas?.length) setMusicas((atuais) => juntarMusicas(atuais, salvas));
@@ -336,9 +340,9 @@ export function App() {
   return (
     <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
       {abertura &&
-        (capasDaAberturaProntas ? (
+        (capasDaAbertura ? (
           <Abertura
-            capas={capasDaAberturaProntas}
+            capas={capasDaAbertura}
             aoTerminar={() => {
               marcarAberturaVista();
               setAbertura(false);

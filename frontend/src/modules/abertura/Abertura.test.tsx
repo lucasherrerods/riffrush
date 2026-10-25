@@ -4,7 +4,7 @@ import { Abertura } from "./Abertura";
 describe("Abertura", () => {
   it("sem canvas para desenhar, termina na hora e não prende o jogo", () => {
     const aoTerminar = vi.fn();
-    render(<Abertura capas={[{ tipo: "gradiente", cores: ["#000", "#111"] }]} aoTerminar={aoTerminar} />);
+    render(<Abertura capas={[new Image()]} aoTerminar={aoTerminar} />);
     expect(aoTerminar).toHaveBeenCalledTimes(1);
   });
 

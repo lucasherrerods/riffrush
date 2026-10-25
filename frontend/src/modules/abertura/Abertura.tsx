@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { DURACAO, DURACAO_TOTAL, corteNoTempo, roteiroDaAbertura, vermelhoNoTempo, type CapaDaAbertura, type Corte } from "./roteiro";
+import { DURACAO, DURACAO_TOTAL, corteNoTempo, roteiroDaAbertura, vermelhoNoTempo, type Corte } from "./roteiro";
 
 const NOME = "RIFF RUSH";
 const VERMELHO = "#b91c1c";
@@ -8,28 +8,13 @@ const FUNDO = "#0a0a0a";
 const PILHA = 5;
 
 interface Props {
-  capas: CapaDaAbertura[];
+  /** As capas já carregadas: a abertura não espera imagem nenhuma no meio. */
+  capas: HTMLImageElement[];
   aoTerminar: () => void;
 }
 
-type Imagens = (HTMLImageElement | null)[];
-
-/** Desenha a capa num quadrado de lado `lado` centrado na origem. */
-function desenharCapa(ctx: CanvasRenderingContext2D, capa: CapaDaAbertura, imagem: HTMLImageElement | null, lado: number) {
-  if (imagem?.complete && imagem.naturalWidth) {
-    ctx.drawImage(imagem, -lado / 2, -lado / 2, lado, lado);
-    return;
-  }
-  const cores = capa.tipo === "gradiente" ? capa.cores : ["#1f2937", "#111827"];
-  const gradiente = ctx.createLinearGradient(-lado / 2, -lado / 2, lado / 2, lado / 2);
-  gradiente.addColorStop(0, cores[0]);
-  gradiente.addColorStop(1, cores[1]);
-  ctx.fillStyle = gradiente;
-  ctx.fillRect(-lado / 2, -lado / 2, lado, lado);
-}
-
 /** As últimas capas cortadas, empilhadas; no fim dos cortes a de cima já cobre a tela toda. */
-function desenharPilha(ctx: CanvasRenderingContext2D, largura: number, altura: number, cortes: Corte[], tempo: number, capas: CapaDaAbertura[], imagens: Imagens) {
+function desenharPilha(ctx: CanvasRenderingContext2D, largura: number, altura: number, cortes: Corte[], tempo: number, capas: HTMLImageElement[]) {
   const atual = cortes.indexOf(corteNoTempo(cortes, tempo));
   const progresso = Math.min(1, tempo / DURACAO.cortes);
   const cheia = Math.hypot(largura, altura);
@@ -41,7 +26,8 @@ function desenharPilha(ctx: CanvasRenderingContext2D, largura: number, altura: n
     ctx.save();
     ctx.translate(largura / 2 + corte.dx * largura * (1 - progresso * 0.6), altura / 2 + corte.dy * altura * (1 - progresso * 0.6));
     ctx.rotate(corte.giro * (1 - progresso * 0.5));
-    desenharCapa(ctx, capas[corte.capa], imagens[corte.capa], Math.min(lado, cheia * 1.2));
+    const ladoFinal = Math.min(lado, cheia * 1.2);
+    ctx.drawImage(capas[corte.capa], -ladoFinal / 2, -ladoFinal / 2, ladoFinal, ladoFinal);
     ctx.restore();
   }
 }
@@ -96,12 +82,6 @@ export function Abertura({ capas, aoTerminar }: Props) {
       return;
     }
     const pincel = ctx;
-    const imagens: Imagens = capas.map((capa) => {
-      if (capa.tipo !== "imagem") return null;
-      const imagem = new Image();
-      imagem.src = capa.url;
-      return imagem;
-    });
     const cortes = roteiroDaAbertura(capas.length);
     // O nome com as capas dentro: as capas desenhadas aqui e recortadas no formato das letras.
     const mascara = document.createElement("canvas");
@@ -136,7 +116,7 @@ export function Abertura({ capas, aoTerminar }: Props) {
       pincel.fillStyle = FUNDO;
       pincel.fillRect(0, 0, largura, altura);
 
-      desenharPilha(pincel, largura, altura, cortes, tempo, capas, imagens);
+      desenharPilha(pincel, largura, altura, cortes, tempo, capas);
       if (tempo < DURACAO.cortes) {
         tingir(pincel, largura, altura, vermelhoNoTempo(tempo) * 0.85);
       } else {
@@ -153,7 +133,7 @@ export function Abertura({ capas, aoTerminar }: Props) {
           mascara.width = el.width;
           mascara.height = el.height;
           pincelDaMascara.setTransform(escalaX, 0, 0, escalaY, 0, 0);
-          desenharPilha(pincelDaMascara, largura, altura, cortes, tempo, capas, imagens);
+          desenharPilha(pincelDaMascara, largura, altura, cortes, tempo, capas);
           pincelDaMascara.globalCompositeOperation = "destination-in";
           escreverNome(pincelDaMascara, tamanho, largura, altura);
           pincel.save();
