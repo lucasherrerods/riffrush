@@ -1,4 +1,4 @@
-import { HOST, LIMITE_DE_MENSAGENS_POR_SEGUNDO, MAXIMO_DE_JOGADORES, TAMANHO_MAXIMO_DA_MENSAGEM, VALIDADE_DA_ENTRADA_MS, codigoValido, dentroDoLimite, embrulhar, gerarCodigo, listarSalas, mensagemDoServidor, nomeDoHost, type EntradaDaSala } from "./regras";
+import { HOST, LIMITE_DE_MENSAGENS_POR_SEGUNDO, MAXIMO_DE_JOGADORES, TAMANHO_MAXIMO_DA_MENSAGEM, VALIDADE_DA_ENTRADA_MS, codigoValido, dentroDoLimite, embrulhar, gerarCodigo, listarSalas, mensagemDoServidor, nomeDoHost, novoHost, type EntradaDaSala } from "./regras";
 
 describe("gerarCodigo", () => {
   it("gera 5 caracteres sem letras que se confundem", () => {
@@ -88,5 +88,25 @@ describe("nomeDoHost", () => {
 
   it("sem nome, usa um padrão", () => {
     expect(nomeDoHost(null)).toBe("Sala sem nome");
+  });
+});
+
+describe("novoHost", () => {
+  const pedido = (id: unknown) => JSON.stringify({ tipo: "transferirHost", id, expulsos: [] });
+  const ids = [1, 2, 3];
+
+  it("o host atual passa a sala para quem está nela", () => {
+    expect(novoHost(1, 1, pedido(2), ids)).toBe(2);
+  });
+
+  it("convidado não se promove, e não vale passar para quem não está na sala", () => {
+    expect(novoHost(2, 1, pedido(2), ids)).toBeNull();
+    expect(novoHost(1, 1, pedido(9), ids)).toBeNull();
+    expect(novoHost(1, 1, pedido("2"), ids)).toBeNull();
+  });
+
+  it("outras mensagens não mudam o host", () => {
+    expect(novoHost(1, 1, '{"tipo":"oi"}', ids)).toBeNull();
+    expect(novoHost(1, 1, "lixo", ids)).toBeNull();
   });
 });

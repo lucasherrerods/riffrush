@@ -1,9 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { MUSICAS_DE_TESTE } from "@/test/musicas";
 import { estadoInicial, type EstadoDaSala } from "../protocolo";
-import { enviarChat, expulsar } from "../sala";
+import { enviarChat, expulsar, passarLideranca } from "../sala";
 import { Lobby } from "./Lobby";
 
 vi.mock("@/modules/character", async (original) => ({
@@ -11,7 +11,7 @@ vi.mock("@/modules/character", async (original) => ({
   Avatar: () => null,
 }));
 vi.mock("@/modules/player", () => ({ useSeguirMusica: () => {} }));
-vi.mock("../sala", async (original) => ({ ...(await original<typeof import("../sala")>()), expulsar: vi.fn(), enviarChat: vi.fn(() => true) }));
+vi.mock("../sala", async (original) => ({ ...(await original<typeof import("../sala")>()), expulsar: vi.fn(), enviarChat: vi.fn(() => true), passarLideranca: vi.fn() }));
 
 const [primeira, segunda] = MUSICAS_DE_TESTE;
 
@@ -57,6 +57,21 @@ describe("Lobby", () => {
     expect(screen.getAllByRole("button", { name: /^Expulsar/ })).toHaveLength(1);
     await userEvent.setup().click(screen.getByRole("button", { name: "Expulsar Vitor" }));
     expect(expulsar).toHaveBeenCalledWith(2);
+  });
+
+  it("no online, o host passa a liderança pela coroa, depois de confirmar", async () => {
+    const usuario = userEvent.setup();
+    render(<Lobby sala={sala(primeira.id, { jogadores: [{ id: 1, personagem: PERSONAGEM_PADRAO }, { id: 2, personagem: vitor }] })} codigo="K7QXM" endereco="" musicas={MUSICAS_DE_TESTE} volumeDosEfeitos={0} />);
+    expect(screen.getAllByRole("button", { name: /^Passar a liderança/ })).toHaveLength(1);
+    await usuario.click(screen.getByRole("button", { name: "Passar a liderança para Vitor" }));
+    expect(passarLideranca).not.toHaveBeenCalled();
+    await usuario.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Passar/ }));
+    expect(passarLideranca).toHaveBeenCalledWith(2);
+  });
+
+  it("na LAN não tem coroa: a sala mora no PC de quem criou", () => {
+    render(lobby(primeira.id, { jogadores: [{ id: 1, personagem: PERSONAGEM_PADRAO }, { id: 2, personagem: vitor }] }));
+    expect(screen.queryByRole("button", { name: /^Passar a liderança/ })).not.toBeInTheDocument();
   });
 
   it("convidado não vê o botão de expulsar", () => {

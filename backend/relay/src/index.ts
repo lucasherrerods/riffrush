@@ -9,6 +9,7 @@ import {
   listarSalas,
   mensagemDoServidor,
   nomeDoHost,
+  novoHost,
   type EntradaDaSala,
   type Janela,
 } from "./regras";
@@ -160,7 +161,11 @@ export class Sala extends DurableObject<Env> {
     this.janelas.set(socket, limite.janela);
     if (!limite.passa) return;
     const embrulhada = embrulhar(id, mensagem);
-    if (embrulhada) this.paraTodos(embrulhada);
+    if (!embrulhada) return;
+    const presentes = this.ctx.getWebSockets(JOGADOR).map((s) => (s.deserializeAttachment() as Anexo).id);
+    const novo = novoHost(id, await this.hostAtual(), mensagem, presentes);
+    if (novo !== null) await this.ctx.storage.put("host", novo);
+    this.paraTodos(embrulhada);
   }
 
   async webSocketClose(socket: WebSocket) {
@@ -169,6 +174,10 @@ export class Sala extends DurableObject<Env> {
 
   async webSocketError(socket: WebSocket) {
     await this.saiu(socket);
+  }
+
+  private async hostAtual() {
+    return (await this.ctx.storage.get<number>("host")) ?? HOST;
   }
 
   private ehJogador(socket: WebSocket) {
@@ -180,7 +189,7 @@ export class Sala extends DurableObject<Env> {
     this.janelas.delete(socket);
     const { id } = socket.deserializeAttachment() as Anexo;
     // Sem o host não há quem mande na sala: ninguém mais entra, e os que estão saem sozinhos.
-    if (id === HOST) await this.ctx.storage.put("aberta", false);
+    if (id === (await this.hostAtual())) await this.ctx.storage.put("aberta", false);
     await this.publicar(socket);
     this.paraTodos(mensagemDoServidor({ tipo: "saiu" }, id), socket);
     try {
