@@ -38,7 +38,7 @@ struct LinhaDoBanido {
 }
 
 const SITUACAO: &str = "
-    SELECT EXISTS (SELECT 1 FROM equipe WHERE conta_id = $1) AS admin,
+    SELECT EXISTS (SELECT 1 FROM equipe_moderacao WHERE conta_id = $1) AS admin,
            EXISTS (SELECT 1 FROM banimentos_do_chat WHERE conta_id = $1) AS banido";
 
 const DENUNCIAS: &str = "
