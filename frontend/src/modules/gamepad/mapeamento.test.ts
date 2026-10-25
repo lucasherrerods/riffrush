@@ -1,6 +1,21 @@
-import { BOTOES, direcoesDoAnalogico, juntarAnalogico, traduzir, type Mapa } from "./mapeamento";
+import {
+  BOTAO_DA_ESTRELA_PADRAO,
+  BOTOES,
+  BOTOES_DOS_TRASTES_PADRAO,
+  direcoesDoAnalogico,
+  juntarAnalogico,
+  nomeDoBotao,
+  podeSerEscolhido,
+  traduzir,
+  type Mapa,
+} from "./mapeamento";
 
-const mapa: Mapa = { teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"], teclaDaEstrela: "Space" };
+const mapa: Mapa = {
+  teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"],
+  teclaDaEstrela: "Space",
+  botoesDoControle: BOTOES_DOS_TRASTES_PADRAO,
+  botaoDaEstrela: BOTAO_DA_ESTRELA_PADRAO,
+};
 const solto = () => Array<boolean>(17).fill(false);
 const com = (...botoes: number[]) => {
   const estado = solto();
@@ -21,6 +36,17 @@ describe("traduzir no jogo", () => {
   it("segue as teclas que o jogador configurou", () => {
     const { eventos } = traduzir(solto(), com(BOTOES.LT), vazio(), "jogo", { ...mapa, teclas: ["KeyQ", "KeyW", "KeyE", "KeyR", "KeyT"] });
     expect(eventos).toContainEqual({ tipo: "keydown", code: "KeyQ" });
+  });
+
+  it("segue os botões que o jogador escolheu para o controle", () => {
+    const escolhidos = { ...mapa, botoesDoControle: [BOTOES.X, BOTOES.Y, BOTOES.B, BOTOES.A, BOTOES.RB], botaoDaEstrela: BOTOES.LB };
+    expect(traduzir(solto(), com(BOTOES.X), vazio(), "jogo", escolhidos).eventos).toEqual([{ tipo: "keydown", code: "KeyA" }]);
+    expect(traduzir(solto(), com(BOTOES.LB), vazio(), "jogo", escolhidos).eventos).toEqual([{ tipo: "keydown", code: "Space" }]);
+    // LT deixou de ser traste.
+    expect(traduzir(solto(), com(BOTOES.LT), vazio(), "jogo", escolhidos).eventos).toEqual([]);
+    // Palhetar toca de novo os trastes novos.
+    const segurando = traduzir(solto(), com(BOTOES.X), vazio(), "jogo", escolhidos);
+    expect(traduzir(com(BOTOES.X), com(BOTOES.X, BOTOES.CIMA), segurando.emitidos, "jogo", escolhidos).eventos).toContainEqual({ tipo: "keydown", code: "KeyA" });
   });
 
   it("soltar o botão solta a tecla", () => {
@@ -120,5 +146,19 @@ describe("juntarAnalogico", () => {
 
   it("não perde o direcional apertado de verdade", () => {
     expect(juntarAnalogico(com(BOTOES.ESQUERDA), [false, false, false, false], "menu")[BOTOES.ESQUERDA]).toBe(true);
+  });
+});
+
+describe("botões do controle", () => {
+  it("têm nome conhecido no layout padrão e um número nos outros", () => {
+    expect(nomeDoBotao(BOTOES.LT)).toBe("LT");
+    expect(nomeDoBotao(BOTOES.SELECT)).toBe("Select");
+    expect(nomeDoBotao(20)).toBe("Botão 21");
+  });
+
+  it("o direcional e o Start não podem virar traste", () => {
+    expect(podeSerEscolhido(BOTOES.X)).toBe(true);
+    expect(podeSerEscolhido(BOTOES.BAIXO)).toBe(false);
+    expect(podeSerEscolhido(BOTOES.START)).toBe(false);
   });
 });

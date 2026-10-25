@@ -2,6 +2,7 @@
 //! (o CI sobe um Postgres); sem ela, os testes passam sem fazer nada.
 
 use chrono::{Duration, Utc};
+use riffrush_api::modules::catalogo::{CatalogoPostgres, DadosDaMusica, RepositorioDoCatalogo};
 use riffrush_api::modules::conta::{ContasPostgres, PartidaRegistrada, PerfilDoGoogle, RepositorioDeContas, RepositorioDeSessoes};
 use riffrush_api::modules::perfil::{PerfilPostgres, RepositorioDoPerfil};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento, ResumoDaPartida};
@@ -431,4 +432,24 @@ async fn so_o_recorde_guarda_o_replay() {
         .await
         .unwrap();
     assert_eq!(com_replay, 1);
+}
+
+#[tokio::test]
+async fn catalogo_guarda_atualiza_e_busca_varias_musicas() {
+    let Some(banco) = banco().await else { return };
+    let catalogo = CatalogoPostgres(banco.0.clone());
+    let id = format!("encore:{}", Uuid::new_v4().simple());
+    let outro = format!("encore:{}", Uuid::new_v4().simple());
+    catalogo.guardar(&id, &DadosDaMusica::default()).await.unwrap();
+    let achada = DadosDaMusica {
+        titulo: Some("Tom Sawyer".into()),
+        artista: Some("Rush".into()),
+        capa: Some("https://files.enchor.us/capa.jpg".into()),
+    };
+    catalogo.guardar(&id, &achada).await.unwrap();
+
+    let guardadas = catalogo.buscar(&[id.clone(), outro.clone()]).await.unwrap();
+
+    assert_eq!(guardadas.get(&id), Some(&achada));
+    assert!(!guardadas.contains_key(&outro));
 }

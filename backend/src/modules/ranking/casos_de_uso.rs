@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use super::dominio::{montar_ranking, LinhaDoGeral, MusicaPopular, PartidaPublica, Ranking, TAMANHO_DO_TOP};
 use super::portas::RepositorioDoRanking;
+use crate::modules::catalogo::{DadosDaMusica, ServicosDoCatalogo};
 use crate::modules::conta::{FalhaExterna, ServicosDaConta, TAMANHO_MAXIMO_DO_ID_DA_MUSICA};
 use crate::modules::progresso::{Dificuldade, Instrumento};
 
@@ -10,6 +11,8 @@ pub struct ServicosDoRanking {
     pub repositorio: Arc<dyn RepositorioDoRanking>,
     /// Para achar a conta de quem pediu e mostrar o recorde dela.
     pub conta: ServicosDaConta,
+    /// Nome, banda e capa das músicas mais jogadas.
+    pub catalogo: ServicosDoCatalogo,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -39,9 +42,18 @@ impl ServicosDoRanking {
         Ok(montar_ranking(linhas, conta))
     }
 
-    /// As músicas com mais partidas, somando todos os jogadores.
-    pub async fn musicas(&self) -> Result<Vec<MusicaPopular>, ErroDoRanking> {
-        Ok(self.repositorio.musicas(TAMANHO_DO_TOP).await?)
+    /// As músicas com mais partidas, somando todos os jogadores, com o que o catálogo sabe de cada uma.
+    pub async fn musicas(&self) -> Result<Vec<(MusicaPopular, DadosDaMusica)>, ErroDoRanking> {
+        let musicas = self.repositorio.musicas(TAMANHO_DO_TOP).await?;
+        let ids: Vec<String> = musicas.iter().map(|m| m.musica_id.clone()).collect();
+        let mut dados = self.catalogo.dados(&ids).await;
+        Ok(musicas
+            .into_iter()
+            .map(|m| {
+                let dados_da_musica = dados.remove(&m.musica_id).unwrap_or_default();
+                (m, dados_da_musica)
+            })
+            .collect())
     }
 
     /// A partida que alguém abriu no ranking. É pública, como o próprio ranking.
@@ -92,6 +104,7 @@ pub mod fakes {
         let servicos = ServicosDoRanking {
             repositorio: repositorio.clone(),
             conta,
+            catalogo: crate::modules::catalogo::fakes::servicos_do_catalogo(Default::default()).0,
         };
         (servicos, repositorio)
     }
@@ -256,7 +269,10 @@ mod tests {
             partidas: 30,
             jogadores: 4,
         }];
-        assert_eq!(servicos.musicas().await.unwrap().len(), 1);
+        let musicas = servicos.musicas().await.unwrap();
+        assert_eq!(musicas.len(), 1);
+        // Sem nada no catálogo, a música vem sem nome, e o app usa o da biblioteca ou o id.
+        assert_eq!(musicas[0].1, DadosDaMusica::default());
         assert_eq!(*repositorio.ultimo_limite.lock().unwrap(), Some(TAMANHO_DO_TOP));
     }
 

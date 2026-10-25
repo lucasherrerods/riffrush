@@ -1,9 +1,13 @@
+import { BOTAO_DA_ESTRELA_PADRAO, BOTOES_DOS_TRASTES_PADRAO } from "@/modules/gamepad";
 import type { QualidadeDoPalco } from "@/modules/stage";
 
 export interface Configuracoes {
   /** Códigos das teclas dos 5 trastes (KeyboardEvent.code). */
   teclas: string[];
   teclaDaEstrela: string;
+  /** Índices (Gamepad API) dos botões do controle de cada traste, na mesma ordem das teclas. */
+  botoesDoControle: number[];
+  botaoDaEstrela: number;
   /** De 1 a 10. */
   velocidade: number;
   volumeDaMusica: number;
@@ -25,6 +29,8 @@ export interface Configuracoes {
 export const CONFIGURACOES_PADRAO: Configuracoes = {
   teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"],
   teclaDaEstrela: "Space",
+  botoesDoControle: BOTOES_DOS_TRASTES_PADRAO,
+  botaoDaEstrela: BOTAO_DA_ESTRELA_PADRAO,
   velocidade: 6,
   volumeDaMusica: 0.8,
   volumeDosEfeitos: 0.5,
@@ -66,6 +72,18 @@ export function trocarTecla(configuracoes: Configuracoes, indice: number, codigo
   if (ocupada >= 0) teclas[ocupada] = teclas[indice];
   teclas[indice] = codigo;
   return { ...configuracoes, teclas };
+}
+
+/**
+ * Troca o botão do controle de um traste (0 a 4) ou do star power (5).
+ * Um botão já usado troca de lugar com o antigo, para nenhum botão fazer duas coisas.
+ */
+export function trocarBotao(configuracoes: Configuracoes, indice: number, botao: number): Configuracoes {
+  const botoes = [...configuracoes.botoesDoControle, configuracoes.botaoDaEstrela];
+  const ocupado = botoes.indexOf(botao);
+  if (ocupado >= 0) botoes[ocupado] = botoes[indice];
+  botoes[indice] = botao;
+  return { ...configuracoes, botoesDoControle: botoes.slice(0, INDICE_DA_ESTRELA), botaoDaEstrela: botoes[INDICE_DA_ESTRELA] };
 }
 
 const PREFIXOS: [RegExp, string][] = [

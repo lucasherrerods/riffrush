@@ -1,4 +1,4 @@
-import { CONFIGURACOES_PADRAO, antecedenciaDasNotas, carregarConfiguracoes, nomeDaTecla, salvarConfiguracoes, trocarTecla } from "./configuracoes";
+import { CONFIGURACOES_PADRAO, antecedenciaDasNotas, carregarConfiguracoes, nomeDaTecla, salvarConfiguracoes, trocarBotao, trocarTecla } from "./configuracoes";
 
 beforeEach(() => localStorage.clear());
 
@@ -35,6 +35,26 @@ describe("trocarTecla", () => {
 
   it("o índice 5 é a tecla do star power", () => {
     expect(trocarTecla(CONFIGURACOES_PADRAO, 5, "KeyE").teclaDaEstrela).toBe("KeyE");
+  });
+});
+
+describe("trocarBotao", () => {
+  // Padrão: LT(6), LB(4), RB(5), RT(7) e A(0) nos trastes, Select(8) no star power.
+  it("troca o botão do traste no controle sem mexer nas teclas", () => {
+    const trocada = trocarBotao(CONFIGURACOES_PADRAO, 0, 2);
+    expect(trocada.botoesDoControle).toEqual([2, 4, 5, 7, 0]);
+    expect(trocada.teclas).toEqual(CONFIGURACOES_PADRAO.teclas);
+  });
+
+  it("se o botão já estava em outro traste, os dois trocam de lugar", () => {
+    expect(trocarBotao(CONFIGURACOES_PADRAO, 0, 4).botoesDoControle).toEqual([4, 6, 5, 7, 0]);
+  });
+
+  it("o índice 5 é o star power, e ele também troca com um traste", () => {
+    expect(trocarBotao(CONFIGURACOES_PADRAO, 5, 3).botaoDaEstrela).toBe(3);
+    const comTraste = trocarBotao(CONFIGURACOES_PADRAO, 5, 6);
+    expect(comTraste.botaoDaEstrela).toBe(6);
+    expect(comTraste.botoesDoControle[0]).toBe(8);
   });
 });
 

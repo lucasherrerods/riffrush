@@ -1,3 +1,4 @@
+pub mod catalogo;
 pub mod conta;
 pub mod perfil;
 pub mod progresso;

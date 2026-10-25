@@ -19,6 +19,12 @@ const carregarPlayersPadrao = (sinal: AbortSignal) => apiDoRanking.geral({ token
 const carregarMusicasPadrao = (sinal: AbortSignal) => apiDoRanking.musicas({ sinal });
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 const plural = (n: number, um: string, varios: string) => `${formatar(n)} ${n === 1 ? um : varios}`;
+/** A biblioteca primeiro (músicas do jogo), depois o que a API achou, e por último o id. */
+function nomeDaMusica(musica: MusicaNoRanking, tituloDaMusica: Props["tituloDaMusica"]) {
+  const daApi = musica.titulo && (musica.artista ? `${musica.titulo} — ${musica.artista}` : musica.titulo);
+  return tituloDaMusica(musica.musica_id) ?? daApi ?? musica.musica_id;
+}
+
 const LISTA = "sem-barra-de-rolagem flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto";
 
 /** O leaderboard: os jogadores com mais XP numa aba e as músicas mais jogadas na outra. */
@@ -65,7 +71,7 @@ function AbaDePlayers({ carregar }: { carregar: (sinal: AbortSignal) => Promise<
         ) : (
           <>
             <p className="px-2 text-base text-texto-suave">
-              Os {formatar(top.length)} jogadores com mais XP, de {formatar(jogadores)} no total
+              Jogadores com mais XP
             </p>
             <ol aria-label="Players" className={LISTA}>
               {top.map((linha) => (
@@ -117,7 +123,9 @@ function AbaDeMusicas({ carregar, tituloDaMusica }: { carregar: (sinal: AbortSig
                 <LinhaComPosicao
                   key={m.musica_id}
                   posicao={m.posicao}
-                  nome={tituloDaMusica(m.musica_id) ?? m.musica_id}
+                  nome={nomeDaMusica(m, tituloDaMusica)}
+                  avatar={m.capa ?? null}
+                  semFoto={Music}
                   minha={false}
                   detalhe={plural(m.jogadores, "jogador", "jogadores")}
                   valor={plural(m.partidas, "partida", "partidas")}
