@@ -59,6 +59,24 @@ describe("MenuPrincipal", () => {
     expect(aoPersonagem).toHaveBeenCalled();
   });
 
+  it("com o relay e contas, Online abre a lista de quem está online", async () => {
+    const aoOnline = vi.fn();
+    render(
+      <MenuPrincipal
+        volumeDosEfeitos={0}
+        aoJogar={vi.fn()}
+        aoMultijogador={vi.fn()}
+        aoPersonagem={vi.fn()}
+        aoConfigurar={vi.fn()}
+        aoBuscarMusicas={vi.fn()}
+        aoOnline={aoOnline}
+        aoAbrirDocumento={vi.fn()}
+      />,
+    );
+    await userEvent.setup().click(screen.getByRole("button", { name: "Online" }));
+    expect(aoOnline).toHaveBeenCalled();
+  });
+
   it("Leaderboard abre o ranking geral", async () => {
     const { aoLeaderboard, usuario } = abrir();
     await usuario.click(screen.getByRole("button", { name: "Leaderboard" }));

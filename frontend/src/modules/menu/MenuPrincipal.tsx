@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Play, Search, Settings2, Shirt, Trophy, Users, Zap, type LucideIcon } from "lucide-react";
+import { Play, Radio, Search, Settings2, Shirt, Trophy, Users, Zap, type LucideIcon } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Documento } from "@/modules/legal";
 import { abrirLink } from "@/modules/platform";
@@ -18,6 +18,8 @@ interface Props {
   aoBuscarMusicas: () => void;
   /** Sem contas ligadas não há leaderboard, e a opção some. */
   aoLeaderboard?: () => void;
+  /** Sem o relay ou sem contas não há quem está online, e a opção some. */
+  aoOnline?: () => void;
   aoAbrirDocumento: (documento: Documento) => void;
 }
 
@@ -29,10 +31,11 @@ interface Item {
 
 const URL_DO_PROJETO = "https://github.com/lucasherrerods/riffrush";
 
-export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoAbrirDocumento }: Props) {
+export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento }: Props) {
   const [selecionado, setSelecionado] = useState(0);
   const comuns: Item[] = [
     ...(aoLeaderboard ? [{ rotulo: "Leaderboard", icone: Trophy, acao: aoLeaderboard }] : []),
+    ...(aoOnline ? [{ rotulo: "Online", icone: Radio, acao: aoOnline }] : []),
     { rotulo: "Buscar músicas", icone: Search, acao: aoBuscarMusicas },
     { rotulo: "Personagem", icone: Shirt, acao: aoPersonagem },
     { rotulo: "Configurações", icone: Settings2, acao: aoConfigurar },

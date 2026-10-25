@@ -20,6 +20,10 @@ export interface Configuracoes {
   qualidadeDoPalco: QualidadeDoPalco;
   /** Só a pista e o placar na partida: sem palco, personagem, clipe nem fundo. */
   modoCompetitivo: boolean;
+  /** Aparecer na lista de quem está online. `null` enquanto a pessoa não respondeu: nada liga sem ela aceitar. */
+  mostrarOnline: boolean | null;
+  /** Quem está online pode assistir às partidas ao vivo. */
+  permitirEspectadores: boolean;
 }
 
 export const CONFIGURACOES_PADRAO: Configuracoes = {
@@ -37,6 +41,8 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   mostrarFps: false,
   qualidadeDoPalco: "media",
   modoCompetitivo: false,
+  mostrarOnline: null,
+  permitirEspectadores: true,
 };
 
 const CHAVE = "riffrush.configuracoes";

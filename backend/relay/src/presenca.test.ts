@@ -1,0 +1,53 @@
+import { lerEstado, lerMensagemDaTransmissao, verificarFicha } from "./presenca";
+
+// A mesma ficha do teste da API (backend/src/modules/presenca/dominio.rs): os dois lados precisam concordar.
+const FICHA =
+  "eyJpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNyIsIm5vbWUiOiJMdWNhcyIsImF2YXRhciI6bnVsbCwiZXhwIjoxOTAwMDAwMDAwfQ.g3x_8V8_Mc8fiEU3TwanHW2LnkX5ipNmEHy9XUb6HhA";
+const SEGREDO = "segredo-de-teste";
+
+describe("verificarFicha", () => {
+  it("aceita a ficha assinada pela API e devolve quem é", async () => {
+    expect(await verificarFicha(FICHA, SEGREDO, 1_800_000_000)).toEqual({ id: "00000000-0000-0000-0000-000000000007", nome: "Lucas", avatar: null });
+  });
+
+  it("recusa ficha vencida, com outro segredo ou adulterada", async () => {
+    expect(await verificarFicha(FICHA, SEGREDO, 1_900_000_001)).toBeNull();
+    expect(await verificarFicha(FICHA, "outro", 1_800_000_000)).toBeNull();
+    expect(await verificarFicha(FICHA.replace("eyJpZCI6", "eyJpZCI7"), SEGREDO, 1_800_000_000)).toBeNull();
+    expect(await verificarFicha("lixo", SEGREDO, 1_800_000_000)).toBeNull();
+    expect(await verificarFicha(FICHA, "", 1_800_000_000)).toBeNull();
+  });
+});
+
+describe("lerEstado", () => {
+  it("aceita o menu e a música que está tocando", () => {
+    expect(lerEstado({ tipo: "menu" })).toEqual({ tipo: "menu" });
+    const tocando = { tipo: "tocando", musica: "encore:abc", titulo: "Paint It Black", artista: "The Rolling Stones", dificuldade: "expert", instrumento: "guitarra", transmitindo: true };
+    expect(lerEstado(tocando)).toEqual(tocando);
+  });
+
+  it("corta textos longos e recusa formatos estranhos", () => {
+    const longo = lerEstado({ tipo: "tocando", musica: "x", titulo: "a".repeat(500), artista: "b", dificuldade: "facil", instrumento: "baixo", transmitindo: false });
+    expect(longo?.tipo === "tocando" && longo.titulo.length).toBe(80);
+    expect(lerEstado({ tipo: "hackeando" })).toBeNull();
+    expect(lerEstado(null)).toBeNull();
+    expect(lerEstado({ tipo: "tocando", musica: 3 })).toBeNull();
+  });
+});
+
+describe("lerMensagemDaTransmissao", () => {
+  it("aceita o início, os lotes de entradas, a pausa e o fim", () => {
+    expect(lerMensagemDaTransmissao('{"tipo":"lote","ate":12.5,"entradas":[[12001,0],[12100,5]]}')).toEqual({ tipo: "lote", ate: 12.5, entradas: [[12001, 0], [12100, 5]] });
+    expect(lerMensagemDaTransmissao('{"tipo":"pausa","pausado":true}')).toEqual({ tipo: "pausa", pausado: true });
+    expect(lerMensagemDaTransmissao('{"tipo":"fim"}')).toEqual({ tipo: "fim" });
+    const inicio = { tipo: "inicio", partida: { musica: "encore:abc", dificuldade: "expert", instrumento: "guitarra", hashDoChart: "a".repeat(32), semFalha: false } };
+    expect(lerMensagemDaTransmissao(JSON.stringify(inicio))).toEqual(inicio);
+  });
+
+  it("recusa lotes com entradas inválidas, mensagens grandes e JSON quebrado", () => {
+    expect(lerMensagemDaTransmissao('{"tipo":"lote","ate":1,"entradas":[[1,11]]}')).toBeNull();
+    expect(lerMensagemDaTransmissao('{"tipo":"lote","ate":1,"entradas":[["x",0]]}')).toBeNull();
+    expect(lerMensagemDaTransmissao(`{"tipo":"lote","ate":1,"entradas":[${"[1,0],".repeat(2000)}[1,0]]}`)).toBeNull();
+    expect(lerMensagemDaTransmissao("{quebrado")).toBeNull();
+  });
+});

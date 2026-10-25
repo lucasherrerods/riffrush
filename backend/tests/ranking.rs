@@ -70,6 +70,10 @@ async fn app() -> (Router, String, Arc<RankingEmMemoria>) {
     let app = riffrush_api::app(
         EstadoDoApp {
             banco: Arc::new(BancoOk),
+            presenca: riffrush_api::modules::presenca::ServicosDePresenca {
+                conta: conta.clone(),
+                segredo: None,
+            },
             perfil: riffrush_api::modules::perfil::fakes::servicos_do_perfil(conta.clone()).0,
             conta,
             ranking,

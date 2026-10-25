@@ -25,6 +25,10 @@ async fn chamar(banco_ok: bool, caminho: &str) -> (StatusCode, Value) {
     let app = riffrush_api::app(
         EstadoDoApp {
             banco: Arc::new(BancoFalso(banco_ok)),
+            presenca: riffrush_api::modules::presenca::ServicosDePresenca {
+                conta: conta.clone(),
+                segredo: None,
+            },
             ranking: riffrush_api::modules::ranking::fakes::servicos_do_ranking(conta.clone()).0,
             perfil: riffrush_api::modules::perfil::fakes::servicos_do_perfil(conta.clone()).0,
             conta,

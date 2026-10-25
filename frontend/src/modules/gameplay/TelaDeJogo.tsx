@@ -19,7 +19,7 @@ import { progressoDasEstrelas } from "./estrelas";
 import { criarLojaDoHud, useLoja, type LojaDoHud } from "./lojaDoHud";
 import { NOMES_DAS_PISTAS } from "./cores";
 import { avancar, criarPartida, multiplicador, precisao, retirarEventos } from "./partida";
-import { aplicarEntradas, criarGravador, empacotarReplay, hashDoChart, type Replay } from "./replay";
+import { aplicarEntradas, criarGravador, empacotarReplay, hashDoChart, type EventoDaTransmissao, type Replay } from "./replay";
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { forcaDoTrovao } from "./pista/efeitos";
 import { criarContadorDeFps } from "./fps";
@@ -49,6 +49,9 @@ export interface OpcoesDaPartida {
   qualidadeDoPalco: QualidadeDoPalco;
   modoCompetitivo: boolean;
 }
+
+/** Ao vivo, as entradas vão em lotes: um por segundo poupa a cota do relay e chega bem antes de quem assiste precisar. */
+const INTERVALO_DO_LOTE_MS = 1000;
 
 export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"],
@@ -88,6 +91,8 @@ interface Props {
   aoTerminar: (resultado: Resultado, gerarReplay?: () => Promise<Uint8Array>) => void;
   /** Assiste a uma partida gravada: as entradas vêm do replay e o teclado só pausa. */
   replay?: Replay;
+  /** Transmite a partida ao vivo: recebe o início, um lote de entradas por segundo, as pausas e o fim. */
+  transmissao?: (evento: EventoDaTransmissao) => void;
   /** O placar do ranking no canto da tela, desenhado com os pontos de agora. */
   placar?: (pontos: number) => ReactNode;
 }
@@ -124,7 +129,7 @@ const LARGURA_DO_PAINEL = 250;
 const LARGURA_DO_HUD_LATERAL = 240;
 const MARGEM_DO_HUD = 16;
 
-export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar, replay }: Props) {
+export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar, replay, transmissao }: Props) {
   const recordeAtual = useRef(recorde);
   recordeAtual.current = recorde;
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -159,6 +164,9 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   const inicioEmRede = rede?.inicio;
   const redeAtual = useRef(rede);
   redeAtual.current = rede;
+  // Lida no loop: trocar a função a cada render não pode reiniciar a partida.
+  const transmissaoAtual = useRef(transmissao);
+  transmissaoAtual.current = transmissao;
   const [carregada, setCarregada] = useState<MusicaCarregada | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [urlDoVideo, setUrlDoVideo] = useState<string | null>(null);
@@ -224,6 +232,28 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     const bot = opcoes.bot && !replay ? criarBot() : null;
     const gravador = criarGravador(partida);
     let proximaEntrada = 0;
+    // Os lotes só saem depois do início: o relay apaga o que tinha quando chega um início novo.
+    let transmitindo = false;
+    let entradasEnviadas = 0;
+    let ultimoLote = 0;
+    let transmissaoAcabou = false;
+    const transmitir = (evento: EventoDaTransmissao) => transmitindo && !transmissaoAcabou && transmissaoAtual.current?.(evento);
+    const encerrarTransmissao = () => {
+      // O que foi tocado depois do último lote vai antes do fim, para quem assiste ver o final inteiro.
+      if (gravador.entradas.length > entradasEnviadas) {
+        transmitir({ tipo: "lote", entradas: gravador.entradas.slice(entradasEnviadas), ate: partida.tempo ?? 0 });
+        entradasEnviadas = gravador.entradas.length;
+      }
+      transmitir({ tipo: "fim" });
+      transmissaoAcabou = true;
+    };
+    if (transmissaoAtual.current && !replay && !bot) {
+      void hashDoChart(carregada.notas).then((hash) => {
+        if (transmissaoAcabou) return;
+        transmitindo = true;
+        transmitir({ tipo: "inicio", hashDoChart: hash, semFalha: opcoes.semFalha });
+      });
+    }
     const sprites = criarSprites();
     const contexto2d = canvas.current?.getContext("2d") ?? null;
     // O tamanho vem do ResizeObserver: ler clientWidth no loop, logo depois de mudar a opacidade, força um layout por quadro.
@@ -269,6 +299,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     const terminar = () => {
       if (terminou) return;
       terminou = true;
+      encerrarTransmissao();
       publicar(true);
       video.current?.pause();
       if (partida.derrota) {
@@ -333,16 +364,19 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       void audio.suspend();
       video.current?.pause();
       setPausado(true);
+      transmitir({ tipo: "pausa", pausado: true });
     };
     const continuar = () => {
       setPausado(false);
       if (!pausadoAgora) return;
       pausadoAgora = false;
       void audio.resume();
+      transmitir({ tipo: "pausa", pausado: false });
     };
     const desistir = () => {
       partida.derrota = true;
       terminou = true;
+      encerrarTransmissao();
       publicar(true);
       aoTerminar(resultadoDaPartida(partida, musica.id, dificuldade, instrumento));
     };
@@ -400,8 +434,15 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
 
       if (!pausadoAgora && !terminou) {
         if (bot) jogarSozinho(bot, partida, tempo).forEach((apertado, i) => (apertados[i] = apertado));
-        if (replay) proximaEntrada = aplicarEntradas(partida, replay.entradas, proximaEntrada, tempo, apertados);
-        avancar(partida, tempo);
+        // Ao vivo, a partida de quem assiste espera o próximo lote em vez de passar das entradas que já chegaram.
+        const tempoDaPartida = replay?.ateAgora === undefined ? tempo : Math.min(tempo, replay.ateAgora);
+        if (replay) proximaEntrada = aplicarEntradas(partida, replay.entradas, proximaEntrada, tempoDaPartida, apertados);
+        avancar(partida, tempoDaPartida);
+        if (transmitindo && performance.now() - ultimoLote >= INTERVALO_DO_LOTE_MS) {
+          ultimoLote = performance.now();
+          transmitir({ tipo: "lote", entradas: gravador.entradas.slice(entradasEnviadas), ate: partida.tempo ?? tempo });
+          entradasEnviadas = gravador.entradas.length;
+        }
         tratarEventos(tempo);
         if (!terminou && tempo >= carregada.duracao) terminar();
         if (!terminou && performance.now() - ultimoEnvio > INTERVALO_DO_ENVIO_MS) {
@@ -493,6 +534,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     quadro = requestAnimationFrame(desenhar);
 
     return () => {
+      encerrarTransmissao();
       cancelAnimationFrame(quadro);
       observador?.disconnect();
       window.removeEventListener("keydown", aoApertar);
@@ -563,7 +605,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
               <p className="truncate text-base text-texto-suave">
                 {musica.artista} · {rotuloDaDificuldade}
                 {opcoes.bot && !replay && <span className="ml-2 rounded bg-estrela px-2 font-black text-fundo">BOT</span>}
-                {replay && <span className="ml-2 rounded bg-primaria px-2 font-black">REPLAY</span>}
+                {replay && <span className="ml-2 rounded bg-primaria px-2 font-black">{replay.ateAgora === undefined ? "REPLAY" : "AO VIVO"}</span>}
                 {opcoes.mostrarFps && <span className="ml-2 font-mono tabular-nums">{fps ?? "–"} FPS</span>}
               </p>
             </div>

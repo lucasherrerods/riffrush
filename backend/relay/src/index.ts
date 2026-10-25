@@ -12,10 +12,15 @@ import {
   type EntradaDaSala,
   type Janela,
 } from "./regras";
+import { lerEstado, lerMensagemDaTransmissao, verificarFicha, type MensagemDaPresenca, type Pessoa, type PessoaOnline } from "./presenca";
 
 interface Env {
   SALAS: DurableObjectNamespace<Sala>;
   DIRETORIO: DurableObjectNamespace<Diretorio>;
+  PRESENCA: DurableObjectNamespace<Presenca>;
+  TRANSMISSOES: DurableObjectNamespace<Transmissao>;
+  /** O mesmo SEGREDO_DO_RELAY da API (`npx wrangler secret put SEGREDO_DA_PRESENCA`). */
+  SEGREDO_DA_PRESENCA?: string;
 }
 
 interface Anexo {
@@ -169,6 +174,184 @@ export class Sala extends DurableObject<Env> {
   }
 }
 
+const CABECALHO_DA_PESSOA = "x-riffrush-pessoa";
+const PESSOA = "pessoa";
+const QUEM_JOGA = "jogador";
+const QUEM_ASSISTE = "espectador";
+
+function enviar(socket: WebSocket, texto: string) {
+  try {
+    socket.send(texto);
+  } catch {
+    // Conexão caindo: o webSocketClose dela cuida do resto.
+  }
+}
+
+function fechar(socket: WebSocket, motivo: string) {
+  try {
+    socket.close(1000, motivo);
+  } catch {
+    // Já estava fechado.
+  }
+}
+
+/**
+ * Quem está online agora. Um só para o relay todo; cada conexão guarda a pessoa no anexo,
+ * que sobrevive à hibernação, então a lista sai das próprias conexões abertas.
+ */
+export class Presenca extends DurableObject<Env> {
+  private janelas = new Map<WebSocket, Janela>();
+
+  async fetch(pedido: Request): Promise<Response> {
+    if (pedido.headers.get("Upgrade") !== "websocket") return new Response("Esperava um WebSocket.", { status: 426 });
+    const pessoa = JSON.parse(pedido.headers.get(CABECALHO_DA_PESSOA) ?? "null") as Pessoa;
+    // A mesma conta em outro aparelho: a conexão antiga sai, para não aparecer duas vezes.
+    for (const antiga of this.ctx.getWebSockets(PESSOA)) {
+      if ((antiga.deserializeAttachment() as PessoaOnline).id === pessoa.id) fechar(antiga, "outroAparelho");
+    }
+    const [cliente, servidor] = Object.values(new WebSocketPair());
+    this.ctx.acceptWebSocket(servidor, [PESSOA]);
+    const online: PessoaOnline = { ...pessoa, estado: { tipo: "menu" } };
+    servidor.serializeAttachment(online);
+    enviar(servidor, JSON.stringify({ tipo: "lista", pessoas: this.pessoas() } satisfies MensagemDaPresenca));
+    this.paraTodos({ tipo: "pessoa", pessoa: online }, servidor);
+    return new Response(null, { status: 101, webSocket: cliente });
+  }
+
+  async webSocketMessage(socket: WebSocket, mensagem: string | ArrayBuffer) {
+    if (typeof mensagem !== "string" || mensagem.length > TAMANHO_DO_ESTADO) return;
+    const limite = dentroDoLimite(this.janelas.get(socket) ?? { inicio: 0, contagem: 0 }, Date.now());
+    this.janelas.set(socket, limite.janela);
+    if (!limite.passa) return;
+    let estado;
+    try {
+      estado = lerEstado(JSON.parse(mensagem)?.estado);
+    } catch {
+      return;
+    }
+    if (!estado) return;
+    const pessoa: PessoaOnline = { ...(socket.deserializeAttachment() as PessoaOnline), estado };
+    socket.serializeAttachment(pessoa);
+    this.paraTodos({ tipo: "pessoa", pessoa });
+  }
+
+  async webSocketClose(socket: WebSocket) {
+    this.saiu(socket);
+  }
+
+  async webSocketError(socket: WebSocket) {
+    this.saiu(socket);
+  }
+
+  private saiu(socket: WebSocket) {
+    this.janelas.delete(socket);
+    const { id } = socket.deserializeAttachment() as PessoaOnline;
+    fechar(socket, "saiu");
+    // Se a mesma conta já abriu outra conexão, ela continua na lista.
+    const continua = this.ctx.getWebSockets(PESSOA).some((s) => s !== socket && (s.deserializeAttachment() as PessoaOnline).id === id);
+    if (!continua) this.paraTodos({ tipo: "saiu", id }, socket);
+  }
+
+  private pessoas() {
+    return this.ctx.getWebSockets(PESSOA).map((s) => s.deserializeAttachment() as PessoaOnline);
+  }
+
+  private paraTodos(mensagem: MensagemDaPresenca, exceto?: WebSocket) {
+    const texto = JSON.stringify(mensagem);
+    for (const socket of this.ctx.getWebSockets(PESSOA)) if (socket !== exceto) enviar(socket, texto);
+  }
+}
+
+/** O estado é pequeno: música, dificuldade e instrumento. */
+const TAMANHO_DO_ESTADO = 1024;
+
+/**
+ * A partida ao vivo de uma pessoa: guarda o início e os lotes de entradas desde o começo da música,
+ * para quem chega no meio alcançar a partida, e repassa cada lote novo para quem está assistindo.
+ */
+export class Transmissao extends DurableObject<Env> {
+  private janelas = new Map<WebSocket, Janela>();
+
+  async fetch(pedido: Request): Promise<Response> {
+    if (pedido.headers.get("Upgrade") !== "websocket") return new Response("Esperava um WebSocket.", { status: 426 });
+    const [cliente, servidor] = Object.values(new WebSocketPair());
+    if (pedido.headers.get(CABECALHO_DA_PESSOA)) {
+      for (const antigo of this.ctx.getWebSockets(QUEM_JOGA)) fechar(antigo, "outraPartida");
+      this.ctx.acceptWebSocket(servidor, [QUEM_JOGA]);
+      return new Response(null, { status: 101, webSocket: cliente });
+    }
+    this.ctx.acceptWebSocket(servidor, [QUEM_ASSISTE]);
+    // Quem chega no meio recebe tudo o que já aconteceu, num lote só.
+    const inicio = await this.ctx.storage.get<string>("inicio");
+    if (!inicio || this.ctx.getWebSockets(QUEM_JOGA).length === 0) {
+      enviar(servidor, JSON.stringify({ tipo: "semPartida" }));
+      fechar(servidor, "semPartida");
+      return new Response(null, { status: 101, webSocket: cliente });
+    }
+    enviar(servidor, inicio);
+    const lotes = [...(await this.ctx.storage.list<{ ate: number; entradas: [number, number][] }>({ prefix: "lote:" })).values()];
+    if (lotes.length) {
+      enviar(servidor, JSON.stringify({ tipo: "lote", ate: lotes[lotes.length - 1].ate, entradas: lotes.flatMap((l) => l.entradas) }));
+    }
+    const pausado = await this.ctx.storage.get<boolean>("pausado");
+    if (pausado) enviar(servidor, JSON.stringify({ tipo: "pausa", pausado: true }));
+    return new Response(null, { status: 101, webSocket: cliente });
+  }
+
+  async webSocketMessage(socket: WebSocket, bruta: string | ArrayBuffer) {
+    if (typeof bruta !== "string" || !this.ctx.getTags(socket).includes(QUEM_JOGA)) return;
+    const limite = dentroDoLimite(this.janelas.get(socket) ?? { inicio: 0, contagem: 0 }, Date.now());
+    this.janelas.set(socket, limite.janela);
+    if (!limite.passa) return;
+    const mensagem = lerMensagemDaTransmissao(bruta);
+    if (!mensagem) return;
+    const texto = JSON.stringify(mensagem);
+    if (mensagem.tipo === "inicio") {
+      await this.ctx.storage.deleteAll();
+      await this.ctx.storage.put({ inicio: texto, proximoLote: 0 });
+    } else if (mensagem.tipo === "lote") {
+      const numero = (await this.ctx.storage.get<number>("proximoLote")) ?? 0;
+      await this.ctx.storage.put({ [`lote:${String(numero).padStart(6, "0")}`]: { ate: mensagem.ate, entradas: mensagem.entradas }, proximoLote: numero + 1 });
+    } else if (mensagem.tipo === "pausa") {
+      await this.ctx.storage.put("pausado", mensagem.pausado);
+    } else {
+      await this.ctx.storage.deleteAll();
+    }
+    for (const espectador of this.ctx.getWebSockets(QUEM_ASSISTE)) enviar(espectador, texto);
+  }
+
+  async webSocketClose(socket: WebSocket) {
+    await this.saiu(socket);
+  }
+
+  async webSocketError(socket: WebSocket) {
+    await this.saiu(socket);
+  }
+
+  private async saiu(socket: WebSocket) {
+    this.janelas.delete(socket);
+    fechar(socket, "saiu");
+    if (!this.ctx.getTags(socket).includes(QUEM_JOGA)) return;
+    if (this.ctx.getWebSockets(QUEM_JOGA).some((s) => s !== socket)) return;
+    // Quem jogava saiu: a partida acaba para quem assiste e o armazenamento é liberado.
+    await this.ctx.storage.deleteAll();
+    for (const espectador of this.ctx.getWebSockets(QUEM_ASSISTE)) {
+      enviar(espectador, JSON.stringify({ tipo: "fim" }));
+      fechar(espectador, "fim");
+    }
+  }
+}
+
+/** Confere a ficha da URL e passa a pessoa para o Durable Object num cabeçalho que o cliente não consegue mandar. */
+async function comPessoa(pedido: Request, env: Env) {
+  const ficha = new URL(pedido.url).searchParams.get("ficha") ?? "";
+  const pessoa = await verificarFicha(ficha, env.SEGREDO_DA_PRESENCA ?? "", Math.floor(Date.now() / 1000));
+  if (!pessoa) return null;
+  const cabecalhos = new Headers(pedido.headers);
+  cabecalhos.set(CABECALHO_DA_PESSOA, JSON.stringify(pessoa));
+  return { pessoa, pedido: new Request(pedido, { headers: cabecalhos }) };
+}
+
 function encaminhar(pedido: Request, env: Env, codigo: string, criar: boolean) {
   const cabecalhos = new Headers(pedido.headers);
   if (criar) cabecalhos.set(CABECALHO_DO_NOME, new URL(pedido.url).searchParams.get("nome") ?? "");
@@ -192,6 +375,24 @@ export default {
     // O app web roda em outro domínio: a lista precisa liberar CORS.
     if (pathname === "/salas") {
       return Response.json(await diretorio(env).listar(), { headers: { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" } });
+    }
+
+    if (pathname === "/presenca") {
+      const autenticado = await comPessoa(pedido, env);
+      if (!autenticado) return new Response("Ficha inválida.", { status: 401 });
+      return env.PRESENCA.get(env.PRESENCA.idFromName("presenca")).fetch(autenticado.pedido);
+    }
+
+    const transmissao = /^\/transmissao\/([0-9a-f-]{36})$/.exec(pathname);
+    if (transmissao) {
+      const sem = new Headers(pedido.headers);
+      sem.delete(CABECALHO_DA_PESSOA);
+      const destino = env.TRANSMISSOES.get(env.TRANSMISSOES.idFromName(transmissao[1]));
+      if (!new URL(pedido.url).searchParams.has("ficha")) return destino.fetch(new Request(pedido, { headers: sem }));
+      // Só a própria pessoa transmite a partida dela.
+      const autenticado = await comPessoa(pedido, env);
+      if (!autenticado || autenticado.pessoa.id !== transmissao[1]) return new Response("Ficha inválida.", { status: 401 });
+      return destino.fetch(autenticado.pedido);
     }
 
     const sala = /^\/sala\/([^/]+)$/.exec(pathname);

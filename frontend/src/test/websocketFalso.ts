@@ -7,7 +7,7 @@ export class WebSocketFalso {
   fechado = false;
   onopen: (() => void) | null = null;
   onmessage: ((evento: { data: string }) => void) | null = null;
-  onclose: (() => void) | null = null;
+  onclose: ((evento?: { reason?: string }) => void) | null = null;
   onerror: (() => void) | null = null;
 
   constructor(public url: string) {
@@ -22,6 +22,17 @@ export class WebSocketFalso {
   /** Simula o servidor entregando `msg`, enviada pelo jogador `de`. */
   receber(de: number, msg: object) {
     this.onmessage?.({ data: JSON.stringify({ de, msg }) });
+  }
+
+  /** Simula o relay entregando uma mensagem crua, sem o envelope da sala. */
+  entregar(msg: object) {
+    this.onmessage?.({ data: JSON.stringify(msg) });
+  }
+
+  /** O servidor fecha a conexão com um motivo. */
+  fecharPeloServidor(reason: string) {
+    this.readyState = 3;
+    this.onclose?.({ reason });
   }
 
   send(texto: string) {

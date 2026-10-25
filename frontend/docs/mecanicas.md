@@ -34,3 +34,10 @@ Como o `.osr` do osu!, o replay guarda só as entradas do jogador, não vídeo (
 - Só a partida que vale para o ranking gera replay: sem bot, sem derrota e sem fantasma.
 - A API guarda o replay só no recorde de cada jogador em cada música, dificuldade e instrumento. As outras partidas perdem o delas. O limite é de 64 KB.
 - O replay só toca no mesmo chart. Se o hash não bater, a tela avisa que é de outra versão do chart.
+
+## Quem está online e partidas ao vivo
+
+- **Presença:** o app só entra na lista depois que a pessoa aceita (`mostrarOnline`), e dá para desligar na tela Online. A API assina uma ficha de 5 minutos (HMAC, `POST /presenca/ficha`), e o relay confere a ficha com o mesmo segredo. Assim ninguém aparece com o nome de outra pessoa, e o relay não precisa conhecer as sessões.
+- **Transmissão:** vai ao ar só a partida solo de quem deixa (`permitirEspectadores`), sem bot, com música do jogo ou do Encore. A `TelaDeJogo` manda as entradas do replay em lotes de 1 s, e o relay guarda tudo desde o início, para quem chega no meio alcançar a partida.
+- **Quem assiste:** fica 2 s atrás de quem joga e monta a mesma partida com o modo replay. A partida não passa do último lote que chegou (`ateAgora`). Se sair mais de 1,5 s do ponto certo, como numa pausa ou num travamento da rede, a partida recomeça no lugar certo.
+- **Música diferente:** sem a mesma música, ou com outro chart (hash diferente), a tela avisa em vez de tocar.

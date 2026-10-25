@@ -11,6 +11,14 @@ class_name = "Sala"
 name = "DIRETORIO"
 class_name = "Diretorio"
 
+[[durable_objects.bindings]]
+name = "PRESENCA"
+class_name = "Presenca"
+
+[[durable_objects.bindings]]
+name = "TRANSMISSOES"
+class_name = "Transmissao"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Sala"]
@@ -18,3 +26,7 @@ new_sqlite_classes = ["Sala"]
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["Diretorio"]
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["Presenca", "Transmissao"]
