@@ -31,7 +31,7 @@ export const DOCUMENTOS: Record<Documento, ConteudoDoDocumento> = {
           "O seu XP total e o resumo de cada partida: música, instrumento, dificuldade, pontos, acertos, total de notas, se foi vaiado e a data.",
           "As sessões de login, guardadas como um código embaralhado (hash) que vale por 30 dias. O código original fica só no seu aparelho.",
           "Se você ligar o chat global: as mensagens que manda, com o seu nome e o identificador da conta, ficam no servidor das salas online (Cloudflare) por até 24 horas, no máximo as 50 últimas do chat.",
-          "Quando alguém denuncia uma mensagem, uma cópia dela (autor, texto e hora), com quem denunciou, fica guardada no nosso banco de dados para a equipe analisar até ser resolvida. Se a equipe banir a sua conta do chat, isso também fica no banco, ligado à sua conta.",
+          "Quando alguém denuncia uma mensagem, uma cópia dela (autor, texto e hora), com quem denunciou, fica guardada no nosso banco de dados para a moderação analisar até ser resolvida. Se a moderação banir a sua conta do chat, isso também fica no banco, ligado à sua conta.",
         ],
       },
       {
@@ -99,9 +99,9 @@ export const DOCUMENTOS: Record<Documento, ConteudoDoDocumento> = {
         titulo: "Chat",
         paragrafos: [
           "O chat global é público para quem tem conta, e escrever nele pede o nível 2. O chat da sala é visto por quem estiver na sala.",
-          "Não passe dados pessoais seus nem de outras pessoas. A equipe nunca pede senha: só fala por ela quem aparece com o selo Equipe.",
+          "Não passe dados pessoais seus nem de outras pessoas. A moderação nunca pede senha: só fala por ela quem aparece com o selo Moderação.",
           "Proibido ofender, assediar, ameaçar, discriminar, mandar spam, divulgar golpes ou conteúdo ilegal ou sexual. Mensagens assim podem ser apagadas e a conta pode ser banida do chat, ou excluída.",
-          "Você pode silenciar e denunciar qualquer mensagem. As denúncias vão para a equipe.",
+          "Você pode silenciar e denunciar qualquer mensagem. As denúncias vão para a moderação.",
         ],
       },
       {

@@ -20,9 +20,9 @@ impl From<ErroDaModeracao> for ErroDaApi {
         match erro {
             ErroDaModeracao::Desligada => Self::Indisponivel,
             ErroDaModeracao::SessaoInvalida | ErroDaModeracao::AssinaturaInvalida => Self::NaoAutorizado,
-            ErroDaModeracao::SoAEquipe => Self::Proibido,
+            ErroDaModeracao::SoAModeracao => Self::Proibido,
             ErroDaModeracao::ContaNaoEncontrada => Self::NaoEncontrado,
-            ErroDaModeracao::EquipeNaoEBanida | ErroDaModeracao::Invalida(_) => Self::Invalido(erro.to_string()),
+            ErroDaModeracao::ModeracaoNaoEBanida | ErroDaModeracao::Invalida(_) => Self::Invalido(erro.to_string()),
             ErroDaModeracao::Falha(falha) => Self::Interno(falha.0),
         }
     }
@@ -41,7 +41,7 @@ pub struct CorpoDaDenuncia {
 }
 
 #[derive(Serialize, ToSchema)]
-pub struct DenunciaDaEquipe {
+pub struct DenunciaDaModeracao {
     mensagem_n: i64,
     autor_id: Uuid,
     autor_nome: String,
@@ -51,7 +51,7 @@ pub struct DenunciaDaEquipe {
     criada_em: DateTime<Utc>,
 }
 
-impl From<DenunciaRecebida> for DenunciaDaEquipe {
+impl From<DenunciaRecebida> for DenunciaDaModeracao {
     fn from(d: DenunciaRecebida) -> Self {
         Self {
             mensagem_n: d.denuncia.mensagem_n,
@@ -66,12 +66,12 @@ impl From<DenunciaRecebida> for DenunciaDaEquipe {
 }
 
 #[derive(Serialize, ToSchema)]
-pub struct BanidoDaEquipe {
+pub struct BanidoDaModeracao {
     conta_id: Uuid,
     nome: String,
 }
 
-impl From<Banido> for BanidoDaEquipe {
+impl From<Banido> for BanidoDaModeracao {
     fn from(b: Banido) -> Self {
         Self {
             conta_id: b.conta_id,
@@ -102,9 +102,9 @@ pub async fn denunciar(State(estado): State<EstadoDoApp>, cabecalhos: HeaderMap,
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// As denúncias para a equipe, as mais novas primeiro.
-#[utoipa::path(get, path = "/moderacao/denuncias", responses((status = 200, body = [DenunciaDaEquipe]), (status = 401), (status = 403)), security(("token" = [])))]
-pub async fn denuncias(State(estado): State<EstadoDoApp>, Token(token): Token) -> Result<Json<Vec<DenunciaDaEquipe>>, ErroDaApi> {
+/// As denúncias para a moderação, as mais novas primeiro.
+#[utoipa::path(get, path = "/moderacao/denuncias", responses((status = 200, body = [DenunciaDaModeracao]), (status = 401), (status = 403)), security(("token" = [])))]
+pub async fn denuncias(State(estado): State<EstadoDoApp>, Token(token): Token) -> Result<Json<Vec<DenunciaDaModeracao>>, ErroDaApi> {
     Ok(Json(estado.moderacao.denuncias(&token).await?.into_iter().map(Into::into).collect()))
 }
 
@@ -115,8 +115,8 @@ pub async fn resolver(State(estado): State<EstadoDoApp>, Token(token): Token, Pa
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[utoipa::path(get, path = "/moderacao/banidos", responses((status = 200, body = [BanidoDaEquipe]), (status = 401), (status = 403)), security(("token" = [])))]
-pub async fn banidos(State(estado): State<EstadoDoApp>, Token(token): Token) -> Result<Json<Vec<BanidoDaEquipe>>, ErroDaApi> {
+#[utoipa::path(get, path = "/moderacao/banidos", responses((status = 200, body = [BanidoDaModeracao]), (status = 401), (status = 403)), security(("token" = [])))]
+pub async fn banidos(State(estado): State<EstadoDoApp>, Token(token): Token) -> Result<Json<Vec<BanidoDaModeracao>>, ErroDaApi> {
     Ok(Json(estado.moderacao.banidos(&token).await?.into_iter().map(Into::into).collect()))
 }
 

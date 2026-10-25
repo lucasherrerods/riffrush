@@ -16,7 +16,7 @@ pub struct Ficha {
     pub avatar: Option<String>,
     /// O relay só deixa escrever no chat global a partir de um nível mínimo.
     pub nivel: u32,
-    /// Da equipe: modera o chat global e aparece com o selo.
+    /// Da moderação: modera o chat global e aparece com o selo.
     pub admin: bool,
     /// Banido do chat global: lê, mas não escreve.
     pub banido: bool,

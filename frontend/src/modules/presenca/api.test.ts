@@ -11,7 +11,7 @@ const pedido = (buscar: ReturnType<typeof vi.fn>) => {
 };
 
 describe("api da moderação", () => {
-  it("lista as denúncias e os banidos com o token da equipe", async () => {
+  it("lista as denúncias e os banidos com o token da moderação", async () => {
     const { api, buscar } = montar([{ conta_id: "a", nome: "Ana" }]);
     expect(await api.banidos("t")).toEqual([{ conta_id: "a", nome: "Ana" }]);
     expect(pedido(buscar)).toEqual({ url: "https://api/moderacao/banidos", metodo: "GET", token: "Bearer t" });
@@ -29,7 +29,7 @@ describe("api da moderação", () => {
     }
   });
 
-  it("quem não é da equipe recebe o erro da API", async () => {
+  it("quem não é da moderação recebe o erro da API", async () => {
     const { api } = montar({ erro: "sem permissão" }, 403);
     await expect(api.denuncias("t")).rejects.toMatchObject({ status: 403 });
   });

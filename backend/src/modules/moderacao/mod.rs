@@ -1,4 +1,4 @@
-//! Moderação do chat global: quem é da equipe, quem está banido e as denúncias.
+//! Moderação do chat global: quem é da moderação, quem está banido e as denúncias.
 //! As mensagens ficam no relay (tempo real, 24 horas); o que precisa durar fica aqui.
 
 mod casos_de_uso;
@@ -14,7 +14,7 @@ pub use casos_de_uso::{ErroDaModeracao, ServicosDeModeracao};
 pub use dominio::{assinar_pedido, pedido_confere, Banido, Denuncia, DenunciaRecebida, Situacao, VALIDADE_DO_PEDIDO_EM_SEGUNDOS};
 pub use http::{
     __path_banidos, __path_banir, __path_denunciar, __path_denuncias, __path_desbanir, __path_resolver, banidos, banir, denunciar, denuncias, desbanir,
-    resolver, rotas, BanidoDaEquipe, CorpoDaDenuncia, DenunciaDaEquipe,
+    resolver, rotas, BanidoDaModeracao, CorpoDaDenuncia, DenunciaDaModeracao,
 };
 pub use portas::{AvisoAoRelay, AvisoDeModeracao, RepositorioDeModeracao};
 pub use postgres::ModeracaoPostgres;

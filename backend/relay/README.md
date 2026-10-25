@@ -38,12 +38,12 @@ A ficha vai como subprotocolo do WebSocket (`riffrush, <ficha>`), para não apar
 
 O chat global (`/chat`) usa a mesma ficha. Aqui ficam só as mensagens: as últimas 50, das últimas 24 horas.
 
-Quem é da equipe, quem está banido e as denúncias ficam no banco da API. Eles chegam no relay assim:
+Quem é da moderação, quem está banido e as denúncias ficam no banco da API. Eles chegam no relay assim:
 - **Na ficha:** a API assina `nivel`, `admin` e `banido`. Escrever pede nível 2.
 - **Denúncias:** o relay manda a cópia da mensagem para a API em `URL_DA_API`/moderacao/denuncias, assinada com o segredo em comum.
 - **Banimentos:** a API avisa o relay em `/chat/moderacao`, também assinado, para valer na hora para quem já está conectado.
 
-`URL_DA_API` fica em `[vars]` no `wrangler.toml`. Para pôr alguém na equipe, rode no banco da API:
+`URL_DA_API` fica em `[vars]` no `wrangler.toml`. Para pôr alguém na moderação, rode no banco da API:
 
 ```sql
 INSERT INTO equipe_moderacao (conta_id) SELECT id FROM contas WHERE email = 'alguem@exemplo.com';

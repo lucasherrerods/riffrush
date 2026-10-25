@@ -9,7 +9,7 @@ export interface MensagemDoChat {
   autor: string;
   texto: string;
   minha?: boolean;
-  /** Um selo ao lado do nome, como "Equipe". */
+  /** Um selo ao lado do nome, como "Moderação". */
   selo?: string;
 }
 

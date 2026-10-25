@@ -70,16 +70,16 @@ describe("PainelDeChat", () => {
 
   it("mostra as ações de cada mensagem e o selo ao lado do nome", async () => {
     const aoClicar = vi.fn();
-    const mensagens = [{ ...MENSAGENS[0], selo: "Equipe" }, MENSAGENS[1]];
+    const mensagens = [{ ...MENSAGENS[0], selo: "Moderação" }, MENSAGENS[1]];
     render(<PainelDeChat titulo="Chat" mensagens={mensagens} aoEnviar={vi.fn()} acoesDaMensagem={(m) => (m.minha ? [] : [{ rotulo: `Silenciar ${m.autor}`, icone: VolumeX, aoClicar }])} />);
-    expect(screen.getByText("Equipe")).toBeInTheDocument();
+    expect(screen.getByText("Moderação")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Silenciar Vitor" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Silenciar Lucas" }));
     expect(aoClicar).toHaveBeenCalled();
   });
 
   it("mostra o aviso fixo acima do campo", () => {
-    render(<PainelDeChat titulo="Chat" mensagens={[]} aoEnviar={vi.fn()} aviso="A equipe nunca pede senha." />);
-    expect(screen.getByText("A equipe nunca pede senha.")).toBeInTheDocument();
+    render(<PainelDeChat titulo="Chat" mensagens={[]} aoEnviar={vi.fn()} aviso="A moderação nunca pede senha." />);
+    expect(screen.getByText("A moderação nunca pede senha.")).toBeInTheDocument();
   });
 });

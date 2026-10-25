@@ -6,7 +6,7 @@ import { cn } from "@/shared/lib/utils";
 import { avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/ui/dialog";
-import { apiDaPresenca, type BanidoDaEquipe, type DenunciaDaEquipe } from "./api";
+import { apiDaPresenca, type BanidoDaModeracao, type DenunciaDaModeracao } from "./api";
 import { chatGlobal } from "./presenca";
 
 const CHAVE_DOS_SILENCIADOS = "riffrush:chat:silenciados";
@@ -28,12 +28,12 @@ function guardarSilenciados(ids: string[]) {
   }
 }
 
-const AVISO = "A equipe nunca pede senha nem dados pessoais. Só quem tem o selo Equipe fala pela equipe.";
+const AVISO = "A moderação nunca pede senha nem dados pessoais. Só quem tem o selo Moderação fala pela moderação.";
 
-/** As denúncias e os banidos vêm da API (ficam no banco); só a equipe consegue ler. */
+/** As denúncias e os banidos vêm da API (ficam no banco); só a moderação consegue ler. */
 function useModeracao(ativa: boolean) {
-  const [denuncias, setDenuncias] = useState<DenunciaDaEquipe[]>([]);
-  const [banidos, setBanidos] = useState<BanidoDaEquipe[]>([]);
+  const [denuncias, setDenuncias] = useState<DenunciaDaModeracao[]>([]);
+  const [banidos, setBanidos] = useState<BanidoDaModeracao[]>([]);
 
   const recarregar = useCallback(async () => {
     const token = sessaoDaConta.token();
@@ -74,7 +74,7 @@ interface Props {
   className?: string;
 }
 
-/** O chat de todo mundo que tem conta. Silenciar é só neste aparelho; denunciar avisa a equipe. */
+/** O chat de todo mundo que tem conta. Silenciar é só neste aparelho; denunciar avisa a moderação. */
 export function ChatGlobal({ aceito, aoResponder, className }: Props) {
   const { conta } = useConta();
   const logado = !!conta;
@@ -116,14 +116,14 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
         rotulo: `Denunciar mensagem de ${m.autor}`,
         icone: Flag,
         aoClicar: () => {
-          if (chatGlobal.denunciar(msg.n)) avisar("Denúncia enviada para a equipe. Obrigado!");
+          if (chatGlobal.denunciar(msg.n)) avisar("Denúncia enviada para a moderação. Obrigado!");
         },
       },
     ];
     if (voce?.admin) {
       lista.push(apagar);
-      // Ninguém da equipe é banido pelo botão (a API também recusa).
-      if (!msg.autor.equipe) {
+      // Ninguém da moderação é banido pelo botão (a API também recusa).
+      if (!msg.autor.moderacao) {
         lista.push({ rotulo: `Banir ${m.autor}`, icone: Ban, aoClicar: () => void moderacao.agir((t) => apiDaPresenca.banir(t, msg.autor.id), `${m.autor} foi banido do chat.`) });
       }
     }
@@ -141,7 +141,7 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
         aviso={ligado ? AVISO : undefined}
         mensagens={mensagens
           .filter((m) => !silenciados.includes(m.autor.id))
-          .map((m) => ({ id: String(m.n), autor: m.autor.nome, texto: m.texto, minha: m.autor.id === conta?.id, selo: m.autor.equipe ? "Equipe" : undefined }))}
+          .map((m) => ({ id: String(m.n), autor: m.autor.nome, texto: m.texto, minha: m.autor.id === conta?.id, selo: m.autor.moderacao ? "Moderação" : undefined }))}
         aoEnviar={(texto) => chatGlobal.enviar(texto)}
         acoesDaMensagem={acoes}
         extra={
@@ -180,8 +180,8 @@ function Regras({ aoResponder, className }: { aoResponder: (aceito: boolean) => 
       <ul className="flex flex-1 list-disc flex-col gap-1 overflow-y-auto pl-5 text-base text-texto-suave">
         <li>É público: todo mundo com conta lê o que você escreve.</li>
         <li>Não passe dados pessoais (telefone, endereço, senha).</li>
-        <li>A equipe nunca pede senha. Só quem tem o selo Equipe fala por ela.</li>
-        <li>Sem ofensas, spam ou golpes: dá para silenciar e denunciar, e a equipe pode banir.</li>
+        <li>A moderação nunca pede senha. Só quem tem o selo Moderação fala por ela.</li>
+        <li>Sem ofensas, spam ou golpes: dá para silenciar e denunciar, e a moderação pode banir.</li>
       </ul>
       <div className="flex gap-2">
         <Button className="flex-1" onClick={() => aoResponder(true)}>
@@ -202,7 +202,7 @@ interface PropsDaModeracao extends ReturnType<typeof useModeracao> {
 
 function Moderacao({ aberta, aoFechar, denuncias, banidos, agir }: PropsDaModeracao) {
   // Uma linha por mensagem denunciada, com quem denunciou.
-  const porMensagem = new Map<number, DenunciaDaEquipe[]>();
+  const porMensagem = new Map<number, DenunciaDaModeracao[]>();
   for (const d of denuncias) porMensagem.set(d.mensagem_n, [...(porMensagem.get(d.mensagem_n) ?? []), d]);
   return (
     <Dialog open={aberta} onOpenChange={(aberto) => !aberto && aoFechar()}>

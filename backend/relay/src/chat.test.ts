@@ -50,7 +50,7 @@ describe("lerComando", () => {
     expect(lerComando(JSON.stringify({ tipo: "mensagem", texto: "oi" }))).toEqual({ tipo: "mensagem", texto: "oi" });
   });
 
-  it("lê denúncia e o apagar da equipe; banir é com a API, não pelo chat", () => {
+  it("lê denúncia e o apagar da moderação; banir é com a API, não pelo chat", () => {
     expect(lerComando(JSON.stringify({ tipo: "denunciar", n: 4 }))).toEqual({ tipo: "denunciar", n: 4 });
     expect(lerComando(JSON.stringify({ tipo: "apagar", n: 4 }))).toEqual({ tipo: "apagar", n: 4 });
     expect(lerComando(JSON.stringify({ tipo: "banir", id: "00000000-0000-0000-0000-000000000007" }))).toBeNull();
@@ -72,7 +72,7 @@ describe("quem pode o quê", () => {
     expect(podeEscrever({ nivel: 0, admin: true, banido: false })).toBe(true);
   });
 
-  it("nome que finge ser da equipe ganha um aviso, menos para quem é da equipe", () => {
+  it("nome que finge ser da moderação ganha um aviso, menos para quem é da moderação", () => {
     expect(nomeParaMostrar("Equipe Riff Rush", false)).toBe("Equipe Riff Rush (não oficial)");
     expect(nomeParaMostrar("ADM1N", false)).toBe("ADM1N (não oficial)");
     expect(nomeParaMostrar("Mod3rador", false)).toBe("Mod3rador (não oficial)");

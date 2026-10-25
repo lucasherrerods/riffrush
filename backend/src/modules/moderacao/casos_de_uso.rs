@@ -22,12 +22,12 @@ pub enum ErroDaModeracao {
     Desligada,
     #[error("sessão inválida ou expirada")]
     SessaoInvalida,
-    #[error("só a equipe pode fazer isso")]
-    SoAEquipe,
+    #[error("só a moderação pode fazer isso")]
+    SoAModeracao,
     #[error("pedido sem a assinatura do relay")]
     AssinaturaInvalida,
-    #[error("não dá para banir alguém da equipe")]
-    EquipeNaoEBanida,
+    #[error("não dá para banir alguém da moderação")]
+    ModeracaoNaoEBanida,
     #[error("conta não encontrada")]
     ContaNaoEncontrada,
     #[error(transparent)]
@@ -60,24 +60,24 @@ impl ServicosDeModeracao {
     }
 
     pub async fn denuncias(&self, token: &str) -> Result<Vec<DenunciaRecebida>, ErroDaModeracao> {
-        self.exigir_equipe(token).await?;
+        self.exigir_moderacao(token).await?;
         Ok(self.repositorio.denuncias(DENUNCIAS_NA_TELA).await?)
     }
 
     pub async fn resolver(&self, token: &str, mensagem_n: i64) -> Result<(), ErroDaModeracao> {
-        self.exigir_equipe(token).await?;
+        self.exigir_moderacao(token).await?;
         Ok(self.repositorio.resolver(mensagem_n).await?)
     }
 
     pub async fn banidos(&self, token: &str) -> Result<Vec<Banido>, ErroDaModeracao> {
-        self.exigir_equipe(token).await?;
+        self.exigir_moderacao(token).await?;
         Ok(self.repositorio.banidos().await?)
     }
 
     pub async fn banir(&self, token: &str, conta_id: Uuid) -> Result<(), ErroDaModeracao> {
-        let admin = self.exigir_equipe(token).await?;
+        let admin = self.exigir_moderacao(token).await?;
         if self.repositorio.situacao(conta_id).await?.admin {
-            return Err(ErroDaModeracao::EquipeNaoEBanida);
+            return Err(ErroDaModeracao::ModeracaoNaoEBanida);
         }
         if !self.repositorio.banir(conta_id, admin).await? {
             return Err(ErroDaModeracao::ContaNaoEncontrada);
@@ -87,7 +87,7 @@ impl ServicosDeModeracao {
     }
 
     pub async fn desbanir(&self, token: &str, conta_id: Uuid) -> Result<(), ErroDaModeracao> {
-        self.exigir_equipe(token).await?;
+        self.exigir_moderacao(token).await?;
         self.repositorio.desbanir(conta_id).await?;
         self.avisar_relay(AvisoDeModeracao::Desbanir(conta_id)).await;
         Ok(())
@@ -100,12 +100,12 @@ impl ServicosDeModeracao {
         }
     }
 
-    async fn exigir_equipe(&self, token: &str) -> Result<Uuid, ErroDaModeracao> {
+    async fn exigir_moderacao(&self, token: &str) -> Result<Uuid, ErroDaModeracao> {
         let conta = self.conta.conta_da_sessao(token).await.map_err(|_| ErroDaModeracao::SessaoInvalida)?;
         if self.repositorio.situacao(conta.id).await?.admin {
             Ok(conta.id)
         } else {
-            Err(ErroDaModeracao::SoAEquipe)
+            Err(ErroDaModeracao::SoAModeracao)
         }
     }
 }
@@ -123,7 +123,7 @@ pub mod fakes {
 
     #[derive(Default)]
     pub struct ModeracaoEmMemoria {
-        pub equipe: Mutex<HashSet<Uuid>>,
+        pub moderacao: Mutex<HashSet<Uuid>>,
         pub banidos: Mutex<HashMap<Uuid, String>>,
         pub denuncias: Mutex<Vec<Denuncia>>,
         /// As contas que existem, com o nome.
@@ -134,7 +134,7 @@ pub mod fakes {
     impl RepositorioDeModeracao for ModeracaoEmMemoria {
         async fn situacao(&self, conta_id: Uuid) -> Result<Situacao, FalhaExterna> {
             Ok(Situacao {
-                admin: self.equipe.lock().unwrap().contains(&conta_id),
+                admin: self.moderacao.lock().unwrap().contains(&conta_id),
                 banido: self.banidos.lock().unwrap().contains_key(&conta_id),
             })
         }
@@ -251,19 +251,19 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn quem_nao_e_da_equipe_nao_modera() {
+    async fn quem_nao_e_da_moderacao_nao_modera() {
         let (moderacao, _, relay, token, outra) = montar().await;
-        assert!(matches!(moderacao.denuncias(&token).await, Err(ErroDaModeracao::SoAEquipe)));
-        assert!(matches!(moderacao.banir(&token, outra).await, Err(ErroDaModeracao::SoAEquipe)));
+        assert!(matches!(moderacao.denuncias(&token).await, Err(ErroDaModeracao::SoAModeracao)));
+        assert!(matches!(moderacao.banir(&token, outra).await, Err(ErroDaModeracao::SoAModeracao)));
         assert!(matches!(moderacao.banidos("inventado").await, Err(ErroDaModeracao::SessaoInvalida)));
         assert!(relay.avisos.lock().unwrap().is_empty());
     }
 
     #[tokio::test]
-    async fn a_equipe_bane_e_desbane_e_o_relay_fica_sabendo() {
+    async fn a_moderacao_bane_e_desbane_e_o_relay_fica_sabendo() {
         let (moderacao, repositorio, relay, token, outra) = montar().await;
         let eu = moderacao.conta.conta_da_sessao(&token).await.unwrap().id;
-        repositorio.equipe.lock().unwrap().insert(eu);
+        repositorio.moderacao.lock().unwrap().insert(eu);
 
         moderacao.banir(&token, outra).await.unwrap();
         assert!(moderacao.situacao(outra).await.unwrap().banido);
@@ -284,11 +284,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn ninguem_da_equipe_e_banido_e_conta_inexistente_avisa() {
+    async fn ninguem_da_moderacao_e_banido_e_conta_inexistente_avisa() {
         let (moderacao, repositorio, _, token, outra) = montar().await;
         let eu = moderacao.conta.conta_da_sessao(&token).await.unwrap().id;
-        repositorio.equipe.lock().unwrap().extend([eu, outra]);
-        assert!(matches!(moderacao.banir(&token, outra).await, Err(ErroDaModeracao::EquipeNaoEBanida)));
+        repositorio.moderacao.lock().unwrap().extend([eu, outra]);
+        assert!(matches!(moderacao.banir(&token, outra).await, Err(ErroDaModeracao::ModeracaoNaoEBanida)));
         assert!(matches!(
             moderacao.banir(&token, Uuid::from_u128(5)).await,
             Err(ErroDaModeracao::ContaNaoEncontrada)
@@ -296,7 +296,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn so_o_relay_denuncia_e_a_equipe_ve_e_resolve() {
+    async fn so_o_relay_denuncia_e_a_moderacao_ve_e_resolve() {
         let (moderacao, repositorio, _, token, outra) = montar().await;
         let eu = moderacao.conta.conta_da_sessao(&token).await.unwrap().id;
         let agora = moderacao.conta.relogio.agora().timestamp();
@@ -309,7 +309,7 @@ mod tests {
 
         moderacao.registrar_denuncia(denuncia_de(outra, eu)).await.unwrap();
         moderacao.registrar_denuncia(denuncia_de(outra, eu)).await.unwrap();
-        repositorio.equipe.lock().unwrap().insert(eu);
+        repositorio.moderacao.lock().unwrap().insert(eu);
         assert_eq!(moderacao.denuncias(&token).await.unwrap().len(), 1);
         moderacao.resolver(&token, 3).await.unwrap();
         assert!(moderacao.denuncias(&token).await.unwrap().is_empty());

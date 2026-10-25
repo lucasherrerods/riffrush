@@ -18,8 +18,8 @@ const INVISIVEIS = /[\p{Cc}\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/gu;
 export interface Autor {
   id: string;
   nome: string;
-  /** Selo "Equipe": só quem a API marcou como equipe na ficha. */
-  equipe?: true;
+  /** Selo "Moderação": só quem a API marcou como moderação na ficha. */
+  moderacao?: true;
 }
 
 export interface MensagemDoChat {
@@ -49,7 +49,7 @@ export type Comando =
   | { tipo: "denunciar"; n: number }
   | { tipo: "apagar"; n: number };
 
-/** O que a API avisa quando a equipe bane ou desbane alguém (as denúncias e os banidos ficam no banco). */
+/** O que a API avisa quando a moderação bane ou desbane alguém (as denúncias e os banidos ficam no banco). */
 export type AvisoDaApi = { tipo: "banir" | "desbanir"; id: string };
 
 const ID_DA_CONTA = /^[0-9a-f-]{36}$/;
@@ -124,7 +124,7 @@ export const podeEscrever = (p: { nivel: number; admin: boolean; banido: boolean
 const RESERVADOS = ["equipe", "admin", "moderador", "moderacao", "suporte", "staff", "oficial", "riffrush"];
 const TROCAS: Record<string, string> = { "0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", $: "s" };
 
-/** O nome vem do Google e é livre: quem não é da equipe e usa um nome que parece oficial ganha o aviso. */
+/** O nome vem do Google e é livre: quem não é da moderação e usa um nome que parece oficial ganha o aviso. */
 export function nomeParaMostrar(nome: string, admin: boolean): string {
   if (admin) return nome;
   const comparavel = nome

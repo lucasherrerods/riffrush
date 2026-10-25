@@ -5,7 +5,7 @@ const FICHA_COM_NIVEL =
   "eyJpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNyIsIm5vbWUiOiJMdWNhcyIsImF2YXRhciI6bnVsbCwibml2ZWwiOjMsImV4cCI6MTkwMDAwMDAwMH0.GcC-2VOsr_or75WtX3gQNBTBIKzZyYE3vwmey0C-eJY";
 const FICHA_COMPLETA =
   "eyJpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNyIsIm5vbWUiOiJMdWNhcyIsImF2YXRhciI6bnVsbCwibml2ZWwiOjMsImFkbWluIjpmYWxzZSwiYmFuaWRvIjpmYWxzZSwiZXhwIjoxOTAwMDAwMDAwfQ.9401CmmfteL1hrpnUWwo073vskes2uCyA8VskxNS7Ls";
-// Fichas de versões antigas da API, sem nível ou sem equipe/banido: continuam valendo, com nível 0 e sem poderes.
+// Fichas de versões antigas da API, sem nível ou sem moderação/banido: continuam valendo, com nível 0 e sem poderes.
 const FICHA =
   "eyJpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNyIsIm5vbWUiOiJMdWNhcyIsImF2YXRhciI6bnVsbCwiZXhwIjoxOTAwMDAwMDAwfQ.g3x_8V8_Mc8fiEU3TwanHW2LnkX5ipNmEHy9XUb6HhA";
 const SEGREDO = "segredo-de-teste";

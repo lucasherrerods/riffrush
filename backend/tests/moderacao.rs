@@ -1,4 +1,4 @@
-//! A moderação pela API inteira: denúncia assinada pelo relay e as rotas da equipe. As portas são os fakes.
+//! A moderação pela API inteira: denúncia assinada pelo relay e as rotas da moderação. As portas são os fakes.
 
 use std::sync::Arc;
 
@@ -117,7 +117,7 @@ async fn so_o_relay_consegue_denunciar() {
 }
 
 #[tokio::test]
-async fn so_a_equipe_ve_denuncias_e_bane() {
+async fn so_a_moderacao_ve_denuncias_e_bane() {
     let m = montar().await;
     let alvo = Uuid::from_u128(5);
     m.repositorio.contas.lock().unwrap().insert(alvo, "Ana".into());
@@ -127,7 +127,7 @@ async fn so_a_equipe_ve_denuncias_e_bane() {
     let (status, _) = chamar(&m.app, com_token("POST", &format!("/moderacao/banidos/{alvo}"), &m.token)).await;
     assert_eq!(status, StatusCode::FORBIDDEN);
 
-    m.repositorio.equipe.lock().unwrap().insert(m.eu);
+    m.repositorio.moderacao.lock().unwrap().insert(m.eu);
     let (status, _) = chamar(&m.app, com_token("POST", &format!("/moderacao/banidos/{alvo}"), &m.token)).await;
     assert_eq!(status, StatusCode::NO_CONTENT);
     let (status, banidos) = chamar(&m.app, com_token("GET", "/moderacao/banidos", &m.token)).await;

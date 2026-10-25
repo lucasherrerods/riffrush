@@ -2,7 +2,7 @@ import { WebSocketFalso } from "@/test/websocketFalso";
 import { ConexaoDoChatGlobal, aplicarMensagemDoChat, type EstadoDoChatGlobal, type MensagemGlobal } from "./conexaoDoChat";
 
 const ana: MensagemGlobal = { n: 1, autor: { id: "a", nome: "Ana" }, texto: "oi", em: 1 };
-const bia: MensagemGlobal = { n: 2, autor: { id: "b", nome: "Bia", equipe: true }, texto: "olá", em: 2 };
+const bia: MensagemGlobal = { n: 2, autor: { id: "b", nome: "Bia", moderacao: true }, texto: "olá", em: 2 };
 const VAZIO: EstadoDoChatGlobal = { conectado: true, mensagens: [], voce: null };
 const PODE = { podeEscrever: true, admin: false, banido: false, nivelParaEscrever: 2 };
 const aplicar = (estado: EstadoDoChatGlobal, msg: object) => aplicarMensagemDoChat(estado, JSON.stringify(msg));
@@ -15,7 +15,7 @@ describe("aplicarMensagemDoChat", () => {
     expect(aplicar(estado, { tipo: "mensagem", mensagem: bia }).mensagens).toEqual([ana, bia]);
   });
 
-  it("mensagens apagadas pela equipe somem", () => {
+  it("mensagens apagadas pela moderação somem", () => {
     expect(aplicar({ ...VAZIO, mensagens: [ana, bia] }, { tipo: "apagadas", ns: [1] }).mensagens).toEqual([bia]);
   });
 
@@ -24,7 +24,7 @@ describe("aplicarMensagemDoChat", () => {
   });
 
   it("limpa de novo o que chega e descarta o que não tem o formato certo", () => {
-    const suja = { ...ana, texto: "a‮b".padEnd(400, "x"), autor: { id: "a", nome: "Ana", equipe: "sim" } };
+    const suja = { ...ana, texto: "a‮b".padEnd(400, "x"), autor: { id: "a", nome: "Ana", moderacao: "sim" } };
     const [limpa] = aplicar(VAZIO, { tipo: "mensagem", mensagem: suja }).mensagens;
     expect(limpa.texto.startsWith("ab")).toBe(true);
     expect(limpa.texto).toHaveLength(200);
