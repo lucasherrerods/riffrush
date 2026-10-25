@@ -51,14 +51,14 @@ export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar =
 
       <div className="sem-barra-de-rolagem mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-4 overflow-y-auto">
         <ComCarregamento estado={estado} tentarDeNovo={tentarDeNovo} oQue="o perfil">
-          {(perfil) => <Conteudo perfil={perfil} tituloDaMusica={tituloDaMusica} />}
+          {(perfil) => <Conteudo perfil={perfil} tituloDaMusica={tituloDaMusica} mod={mod} />}
         </ComCarregamento>
       </div>
     </div>
   );
 }
 
-function Conteudo({ perfil, tituloDaMusica }: { perfil: PerfilDaApi; tituloDaMusica: Props["tituloDaMusica"] }) {
+function Conteudo({ perfil, tituloDaMusica, mod }: { perfil: PerfilDaApi; tituloDaMusica: Props["tituloDaMusica"]; mod: boolean }) {
   const { nivel, xp_no_nivel, xp_para_o_proximo } = perfil.nivel;
   const concluidas = perfil.partidas ? (perfil.partidas - perfil.derrotas) / perfil.partidas : 0;
 
