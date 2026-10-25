@@ -352,6 +352,8 @@ describe("App em rede", () => {
     adversarios: {},
     partidas: 1,
     inicio: performance.now() + 5000,
+    chat: [],
+    baldesDoChat: {},
   };
 
   it("Multiplayer abre a tela da sala", async () => {

@@ -10,7 +10,7 @@ const RAJADA = 5;
 const RECARGA_MS = 1000;
 
 // Controle, e os invisíveis que invertem a direção do texto ou escondem letras (truques de golpe).
-const INVISIVEIS = /[\p{Cc}​-‏‪-‮⁠-⁩﻿]/gu;
+const INVISIVEIS = /[\p{Cc}\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/gu;
 
 /** O texto como pode aparecer no chat, ou null quando não sobra nada. */
 export function limparTexto(texto: unknown): string | null {

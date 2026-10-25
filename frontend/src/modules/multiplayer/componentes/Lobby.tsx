@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import { Check, ChevronDown, ChevronUp, Globe, Loader2, Play, Smartphone, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar } from "@/modules/character";
+import { PainelDeChat } from "@/modules/chat";
 import { useSeguirMusica } from "@/modules/player";
 import { DIFICULDADES, INSTRUMENTOS, dificuldadesDaMusica, instrumentosDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { cn } from "@/shared/lib/utils";
@@ -12,7 +13,7 @@ import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { MAXIMO_DE_JOGADORES, type EstadoDaSala } from "../protocolo";
 import { todosProntos } from "../protocolo";
 import { IconeDeChute } from "./IconeDeChute";
-import { comecar, escolher, expulsar, marcarPronto, type InfoDaSala } from "../sala";
+import { comecar, enviarChat, escolher, expulsar, marcarPronto, type InfoDaSala } from "../sala";
 import { useMusicaDaSala } from "../useMusicaDaSala";
 
 interface Props {
@@ -71,7 +72,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1">
-      <div className={cn("flex min-h-0 flex-col gap-4", info || codigo ? "col-span-8" : "col-span-12")}>
+      <div className="col-span-8 flex min-h-0 flex-col gap-4 max-md:col-span-1">
         <ul className="grid grid-cols-4 gap-4 max-md:grid-cols-2">
           {Array.from({ length: MAXIMO_DE_JOGADORES }, (_, i) => {
             const jogador = sala.jogadores[i];
@@ -235,25 +236,34 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
         </section>
       </div>
 
-      {codigo && (
-        <section className="col-span-4 flex flex-col items-center gap-4 placa p-6 text-center">
-          <Globe className="text-primaria opacity-70" aria-hidden />
-          <p className="text-base font-bold">Sala online</p>
-          <p className="text-base text-texto-suave">Passe o código para os amigos:</p>
-          <p className="font-mono text-5xl font-bold tracking-[0.2em] text-destaque">{codigo}</p>
-          <p className="text-base text-texto-suave">Eles entram em Multijogador, no campo &quot;Código da sala online&quot;.</p>
-        </section>
-      )}
-      {info && (
-        <section className="col-span-4 flex flex-col items-center gap-4 placa p-6 text-center">
-          <Smartphone className="text-primaria opacity-70" aria-hidden />
-          <p className="text-base font-bold">Jogar pelo celular</p>
-          <p className="text-base text-texto-suave">No mesmo Wi-Fi, abra a câmera no QR code:</p>
-          {qr && <img src={qr} alt="QR code da sala" className="rounded-2xl bg-texto p-2" />}
-          <p className="font-mono text-lg font-bold">{info.endereco}</p>
-          <p className="text-base text-texto-suave">Outros PCs com o Riff Rush acham a sala sozinhos.</p>
-        </section>
-      )}
+      {/* O código ou o QR em cima, o chat da sala ocupando o resto da coluna. */}
+      <div className="col-span-4 flex min-h-0 flex-col gap-6 max-md:col-span-1">
+        {codigo && (
+          <section className="flex shrink-0 flex-col items-center gap-4 placa p-6 text-center">
+            <Globe className="text-primaria opacity-70" aria-hidden />
+            <p className="text-base font-bold">Sala online</p>
+            <p className="text-base text-texto-suave">Passe o código para os amigos:</p>
+            <p className="font-mono text-5xl font-bold tracking-[0.2em] text-destaque">{codigo}</p>
+            <p className="text-base text-texto-suave">Eles entram em Multijogador, no campo &quot;Código da sala online&quot;.</p>
+          </section>
+        )}
+        {info && (
+          <section className="flex shrink-0 flex-col items-center gap-4 placa p-6 text-center">
+            <Smartphone className="text-primaria opacity-70" aria-hidden />
+            <p className="text-base font-bold">Jogar pelo celular</p>
+            <p className="text-base text-texto-suave">No mesmo Wi-Fi, abra a câmera no QR code:</p>
+            {qr && <img src={qr} alt="QR code da sala" className="rounded-2xl bg-texto p-2" />}
+            <p className="font-mono text-lg font-bold">{info.endereco}</p>
+            <p className="text-base text-texto-suave">Outros PCs com o Riff Rush acham a sala sozinhos.</p>
+          </section>
+        )}
+        <PainelDeChat
+          titulo="Chat da sala"
+          className="min-h-48 flex-1"
+          mensagens={sala.chat.map((m) => ({ id: String(m.n), autor: m.autor, texto: m.texto, minha: m.de === sala.meuId }))}
+          aoEnviar={enviarChat}
+        />
+      </div>
     </div>
   );
 }

@@ -16,7 +16,7 @@ describe("limparTexto", () => {
   });
 
   it("tira caracteres de controle e os que invertem a direção do texto ou ficam invisíveis", () => {
-    expect(limparTexto("a\u0000b‮c⁦d​e﻿f")).toBe("abcdef");
+    expect(limparTexto("a\u0000b\u202Ec\u2066d\u200Be\uFEFFf")).toBe("abcdef");
   });
 });
 
