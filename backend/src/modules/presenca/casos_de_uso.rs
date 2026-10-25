@@ -1,8 +1,10 @@
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use chrono::Duration;
+use uuid::Uuid;
 
-use super::dominio::{assinar_ficha, Ficha, VALIDADE_DA_FICHA_EM_SEGUNDOS};
+use super::dominio::{assinar_ficha, dentro_do_limite, Ficha, Janela, VALIDADE_DA_FICHA_EM_SEGUNDOS};
 use crate::modules::conta::ServicosDaConta;
 
 #[derive(Clone)]
@@ -11,7 +13,12 @@ pub struct ServicosDePresenca {
     pub conta: ServicosDaConta,
     /// O mesmo segredo do relay. Sem ele, a presença fica desligada.
     pub segredo: Option<Arc<Vec<u8>>>,
+    /// A janela de fichas de cada conta. Só em memória: reiniciar a API zera, e tudo bem.
+    pub janelas: Arc<Mutex<HashMap<Uuid, Janela>>>,
 }
+
+/// Acima disso, as janelas vencidas são jogadas fora para o mapa não crescer sem fim.
+const JANELAS_GUARDADAS: usize = 10_000;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ErroDaPresenca {
@@ -19,6 +26,8 @@ pub enum ErroDaPresenca {
     Desligada,
     #[error("sessão inválida ou expirada")]
     SessaoInvalida,
+    #[error("fichas demais em pouco tempo")]
+    RapidoDemais,
 }
 
 impl ServicosDePresenca {
@@ -26,11 +35,25 @@ impl ServicosDePresenca {
     pub async fn ficha(&self, token: &str) -> Result<String, ErroDaPresenca> {
         let segredo = self.segredo.as_ref().ok_or(ErroDaPresenca::Desligada)?;
         let conta = self.conta.conta_da_sessao(token).await.map_err(|_| ErroDaPresenca::SessaoInvalida)?;
-        let exp = (self.conta.relogio.agora() + Duration::seconds(VALIDADE_DA_FICHA_EM_SEGUNDOS)).timestamp();
+        let agora = self.conta.relogio.agora();
+        {
+            let mut janelas = self.janelas.lock().unwrap_or_else(|envenenado| envenenado.into_inner());
+            if janelas.len() > JANELAS_GUARDADAS {
+                janelas.retain(|_, j| agora - j.inicio < Duration::minutes(1));
+            }
+            let (passa, janela) = dentro_do_limite(janelas.get(&conta.id).copied(), agora);
+            janelas.insert(conta.id, janela);
+            if !passa {
+                return Err(ErroDaPresenca::RapidoDemais);
+            }
+        }
+        let exp = (agora + Duration::seconds(VALIDADE_DA_FICHA_EM_SEGUNDOS)).timestamp();
+        let nivel = conta.nivel().nivel;
         let ficha = Ficha {
             id: conta.id,
             nome: conta.nome,
             avatar: conta.avatar,
+            nivel,
             exp,
         };
         Ok(assinar_ficha(&ficha, segredo))
@@ -52,6 +75,7 @@ mod tests {
         let presenca = ServicosDePresenca {
             conta,
             segredo: Some(Arc::new(b"segredo".to_vec())),
+            janelas: Default::default(),
         };
 
         let ficha = presenca.ficha(&entrada.token).await.unwrap();
@@ -60,6 +84,22 @@ mod tests {
         let corpo: serde_json::Value = serde_json::from_slice(&corpo).unwrap();
         assert_eq!(corpo["id"], entrada.conta.id.to_string());
         assert_eq!(corpo["exp"], relogio.agora().timestamp() + VALIDADE_DA_FICHA_EM_SEGUNDOS);
+        assert_eq!(corpo["nivel"], 1);
+    }
+
+    #[tokio::test]
+    async fn quem_pede_fichas_demais_espera() {
+        let (conta, _, _) = servicos();
+        let entrada = conta.entrar_com_google(&pedido("bom")).await.unwrap();
+        let presenca = ServicosDePresenca {
+            conta,
+            segredo: Some(Arc::new(b"s".to_vec())),
+            janelas: Default::default(),
+        };
+        for _ in 0..crate::modules::presenca::FICHAS_POR_MINUTO {
+            presenca.ficha(&entrada.token).await.unwrap();
+        }
+        assert!(matches!(presenca.ficha(&entrada.token).await, Err(ErroDaPresenca::RapidoDemais)));
     }
 
     #[tokio::test]
@@ -68,11 +108,13 @@ mod tests {
         let desligada = ServicosDePresenca {
             conta: conta.clone(),
             segredo: None,
+            janelas: Default::default(),
         };
         assert!(matches!(desligada.ficha("x").await, Err(ErroDaPresenca::Desligada)));
         let ligada = ServicosDePresenca {
             conta,
             segredo: Some(Arc::new(b"s".to_vec())),
+            janelas: Default::default(),
         };
         assert!(matches!(ligada.ficha("inventado").await, Err(ErroDaPresenca::SessaoInvalida)));
     }

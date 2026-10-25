@@ -10,7 +10,10 @@ export class WebSocketFalso {
   onclose: ((evento?: { reason?: string }) => void) | null = null;
   onerror: (() => void) | null = null;
 
-  constructor(public url: string) {
+  constructor(
+    public url: string,
+    public protocolos: string[] = [],
+  ) {
     WebSocketFalso.ultimo = this;
   }
 

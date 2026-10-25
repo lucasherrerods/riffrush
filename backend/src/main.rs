@@ -57,6 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let presenca = ServicosDePresenca {
         conta: conta.clone(),
         segredo: config.segredo_do_relay.as_ref().map(|s| Arc::new(s.clone().into_bytes())),
+        janelas: Default::default(),
     };
     let estado = EstadoDoApp {
         banco: Arc::new(BancoPostgres(banco)),

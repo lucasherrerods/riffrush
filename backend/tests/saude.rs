@@ -28,6 +28,7 @@ async fn chamar(banco_ok: bool, caminho: &str) -> (StatusCode, Value) {
             presenca: riffrush_api::modules::presenca::ServicosDePresenca {
                 conta: conta.clone(),
                 segredo: None,
+                janelas: Default::default(),
             },
             ranking: riffrush_api::modules::ranking::fakes::servicos_do_ranking(conta.clone()).0,
             perfil: riffrush_api::modules::perfil::fakes::servicos_do_perfil(conta.clone()).0,

@@ -18,4 +18,9 @@ describe("DOCUMENTOS", () => {
     expect(texto).toContain("Google");
     expect(texto).toContain("Excluir minha conta");
   });
+
+  it("a política e os termos falam do chat", () => {
+    expect(JSON.stringify(DOCUMENTOS.privacidade)).toContain("chat global");
+    expect(JSON.stringify(DOCUMENTOS.termos)).toContain("selo Equipe");
+  });
 });

@@ -73,6 +73,7 @@ async fn app() -> (Router, String, Arc<RankingEmMemoria>) {
             presenca: riffrush_api::modules::presenca::ServicosDePresenca {
                 conta: conta.clone(),
                 segredo: None,
+                janelas: Default::default(),
             },
             perfil: riffrush_api::modules::perfil::fakes::servicos_do_perfil(conta.clone()).0,
             conta,

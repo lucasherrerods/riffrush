@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { VolumeX } from "lucide-react";
 import { PainelDeChat, type MensagemDoChat } from "./PainelDeChat";
 
 const MENSAGENS: MensagemDoChat[] = [
@@ -67,11 +68,18 @@ describe("PainelDeChat", () => {
     expect(screen.getByText("Entre com a sua conta para conversar.")).toBeInTheDocument();
   });
 
-  it("silencia quem incomoda, menos a própria pessoa", async () => {
-    const aoSilenciar = vi.fn();
-    render(<PainelDeChat titulo="Chat" mensagens={MENSAGENS} aoEnviar={vi.fn()} aoSilenciar={aoSilenciar} />);
+  it("mostra as ações de cada mensagem e o selo ao lado do nome", async () => {
+    const aoClicar = vi.fn();
+    const mensagens = [{ ...MENSAGENS[0], selo: "Equipe" }, MENSAGENS[1]];
+    render(<PainelDeChat titulo="Chat" mensagens={mensagens} aoEnviar={vi.fn()} acoesDaMensagem={(m) => (m.minha ? [] : [{ rotulo: `Silenciar ${m.autor}`, icone: VolumeX, aoClicar }])} />);
+    expect(screen.getByText("Equipe")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Silenciar Vitor" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Silenciar Lucas" }));
-    expect(aoSilenciar).toHaveBeenCalledWith(MENSAGENS[0]);
+    expect(aoClicar).toHaveBeenCalled();
+  });
+
+  it("mostra o aviso fixo acima do campo", () => {
+    render(<PainelDeChat titulo="Chat" mensagens={[]} aoEnviar={vi.fn()} aviso="A equipe nunca pede senha." />);
+    expect(screen.getByText("A equipe nunca pede senha.")).toBeInTheDocument();
   });
 });
