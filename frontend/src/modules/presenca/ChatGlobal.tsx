@@ -1,12 +1,12 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { Ban, Flag, MessageSquare, ShieldAlert, Trash2, VolumeX } from "lucide-react";
 import { PainelDeChat, type AcaoDaMensagem, type MensagemDoChat } from "@/modules/chat";
-import { useConta } from "@/modules/conta";
+import { sessaoDaConta, useConta } from "@/modules/conta";
 import { cn } from "@/shared/lib/utils";
 import { avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/ui/dialog";
-import type { Denuncia, EstadoDoChatGlobal, MensagemGlobal } from "./conexaoDoChat";
+import { apiDaPresenca, type BanidoDaEquipe, type DenunciaDaEquipe } from "./api";
 import { chatGlobal } from "./presenca";
 
 const CHAVE_DOS_SILENCIADOS = "riffrush:chat:silenciados";
@@ -30,6 +30,43 @@ function guardarSilenciados(ids: string[]) {
 
 const AVISO = "A equipe nunca pede senha nem dados pessoais. Só quem tem o selo Equipe fala pela equipe.";
 
+/** As denúncias e os banidos vêm da API (ficam no banco); só a equipe consegue ler. */
+function useModeracao(ativa: boolean) {
+  const [denuncias, setDenuncias] = useState<DenunciaDaEquipe[]>([]);
+  const [banidos, setBanidos] = useState<BanidoDaEquipe[]>([]);
+
+  const recarregar = useCallback(async () => {
+    const token = sessaoDaConta.token();
+    if (!token) return;
+    try {
+      const [novasDenuncias, novosBanidos] = await Promise.all([apiDaPresenca.denuncias(token), apiDaPresenca.banidos(token)]);
+      setDenuncias(novasDenuncias);
+      setBanidos(novosBanidos);
+    } catch (erro) {
+      avisar.error(erro instanceof Error ? erro.message : String(erro));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (ativa) void recarregar();
+  }, [ativa, recarregar]);
+
+  /** Faz a ação na API e recarrega as listas. */
+  const agir = async (acao: (token: string) => Promise<unknown>, aviso?: string) => {
+    const token = sessaoDaConta.token();
+    if (!token) return;
+    try {
+      await acao(token);
+      if (aviso) avisar(aviso);
+      await recarregar();
+    } catch (erro) {
+      avisar.error(erro instanceof Error ? erro.message : String(erro));
+    }
+  };
+
+  return { denuncias, banidos, recarregar, agir };
+}
+
 interface Props {
   /** A resposta da pessoa às regras: null enquanto ela não respondeu, e nada liga sem ela aceitar. */
   aceito: boolean | null;
@@ -45,6 +82,7 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
   const estado = useSyncExternalStore(chatGlobal.inscrever, chatGlobal.estado);
   const [silenciados, setSilenciados] = useState(lerSilenciados);
   const [moderando, setModerando] = useState(false);
+  const moderacao = useModeracao(ligado && !!estado.voce?.admin);
 
   useEffect(() => (ligado ? chatGlobal.usar() : undefined), [ligado]);
 
@@ -84,11 +122,15 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
     ];
     if (voce?.admin) {
       lista.push(apagar);
-      // Ninguém da equipe é banido pelo botão.
-      if (!msg.autor.equipe) lista.push({ rotulo: `Banir ${m.autor}`, icone: Ban, aoClicar: () => chatGlobal.banir(msg.autor.id) });
+      // Ninguém da equipe é banido pelo botão (a API também recusa).
+      if (!msg.autor.equipe) {
+        lista.push({ rotulo: `Banir ${m.autor}`, icone: Ban, aoClicar: () => void moderacao.agir((t) => apiDaPresenca.banir(t, msg.autor.id), `${m.autor} foi banido do chat.`) });
+      }
     }
     return lista;
   };
+
+  const mensagensDenunciadas = new Set(moderacao.denuncias.map((d) => d.mensagem_n)).size;
 
   return (
     <>
@@ -110,14 +152,21 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
               </button>
             )}
             {voce?.admin && (
-              <Button variant="ghost" size="sm" onClick={() => setModerando(true)}>
-                <ShieldAlert className="opacity-70" /> Moderação ({new Set(estado.denuncias.map((d) => d.mensagem.n)).size})
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setModerando(true);
+                  void moderacao.recarregar();
+                }}
+              >
+                <ShieldAlert className="opacity-70" /> Moderação ({mensagensDenunciadas})
               </Button>
             )}
           </>
         }
       />
-      {voce?.admin && <Moderacao aberta={moderando} aoFechar={() => setModerando(false)} estado={estado} />}
+      {voce?.admin && <Moderacao aberta={moderando} aoFechar={() => setModerando(false)} {...moderacao} />}
     </>
   );
 }
@@ -146,66 +195,70 @@ function Regras({ aoResponder, className }: { aoResponder: (aceito: boolean) => 
   );
 }
 
-function Moderacao({ aberta, aoFechar, estado }: { aberta: boolean; aoFechar: () => void; estado: EstadoDoChatGlobal }) {
+interface PropsDaModeracao extends ReturnType<typeof useModeracao> {
+  aberta: boolean;
+  aoFechar: () => void;
+}
+
+function Moderacao({ aberta, aoFechar, denuncias, banidos, agir }: PropsDaModeracao) {
   // Uma linha por mensagem denunciada, com quem denunciou.
-  const porMensagem = new Map<number, { mensagem: MensagemGlobal; denuncias: Denuncia[] }>();
-  for (const d of estado.denuncias) {
-    const grupo = porMensagem.get(d.mensagem.n) ?? { mensagem: d.mensagem, denuncias: [] };
-    grupo.denuncias.push(d);
-    porMensagem.set(d.mensagem.n, grupo);
-  }
+  const porMensagem = new Map<number, DenunciaDaEquipe[]>();
+  for (const d of denuncias) porMensagem.set(d.mensagem_n, [...(porMensagem.get(d.mensagem_n) ?? []), d]);
   return (
     <Dialog open={aberta} onOpenChange={(aberto) => !aberto && aoFechar()}>
       <DialogContent className="max-h-[80vh] overflow-y-auto">
         <DialogTitle>Moderação do chat</DialogTitle>
-        <DialogDescription>Denúncias das últimas mensagens e contas banidas.</DialogDescription>
+        <DialogDescription>Denúncias das mensagens e contas banidas. Fica tudo guardado no servidor do jogo.</DialogDescription>
         <section aria-label="Denúncias" className="flex flex-col gap-2">
           {porMensagem.size === 0 && <p className="text-base text-texto-suave">Nenhuma denúncia.</p>}
-          {[...porMensagem.values()].map(({ mensagem, denuncias }) => (
-            <div key={mensagem.n} className="chapa flex flex-col gap-2 border-borda bg-superficie p-4">
-              <p className="break-words">
-                <span className="font-bold">{mensagem.autor.nome}</span>: {mensagem.texto}
-              </p>
-              <p className="text-base text-texto-suave">
-                {denuncias.length} {denuncias.length === 1 ? "denúncia" : "denúncias"} ({denuncias.map((d) => d.por.nome).join(", ")})
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => {
-                    chatGlobal.apagar(mensagem.n);
-                    chatGlobal.resolver(mensagem.n);
-                  }}
-                >
-                  <Trash2 className="opacity-70" /> Apagar
-                </Button>
-                {!mensagem.autor.equipe && (
+          {[...porMensagem.entries()].map(([n, grupo]) => {
+            const { autor_id: autorId, autor_nome: autor, texto } = grupo[0];
+            return (
+              <div key={n} className="chapa flex flex-col gap-2 border-borda bg-superficie p-4">
+                <p className="break-words">
+                  <span className="font-bold">{autor}</span>: {texto}
+                </p>
+                <p className="text-base text-texto-suave">
+                  {grupo.length} {grupo.length === 1 ? "denúncia" : "denúncias"} ({grupo.map((d) => d.denunciante_nome).join(", ")})
+                </p>
+                <div className="flex flex-wrap gap-2">
                   <Button
                     size="sm"
                     variant="destructive"
                     onClick={() => {
-                      chatGlobal.banir(mensagem.autor.id);
-                      chatGlobal.resolver(mensagem.n);
+                      chatGlobal.apagar(n);
+                      void agir((t) => apiDaPresenca.resolver(t, n), "Mensagem apagada.");
                     }}
                   >
-                    <Ban className="opacity-70" /> Banir {mensagem.autor.nome}
+                    <Trash2 className="opacity-70" /> Apagar
                   </Button>
-                )}
-                <Button size="sm" variant="ghost" onClick={() => chatGlobal.resolver(mensagem.n)}>
-                  Descartar
-                </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() =>
+                      void agir(async (t) => {
+                        await apiDaPresenca.banir(t, autorId);
+                        await apiDaPresenca.resolver(t, n);
+                      }, `${autor} foi banido do chat.`)
+                    }
+                  >
+                    <Ban className="opacity-70" /> Banir {autor}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => void agir((t) => apiDaPresenca.resolver(t, n))}>
+                    Descartar
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </section>
         <section aria-label="Banidos" className="flex flex-col gap-2">
           <p className="text-base font-bold">Banidos</p>
-          {estado.banidos.length === 0 && <p className="text-base text-texto-suave">Ninguém banido.</p>}
-          {estado.banidos.map((b) => (
-            <div key={b.id} className="flex items-center gap-2">
+          {banidos.length === 0 && <p className="text-base text-texto-suave">Ninguém banido.</p>}
+          {banidos.map((b) => (
+            <div key={b.conta_id} className="flex items-center gap-2">
               <span className="flex-1 truncate">{b.nome}</span>
-              <Button size="sm" variant="ghost" onClick={() => chatGlobal.desbanir(b.id)}>
+              <Button size="sm" variant="ghost" onClick={() => void agir((t) => apiDaPresenca.desbanir(t, b.conta_id), `${b.nome} pode escrever de novo.`)}>
                 Desbanir
               </Button>
             </div>

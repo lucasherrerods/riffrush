@@ -15,6 +15,7 @@ impl From<ErroDaPresenca> for ErroDaApi {
             ErroDaPresenca::Desligada => Self::Indisponivel,
             ErroDaPresenca::SessaoInvalida => Self::NaoAutorizado,
             ErroDaPresenca::RapidoDemais => Self::MuitasRequisicoes,
+            ErroDaPresenca::Falha(falha) => Self::Interno(falha.0),
         }
     }
 }

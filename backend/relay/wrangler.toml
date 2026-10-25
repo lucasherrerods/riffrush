@@ -2,6 +2,10 @@ name = "riffrush-relay"
 main = "src/index.ts"
 compatibility_date = "2025-06-01"
 
+# Para onde vão as denúncias do chat global (a mesma API do app).
+[vars]
+URL_DA_API = "https://riffrush-api.onrender.com"
+
 [[durable_objects.bindings]]
 name = "SALAS"
 class_name = "Sala"

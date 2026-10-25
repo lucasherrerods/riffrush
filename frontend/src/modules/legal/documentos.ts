@@ -30,7 +30,8 @@ export const DOCUMENTOS: Record<Documento, ConteudoDoDocumento> = {
           "Só quando você entra com o Google: o identificador da sua conta Google, o seu nome, o seu e-mail e o endereço da sua foto de perfil, como o Google nos informa. O e-mail aparece só para você, no menu da conta e no perfil.",
           "O seu XP total e o resumo de cada partida: música, instrumento, dificuldade, pontos, acertos, total de notas, se foi vaiado e a data.",
           "As sessões de login, guardadas como um código embaralhado (hash) que vale por 30 dias. O código original fica só no seu aparelho.",
-          "Se você ligar o chat global: as mensagens que manda, com o seu nome e o identificador da conta, ficam no servidor das salas online (Cloudflare) por até 24 horas, no máximo as 50 últimas do chat. Quando alguém denuncia uma mensagem, uma cópia dela, com o nome de quem denunciou, fica guardada para a equipe analisar até ser resolvida. Se a equipe banir a sua conta do chat, guardamos o identificador e o nome dela na lista de banidos.",
+          "Se você ligar o chat global: as mensagens que manda, com o seu nome e o identificador da conta, ficam no servidor das salas online (Cloudflare) por até 24 horas, no máximo as 50 últimas do chat.",
+          "Quando alguém denuncia uma mensagem, uma cópia dela (autor, texto e hora), com quem denunciou, fica guardada no nosso banco de dados para a equipe analisar até ser resolvida. Se a equipe banir a sua conta do chat, isso também fica no banco, ligado à sua conta.",
         ],
       },
       {
@@ -56,7 +57,7 @@ export const DOCUMENTOS: Record<Documento, ConteudoDoDocumento> = {
       {
         titulo: "Por quanto tempo",
         paragrafos: [
-          "Enquanto a sua conta existir. Quando você a exclui, a conta, as sessões e o histórico de partidas são apagados na hora. As mensagens do chat global somem sozinhas em até 24 horas, e as denúncias e banimentos, quando a equipe os resolve.",
+          "Enquanto a sua conta existir. Quando você a exclui, a conta, as sessões, o histórico de partidas, as denúncias que envolvem você e um banimento do chat são apagados na hora. As mensagens do chat global somem sozinhas em até 24 horas.",
         ],
       },
       {

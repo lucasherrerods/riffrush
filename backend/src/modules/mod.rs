@@ -1,5 +1,6 @@
 pub mod catalogo;
 pub mod conta;
+pub mod moderacao;
 pub mod perfil;
 pub mod presenca;
 pub mod progresso;

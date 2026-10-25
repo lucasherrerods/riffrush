@@ -1,11 +1,15 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useConta } from "@/modules/conta";
+import { apiDaPresenca } from "./api";
 import { ChatGlobal } from "./ChatGlobal";
 import type { EstadoDoChatGlobal } from "./conexaoDoChat";
 import { chatGlobal } from "./presenca";
 
 vi.mock("@/modules/conta", () => ({ useConta: vi.fn(), sessaoDaConta: { token: () => "t" } }));
+vi.mock("./api", () => ({
+  apiDaPresenca: { denuncias: vi.fn(async () => []), banidos: vi.fn(async () => []), banir: vi.fn(async () => {}), desbanir: vi.fn(async () => {}), resolver: vi.fn(async () => {}) },
+}));
 vi.mock("./presenca", async () => {
   const { ConexaoDoChatGlobal } = await import("./conexaoDoChat");
   return { chatGlobal: new ConexaoDoChatGlobal({ urlDoRelay: "", pedirFicha: async () => "f" }) };
@@ -18,7 +22,7 @@ const bia = { n: 2, autor: { id: "b", nome: "Bia", equipe: true as const }, text
 
 /** Põe o estado como se tivesse vindo do relay. */
 function chegou(parcial: Partial<EstadoDoChatGlobal>) {
-  const estado: EstadoDoChatGlobal = { conectado: true, mensagens: [ana, bia], voce: PODE, denuncias: [], banidos: [], ...parcial };
+  const estado: EstadoDoChatGlobal = { conectado: true, mensagens: [ana, bia], voce: PODE, ...parcial };
   act(() => (chatGlobal as unknown as { mudar: (e: EstadoDoChatGlobal) => void }).mudar(estado));
 }
 
@@ -102,23 +106,22 @@ describe("ChatGlobal", () => {
     expect(screen.queryByRole("button", { name: /Moderação/ })).not.toBeInTheDocument();
   });
 
-  it("a equipe bane, apaga e resolve as denúncias", async () => {
+  it("a equipe vê as denúncias e os banidos da API, e bane e desbane por ela", async () => {
     logado();
+    const denuncia = { mensagem_n: 1, autor_id: "a", autor_nome: "Ana", texto: "spam", mensagem_em: "", denunciante_nome: "Caio", criada_em: "" };
+    vi.mocked(apiDaPresenca.denuncias).mockResolvedValue([denuncia]);
+    vi.mocked(apiDaPresenca.banidos).mockResolvedValue([{ conta_id: "x", nome: "Xis" }]);
     abrir();
-    const denuncia = { mensagem: ana, por: { id: "c", nome: "Caio" }, em: 0 };
-    chegou({ voce: { ...PODE, admin: true }, denuncias: [denuncia], banidos: [{ id: "x", nome: "Xis" }] });
-    const banir = vi.spyOn(chatGlobal, "banir").mockReturnValue(true);
-    const resolver = vi.spyOn(chatGlobal, "resolver").mockReturnValue(true);
-    const desbanir = vi.spyOn(chatGlobal, "desbanir").mockReturnValue(true);
+    chegou({ voce: { ...PODE, admin: true } });
     // Ninguém da equipe é banido pelo botão.
     expect(screen.queryByRole("button", { name: "Banir Bia" })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /Moderação \(1\)/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /Moderação \(1\)/ }));
     const dialogo = screen.getByRole("dialog");
-    expect(within(dialogo).getByText(/1 denúncia \(Caio\)/)).toBeInTheDocument();
+    expect(await within(dialogo).findByText(/1 denúncia \(Caio\)/)).toBeInTheDocument();
     await userEvent.click(within(dialogo).getByRole("button", { name: /Banir Ana/ }));
-    expect(banir).toHaveBeenCalledWith("a");
-    expect(resolver).toHaveBeenCalledWith(1);
+    await waitFor(() => expect(apiDaPresenca.banir).toHaveBeenCalledWith("t", "a"));
+    await waitFor(() => expect(apiDaPresenca.resolver).toHaveBeenCalledWith("t", 1));
     await userEvent.click(within(dialogo).getByRole("button", { name: "Desbanir" }));
-    expect(desbanir).toHaveBeenCalledWith("x");
+    await waitFor(() => expect(apiDaPresenca.desbanir).toHaveBeenCalledWith("t", "x"));
   });
 });
