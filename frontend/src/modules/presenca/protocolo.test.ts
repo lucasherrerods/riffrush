@@ -56,9 +56,8 @@ describe("lotes", () => {
 
 describe("urls", () => {
   it("monta as rotas do relay, com a ficha só para quem transmite", () => {
-    expect(urlDaPresenca("wss://relay/", "a.b")).toBe("wss://relay/presenca?ficha=a.b");
+    expect(urlDaPresenca("wss://relay/")).toBe("wss://relay/presenca");
     expect(urlDaTransmissao("wss://relay", "id-1")).toBe("wss://relay/transmissao/id-1");
-    expect(urlDaTransmissao("wss://relay", "id-1", "a+b")).toBe("wss://relay/transmissao/id-1?ficha=a%2Bb");
   });
 });
 

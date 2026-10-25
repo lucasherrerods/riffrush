@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
-import { MessageSquare, Send, VolumeX } from "lucide-react";
+import { MessageSquare, Send, type LucideIcon } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { TAMANHO_MAXIMO_DO_TEXTO, limparTexto } from "./chat";
@@ -9,6 +9,14 @@ export interface MensagemDoChat {
   autor: string;
   texto: string;
   minha?: boolean;
+  /** Um selo ao lado do nome, como "Equipe". */
+  selo?: string;
+}
+
+export interface AcaoDaMensagem {
+  rotulo: string;
+  icone: LucideIcon;
+  aoClicar: () => void;
 }
 
 interface Props {
@@ -18,14 +26,17 @@ interface Props {
   aoEnviar: (texto: string) => boolean | void;
   /** Quando existe, ninguém digita: aparece este motivo no lugar do campo. */
   bloqueado?: string;
-  aoSilenciar?: (mensagem: MensagemDoChat) => void;
+  /** Botões que aparecem ao passar o mouse na mensagem. */
+  acoesDaMensagem?: (mensagem: MensagemDoChat) => AcaoDaMensagem[];
+  /** Uma linha fixa acima do campo, como as regras do chat. */
+  aviso?: ReactNode;
   /** Ao lado do título, à direita. */
   extra?: ReactNode;
   className?: string;
 }
 
 /** Chat de texto puro: nada vira link nem HTML, e as teclas digitadas não acionam os atalhos das telas. */
-export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, aoSilenciar, extra, className }: Props) {
+export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMensagem, aviso, extra, className }: Props) {
   const [texto, setTexto] = useState("");
   const [devagar, setDevagar] = useState(false);
   const lista = useRef<HTMLOListElement>(null);
@@ -63,23 +74,26 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, aoSilenci
           <li key={m.id} className="group flex items-start gap-1 break-words">
             <p className="min-w-0 flex-1">
               <span className={cn("font-bold", m.minha ? "text-destaque" : "text-texto")}>{m.autor}</span>
+              {m.selo && <span className="ml-1 rounded-full bg-ouro px-2 text-base font-bold text-fundo">{m.selo}</span>}
               <span className="text-texto-suave">: </span>
               <span>{m.texto}</span>
             </p>
-            {aoSilenciar && !m.minha && (
+            {acoesDaMensagem?.(m).map(({ rotulo, icone: Icone, aoClicar }) => (
               <button
+                key={rotulo}
                 type="button"
-                aria-label={`Silenciar ${m.autor}`}
-                title={`Silenciar ${m.autor}`}
-                onClick={() => aoSilenciar(m)}
+                aria-label={rotulo}
+                title={rotulo}
+                onClick={aoClicar}
                 className="shrink-0 text-texto-suave opacity-0 group-hover:opacity-100 hover:text-perigo focus-visible:opacity-100"
               >
-                <VolumeX className="size-4" aria-hidden />
+                <Icone className="size-4" aria-hidden />
               </button>
-            )}
+            ))}
           </li>
         ))}
       </ol>
+      {aviso && <p className="text-base text-texto-suave">{aviso}</p>}
       {bloqueado ? (
         <p className="text-base text-texto-suave">{bloqueado}</p>
       ) : (

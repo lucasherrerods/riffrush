@@ -92,11 +92,11 @@ describe("TelaDeConfiguracoes", () => {
     expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ mostrarFps: true }));
   });
 
-  it("esconde o chat global do menu", async () => {
+  it("liga o chat global do menu, que começa desligado", async () => {
     const { aoMudar, usuario } = abrir();
     await usuario.click(screen.getByRole("tab", { name: /Vídeo/ }));
     await usuario.click(screen.getByRole("switch", { name: "Chat global no menu" }));
-    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ chatGlobal: false }));
+    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ chatGlobal: true }));
   });
 
   it("começa a calibração com o metrônomo", async () => {

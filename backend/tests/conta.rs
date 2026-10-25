@@ -33,6 +33,7 @@ fn app() -> Router {
             presenca: riffrush_api::modules::presenca::ServicosDePresenca {
                 conta: conta.clone(),
                 segredo: None,
+                janelas: Default::default(),
             },
             conta,
         },

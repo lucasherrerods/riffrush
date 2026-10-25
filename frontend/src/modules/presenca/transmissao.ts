@@ -1,6 +1,6 @@
 import type { EventoDaTransmissao } from "@/modules/gameplay";
 import type { Dificuldade, Instrumento } from "@/modules/songs";
-import { entradasParaOLote, lerAvisoDeEspectadores, urlDaTransmissao, type MensagemDaTransmissao } from "./protocolo";
+import { entradasParaOLote, lerAvisoDeEspectadores, protocolosComFicha, urlDaTransmissao, type MensagemDaTransmissao } from "./protocolo";
 
 interface SocketMinimo {
   readyState: number;
@@ -24,7 +24,7 @@ export interface PartidaParaTransmitir {
 export interface DependenciasDaTransmissao {
   urlDoRelay: string;
   pedirFicha: () => Promise<string>;
-  criarSocket?: (url: string) => SocketMinimo;
+  criarSocket?: (url: string, protocolos: string[]) => SocketMinimo;
   /** Quantas pessoas estão assistindo; volta a 0 quando a transmissão cai ou recomeça. */
   aoContarEspectadores?: (quantos: number) => void;
 }
@@ -59,8 +59,8 @@ export function criarTransmissao(partida: PartidaParaTransmitir, deps: Dependenc
     try {
       const ficha = await deps.pedirFicha();
       if (encerrada && fila.length === 0) return;
-      const criar = deps.criarSocket ?? ((url: string) => new WebSocket(url) as unknown as SocketMinimo);
-      const este = criar(urlDaTransmissao(deps.urlDoRelay, partida.contaId, ficha));
+      const criar = deps.criarSocket ?? ((url: string, protocolos: string[]) => new WebSocket(url, protocolos) as unknown as SocketMinimo);
+      const este = criar(urlDaTransmissao(deps.urlDoRelay, partida.contaId), protocolosComFicha(ficha));
       socket = este;
       este.onopen = despachar;
       este.onmessage = (evento) => {

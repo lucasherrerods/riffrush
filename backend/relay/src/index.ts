@@ -12,8 +12,36 @@ import {
   type EntradaDaSala,
   type Janela,
 } from "./regras";
-import { BALDE_CHEIO, MENSAGENS_GUARDADAS, chaveDaMensagem, gastarDoBalde, lerTextoDoChat, type Autor, type Balde, type MensagemDoChat, type MensagemDoChatGlobal } from "./chat";
-import { avisoDeEspectadores, lerEstado, lerMensagemDaTransmissao, verificarFicha, type MensagemDaPresenca, type Pessoa, type PessoaOnline } from "./presenca";
+import {
+  BALDE_CHEIO,
+  DENUNCIAS_GUARDADAS,
+  MENSAGENS_GUARDADAS,
+  NIVEL_PARA_ESCREVER,
+  admins,
+  chaveDaMensagem,
+  gastarDoBalde,
+  lerComando,
+  nomeParaMostrar,
+  podeEscrever,
+  recentes,
+  type Autor,
+  type Balde,
+  type Denuncia,
+  type MensagemDoChat,
+  type MensagemDoChatGlobal,
+  type Permissoes,
+} from "./chat";
+import {
+  PROTOCOLO_DO_JOGO,
+  avisoDeEspectadores,
+  fichaDoPedido,
+  lerEstado,
+  lerMensagemDaTransmissao,
+  verificarFicha,
+  type MensagemDaPresenca,
+  type PessoaDaFicha,
+  type PessoaOnline,
+} from "./presenca";
 
 interface Env {
   SALAS: DurableObjectNamespace<Sala>;
@@ -21,6 +49,10 @@ interface Env {
   PRESENCA: DurableObjectNamespace<Presenca>;
   TRANSMISSOES: DurableObjectNamespace<Transmissao>;
   CHAT: DurableObjectNamespace<ChatGlobal>;
+  /** Ids das contas da equipe, separados por vírgula (`npx wrangler secret put ADMINS_DO_CHAT`). */
+  ADMINS_DO_CHAT?: string;
+  /** Limite de pedidos por IP (`[[ratelimits]]` no wrangler.toml). */
+  LIMITE_POR_IP?: RateLimit;
   /** O mesmo SEGREDO_DO_RELAY da API (`npx wrangler secret put SEGREDO_DA_PRESENCA`). */
   SEGREDO_DA_PRESENCA?: string;
 }
@@ -206,7 +238,8 @@ export class Presenca extends DurableObject<Env> {
 
   async fetch(pedido: Request): Promise<Response> {
     if (pedido.headers.get("Upgrade") !== "websocket") return new Response("Esperava um WebSocket.", { status: 426 });
-    const pessoa = JSON.parse(pedido.headers.get(CABECALHO_DA_PESSOA) ?? "null") as Pessoa;
+    // O nível só serve para o chat: a lista de quem está online não precisa dele.
+    const { nivel: _, ...pessoa } = JSON.parse(pedido.headers.get(CABECALHO_DA_PESSOA) ?? "null") as PessoaDaFicha;
     // A mesma conta em outro aparelho: a conexão antiga sai, para não aparecer duas vezes.
     for (const antiga of this.ctx.getWebSockets(PESSOA)) {
       if ((antiga.deserializeAttachment() as PessoaOnline).id === pessoa.id) fechar(antiga, "outroAparelho");
@@ -217,7 +250,7 @@ export class Presenca extends DurableObject<Env> {
     servidor.serializeAttachment(online);
     enviar(servidor, JSON.stringify({ tipo: "lista", pessoas: this.pessoas() } satisfies MensagemDaPresenca));
     this.paraTodos({ tipo: "pessoa", pessoa: online }, servidor);
-    return new Response(null, { status: 101, webSocket: cliente });
+    return respostaDoSocket(pedido, cliente);
   }
 
   async webSocketMessage(socket: WebSocket, mensagem: string | ArrayBuffer) {
@@ -282,7 +315,7 @@ export class Transmissao extends DurableObject<Env> {
       this.ctx.acceptWebSocket(servidor, [QUEM_JOGA]);
       // Recomeçar a música abre uma conexão nova: quem já assistia continua contando.
       enviar(servidor, avisoDeEspectadores(this.ctx.getWebSockets(QUEM_ASSISTE).length));
-      return new Response(null, { status: 101, webSocket: cliente });
+      return respostaDoSocket(pedido, cliente);
     }
     this.ctx.acceptWebSocket(servidor, [QUEM_ASSISTE]);
     // Quem chega no meio recebe tudo o que já aconteceu, num lote só.
@@ -358,10 +391,17 @@ export class Transmissao extends DurableObject<Env> {
 
 const QUEM_CONVERSA = "conversa";
 
+/** O que fica no anexo de cada conexão do chat: sobrevive à hibernação. */
+interface Conversando {
+  autor: Autor;
+  nivel: number;
+  admin: boolean;
+}
+
 /**
  * O chat global: um só para o relay todo. Só entra quem tem conta (a ficha da API), então o nome
- * de quem escreve vem assinado e ninguém fala pelo outro. As últimas mensagens ficam guardadas
- * para quem chega ver a conversa.
+ * de quem escreve vem assinado e ninguém fala pelo outro. Escrever pede nível mínimo; as contas de
+ * ADMINS_DO_CHAT apagam mensagens, banem e veem as denúncias.
  */
 export class ChatGlobal extends DurableObject<Env> {
   /**
@@ -372,34 +412,85 @@ export class ChatGlobal extends DurableObject<Env> {
 
   async fetch(pedido: Request): Promise<Response> {
     if (pedido.headers.get("Upgrade") !== "websocket") return new Response("Esperava um WebSocket.", { status: 426 });
-    const pessoa = JSON.parse(pedido.headers.get(CABECALHO_DA_PESSOA) ?? "null") as Pessoa;
+    const pessoa = JSON.parse(pedido.headers.get(CABECALHO_DA_PESSOA) ?? "null") as PessoaDaFicha;
     // Uma conexão por conta: abrir outra não multiplica o limite de mensagens.
     for (const antiga of this.ctx.getWebSockets(QUEM_CONVERSA)) {
-      if ((antiga.deserializeAttachment() as Autor).id === pessoa.id) fechar(antiga, "outroAparelho");
+      if ((antiga.deserializeAttachment() as Conversando).autor.id === pessoa.id) fechar(antiga, "outroAparelho");
     }
+    const admin = admins(this.env.ADMINS_DO_CHAT).has(pessoa.id);
+    const conversando: Conversando = {
+      autor: { id: pessoa.id, nome: nomeParaMostrar(pessoa.nome, admin), ...(admin && { equipe: true as const }) },
+      nivel: pessoa.nivel,
+      admin,
+    };
     const [cliente, servidor] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(servidor, [QUEM_CONVERSA]);
-    servidor.serializeAttachment({ id: pessoa.id, nome: pessoa.nome } satisfies Autor);
-    const mensagens = [...(await this.ctx.storage.list<MensagemDoChat>({ prefix: "msg:" })).values()];
-    enviar(servidor, JSON.stringify({ tipo: "historico", mensagens } satisfies MensagemDoChatGlobal));
-    return new Response(null, { status: 101, webSocket: cliente });
+    servidor.serializeAttachment(conversando);
+    const voce = await this.permissoes(conversando);
+    enviar(servidor, JSON.stringify({ tipo: "historico", mensagens: await this.mensagens(), voce } satisfies MensagemDoChatGlobal));
+    if (admin) await this.mandarModeracao(servidor);
+    return respostaDoSocket(pedido, cliente);
   }
 
   async webSocketMessage(socket: WebSocket, bruta: string | ArrayBuffer) {
     if (typeof bruta !== "string") return;
-    const autor = socket.deserializeAttachment() as Autor;
+    const quem = socket.deserializeAttachment() as Conversando;
     const agora = Date.now();
-    const limite = gastarDoBalde(this.baldes.get(autor.id) ?? BALDE_CHEIO, agora);
-    this.baldes.set(autor.id, limite.balde);
+    // Denúncias e comandos gastam do mesmo balde: ninguém inunda a moderação.
+    const limite = gastarDoBalde(this.baldes.get(quem.autor.id) ?? BALDE_CHEIO, agora);
+    this.baldes.set(quem.autor.id, limite.balde);
     if (!limite.passa) return;
-    const texto = lerTextoDoChat(bruta);
-    if (!texto) return;
-    const n = ((await this.ctx.storage.get<number>("ultima")) ?? 0) + 1;
-    const mensagem: MensagemDoChat = { n, autor, texto, em: agora };
-    await this.ctx.storage.put({ ultima: n, [chaveDaMensagem(n)]: mensagem });
-    if (n > MENSAGENS_GUARDADAS) await this.ctx.storage.delete(chaveDaMensagem(n - MENSAGENS_GUARDADAS));
-    const saida = JSON.stringify({ tipo: "mensagem", mensagem } satisfies MensagemDoChatGlobal);
-    for (const conectado of this.ctx.getWebSockets(QUEM_CONVERSA)) enviar(conectado, saida);
+    const comando = lerComando(bruta);
+    if (!comando) return;
+
+    if (comando.tipo === "mensagem") {
+      if (!(await this.permissoes(quem)).podeEscrever) return;
+      const n = ((await this.ctx.storage.get<number>("ultima")) ?? 0) + 1;
+      const mensagem: MensagemDoChat = { n, autor: quem.autor, texto: comando.texto, em: agora };
+      await this.ctx.storage.put({ ultima: n, [chaveDaMensagem(n)]: mensagem });
+      if (n > MENSAGENS_GUARDADAS) await this.ctx.storage.delete(chaveDaMensagem(n - MENSAGENS_GUARDADAS));
+      return this.paraTodos({ tipo: "mensagem", mensagem });
+    }
+
+    if (comando.tipo === "denunciar") {
+      const mensagem = await this.ctx.storage.get<MensagemDoChat>(chaveDaMensagem(comando.n));
+      if (!mensagem || mensagem.autor.id === quem.autor.id) return;
+      // Uma denúncia por pessoa e mensagem; a mensagem vai junto, para valer mesmo depois de apagada.
+      const chave = `denuncia:${String(comando.n).padStart(8, "0")}:${quem.autor.id}`;
+      if (await this.ctx.storage.get(chave)) return;
+      await this.ctx.storage.put(chave, { mensagem, por: quem.autor, em: agora } satisfies Denuncia);
+      await this.podarDenuncias();
+      return this.paraAdmins();
+    }
+
+    // Daqui para baixo, só a equipe.
+    if (!quem.admin) return;
+    if (comando.tipo === "apagar") {
+      await this.ctx.storage.delete(chaveDaMensagem(comando.n));
+      return this.paraTodos({ tipo: "apagadas", ns: [comando.n] });
+    }
+    if (comando.tipo === "resolver") {
+      const prefixo = `denuncia:${String(comando.n).padStart(8, "0")}:`;
+      await this.ctx.storage.delete([...(await this.ctx.storage.list({ prefix: prefixo })).keys()]);
+      return this.paraAdmins();
+    }
+    if (comando.tipo === "banir") {
+      if (admins(this.env.ADMINS_DO_CHAT).has(comando.id)) return;
+      const doBanido = (await this.mensagens()).filter((m) => m.autor.id === comando.id);
+      const denunciada = [...(await this.ctx.storage.list<Denuncia>({ prefix: "denuncia:" })).values()].find((d) => d.mensagem.autor.id === comando.id);
+      const nome = doBanido[0]?.autor.nome ?? denunciada?.mensagem.autor.nome ?? comando.id;
+      await this.ctx.storage.put(`ban:${comando.id}`, { id: comando.id, nome } satisfies Autor);
+      // O que o banido escreveu some da conversa de todo mundo.
+      await this.ctx.storage.delete(doBanido.map((m) => chaveDaMensagem(m.n)));
+      if (doBanido.length) this.paraTodos({ tipo: "apagadas", ns: doBanido.map((m) => m.n) });
+    } else {
+      await this.ctx.storage.delete(`ban:${comando.id}`);
+    }
+    for (const conectado of this.ctx.getWebSockets(QUEM_CONVERSA)) {
+      const outro = conectado.deserializeAttachment() as Conversando;
+      if (outro.autor.id === comando.id) enviar(conectado, JSON.stringify({ tipo: "voce", voce: await this.permissoes(outro) } satisfies MensagemDoChatGlobal));
+    }
+    return this.paraAdmins();
   }
 
   async webSocketClose(socket: WebSocket) {
@@ -409,11 +500,53 @@ export class ChatGlobal extends DurableObject<Env> {
   async webSocketError(socket: WebSocket) {
     fechar(socket, "saiu");
   }
+
+  private async permissoes(quem: Conversando): Promise<Permissoes> {
+    const banido = !quem.admin && !!(await this.ctx.storage.get(`ban:${quem.autor.id}`));
+    return { podeEscrever: podeEscrever({ nivel: quem.nivel, admin: quem.admin, banido }), admin: quem.admin, banido, nivelParaEscrever: NIVEL_PARA_ESCREVER };
+  }
+
+  /** As mensagens das últimas 24 horas; as mais velhas são apagadas do armazenamento aqui. */
+  private async mensagens() {
+    const todas = [...(await this.ctx.storage.list<MensagemDoChat>({ prefix: "msg:" })).values()];
+    const vivas = recentes(todas, Date.now());
+    if (vivas.length < todas.length) await this.ctx.storage.delete(todas.filter((m) => !vivas.includes(m)).map((m) => chaveDaMensagem(m.n)));
+    return vivas;
+  }
+
+  private async podarDenuncias() {
+    const chaves = [...(await this.ctx.storage.list({ prefix: "denuncia:" })).keys()];
+    if (chaves.length > DENUNCIAS_GUARDADAS) await this.ctx.storage.delete(chaves.slice(0, chaves.length - DENUNCIAS_GUARDADAS));
+  }
+
+  private async mandarModeracao(socket: WebSocket) {
+    const denuncias = [...(await this.ctx.storage.list<Denuncia>({ prefix: "denuncia:" })).values()];
+    const banidos = [...(await this.ctx.storage.list<Autor>({ prefix: "ban:" })).values()];
+    enviar(socket, JSON.stringify({ tipo: "denuncias", denuncias } satisfies MensagemDoChatGlobal));
+    enviar(socket, JSON.stringify({ tipo: "banidos", banidos } satisfies MensagemDoChatGlobal));
+  }
+
+  private async paraAdmins() {
+    for (const conectado of this.ctx.getWebSockets(QUEM_CONVERSA)) {
+      if ((conectado.deserializeAttachment() as Conversando).admin) await this.mandarModeracao(conectado);
+    }
+  }
+
+  private paraTodos(mensagem: MensagemDoChatGlobal) {
+    const texto = JSON.stringify(mensagem);
+    for (const conectado of this.ctx.getWebSockets(QUEM_CONVERSA)) enviar(conectado, texto);
+  }
 }
 
-/** Confere a ficha da URL e passa a pessoa para o Durable Object num cabeçalho que o cliente não consegue mandar. */
+/** Com a ficha no subprotocolo, a resposta precisa aceitar o mesmo protocolo, ou o navegador fecha a conexão. */
+function respostaDoSocket(pedido: Request, cliente: WebSocket) {
+  const peloProtocolo = fichaDoPedido(pedido).peloProtocolo;
+  return new Response(null, { status: 101, webSocket: cliente, headers: peloProtocolo ? { "Sec-WebSocket-Protocol": PROTOCOLO_DO_JOGO } : {} });
+}
+
+/** Confere a ficha (do subprotocolo ou da URL) e passa a pessoa para o Durable Object num cabeçalho que o cliente não consegue mandar. */
 async function comPessoa(pedido: Request, env: Env) {
-  const ficha = new URL(pedido.url).searchParams.get("ficha") ?? "";
+  const { ficha } = fichaDoPedido(pedido);
   const pessoa = await verificarFicha(ficha, env.SEGREDO_DA_PRESENCA ?? "", Math.floor(Date.now() / 1000));
   if (!pessoa) return null;
   const cabecalhos = new Headers(pedido.headers);
@@ -432,6 +565,9 @@ function encaminhar(pedido: Request, env: Env, codigo: string, criar: boolean) {
 export default {
   async fetch(pedido: Request, env: Env): Promise<Response> {
     const { pathname } = new URL(pedido.url);
+    // Um IP martelando o relay é barrado aqui, antes de acordar os Durable Objects.
+    const ip = pedido.headers.get("CF-Connecting-IP") ?? "";
+    if (env.LIMITE_POR_IP && ip && !(await env.LIMITE_POR_IP.limit({ key: ip })).success) return new Response("Muitos pedidos.", { status: 429 });
 
     if (pathname === "/criar") {
       for (let i = 0; i < TENTATIVAS_DE_CODIGO; i++) {
@@ -463,7 +599,7 @@ export default {
       const sem = new Headers(pedido.headers);
       sem.delete(CABECALHO_DA_PESSOA);
       const destino = env.TRANSMISSOES.get(env.TRANSMISSOES.idFromName(transmissao[1]));
-      if (!new URL(pedido.url).searchParams.has("ficha")) return destino.fetch(new Request(pedido, { headers: sem }));
+      if (!fichaDoPedido(pedido).ficha) return destino.fetch(new Request(pedido, { headers: sem }));
       // Só a própria pessoa transmite a partida dela.
       const autenticado = await comPessoa(pedido, env);
       if (!autenticado || autenticado.pessoa.id !== transmissao[1]) return new Response("Ficha inválida.", { status: 401 });

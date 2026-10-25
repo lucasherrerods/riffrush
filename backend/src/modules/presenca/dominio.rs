@@ -1,4 +1,5 @@
 use base64::prelude::{Engine, BASE64_URL_SAFE_NO_PAD};
+use chrono::{DateTime, Duration, Utc};
 use hmac::{Hmac, Mac};
 use serde::Serialize;
 use sha2::Sha256;
@@ -13,6 +14,8 @@ pub struct Ficha {
     pub id: Uuid,
     pub nome: String,
     pub avatar: Option<String>,
+    /// O relay só deixa escrever no chat global a partir de um nível mínimo.
+    pub nivel: u32,
     /// Segundos Unix.
     pub exp: i64,
 }
@@ -25,12 +28,49 @@ pub fn assinar_ficha(ficha: &Ficha, segredo: &[u8]) -> String {
     format!("{corpo}.{}", BASE64_URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes()))
 }
 
+/// Fichas por minuto para a mesma conta. O app pede uma a cada conexão (presença, chat, transmissão)
+/// e a cada reconexão; mais que isso é alguém martelando a rota.
+pub const FICHAS_POR_MINUTO: u32 = 20;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Janela {
+    pub inicio: DateTime<Utc>,
+    pub contagem: u32,
+}
+
+/// Janela de um minuto por conta: devolve se a ficha pode sair e a janela atualizada.
+pub fn dentro_do_limite(janela: Option<Janela>, agora: DateTime<Utc>) -> (bool, Janela) {
+    match janela {
+        Some(j) if agora - j.inicio < Duration::minutes(1) => {
+            if j.contagem >= FICHAS_POR_MINUTO {
+                (false, j)
+            } else {
+                (true, Janela { contagem: j.contagem + 1, ..j })
+            }
+        }
+        _ => (true, Janela { inicio: agora, contagem: 1 }),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[test]
+    fn limita_as_fichas_por_minuto_da_mesma_conta() {
+        let agora = DateTime::from_timestamp(1_800_000_000, 0).unwrap();
+        let mut janela = None;
+        for _ in 0..FICHAS_POR_MINUTO {
+            let (passa, nova) = dentro_do_limite(janela, agora);
+            assert!(passa);
+            janela = Some(nova);
+        }
+        assert!(!dentro_do_limite(janela, agora + Duration::seconds(59)).0);
+        assert!(dentro_do_limite(janela, agora + Duration::seconds(60)).0);
+    }
+
     /// O mesmo valor está no teste do relay (backend/relay/src/presenca.test.ts): os dois lados precisam concordar.
-    const FICHA_DE_EXEMPLO: &str = "eyJpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNyIsIm5vbWUiOiJMdWNhcyIsImF2YXRhciI6bnVsbCwiZXhwIjoxOTAwMDAwMDAwfQ.g3x_8V8_Mc8fiEU3TwanHW2LnkX5ipNmEHy9XUb6HhA";
+    const FICHA_DE_EXEMPLO: &str = "eyJpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNyIsIm5vbWUiOiJMdWNhcyIsImF2YXRhciI6bnVsbCwibml2ZWwiOjMsImV4cCI6MTkwMDAwMDAwMH0.GcC-2VOsr_or75WtX3gQNBTBIKzZyYE3vwmey0C-eJY";
 
     #[test]
     fn assina_a_ficha_no_formato_que_o_relay_confere() {
@@ -38,6 +78,7 @@ mod tests {
             id: Uuid::from_u128(7),
             nome: "Lucas".into(),
             avatar: None,
+            nivel: 3,
             exp: 1_900_000_000,
         };
         assert_eq!(assinar_ficha(&ficha, b"segredo-de-teste"), FICHA_DE_EXEMPLO);

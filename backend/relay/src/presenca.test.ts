@@ -1,13 +1,20 @@
-import { avisoDeEspectadores, lerEstado, lerMensagemDaTransmissao, linkDoChartConfere, verificarFicha } from "./presenca";
+import { PROTOCOLO_DO_JOGO, avisoDeEspectadores, fichaDoPedido, lerEstado, lerMensagemDaTransmissao, linkDoChartConfere, verificarFicha } from "./presenca";
 
 // A mesma ficha do teste da API (backend/src/modules/presenca/dominio.rs): os dois lados precisam concordar.
+const FICHA_COM_NIVEL =
+  "eyJpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNyIsIm5vbWUiOiJMdWNhcyIsImF2YXRhciI6bnVsbCwibml2ZWwiOjMsImV4cCI6MTkwMDAwMDAwMH0.GcC-2VOsr_or75WtX3gQNBTBIKzZyYE3vwmey0C-eJY";
+// Ficha da API antes de mandar o nível: continua valendo, com nível 0.
 const FICHA =
   "eyJpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNyIsIm5vbWUiOiJMdWNhcyIsImF2YXRhciI6bnVsbCwiZXhwIjoxOTAwMDAwMDAwfQ.g3x_8V8_Mc8fiEU3TwanHW2LnkX5ipNmEHy9XUb6HhA";
 const SEGREDO = "segredo-de-teste";
 
 describe("verificarFicha", () => {
   it("aceita a ficha assinada pela API e devolve quem é", async () => {
-    expect(await verificarFicha(FICHA, SEGREDO, 1_800_000_000)).toEqual({ id: "00000000-0000-0000-0000-000000000007", nome: "Lucas", avatar: null });
+    expect(await verificarFicha(FICHA_COM_NIVEL, SEGREDO, 1_800_000_000)).toEqual({ id: "00000000-0000-0000-0000-000000000007", nome: "Lucas", avatar: null, nivel: 3 });
+  });
+
+  it("ficha antiga, sem nível, vale como nível 0", async () => {
+    expect((await verificarFicha(FICHA, SEGREDO, 1_800_000_000))?.nivel).toBe(0);
   });
 
   it("recusa ficha vencida, com outro segredo ou adulterada", async () => {
@@ -92,5 +99,22 @@ describe("link do chart", () => {
 describe("avisoDeEspectadores", () => {
   it("diz a quem joga quantas pessoas estão assistindo", () => {
     expect(JSON.parse(avisoDeEspectadores(3))).toEqual({ tipo: "espectadores", quantos: 3 });
+  });
+});
+
+describe("fichaDoPedido", () => {
+  const pedido = (url: string, protocolos?: string) =>
+    new Request(url, { headers: protocolos ? { "Sec-WebSocket-Protocol": protocolos } : {} });
+
+  it("lê a ficha do subprotocolo do WebSocket, que não fica em log de URL", () => {
+    expect(fichaDoPedido(pedido("https://r/chat", `${PROTOCOLO_DO_JOGO}, abc.def`))).toEqual({ ficha: "abc.def", peloProtocolo: true });
+  });
+
+  it("aceita ainda a ficha na URL, das versões antigas do app", () => {
+    expect(fichaDoPedido(pedido("https://r/chat?ficha=abc.def"))).toEqual({ ficha: "abc.def", peloProtocolo: false });
+  });
+
+  it("sem ficha, devolve vazio", () => {
+    expect(fichaDoPedido(pedido("https://r/chat"))).toEqual({ ficha: "", peloProtocolo: false });
   });
 });

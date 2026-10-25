@@ -76,6 +76,7 @@ async fn app() -> (Router, String) {
             presenca: riffrush_api::modules::presenca::ServicosDePresenca {
                 conta: conta.clone(),
                 segredo: None,
+                janelas: Default::default(),
             },
             ranking: servicos_do_ranking(conta.clone()).0,
             conta,

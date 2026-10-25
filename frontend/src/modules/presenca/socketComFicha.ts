@@ -1,3 +1,5 @@
+import { protocolosComFicha } from "./protocolo";
+
 export interface SocketMinimo {
   readyState: number;
   onopen: (() => void) | null;
@@ -9,12 +11,12 @@ export interface SocketMinimo {
 
 export interface DependenciasDoSocket {
   pedirFicha: () => Promise<string>;
-  criarSocket?: (url: string) => SocketMinimo;
+  criarSocket?: (url: string, protocolos: string[]) => SocketMinimo;
   esperar?: (fn: () => void, ms: number) => unknown;
 }
 
 interface Eventos {
-  url: (ficha: string) => string;
+  url: string;
   aoAbrir: () => void;
   aoReceber: (texto: string) => void;
   aoCair: () => void;
@@ -70,8 +72,8 @@ export class SocketComFicha {
       return this.tentarDeNovo();
     }
     if (!this.ligado) return;
-    const criar = this.deps.criarSocket ?? ((url: string) => new WebSocket(url) as unknown as SocketMinimo);
-    const socket = criar(this.eventos.url(ficha));
+    const criar = this.deps.criarSocket ?? ((url: string, protocolos: string[]) => new WebSocket(url, protocolos) as unknown as SocketMinimo);
+    const socket = criar(this.eventos.url, protocolosComFicha(ficha));
     this.socket = socket;
     socket.onopen = () => {
       this.espera = ESPERA_INICIAL_MS;

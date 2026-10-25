@@ -359,7 +359,11 @@ export function App() {
                 aoConfigurar={() => setTela("configuracoes")}
                 aoLeaderboard={contasLigadas ? () => setTela("leaderboard") : undefined}
                 aoOnline={presencaDisponivel && contasLigadas ? () => setTela("online") : undefined}
-                chat={presencaDisponivel && contasLigadas && configuracoes.chatGlobal && !ehClienteWebDaSala() ? <ChatGlobal className="w-full" /> : undefined}
+                chat={
+                  presencaDisponivel && contasLigadas && configuracoes.chatGlobal !== false && !ehClienteWebDaSala() ? (
+                    <ChatGlobal className="w-full" aceito={configuracoes.chatGlobal} aoResponder={(chatGlobal) => mudarConfiguracoes({ ...configuracoes, chatGlobal })} />
+                  ) : undefined
+                }
                 aoBuscarMusicas={() => {
                   setVoltarDaBuscaPara("menu");
                   setTela("buscaDeMusicas");

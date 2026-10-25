@@ -22,7 +22,7 @@ export class ConexaoDePresenca {
 
   constructor(private deps: DependenciasDaPresenca) {
     this.socket = new SocketComFicha(deps, {
-      url: (ficha) => urlDaPresenca(deps.urlDoRelay, ficha),
+      url: urlDaPresenca(deps.urlDoRelay),
       aoAbrir: () => {
         this.socket.enviar(JSON.stringify({ estado: this.onde }));
         this.mudar({ ...this.estadoAtual, conectada: true });

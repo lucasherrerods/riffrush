@@ -23,6 +23,12 @@ class_name = "Transmissao"
 name = "CHAT"
 class_name = "ChatGlobal"
 
+# Limite de pedidos por IP, conferido no começo do Worker. O namespace_id é qualquer número único da conta.
+[[ratelimits]]
+name = "LIMITE_POR_IP"
+namespace_id = "1001"
+simple = { limit = 120, period = 60 }
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Sala"]
