@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { motion } from "framer-motion";
 import { ChevronDown, ChevronUp, MessageSquare, Send, type LucideIcon } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -32,7 +33,7 @@ interface Props {
   aviso?: ReactNode;
   /** Ao lado do título, à direita. */
   extra?: ReactNode;
-  /** Com ela, uma setinha no cabeçalho esconde as mensagens e o campo, e só o título fica. */
+  /** Com ela, uma setinha no cabeçalho recolhe as mensagens e o campo, e só o título fica. O corpo tem altura fixa para poder encolher. */
   minimizar?: { minimizado: boolean; aoAlternar: (minimizado: boolean) => void };
   className?: string;
 }
@@ -65,7 +66,7 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
   };
 
   return (
-    <section aria-label={titulo} className={cn("flex min-h-0 flex-col gap-2 placa p-4", className, minimizado && "flex-none")}>
+    <section aria-label={titulo} className={cn("flex min-h-0 flex-col placa p-4", className)}>
       <div className="flex items-center gap-2">
         <p className="flex flex-1 items-center gap-2 text-base font-bold">
           <MessageSquare className="size-4 text-primaria opacity-70" aria-hidden /> {titulo}
@@ -75,7 +76,7 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
           <Button
             variant="ghost"
             size="icon"
-            className="size-7"
+            className="size-7 text-primaria hover:text-primaria"
             aria-label={minimizado ? `Abrir o ${titulo.toLowerCase()}` : `Minimizar o ${titulo.toLowerCase()}`}
             aria-expanded={!minimizado}
             onClick={() => minimizar.aoAlternar(!minimizado)}
@@ -84,8 +85,15 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
           </Button>
         )}
       </div>
-      {!minimizado && (
-        <>
+      <motion.div
+        initial={false}
+        animate={minimizado ? { height: 0, opacity: 0 } : { height: "auto", opacity: 1 }}
+        transition={{ duration: 0.25, ease: "easeInOut" }}
+        aria-hidden={minimizado || undefined}
+        inert={minimizado || undefined}
+        className={cn("flex min-h-0 flex-col overflow-hidden", !minimizar && "flex-1")}
+      >
+        <div className={cn("flex min-h-0 flex-1 flex-col gap-2 pt-2", minimizar && "h-64")}>
           <ol ref={lista} role="log" aria-label={titulo} className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto text-base">
             {mensagens.length === 0 && !bloqueado && <li className="text-texto-suave">Nenhuma mensagem ainda.</li>}
             {mensagens.map((m) => (
@@ -134,8 +142,8 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
               {devagar && <p className="text-base text-texto-suave">Mais devagar: espere um pouco para mandar de novo.</p>}
             </form>
           )}
-        </>
-      )}
+        </div>
+      </motion.div>
     </section>
   );
 }
