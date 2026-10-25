@@ -1,5 +1,6 @@
 import { ArrowLeft, Music, Users } from "lucide-react";
 import { sessaoDaConta, useConta } from "@/modules/conta";
+import { nomeDaMusica } from "@/modules/songs";
 import { useCarregamento } from "@/shared/hooks/useCarregamento";
 import { Button } from "@/shared/ui/button";
 import { ComCarregamento } from "@/shared/ui/ComCarregamento";
@@ -19,12 +20,6 @@ const carregarPlayersPadrao = (sinal: AbortSignal) => apiDoRanking.geral({ token
 const carregarMusicasPadrao = (sinal: AbortSignal) => apiDoRanking.musicas({ sinal });
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 const plural = (n: number, um: string, varios: string) => `${formatar(n)} ${n === 1 ? um : varios}`;
-/** A biblioteca primeiro (músicas do jogo), depois o que a API achou, e por último o id. */
-function nomeDaMusica(musica: MusicaNoRanking, tituloDaMusica: Props["tituloDaMusica"]) {
-  const daApi = musica.titulo && (musica.artista ? `${musica.titulo} — ${musica.artista}` : musica.titulo);
-  return tituloDaMusica(musica.musica_id) ?? daApi ?? musica.musica_id;
-}
-
 const LISTA = "sem-barra-de-rolagem flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto";
 
 /** O leaderboard: os jogadores com mais XP numa aba e as músicas mais jogadas na outra. */

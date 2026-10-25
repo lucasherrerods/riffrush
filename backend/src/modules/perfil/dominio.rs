@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+
 use chrono::{DateTime, Utc};
 
+use crate::modules::catalogo::DadosDaMusica;
 use crate::modules::conta::Conta;
 use crate::modules::progresso::{Dificuldade, Instrumento, Nivel};
 
@@ -77,6 +80,21 @@ pub struct Perfil {
     pub por_instrumento: Vec<PartidasNoInstrumento>,
     pub mais_tocadas: Vec<MusicaMaisTocada>,
     pub recentes: Vec<PartidaRecente>,
+    /// Nome, banda e capa das músicas das listas acima, pelo id. Música do jogo fica de fora.
+    pub musicas: HashMap<String, DadosDaMusica>,
+}
+
+impl Perfil {
+    /// Os ids das músicas que o perfil mostra, sem repetir, na ordem em que aparecem.
+    pub fn ids_das_musicas(&self) -> Vec<String> {
+        let mut ids: Vec<String> = Vec::new();
+        for id in self.mais_tocadas.iter().map(|m| &m.musica_id).chain(self.recentes.iter().map(|p| &p.musica_id)) {
+            if !ids.contains(id) {
+                ids.push(id.clone());
+            }
+        }
+        ids
+    }
 }
 
 fn precisao(acertos: u64, notas: u64) -> f64 {
@@ -124,6 +142,7 @@ pub fn montar_perfil(conta: Conta, dados: DadosDoPerfil) -> Perfil {
         por_instrumento,
         mais_tocadas: dados.mais_tocadas,
         recentes: dados.recentes,
+        musicas: HashMap::new(),
     }
 }
 
@@ -198,5 +217,25 @@ mod tests {
         entrada.por_instrumento = vec![no(Instrumento::Baixo, 2), no(Instrumento::Teclado, 0), no(Instrumento::Guitarra, 7)];
         let perfil = montar_perfil(conta(), entrada);
         assert_eq!(perfil.por_instrumento, [no(Instrumento::Guitarra, 7), no(Instrumento::Baixo, 2)]);
+    }
+
+    #[test]
+    fn ids_das_musicas_juntam_as_listas_sem_repetir() {
+        let mut entrada = dados(vec![]);
+        let recente = |musica_id: &str| PartidaRecente {
+            musica_id: musica_id.into(),
+            dificuldade: Dificuldade::Facil,
+            pontos: 0,
+            acertos: 0,
+            total: 0,
+            derrota: false,
+            jogada_em: DateTime::UNIX_EPOCH,
+        };
+        entrada.mais_tocadas = vec![MusicaMaisTocada {
+            musica_id: "a".into(),
+            partidas: 3,
+        }];
+        entrada.recentes = vec![recente("b"), recente("a"), recente("c")];
+        assert_eq!(montar_perfil(conta(), entrada).ids_das_musicas(), ["a", "b", "c"]);
     }
 }

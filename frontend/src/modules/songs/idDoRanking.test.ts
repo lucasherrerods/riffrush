@@ -1,5 +1,5 @@
 import { MUSICAS_DE_TESTE } from "@/test/musicas";
-import { idDoRanking, tituloDaMusica } from "./idDoRanking";
+import { idDoRanking, nomeDaMusica, tituloDaMusica } from "./idDoRanking";
 
 describe("idDoRanking", () => {
   it("música do jogo usa o próprio id, igual em todo aparelho", () => {
@@ -23,5 +23,22 @@ describe("tituloDaMusica", () => {
     const semArtista = { ...MUSICAS_DE_TESTE[0], titulo: "Solo", artista: "" };
     expect(tituloDaMusica([semArtista], semArtista.id)).toBe("Solo");
     expect(tituloDaMusica([semArtista], "outra")).toBeUndefined();
+  });
+});
+
+describe("nomeDaMusica", () => {
+  const semBiblioteca = () => undefined;
+
+  it("a biblioteca vem primeiro", () => {
+    expect(nomeDaMusica({ musica_id: "spektrem-shine", titulo: "Outro" }, () => "Shine — Spektrem")).toBe("Shine — Spektrem");
+  });
+
+  it("fora da biblioteca, usa o título e a banda da API", () => {
+    expect(nomeDaMusica({ musica_id: "encore:x", titulo: "Hit", artista: "Banda" }, semBiblioteca)).toBe("Hit — Banda");
+    expect(nomeDaMusica({ musica_id: "encore:x", titulo: "Hit", artista: null }, semBiblioteca)).toBe("Hit");
+  });
+
+  it("sem nada, mostra o id", () => {
+    expect(nomeDaMusica({ musica_id: "encore:x", titulo: "" }, semBiblioteca)).toBe("encore:x");
   });
 });

@@ -49,10 +49,16 @@ async fn app() -> (Router, String) {
                 instrumento: Instrumento::Baixo,
                 partidas: 2,
             }],
-            mais_tocadas: vec![MusicaMaisTocada {
-                musica_id: "encore:abc".into(),
-                partidas: 2,
-            }],
+            mais_tocadas: vec![
+                MusicaMaisTocada {
+                    musica_id: "encore:abc".into(),
+                    partidas: 2,
+                },
+                MusicaMaisTocada {
+                    musica_id: "arquivo:Rush - Tom Sawyer.sng:1".into(),
+                    partidas: 1,
+                },
+            ],
             recentes: vec![PartidaRecente {
                 musica_id: "encore:abc".into(),
                 dificuldade: Dificuldade::Expert,
@@ -107,6 +113,11 @@ async fn devolve_as_estatisticas_de_quem_esta_logado() {
     assert_eq!(corpo["email"], "lucas@exemplo.com");
     assert_eq!(corpo["por_instrumento"][0]["instrumento"], "baixo");
     assert_eq!(corpo["mais_tocadas"][0]["partidas"], 2);
+    // Música que o catálogo não conhece vem sem nome; a do arquivo vem com nome e banda.
+    assert!(corpo["mais_tocadas"][0]["titulo"].is_null());
+    assert_eq!(corpo["mais_tocadas"][1]["titulo"], "Tom Sawyer");
+    assert_eq!(corpo["mais_tocadas"][1]["artista"], "Rush");
+    assert!(corpo["recentes"][0]["capa"].is_null());
 }
 
 #[tokio::test]

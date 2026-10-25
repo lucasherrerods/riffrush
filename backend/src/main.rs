@@ -47,11 +47,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ranking = ServicosDoRanking {
         repositorio: Arc::new(RankingPostgres(banco.clone())),
         conta: conta.clone(),
-        catalogo,
+        catalogo: catalogo.clone(),
     };
     let perfil = ServicosDoPerfil {
         repositorio: Arc::new(PerfilPostgres(banco.clone())),
         conta: conta.clone(),
+        catalogo: catalogo.clone(),
     };
     let presenca = ServicosDePresenca {
         conta: conta.clone(),

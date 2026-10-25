@@ -7,6 +7,7 @@ use utoipa::ToSchema;
 
 use super::casos_de_uso::ErroDoPerfil;
 use super::dominio::{EstatisticasDaDificuldade, MusicaMaisTocada, PartidaRecente, PartidasNoInstrumento, Perfil};
+use crate::modules::catalogo::DadosDaMusica;
 use crate::modules::conta::{NivelDaConta, Token};
 use crate::modules::progresso::{Dificuldade, Instrumento};
 use crate::shared::erro::ErroDaApi;
@@ -59,17 +60,40 @@ impl From<PartidasNoInstrumento> for InstrumentoDoPerfil {
     }
 }
 
+/// Do catálogo: sem eles (músicas do jogo, não achadas), o app usa a biblioteca.
+#[derive(Serialize, ToSchema)]
+pub struct DadosDaMusicaNoPerfil {
+    titulo: Option<String>,
+    artista: Option<String>,
+    /// Endereço da imagem da capa.
+    capa: Option<String>,
+}
+
+impl From<Option<DadosDaMusica>> for DadosDaMusicaNoPerfil {
+    fn from(dados: Option<DadosDaMusica>) -> Self {
+        let dados = dados.unwrap_or_default();
+        Self {
+            titulo: dados.titulo,
+            artista: dados.artista,
+            capa: dados.capa,
+        }
+    }
+}
+
 #[derive(Serialize, ToSchema)]
 pub struct MusicaDoPerfil {
     musica_id: String,
     partidas: u32,
+    #[serde(flatten)]
+    dados: DadosDaMusicaNoPerfil,
 }
 
-impl From<MusicaMaisTocada> for MusicaDoPerfil {
-    fn from(m: MusicaMaisTocada) -> Self {
+impl From<(MusicaMaisTocada, Option<DadosDaMusica>)> for MusicaDoPerfil {
+    fn from((m, dados): (MusicaMaisTocada, Option<DadosDaMusica>)) -> Self {
         Self {
             musica_id: m.musica_id,
             partidas: m.partidas,
+            dados: dados.into(),
         }
     }
 }
@@ -84,11 +108,14 @@ pub struct PartidaDoPerfil {
     total: u32,
     derrota: bool,
     jogada_em: DateTime<Utc>,
+    #[serde(flatten)]
+    dados: DadosDaMusicaNoPerfil,
 }
 
-impl From<PartidaRecente> for PartidaDoPerfil {
-    fn from(p: PartidaRecente) -> Self {
+impl From<(PartidaRecente, Option<DadosDaMusica>)> for PartidaDoPerfil {
+    fn from((p, dados): (PartidaRecente, Option<DadosDaMusica>)) -> Self {
         Self {
+            dados: dados.into(),
             musica_id: p.musica_id,
             dificuldade: p.dificuldade,
             pontos: p.pontos,
@@ -123,6 +150,7 @@ pub struct RespostaDoPerfil {
 
 impl From<Perfil> for RespostaDoPerfil {
     fn from(p: Perfil) -> Self {
+        let musicas = p.musicas;
         Self {
             nome: p.conta.nome,
             avatar: p.conta.avatar,
@@ -137,8 +165,18 @@ impl From<Perfil> for RespostaDoPerfil {
             musicas_distintas: p.musicas_distintas,
             por_dificuldade: p.por_dificuldade.into_iter().map(Into::into).collect(),
             por_instrumento: p.por_instrumento.into_iter().map(Into::into).collect(),
-            mais_tocadas: p.mais_tocadas.into_iter().map(Into::into).collect(),
-            recentes: p.recentes.into_iter().map(Into::into).collect(),
+            mais_tocadas: p
+                .mais_tocadas
+                .into_iter()
+                .map(|m| (m.musica_id.clone(), m))
+                .map(|(id, m)| (m, musicas.get(&id).cloned()).into())
+                .collect(),
+            recentes: p
+                .recentes
+                .into_iter()
+                .map(|r| (r.musica_id.clone(), r))
+                .map(|(id, r)| (r, musicas.get(&id).cloned()).into())
+                .collect(),
         }
     }
 }

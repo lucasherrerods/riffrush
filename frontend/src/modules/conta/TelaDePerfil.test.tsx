@@ -22,7 +22,10 @@ const perfil: PerfilDaApi = {
     { instrumento: "guitarra", partidas: 9 },
     { instrumento: "baixo", partidas: 3 },
   ],
-  mais_tocadas: [{ musica_id: "encore:abc", partidas: 7 }],
+  mais_tocadas: [
+    { musica_id: "encore:abc", partidas: 7 },
+    { musica_id: "encore:goofy", partidas: 2, titulo: "Goofy Goober Rock", artista: "Tom Rothrock", capa: "https://files.enchor.us/capa.jpg" },
+  ],
   recentes: [{ musica_id: "encore:abc", dificuldade: "expert", pontos: 98_500, acertos: 9, total: 10, derrota: true, jogada_em: "2026-10-20T12:00:00Z" }],
 };
 
@@ -43,6 +46,9 @@ describe("TelaDePerfil", () => {
     expect(screen.getByText("Baixo")).toBeInTheDocument();
     expect(screen.getByText("75%")).toBeInTheDocument();
     expect(screen.getByText("7 vezes")).toBeInTheDocument();
+    // Fora da biblioteca, o nome, a banda e a capa vêm da API.
+    const goofy = screen.getByText("Goofy Goober Rock — Tom Rothrock").closest("li")!;
+    expect(goofy.querySelector("img")).toHaveAttribute("src", "https://files.enchor.us/capa.jpg");
     expect(screen.getByText("Vaiada")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "XP do nível 4" })).toBeInTheDocument();
   });
