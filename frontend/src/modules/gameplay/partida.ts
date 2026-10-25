@@ -13,6 +13,16 @@ const ESTRELA_MINIMA = 0.5;
 const DURACAO_DA_ESTRELA = 16;
 /** Soltar o sustain até esse tempo antes do fim ainda conta como completo. */
 const TOLERANCIA_DO_SUSTAIN = 0.1;
+/**
+ * Todo tempo que entra na partida é arredondado para esta grade (1 ms, como no osu!). Com sustain e
+ * star power contados em ticks inteiros, a partida dá o mesmo resultado em qualquer taxa
+ * de frames, e um replay com os mesmos tempos reproduz a pontuação exata.
+ */
+const TICKS_POR_SEGUNDO = 1000;
+const ESTRELA_CHEIA = DURACAO_DA_ESTRELA * TICKS_POR_SEGUNDO;
+
+export const quantizar = (tempo: number) => Math.round(tempo * TICKS_POR_SEGUNDO) / TICKS_POR_SEGUNDO;
+const ticksEntre = (de: number, ate: number) => Math.round((ate - de) * TICKS_POR_SEGUNDO);
 
 export interface NotaEmJogo extends Nota {
   acertada: boolean;
@@ -39,14 +49,21 @@ export interface Partida {
   /** Índice da primeira nota que ainda importa; as anteriores já passaram. */
   primeira: number;
   tempo: number | null;
+  /** Derivado de `pontosDasNotas` e `sustainPonderado`. */
   pontos: number;
+  pontosDasNotas: number;
+  /** Ticks de sustain segurados, cada um vezes o multiplicador da hora. */
+  sustainPonderado: number;
   sequencia: number;
   maiorSequencia: number;
   acertos: number;
   /** Notas que passaram sem ser tocadas. */
   erros: number;
   vida: number;
+  /** De 0 a 1, derivado de `estrelaEmTicks`. */
   estrela: number;
+  /** Quantos ticks de star power ativado a barra ainda rende. */
+  estrelaEmTicks: number;
   estrelaAtiva: boolean;
   derrota: boolean;
   semFalha: boolean;
@@ -66,16 +83,22 @@ export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false
   const tamanhoDasFrases = new Map<number, number>();
   for (const nota of notas) if (nota.frase >= 0) tamanhoDasFrases.set(nota.frase, (tamanhoDasFrases.get(nota.frase) ?? 0) + 1);
   return {
-    notas: notas.map((n) => ({ ...n, acertada: false, perdida: false, segurando: false, solta: false, segurouAte: n.tempo })),
+    notas: notas.map((n) => {
+      const tempo = quantizar(n.tempo);
+      return { ...n, tempo, duracao: quantizar(n.tempo + n.duracao) - tempo, acertada: false, perdida: false, segurando: false, solta: false, segurouAte: tempo };
+    }),
     primeira: 0,
     tempo: null,
     pontos: 0,
+    pontosDasNotas: 0,
+    sustainPonderado: 0,
     sequencia: 0,
     maiorSequencia: 0,
     acertos: 0,
     erros: 0,
     vida: VIDA_INICIAL,
     estrela: 0,
+    estrelaEmTicks: 0,
     estrelaAtiva: false,
     derrota: false,
     semFalha,
@@ -110,7 +133,7 @@ function contarFrase(partida: Partida, nota: NotaEmJogo) {
   partida.acertosPorFrase.set(nota.frase, acertos);
   if (acertos < partida.tamanhoDasFrases.get(nota.frase)!) return;
   const antes = partida.estrela;
-  partida.estrela = Math.min(1, partida.estrela + ESTRELA_POR_FRASE);
+  definirEstrela(partida, Math.min(ESTRELA_CHEIA, partida.estrelaEmTicks + ESTRELA_POR_FRASE * ESTRELA_CHEIA));
   partida.eventos.push({ tipo: "fraseCompleta" });
   if (!partida.estrelaAtiva && antes < ESTRELA_MINIMA && partida.estrela >= ESTRELA_MINIMA) partida.eventos.push({ tipo: "estrelaPronta" });
 }
@@ -123,7 +146,8 @@ export function acertar(partida: Partida, nota: NotaEmJogo, tempo: number) {
   partida.acertos++;
   partida.sequencia++;
   partida.maiorSequencia = Math.max(partida.maiorSequencia, partida.sequencia);
-  partida.pontos += PONTOS_POR_NOTA * multiplicador(partida);
+  partida.pontosDasNotas += PONTOS_POR_NOTA * multiplicador(partida);
+  atualizarPontos(partida);
   partida.vida = Math.min(1, partida.vida + VIDA_POR_ACERTO);
   partida.eventos.push({ tipo: "acerto", nota });
   if (partida.sequencia % AVISO_DE_SEQUENCIA === 0) partida.eventos.push({ tipo: "sequencia", valor: partida.sequencia });
@@ -147,15 +171,27 @@ function errar(partida: Partida, nota: NotaEmJogo) {
   }
 }
 
+function atualizarPontos(partida: Partida) {
+  partida.pontos = partida.pontosDasNotas + (partida.sustainPonderado * PONTOS_POR_SEGUNDO_DE_SUSTAIN) / TICKS_POR_SEGUNDO;
+}
+
+function definirEstrela(partida: Partida, ticks: number) {
+  partida.estrelaEmTicks = ticks;
+  partida.estrela = ticks / ESTRELA_CHEIA;
+}
+
 function pontuarSustain(partida: Partida, nota: NotaEmJogo, tempo: number) {
   const ate = Math.min(tempo, nota.tempo + nota.duracao);
-  if (ate <= nota.segurouAte) return;
-  partida.pontos += (ate - nota.segurouAte) * PONTOS_POR_SEGUNDO_DE_SUSTAIN * multiplicador(partida);
+  const ticks = ticksEntre(nota.segurouAte, ate);
+  if (ticks <= 0) return;
+  partida.sustainPonderado += ticks * multiplicador(partida);
+  atualizarPontos(partida);
   nota.segurouAte = ate;
 }
 
 /** Apertou a tecla da pista no instante `tempo` da música. Devolve se acertou alguma nota. */
 export function tocar(partida: Partida, pista: number, tempo: number) {
+  tempo = trazerAte(partida, tempo);
   if (partida.derrota) return false;
   if (!acertarMaisProxima(partida, pista, tempo)) {
     partida.armadas.delete(pista);
@@ -187,12 +223,12 @@ function acertarMaisProxima(partida: Partida, pista: number, tempo: number) {
  * acertou, a soltura acerta a próxima nota da pista (facilita trechos de notas rápidas).
  */
 export function soltar(partida: Partida, pista: number, tempo: number) {
+  tempo = trazerAte(partida, tempo);
   const armada = partida.armadas.delete(pista);
   let largouCedo = false;
   for (let i = partida.primeira; i < partida.notas.length && partida.notas[i].tempo <= tempo; i++) {
     const nota = partida.notas[i];
     if (!nota.segurando || nota.pista !== pista) continue;
-    pontuarSustain(partida, nota, tempo);
     nota.segurando = false;
     if (tempo < nota.tempo + nota.duracao - TOLERANCIA_DO_SUSTAIN) nota.solta = largouCedo = true;
   }
@@ -200,39 +236,71 @@ export function soltar(partida: Partida, pista: number, tempo: number) {
 }
 
 export function ativarEstrela(partida: Partida) {
-  if (partida.estrelaAtiva || partida.estrela < ESTRELA_MINIMA || partida.derrota) return false;
+  if (partida.estrelaAtiva || partida.estrelaEmTicks < ESTRELA_MINIMA * ESTRELA_CHEIA || partida.derrota) return false;
   partida.estrelaAtiva = true;
   partida.eventos.push({ tipo: "estrelaAtivada" });
   return true;
 }
 
-/** Avança a partida até `tempo`: notas perdidas, sustains e a barra de star power. */
-export function avancar(partida: Partida, tempo: number) {
-  if (partida.derrota) return;
-  const passou = partida.tempo === null ? 0 : Math.max(0, tempo - partida.tempo);
-  partida.tempo = tempo;
+/** Avança a partida até o tempo da entrada; ela nunca volta para antes do que já passou. */
+function trazerAte(partida: Partida, tempo: number) {
+  const ate = Math.max(quantizar(tempo), partida.tempo ?? -Infinity);
+  avancar(partida, ate);
+  return ate;
+}
 
+/** Leva sustains e star power de `partida.tempo` até `tempo`, sem nada mudando no meio. */
+function assentar(partida: Partida, tempo: number) {
+  const ticks = partida.tempo === null ? 0 : ticksEntre(partida.tempo, tempo);
   for (let i = partida.primeira; i < partida.notas.length && partida.notas[i].tempo <= tempo; i++) {
     const nota = partida.notas[i];
-    if (!nota.acertada && !nota.perdida && nota.tempo < tempo - JANELA_DE_ACERTO) errar(partida, nota);
-    if (partida.derrota) return;
-    if (nota.segurando) {
-      pontuarSustain(partida, nota, tempo);
-      if (tempo >= nota.tempo + nota.duracao) nota.segurando = false;
+    if (!nota.segurando) continue;
+    pontuarSustain(partida, nota, tempo);
+    if (tempo >= nota.tempo + nota.duracao) nota.segurando = false;
+  }
+  if (partida.estrelaAtiva && ticks > 0) definirEstrela(partida, Math.max(0, partida.estrelaEmTicks - ticks));
+  partida.tempo = tempo;
+}
+
+/** O próximo acontecimento que muda o multiplicador até `tempo`: uma nota perdida ou o fim do star power. */
+function proximoAcontecimento(partida: Partida, tempo: number) {
+  let perdida: NotaEmJogo | undefined;
+  for (let i = partida.primeira; i < partida.notas.length && partida.notas[i].tempo < tempo; i++) {
+    const nota = partida.notas[i];
+    if (!nota.acertada && !nota.perdida) {
+      perdida = nota;
+      break;
     }
   }
+  const prazo = perdida ? quantizar(perdida.tempo + JANELA_DE_ACERTO) : Infinity;
+  const fimDaEstrela = partida.estrelaAtiva && partida.tempo !== null ? quantizar(partida.tempo + partida.estrelaEmTicks / TICKS_POR_SEGUNDO) : Infinity;
+  if (perdida && prazo < tempo && prazo <= fimDaEstrela) return { tempo: prazo, nota: perdida };
+  if (fimDaEstrela <= tempo) return { tempo: fimDaEstrela };
+  return null;
+}
+
+/**
+ * Avança a partida até `tempo`: notas perdidas, sustains e a barra de star power.
+ * Cada acontecimento é aplicado no seu próprio tempo, então o resultado não depende dos frames.
+ */
+export function avancar(partida: Partida, tempo: number) {
+  if (partida.derrota) return;
+  tempo = Math.max(quantizar(tempo), partida.tempo ?? -Infinity);
+
+  for (let proximo = proximoAcontecimento(partida, tempo); proximo; proximo = proximoAcontecimento(partida, tempo)) {
+    assentar(partida, Math.max(proximo.tempo, partida.tempo ?? proximo.tempo));
+    if (proximo.nota) errar(partida, proximo.nota);
+    else {
+      definirEstrela(partida, 0);
+      partida.estrelaAtiva = false;
+    }
+    if (partida.derrota) return;
+  }
+  assentar(partida, tempo);
 
   while (partida.primeira < partida.notas.length) {
     const nota = partida.notas[partida.primeira];
     if (nota.segurando || nota.tempo + nota.duracao >= tempo - 0.3) break;
     partida.primeira++;
-  }
-
-  if (partida.estrelaAtiva) {
-    partida.estrela -= passou / DURACAO_DA_ESTRELA;
-    if (partida.estrela <= 0) {
-      partida.estrela = 0;
-      partida.estrelaAtiva = false;
-    }
   }
 }

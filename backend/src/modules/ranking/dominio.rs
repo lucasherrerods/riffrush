@@ -52,6 +52,7 @@ pub struct PartidaPublica {
     pub derrota: bool,
     pub fantasma: bool,
     pub jogada_em: DateTime<Utc>,
+    pub tem_replay: bool,
 }
 
 /// Uma música no ranking das mais jogadas, contando as partidas de todo mundo.

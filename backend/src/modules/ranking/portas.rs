@@ -25,4 +25,7 @@ pub trait RepositorioDoRanking: Send + Sync {
 
     /// Uma partida com o nome e o avatar de quem jogou.
     async fn partida(&self, id: Uuid) -> Result<Option<PartidaPublica>, FalhaExterna>;
+
+    /// O replay comprimido da partida, se ela guardou um.
+    async fn replay(&self, id: Uuid) -> Result<Option<Vec<u8>>, FalhaExterna>;
 }

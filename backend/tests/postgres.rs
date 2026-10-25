@@ -83,6 +83,7 @@ async fn partida_soma_xp_e_marca_a_ultima() {
         },
         xp_ganho: 120,
         jogada_em,
+        replay: None,
     };
     assert_eq!(banco.registrar_partida(&partida).await.unwrap().xp_total, 120);
     assert_eq!(banco.registrar_partida(&partida).await.unwrap().xp_total, 240);
@@ -112,6 +113,7 @@ async fn excluir_apaga_a_conta_com_sessoes_e_partidas() {
         },
         xp_ganho: 10,
         jogada_em: agora,
+        replay: None,
     };
     banco.registrar_partida(&partida).await.unwrap();
 
@@ -144,6 +146,7 @@ async fn ranking_pega_a_melhor_partida_terminada_de_cada_jogador() {
         },
         xp_ganho: 0,
         jogada_em: agora + Duration::seconds(segundos),
+        replay: None,
     };
     let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -201,6 +204,7 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
         },
         xp_ganho: 0,
         jogada_em: agora + Duration::seconds(segundos),
+        replay: None,
     };
     for partida in [
         jogar("a", Dificuldade::Expert, 900, false, 0),
@@ -250,6 +254,7 @@ async fn ranking_geral_ordena_por_xp_e_ignora_quem_nao_jogou() {
             },
             xp_ganho: 1_000_000_000,
             jogada_em: Utc::now(),
+            replay: None,
         })
         .await
         .unwrap();
@@ -286,6 +291,7 @@ async fn musicas_mais_jogadas_contam_partidas_e_jogadores_diferentes() {
                 },
                 xp_ganho: 0,
                 jogada_em: agora + Duration::seconds(i as i64),
+                replay: None,
             })
             .await
             .unwrap();
@@ -319,6 +325,7 @@ async fn ranking_geral_da_a_posicao_certa_fora_do_top_e_no_empate() {
         },
         xp_ganho,
         jogada_em: Utc::now(),
+        replay: None,
     };
     let primeiro = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let empatado = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -365,6 +372,7 @@ async fn a_linha_do_ranking_abre_a_partida_com_a_maior_sequencia() {
             },
             xp_ganho: 0,
             jogada_em: Utc::now(),
+            replay: None,
         })
         .await
         .unwrap();
@@ -383,4 +391,44 @@ async fn a_linha_do_ranking_abre_a_partida_com_a_maior_sequencia() {
         (musica.as_str(), Dificuldade::Dificil, Instrumento::Baixo, 500, Some(6))
     );
     assert!(ranking.partida(Uuid::new_v4()).await.unwrap().is_none());
+}
+
+#[tokio::test]
+async fn so_o_recorde_guarda_o_replay() {
+    let Some(banco) = banco().await else { return };
+    let ranking = RankingPostgres(banco.0.clone());
+    let musica = format!("teste:{}", Uuid::new_v4());
+    let jogador = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let agora = Utc::now();
+    let partida = |pontos, replay: u8, segundos| PartidaRegistrada {
+        conta_id: jogador.id,
+        musica_id: musica.clone(),
+        instrumento: Instrumento::Guitarra,
+        pontos,
+        resumo: ResumoDaPartida {
+            dificuldade: Dificuldade::Facil,
+            acertos: 1,
+            total: 1,
+            derrota: false,
+            fantasma: false,
+            maior_sequencia: None,
+        },
+        xp_ganho: 0,
+        jogada_em: agora + Duration::seconds(segundos),
+        replay: Some(vec![1, replay]),
+    };
+    banco.registrar_partida(&partida(500, 5, 0)).await.unwrap();
+    banco.registrar_partida(&partida(900, 9, 1)).await.unwrap();
+    banco.registrar_partida(&partida(700, 7, 2)).await.unwrap();
+
+    let linhas = ranking.linhas(&musica, Dificuldade::Facil, Instrumento::Guitarra, 10, None).await.unwrap();
+    let recorde = linhas[0].partida_id;
+    assert_eq!(ranking.replay(recorde).await.unwrap(), Some(vec![1, 9]));
+    assert!(ranking.partida(recorde).await.unwrap().unwrap().tem_replay);
+    let com_replay: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM partidas WHERE musica_id = $1 AND replay IS NOT NULL")
+        .bind(&musica)
+        .fetch_one(&banco.0)
+        .await
+        .unwrap();
+    assert_eq!(com_replay, 1);
 }

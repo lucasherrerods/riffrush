@@ -56,3 +56,12 @@ describe("partida do ranking", () => {
     expect(String((buscar.mock.calls[0] as unknown[])[0])).toBe("https://api.teste/partidas/p1");
   });
 });
+
+describe("replay da partida", () => {
+  it("devolve os bytes do replay", async () => {
+    const buscar = vi.fn(async () => new Response(Uint8Array.of(1, 2, 3), { status: 200 }));
+    const api = criarApiDoRanking("https://api.teste", buscar as unknown as typeof fetch);
+    expect(await api.replay("p1")).toEqual(Uint8Array.of(1, 2, 3));
+    expect(String((buscar.mock.calls[0] as unknown[])[0])).toBe("https://api.teste/partidas/p1/replay");
+  });
+});

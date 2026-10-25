@@ -34,6 +34,8 @@ export interface PartidaParaAApi {
   derrota: boolean;
   fantasma: boolean;
   maior_sequencia: number;
+  /** As entradas da partida comprimidas, em base64. */
+  replay?: string;
 }
 
 export interface DificuldadeDoPerfil {

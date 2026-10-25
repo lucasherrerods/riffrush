@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/character";
 import { ROTULOS_DOS_TRASTES, ROTULO_DA_ESTRELA, iniciarControle } from "@/modules/gamepad";
-import { TelaDeJogo, type Resultado } from "@/modules/gameplay";
+import { TelaDeJogo, type Resultado, desempacotarReplay, type Replay } from "@/modules/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
 import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, type XpDaPartida } from "@/modules/conta";
@@ -38,6 +38,7 @@ export function App() {
   const [dificuldade, setDificuldade] = useState<Dificuldade>("medio");
   const [instrumento, setInstrumento] = useState<Instrumento>("guitarra");
   const [partidaAberta, setPartidaAberta] = useState<string | null>(null);
+  const [assistindo, setAssistindo] = useState<{ replay: Replay; dificuldade: Dificuldade; instrumento: Instrumento } | null>(null);
   const [resultado, setResultado] = useState<{ resultado: Resultado; recordeNovo: boolean } | null>(null);
   const [xpDaPartida, setXpDaPartida] = useState<XpDaPartida | null>(null);
   const [partida, setPartida] = useState(0);
@@ -64,8 +65,8 @@ export function App() {
   const instrumentoDaSelecao = instrumentoDaMusica(musicas[indice] ?? {}, instrumento);
   const dificuldades = dificuldadesDaMusica(musicas[indice] ?? {}, instrumentoDaSelecao).map((d) => d.id);
   const dificuldadeDaSelecao = dificuldadeMaisProxima(dificuldades, dificuldade) ?? dificuldade;
-  const dificuldadeDaPartida = emRede?.dificuldade ?? dificuldadeDaSelecao;
-  const instrumentoDaPartida = emRede?.instrumento ?? instrumentoDaSelecao;
+  const dificuldadeDaPartida = assistindo?.dificuldade ?? emRede?.dificuldade ?? dificuldadeDaSelecao;
+  const instrumentoDaPartida = assistindo?.instrumento ?? emRede?.instrumento ?? instrumentoDaSelecao;
   const [comControle, setComControle] = useState(() => Array.from(navigator.getGamepads?.() ?? []).some((c) => c));
   const opcoes = useMemo(() => {
     const base = opcoesDaPartida(configuracoes);
@@ -165,18 +166,36 @@ export function App() {
     const pronta = await biblioteca.prepararParaTocar(escolhida);
     if (pronta !== escolhida) setMusicas((atuais) => juntarMusicas(atuais, [pronta]));
     setEmRede(null);
+    setAssistindo(null);
     setPartida((p) => p + 1);
     setTela("jogo");
   };
 
+  const assistirReplay = async (bytes: Uint8Array, dificuldadeDoReplay: Dificuldade, instrumentoDoReplay: Instrumento) => {
+    const replay = await desempacotarReplay(bytes).catch(() => null);
+    if (!replay) return avisar.error("Este replay é de uma versão do jogo que este app não abre.");
+    const pronta = await biblioteca.prepararParaTocar(musicas[indice]);
+    if (pronta !== musicas[indice]) setMusicas((atuais) => juntarMusicas(atuais, [pronta]));
+    setEmRede(null);
+    setAssistindo({ replay, dificuldade: dificuldadeDoReplay, instrumento: instrumentoDoReplay });
+    setPartida((p) => p + 1);
+    setTela("jogo");
+  };
+
+  const sairDoReplay = useCallback(() => {
+    setAssistindo(null);
+    setTela("partidaDoRanking");
+  }, []);
+
   const terminar = useCallback(
-    (r: Resultado) => {
+    (r: Resultado, gerarReplay?: () => Promise<Uint8Array>) => {
       // Com o bot tocando, o recorde não é do jogador.
       setResultado({ resultado: r, recordeNovo: !configuracoes.bot && salvarRecorde(r) });
       setXpDaPartida(null);
       if (!configuracoes.bot) {
-        sessaoDaConta
-          .registrarPartida({ ...r, musicaId: idDoRanking(musicaDaPartida.current) })
+        // Sem o replay a partida ainda vale: só não dá para assistir depois.
+        (gerarReplay ? gerarReplay().catch(() => undefined) : Promise.resolve(undefined))
+          .then((replay) => sessaoDaConta.registrarPartida({ ...r, musicaId: idDoRanking(musicaDaPartida.current) }, replay))
           .then(setXpDaPartida)
           .catch((erro) => avisar.error(`Não deu para registrar o XP: ${erro instanceof Error ? erro.message : String(erro)}`));
       }
@@ -312,7 +331,13 @@ export function App() {
               />
             )}
             {tela === "partidaDoRanking" && escolhida && partidaAberta && (
-              <TelaDePartidaDoRanking partidaId={partidaAberta} titulo={escolhida.titulo} artista={escolhida.artista} aoVoltar={() => setTela("selecao")} />
+              <TelaDePartidaDoRanking
+                partidaId={partidaAberta}
+                titulo={escolhida.titulo}
+                artista={escolhida.artista}
+                aoVoltar={() => setTela("selecao")}
+                aoAssistir={(bytes, partidaDoReplay) => void assistirReplay(bytes, partidaDoReplay.dificuldade, partidaDoReplay.instrumento)}
+              />
             )}
             {tela === "buscaDeMusicas" && (
               <TelaDeBuscaDeMusicas aoVoltar={() => setTela(voltarDaBuscaPara)} aoBaixar={baixarMusica} baixadas={baixadasDoEncore} aoJogar={jogarBaixada} />
@@ -359,16 +384,17 @@ export function App() {
                 instrumento={instrumentoDaPartida}
                 opcoes={opcoes}
                 personagem={personagem}
-                recorde={recordeDe(carregarRecordes(), musica.id, dificuldadeDaPartida, instrumentoDaPartida)?.pontos}
+                recorde={assistindo ? undefined : recordeDe(carregarRecordes(), musica.id, dificuldadeDaPartida, instrumentoDaPartida)?.pontos}
+                replay={assistindo?.replay}
                 rede={
                   emRede && conexao.sala
                     ? { inicio: emRede.inicio, aoAtualizar: enviarEstado, adversarios: <Adversarios sala={conexao.sala} compacto={estreita} /> }
                     : undefined
                 }
                 // Em rede o canto mostra a sala; sozinho, o ranking global da música.
-                placar={contasLigadas && !emRede ? (pontos) => <PlacarAoVivo musicaId={idDoRanking(musica)} dificuldade={dificuldadeDaPartida} instrumento={instrumentoDaPartida} pontos={pontos} /> : undefined}
-                aoSair={() => setTela(emRede ? "multijogador" : "selecao")}
-                aoTerminar={terminar}
+                placar={contasLigadas && !emRede && !assistindo ? (pontos) => <PlacarAoVivo musicaId={idDoRanking(musica)} dificuldade={dificuldadeDaPartida} instrumento={instrumentoDaPartida} pontos={pontos} /> : undefined}
+                aoSair={assistindo ? sairDoReplay : () => setTela(emRede ? "multijogador" : "selecao")}
+                aoTerminar={assistindo ? sairDoReplay : terminar}
               />
             )}
             {tela === "resultado" && resultado && (

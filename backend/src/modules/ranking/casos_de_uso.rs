@@ -49,6 +49,11 @@ impl ServicosDoRanking {
         self.repositorio.partida(id).await?.ok_or(ErroDoRanking::PartidaNaoEncontrada)
     }
 
+    /// O replay da partida, para assistir no app. Também é público.
+    pub async fn replay(&self, id: uuid::Uuid) -> Result<Vec<u8>, ErroDoRanking> {
+        self.repositorio.replay(id).await?.ok_or(ErroDoRanking::PartidaNaoEncontrada)
+    }
+
     /// Sessão vencida ou inválida não esconde o ranking: só fica sem a linha pessoal.
     async fn conta_de(&self, token: Option<&str>) -> Option<uuid::Uuid> {
         match token {
@@ -76,6 +81,7 @@ pub mod fakes {
         pub geral: Mutex<Vec<LinhaDoGeral>>,
         pub musicas: Mutex<Vec<MusicaPopular>>,
         pub partidas: Mutex<Vec<PartidaPublica>>,
+        pub replays: Mutex<Vec<(Uuid, Vec<u8>)>>,
         /// O limite do último pedido, para conferir que o caso de uso pede o top inteiro.
         pub ultimo_limite: Mutex<Option<u32>>,
     }
@@ -130,6 +136,10 @@ pub mod fakes {
 
         async fn partida(&self, id: Uuid) -> Result<Option<PartidaPublica>, FalhaExterna> {
             Ok(self.partidas.lock().unwrap().iter().find(|p| p.id == id).cloned())
+        }
+
+        async fn replay(&self, id: Uuid) -> Result<Option<Vec<u8>>, FalhaExterna> {
+            Ok(self.replays.lock().unwrap().iter().find(|(p, _)| *p == id).map(|(_, r)| r.clone()))
         }
     }
 }

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { AudioContextFalso } from "@/test/audioFalso";
 import type { ApiDoRanking, PartidaDoRanking } from "./api";
 import { TelaDePartidaDoRanking } from "./TelaDePartidaDoRanking";
@@ -17,11 +17,13 @@ const partida: PartidaDoRanking = {
   derrota: false,
   fantasma: false,
   jogada_em: "2026-10-20T10:00:00Z",
+  tem_replay: false,
 };
 
-function abrir(api: Pick<ApiDoRanking, "partida">) {
+function abrir(api: Partial<Pick<ApiDoRanking, "partida" | "replay">>, aoAssistir = vi.fn()) {
   const aoVoltar = vi.fn();
-  render(<TelaDePartidaDoRanking partidaId="p1" titulo="Paint It Black" artista="The Rolling Stones" aoVoltar={aoVoltar} api={api} />);
+  const completa = { partida: vi.fn(async () => partida), replay: vi.fn(async () => Uint8Array.of(1)), ...api };
+  render(<TelaDePartidaDoRanking partidaId="p1" titulo="Paint It Black" artista="The Rolling Stones" aoVoltar={aoVoltar} aoAssistir={aoAssistir} api={completa} />);
   return aoVoltar;
 }
 
@@ -37,6 +39,21 @@ describe("TelaDePartidaDoRanking", () => {
     expect(screen.getByText("512")).toBeInTheDocument();
     expect(screen.getByLabelText("1.099.340 pontos")).toBeInTheDocument();
     expect(screen.queryByText(/Tocar de novo/)).not.toBeInTheDocument();
+  });
+
+  it("com replay, Assistir baixa o replay e entrega para quem vai tocar", async () => {
+    const aoAssistir = vi.fn();
+    const replay = vi.fn(async () => Uint8Array.of(1, 2));
+    abrir({ partida: vi.fn(async () => ({ ...partida, tem_replay: true })), replay }, aoAssistir);
+    (await screen.findByRole("button", { name: /Assistir replay/ })).click();
+    await waitFor(() => expect(aoAssistir).toHaveBeenCalledWith(Uint8Array.of(1, 2), expect.objectContaining({ id: "p1", instrumento: "baixo" })));
+    expect(replay).toHaveBeenCalledWith("p1");
+  });
+
+  it("sem replay, não mostra o botão", async () => {
+    abrir({});
+    await screen.findByText("Partida de Srr 4");
+    expect(screen.queryByRole("button", { name: /Assistir replay/ })).not.toBeInTheDocument();
   });
 
   it("voltar sai da tela", async () => {

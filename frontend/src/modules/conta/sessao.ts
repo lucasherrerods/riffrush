@@ -122,7 +122,7 @@ export class SessaoDaConta {
   }
 
   /** Manda a partida para a API e devolve o XP ganho. Sem conta, não manda nada. */
-  async registrarPartida(resultado: Resultado): Promise<XpDaPartida | null> {
+  async registrarPartida(resultado: Resultado, replay?: Uint8Array): Promise<XpDaPartida | null> {
     const token = this.ambiente.local.getItem(CHAVE_DO_TOKEN);
     if (!token || !this.estadoAtual.conta) return null;
     const xp = await this.ambiente.api.registrarPartida(token, {
@@ -135,6 +135,7 @@ export class SessaoDaConta {
       derrota: resultado.derrota,
       fantasma: !!resultado.fantasma,
       maior_sequencia: resultado.maiorSequencia,
+      ...(replay && { replay: emBase64(replay) }),
     });
     const conta = this.estadoAtual.conta;
     this.mudar({ conta: { ...conta, xp_total: conta.xp_total + xp.xp_ganho, nivel: xp.depois } });
@@ -176,3 +177,9 @@ export const sessaoDaConta = new SessaoDaConta({
   limparBusca: () => history.replaceState(null, "", location.pathname),
   loginPeloNavegador: noDesktop ? (url) => invoke("login_pelo_navegador", { url }) : undefined,
 });
+
+function emBase64(bytes: Uint8Array) {
+  let texto = "";
+  for (const byte of bytes) texto += String.fromCharCode(byte);
+  return btoa(texto);
+}

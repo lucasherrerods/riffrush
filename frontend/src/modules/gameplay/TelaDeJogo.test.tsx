@@ -5,6 +5,7 @@ import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { carregarMusica, type Nota } from "@/modules/songs";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { OPCOES_PADRAO_DA_PARTIDA, TelaDeJogo, type OpcoesDaPartida } from "./TelaDeJogo";
+import { desempacotarReplay, hashDoChart, type Replay } from "./replay";
 import { MUSICAS_DE_TESTE } from "@/test/musicas";
 
 vi.mock("@/modules/songs", async (original) => ({
@@ -19,7 +20,7 @@ function carregarCom(notas: Nota[], duracao = 10) {
   vi.mocked(carregarMusica).mockResolvedValue({ audio: {} as AudioBuffer, notas, batidas: [], duracao });
 }
 
-function abrir(opcoes: Partial<OpcoesDaPartida> = {}, recorde?: number) {
+function abrir(opcoes: Partial<OpcoesDaPartida> = {}, recorde?: number, replay?: Replay) {
   const aoSair = vi.fn();
   const aoTerminar = vi.fn();
   render(
@@ -31,6 +32,7 @@ function abrir(opcoes: Partial<OpcoesDaPartida> = {}, recorde?: number) {
       recorde={recorde}
       aoSair={aoSair}
       aoTerminar={aoTerminar}
+      replay={replay}
     />,
   );
   return { aoSair, aoTerminar, usuario: userEvent.setup() };
@@ -178,6 +180,58 @@ describe("TelaDeJogo", () => {
     irPara(1.2);
     await waitFor(() => expect(aoTerminar).toHaveBeenCalled());
     expect(aoTerminar.mock.calls[0][0]).toMatchObject({ musicaId: "neon-highway", dificuldade: "medio", total: 1, acertos: 0, derrota: false });
+  });
+
+  it("grava as entradas e entrega o replay junto com o resultado", async () => {
+    carregarCom([nota(0.5)], 1);
+    const { aoTerminar, usuario } = abrir();
+    await partidaPronta();
+    irPara(0.5);
+    await usuario.keyboard("a");
+    irPara(1.2);
+    await waitFor(() => expect(aoTerminar).toHaveBeenCalled());
+    const gerarReplay = aoTerminar.mock.calls[0][1] as () => Promise<Uint8Array>;
+    const replay = await desempacotarReplay(await gerarReplay());
+    expect(replay.entradas.map((e) => [e.tipo, e.pista])).toEqual([
+      ["tocar", 0],
+      ["soltar", 0],
+    ]);
+    expect(replay.hashDoChart).toMatch(/^[0-9a-f]{32}$/);
+  });
+
+  it("com o bot a partida não vale para o ranking, então não tem replay", async () => {
+    carregarCom([nota(0.5)], 1);
+    const { aoTerminar } = abrir({ bot: true });
+    await partidaPronta();
+    irPara(1.2);
+    await waitFor(() => expect(aoTerminar).toHaveBeenCalled());
+    expect(aoTerminar.mock.calls[0][1]).toBeUndefined();
+  });
+
+  it("assistindo a um replay, as entradas gravadas tocam e o teclado não", async () => {
+    carregarCom([nota(0.5), nota(0.8, 1)]);
+    const replay: Replay = {
+      semFalha: false,
+      fantasma: false,
+      hashDoChart: await hashDoChart([nota(0.5), nota(0.8, 1)]),
+      entradas: [{ tempo: 0.5, tipo: "tocar", pista: 0 }],
+    };
+    const { usuario } = abrir({}, undefined, replay);
+    await partidaPronta();
+    expect(screen.getByText("REPLAY")).toBeInTheDocument();
+    irPara(0.6);
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
+    irPara(0.8);
+    await usuario.keyboard("s");
+    irPara(0.85);
+    await new Promise((fim) => setTimeout(fim, 50));
+    expect(screen.getByLabelText("Pontos")).toHaveTextContent("50");
+  });
+
+  it("replay gravado em outro chart avisa e não toca", async () => {
+    carregarCom([nota(0.5)]);
+    abrir({}, undefined, { semFalha: false, fantasma: false, hashDoChart: "0".repeat(32), entradas: [] });
+    expect(await screen.findByText(/outra versão do chart/)).toBeInTheDocument();
   });
 
   it("mostra a vaia quando a vida acaba", async () => {

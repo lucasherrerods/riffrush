@@ -140,6 +140,7 @@ struct LinhaDaPartida {
     derrota: bool,
     fantasma: bool,
     jogada_em: DateTime<Utc>,
+    tem_replay: bool,
 }
 
 impl LinhaDaPartida {
@@ -159,6 +160,7 @@ impl LinhaDaPartida {
             derrota: self.derrota,
             fantasma: self.fantasma,
             jogada_em: self.jogada_em,
+            tem_replay: self.tem_replay,
         })
     }
 }
@@ -218,7 +220,7 @@ impl RepositorioDoRanking for RankingPostgres {
     async fn partida(&self, id: Uuid) -> Result<Option<PartidaPublica>, FalhaExterna> {
         let linha = sqlx::query_as::<_, LinhaDaPartida>(
             "SELECT p.id, c.nome, c.avatar, p.musica_id, p.dificuldade, p.instrumento, p.pontos, p.acertos, p.total,
-                    p.maior_sequencia, p.derrota, p.fantasma, p.jogada_em
+                    p.maior_sequencia, p.derrota, p.fantasma, p.jogada_em, p.replay IS NOT NULL AS tem_replay
              FROM partidas p JOIN contas c ON c.id = p.conta_id
              WHERE p.id = $1",
         )
@@ -227,5 +229,14 @@ impl RepositorioDoRanking for RankingPostgres {
         .await
         .map_err(|erro| FalhaExterna(format!("banco: {erro}")))?;
         linha.map(LinhaDaPartida::em_dominio).transpose()
+    }
+
+    async fn replay(&self, id: Uuid) -> Result<Option<Vec<u8>>, FalhaExterna> {
+        sqlx::query_scalar::<_, Option<Vec<u8>>>("SELECT replay FROM partidas WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&self.0)
+            .await
+            .map(Option::flatten)
+            .map_err(|erro| FalhaExterna(format!("banco: {erro}")))
     }
 }

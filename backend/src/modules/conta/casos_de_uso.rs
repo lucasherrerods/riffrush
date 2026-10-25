@@ -6,7 +6,7 @@ use super::dominio::{hash_do_token, pode_registrar, Conta, DURACAO_DA_SESSAO, TA
 use super::portas::{
     ErroDeLogin, FalhaExterna, Gerador, PartidaRegistrada, PedidoDeLogin, ProvedorDeLogin, Relogio, RepositorioDeContas, RepositorioDeSessoes,
 };
-use crate::modules::progresso::{nivel_do_xp, xp_da_partida, Instrumento, Nivel, PartidaInvalida, ResumoDaPartida};
+use crate::modules::progresso::{nivel_do_xp, validar_replay, xp_da_partida, Instrumento, Nivel, PartidaInvalida, ResumoDaPartida};
 
 /// As portas que os casos de uso da conta usam. O main liga os adaptadores reais; os testes, fakes.
 #[derive(Clone)]
@@ -53,6 +53,8 @@ pub struct PartidaEnviada {
     pub instrumento: Instrumento,
     pub pontos: u64,
     pub resumo: ResumoDaPartida,
+    /// As entradas da partida, comprimidas pelo app.
+    pub replay: Option<Vec<u8>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -91,6 +93,14 @@ impl ServicosDaConta {
         if !pode_registrar(self.contas.ultima_partida(conta.id).await?, agora) {
             return Err(ErroDaConta::RapidoDemais);
         }
+        // Derrota e fantasma não entram no ranking: o replay delas não teria quem assistir.
+        let replay = match partida.replay {
+            Some(bytes) if !resumo.derrota && !resumo.fantasma => {
+                validar_replay(&bytes)?;
+                Some(bytes)
+            }
+            _ => None,
+        };
         let xp_ganho = xp_da_partida(resumo);
         let atualizada = self
             .contas
@@ -102,6 +112,7 @@ impl ServicosDaConta {
                 resumo,
                 xp_ganho,
                 jogada_em: agora,
+                replay,
             })
             .await?;
         Ok(XpDaPartida {
@@ -143,6 +154,8 @@ pub mod fakes {
         pub contas: Mutex<HashMap<Uuid, (String, Conta)>>,
         pub sessoes: Mutex<HashMap<String, (Uuid, DateTime<Utc>)>>,
         pub partidas: Mutex<Vec<(Uuid, DateTime<Utc>, u64)>>,
+        /// O replay da última partida registrada.
+        pub ultimo_replay: Mutex<Option<Vec<u8>>>,
     }
 
     #[async_trait]
@@ -187,6 +200,7 @@ pub mod fakes {
         }
         async fn registrar_partida(&self, partida: &PartidaRegistrada) -> Result<Conta, FalhaExterna> {
             self.partidas.lock().unwrap().push((partida.conta_id, partida.jogada_em, partida.xp_ganho));
+            *self.ultimo_replay.lock().unwrap() = partida.replay.clone();
             let mut contas = self.contas.lock().unwrap();
             let (_, conta) = contas.get_mut(&partida.conta_id).ok_or_else(|| FalhaExterna("sem conta".into()))?;
             conta.xp_total += partida.xp_ganho;
@@ -314,6 +328,7 @@ mod tests {
                 fantasma: false,
                 maior_sequencia: None,
             },
+            replay: None,
         }
     }
 
@@ -426,5 +441,40 @@ mod tests {
     async fn excluir_sem_sessao_e_recusado() {
         let (servicos, _, _) = servicos();
         assert!(matches!(servicos.excluir_conta("inventado").await, Err(ErroDaConta::SessaoInvalida)));
+    }
+
+    #[tokio::test]
+    async fn guarda_o_replay_so_da_partida_que_vale_para_o_ranking() {
+        let (servicos, banco, relogio) = servicos();
+        let entrada = servicos.entrar_com_google(&pedido("bom")).await.unwrap();
+        let com_replay = |derrota| PartidaEnviada {
+            replay: Some(vec![1, 2, 3]),
+            resumo: ResumoDaPartida {
+                derrota,
+                ..partida(1, 1).resumo
+            },
+            ..partida(1, 1)
+        };
+
+        servicos.registrar_partida(&entrada.token, com_replay(false)).await.unwrap();
+        assert_eq!(*banco.ultimo_replay.lock().unwrap(), Some(vec![1, 2, 3]));
+
+        relogio.andar(Duration::seconds(60));
+        servicos.registrar_partida(&entrada.token, com_replay(true)).await.unwrap();
+        assert_eq!(*banco.ultimo_replay.lock().unwrap(), None);
+    }
+
+    #[tokio::test]
+    async fn replay_de_versao_desconhecida_e_recusado() {
+        let (servicos, _, _) = servicos();
+        let entrada = servicos.entrar_com_google(&pedido("bom")).await.unwrap();
+        let estranho = PartidaEnviada {
+            replay: Some(vec![42, 0]),
+            ..partida(1, 1)
+        };
+        assert!(matches!(
+            servicos.registrar_partida(&entrada.token, estranho).await,
+            Err(ErroDaConta::PartidaInvalida(PartidaInvalida::ReplayInvalido))
+        ));
     }
 }

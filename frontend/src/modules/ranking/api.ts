@@ -30,6 +30,8 @@ export interface PartidaDoRanking {
   derrota: boolean;
   fantasma: boolean;
   jogada_em: string;
+  /** Se dá para assistir ao replay. */
+  tem_replay: boolean;
 }
 
 /** Um jogador no ranking geral, ordenado pelo XP total. */
@@ -86,6 +88,7 @@ export function criarApiDoRanking(base: string, buscar?: typeof fetch) {
       chamar<unknown>("GET", "/ranking/geral", { token, sinal }).then(conferirRanking<PosicaoNoGeral>),
     partida: (id: string, { sinal }: { sinal?: AbortSignal } = {}) =>
       chamar<PartidaDoRanking>("GET", `/partidas/${encodeURIComponent(id)}`, { sinal }),
+    replay: (id: string) => chamar<Uint8Array>("GET", `/partidas/${encodeURIComponent(id)}/replay`, { bytes: true }),
     musicas: ({ sinal }: { sinal?: AbortSignal } = {}) => chamar<unknown>("GET", "/ranking/musicas", { sinal }).then(conferirMusicas),
   };
 }

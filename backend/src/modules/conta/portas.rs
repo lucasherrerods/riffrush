@@ -18,6 +18,8 @@ pub struct PartidaRegistrada {
     pub resumo: ResumoDaPartida,
     pub xp_ganho: u64,
     pub jogada_em: DateTime<Utc>,
+    /// Só vem em partida que vale para o ranking.
+    pub replay: Option<Vec<u8>>,
 }
 
 #[async_trait]

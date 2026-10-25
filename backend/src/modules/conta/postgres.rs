@@ -74,8 +74,8 @@ impl RepositorioDeContas for ContasPostgres {
         let mut transacao = self.0.begin().await.map_err(falha)?;
         let resumo = &partida.resumo;
         sqlx::query(
-            "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, instrumento, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em, maior_sequencia)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
+            "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, instrumento, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em, maior_sequencia, replay)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
         )
         .bind(Uuid::new_v4())
         .bind(partida.conta_id)
@@ -90,9 +90,27 @@ impl RepositorioDeContas for ContasPostgres {
         .bind(partida.xp_ganho as i64)
         .bind(partida.jogada_em)
         .bind(resumo.maior_sequencia.map(|s| s as i32))
+        .bind(partida.replay.as_deref())
         .execute(&mut *transacao)
         .await
         .map_err(falha)?;
+        if partida.replay.is_some() {
+            // Só o recorde guarda replay: as outras partidas desta música perdem o delas.
+            sqlx::query(
+                "UPDATE partidas SET replay = NULL
+                 WHERE conta_id = $1 AND musica_id = $2 AND dificuldade = $3 AND instrumento = $4 AND replay IS NOT NULL
+                   AND id <> (SELECT id FROM partidas
+                              WHERE conta_id = $1 AND musica_id = $2 AND dificuldade = $3 AND instrumento = $4 AND NOT derrota AND NOT fantasma
+                              ORDER BY pontos DESC, jogada_em ASC LIMIT 1)",
+            )
+            .bind(partida.conta_id)
+            .bind(&partida.musica_id)
+            .bind(resumo.dificuldade.como_texto())
+            .bind(partida.instrumento.como_texto())
+            .execute(&mut *transacao)
+            .await
+            .map_err(falha)?;
+        }
         let conta = sqlx::query_as::<_, LinhaDaConta>("UPDATE contas SET xp_total = xp_total + $2 WHERE id = $1 RETURNING id, nome, avatar, email, xp_total")
             .bind(partida.conta_id)
             .bind(partida.xp_ganho as i64)
