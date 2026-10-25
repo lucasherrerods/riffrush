@@ -1,4 +1,5 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { OPCOES_PADRAO_DA_PARTIDA, hashDoChart } from "@/modules/gameplay";
 import { carregarMusica, idDoRanking, type Nota } from "@/modules/songs";
@@ -24,22 +25,27 @@ const ana: PessoaOnline = {
   estado: { tipo: "tocando", musica: idDoRanking(musica), titulo: musica.titulo, artista: musica.artista, dificuldade: "medio", instrumento: "guitarra", transmitindo: true },
 };
 
-function abrir() {
+function abrir({ musicas = MUSICAS_DE_TESTE, aoBaixar = vi.fn(async () => {}) } = {}) {
   const aoSair = vi.fn();
-  render(
+  const elemento = (lista: typeof musicas) => (
     <TelaDeEspectador
       pessoa={ana}
-      musicas={MUSICAS_DE_TESTE}
+      musicas={lista}
       opcoes={OPCOES_PADRAO_DA_PARTIDA}
       personagem={PERSONAGEM_PADRAO}
       aoSair={aoSair}
       aoBuscarMusicas={vi.fn()}
+      aoBaixar={aoBaixar}
       urlDoRelay="wss://relay"
-      criarSocket={(url) => new WebSocketFalso(url)}
-    />,
+      criarSocket={criarSocket}
+    />
   );
-  return { aoSair, socket: WebSocketFalso.ultimo! };
+  const { rerender } = render(elemento(musicas));
+  return { aoSair, aoBaixar, socket: WebSocketFalso.ultimo!, trocarMusicas: (lista: typeof musicas) => rerender(elemento(lista)) };
 }
+
+// Fora do componente: a mesma função entre renderizações não reabre a conexão.
+const criarSocket = (url: string) => new WebSocketFalso(url);
 
 beforeEach(() => vi.mocked(carregarMusica).mockResolvedValue({ audio: {} as AudioBuffer, notas, batidas: [], duracao: 10 }));
 
@@ -75,6 +81,51 @@ describe("TelaDeEspectador", () => {
     act(() => socket.entregar({ tipo: "inicio", partida: { musica: idDoRanking(musica), dificuldade: "medio", instrumento: "guitarra", hashDoChart: "a".repeat(32), semFalha: false } }));
     act(() => socket.entregar({ tipo: "pausa", pausado: true }));
     expect(screen.getByText("Ana pausou a partida.")).toBeInTheDocument();
+  });
+});
+
+describe("baixar e assistir", () => {
+  const md5 = "0123456789abcdef0123456789abcdef";
+  const url = `https://files.enchor.us/${md5}.sng`;
+  const partidaDoEncore = async (urlDoEncore: string) => ({
+    musica: `encore:${md5}`,
+    dificuldade: "medio",
+    instrumento: "guitarra",
+    hashDoChart: await hashDoChart(notas),
+    semFalha: false,
+    urlDoEncore,
+  });
+
+  it("com o link do chart, baixa com um clique e entra ao vivo quando a música chega", async () => {
+    const { socket, aoBaixar, trocarMusicas } = abrir();
+    const partida = await partidaDoEncore(url);
+    act(() => socket.entregar({ tipo: "inicio", partida }));
+    act(() => socket.entregar({ tipo: "lote", ate: 3, entradas: [[500, 0]] }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Baixar e assistir" }));
+    expect(aoBaixar).toHaveBeenCalledWith(url, md5);
+
+    trocarMusicas([...MUSICAS_DE_TESTE, { ...musica, id: "baixada", md5DoEncore: md5 }]);
+    act(() => socket.entregar({ tipo: "lote", ate: 4, entradas: [] }));
+    expect(await screen.findByText("AO VIVO")).toBeInTheDocument();
+  });
+
+  it("link que não é do Encore ou é de outra música não vira botão", async () => {
+    for (const ruim of ["https://evil.com/x.sng", `https://files.enchor.us/${"f".repeat(32)}.sng`]) {
+      const { socket } = abrir();
+      const partida = await partidaDoEncore(ruim);
+      act(() => socket.entregar({ tipo: "inicio", partida }));
+      expect(screen.queryByRole("button", { name: "Baixar e assistir" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Buscar músicas/ })).toBeInTheDocument();
+      cleanup();
+    }
+  });
+
+  it("se o download falhar, mostra o motivo", async () => {
+    const { socket } = abrir({ aoBaixar: vi.fn(async () => Promise.reject(new Error("Esse chart não está mais no Encore."))) });
+    const partida = await partidaDoEncore(url);
+    act(() => socket.entregar({ tipo: "inicio", partida }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Baixar e assistir" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Esse chart não está mais no Encore.");
   });
 });
 

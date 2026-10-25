@@ -1,4 +1,4 @@
-import { lerEstado, lerMensagemDaTransmissao, verificarFicha } from "./presenca";
+import { lerEstado, lerMensagemDaTransmissao, linkDoChartConfere, verificarFicha } from "./presenca";
 
 // A mesma ficha do teste da API (backend/src/modules/presenca/dominio.rs): os dois lados precisam concordar.
 const FICHA =
@@ -49,5 +49,42 @@ describe("lerMensagemDaTransmissao", () => {
     expect(lerMensagemDaTransmissao('{"tipo":"lote","ate":1,"entradas":[["x",0]]}')).toBeNull();
     expect(lerMensagemDaTransmissao(`{"tipo":"lote","ate":1,"entradas":[${"[1,0],".repeat(2000)}[1,0]]}`)).toBeNull();
     expect(lerMensagemDaTransmissao("{quebrado")).toBeNull();
+  });
+});
+
+describe("link do chart", () => {
+  const md5 = "0123456789abcdef0123456789abcdef";
+  const musica = `encore:${md5}`;
+
+  it("aceita os caminhos de chart do Encore da mesma música", () => {
+    expect(linkDoChartConfere(`https://files.enchor.us/${md5}.sng`, musica)).toBe(true);
+    expect(linkDoChartConfere(`https://files.enchor.us/charts/v2/${md5}_novideo.sng`, musica)).toBe(true);
+  });
+
+  it("recusa outro site, outro caminho, outra música e truques na URL", () => {
+    const outra = "f".repeat(32);
+    for (const url of [
+      `https://evil.com/${md5}.sng`,
+      `http://files.enchor.us/${md5}.sng`,
+      `https://files.enchor.us.evil.com/${md5}.sng`,
+      `https://files.enchor.us@evil.com/${md5}.sng`,
+      `https://files.enchor.us/../${md5}.sng`,
+      `https://files.enchor.us/${md5}.sng?x=1`,
+      `https://files.enchor.us/${md5}.exe`,
+      `https://files.enchor.us/${outra}.sng`,
+      `javascript:alert(1)`,
+    ]) {
+      expect(linkDoChartConfere(url, musica), url).toBe(false);
+    }
+    expect(linkDoChartConfere(`https://files.enchor.us/${md5}.sng`, "embutida:neon")).toBe(false);
+  });
+
+  it("o início leva o link só quando ele confere, sem derrubar a mensagem", () => {
+    const inicio = (urlDoEncore: string) =>
+      lerMensagemDaTransmissao(JSON.stringify({ tipo: "inicio", partida: { musica, dificuldade: "expert", instrumento: "guitarra", hashDoChart: "a".repeat(32), urlDoEncore } }));
+    expect(inicio(`https://files.enchor.us/${md5}.sng`)).toMatchObject({ partida: { urlDoEncore: `https://files.enchor.us/${md5}.sng` } });
+    const ruim = inicio("https://evil.com/x.sng");
+    expect(ruim?.tipo).toBe("inicio");
+    expect(ruim?.tipo === "inicio" && ruim.partida.urlDoEncore).toBeUndefined();
   });
 });

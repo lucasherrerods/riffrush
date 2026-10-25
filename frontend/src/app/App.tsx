@@ -11,7 +11,7 @@ import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
 import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { TelaDeEspectador, TelaOnline, presenca, presencaDisponivel, transmitirPartida, usePresenca, type PessoaOnline } from "@/modules/presenca";
-import { TelaDeBuscaDeMusicas, baixarDoEncore, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
+import { TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
@@ -173,7 +173,13 @@ export function App() {
   const transmissao = useMemo(
     () =>
       transmitindo && conta
-        ? transmitirPartida({ contaId: conta.id, musica: idDoRanking(musica), dificuldade: dificuldadeDaPartida, instrumento: instrumentoDaPartida })
+        ? transmitirPartida({
+            contaId: conta.id,
+            musica: idDoRanking(musica),
+            dificuldade: dificuldadeDaPartida,
+            instrumento: instrumentoDaPartida,
+            urlDoEncore: musica.urlDoEncore,
+          })
         : undefined,
     // A partida (contador) entra para uma partida nova ganhar uma transmissão nova.
     [transmitindo, conta?.id, partida],
@@ -260,6 +266,14 @@ export function App() {
     if (!arquivo) return false;
     await importar([arquivo], { md5DoEncore: resultado.md5, urlDoEncore: montarUrlDoChart(resultado, { comVideo: opcoes.comVideo }) });
     return true;
+  };
+
+  /** Quem assiste baixa o chart que a transmissão mandou. Arquivo grande demais (com vídeo) fica para a busca, onde dá para escolher. */
+  const baixarParaAssistir = async (url: string, md5: string) => {
+    const nome = espectando?.estado.tipo === "tocando" ? `${espectando.estado.artista} - ${espectando.estado.titulo}.sng` : `${md5}.sng`;
+    const arquivo = await baixarSng(url, nome, { confirmarTamanho: async () => false });
+    if (!arquivo) throw new Error("Esse chart é grande demais para baixar aqui. Baixe pela busca de músicas.");
+    await importar([arquivo], { md5DoEncore: md5, urlDoEncore: url });
   };
 
   const jogarBaixada = (md5: string) => {
@@ -406,6 +420,7 @@ export function App() {
                   setVoltarDaBuscaPara("online");
                   setTela("buscaDeMusicas");
                 }}
+                aoBaixar={baixarParaAssistir}
               />
             )}
             {tela === "leaderboard" && <TelaDeLeaderboard aoVoltar={() => setTela("menu")} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />}
