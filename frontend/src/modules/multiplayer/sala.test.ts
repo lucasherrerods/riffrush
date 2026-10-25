@@ -46,6 +46,19 @@ describe("sala", () => {
     expect(sala.lerConexao().sala?.meuId).toBe(2);
   });
 
+  it("manda a mensagem do chat, e recusa quando passa do limite", async () => {
+    const sala = await importar();
+    sala.entrarNaSala("http://h:7777", PERSONAGEM_PADRAO);
+    socket().abrir();
+    socket().receber(0, { tipo: "bemVindo", id: 2 });
+    socket().enviadas.length = 0;
+    expect(sala.enviarChat("oi")).toBe(true);
+    expect(socket().enviadas).toEqual([{ tipo: "chat", texto: "oi" }]);
+    for (let i = 0; i < 4; i++) sala.enviarChat("de novo");
+    expect(sala.enviarChat("demais")).toBe(false);
+    expect(socket().enviadas).toHaveLength(5);
+  });
+
   it("avisa quando não consegue conectar", async () => {
     const sala = await importar();
     sala.entrarNaSala("http://h:7777", PERSONAGEM_PADRAO);

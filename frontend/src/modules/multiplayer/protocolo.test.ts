@@ -245,3 +245,44 @@ describe("nível no lobby", () => {
     }
   });
 });
+
+describe("chat da sala", () => {
+  /** Host (1) com o convidado Vitor (2) na sala. */
+  function salaComDois(): EstadoDaSala {
+    return reduzir(salaDoHost(), 2, { tipo: "oi", personagem: vitor }, 0).estado;
+  }
+
+  it("guarda a mensagem com o nome de quem mandou, carimbado pelo servidor", () => {
+    const sala = reduzir(salaComDois(), 2, { tipo: "chat", texto: "  bora!  " }, 0).estado;
+    expect(sala.chat).toEqual([{ n: 1, de: 2, autor: "Vitor", texto: "bora!" }]);
+  });
+
+  it("ignora quem não está na sala, como um expulso que continua conectado", () => {
+    const sala = expulsarJogador(salaComDois(), 2).estado;
+    expect(reduzir(sala, 2, { tipo: "chat", texto: "oi" }, 0).estado.chat).toEqual([]);
+    expect(reduzir(salaComDois(), 3, { tipo: "chat", texto: "oi" }, 0).estado.chat).toEqual([]);
+  });
+
+  it("ignora texto vazio ou que não é texto", () => {
+    expect(reduzir(salaComDois(), 2, { tipo: "chat", texto: "   " }, 0).estado.chat).toEqual([]);
+    expect(reduzir(salaComDois(), 2, { tipo: "chat", texto: 5 as unknown as string }, 0).estado.chat).toEqual([]);
+  });
+
+  it("corta texto grande demais de um cliente modificado", () => {
+    const sala = reduzir(salaComDois(), 2, { tipo: "chat", texto: "a".repeat(5000) }, 0).estado;
+    expect(sala.chat[0].texto).toHaveLength(200);
+  });
+
+  it("quem manda rápido demais tem o excesso ignorado por todos", () => {
+    let sala = salaComDois();
+    for (let i = 0; i < 20; i++) sala = reduzir(sala, 2, { tipo: "chat", texto: `msg ${i}` }, 1000).estado;
+    expect(sala.chat).toHaveLength(5);
+  });
+
+  it("guarda só as últimas mensagens", () => {
+    let sala = salaComDois();
+    for (let i = 0; i < 80; i++) sala = reduzir(sala, 2, { tipo: "chat", texto: `msg ${i}` }, i * 1000).estado;
+    expect(sala.chat).toHaveLength(50);
+    expect(sala.chat.at(-1)?.texto).toBe("msg 79");
+  });
+});

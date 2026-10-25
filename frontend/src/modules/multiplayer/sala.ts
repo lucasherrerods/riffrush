@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Personagem } from "@/modules/character";
+import { BALDE_CHEIO, gastarDoBalde, limparTexto } from "@/modules/chat";
 import type { EstadoDoJogador } from "@/modules/gameplay";
 import { dificuldadeMaisProxima, dificuldadesDaMusica, instrumentoDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { paraRede } from "./musicaNaRede";
@@ -38,6 +39,8 @@ export interface Conexao {
 let conexao: Conexao = { sala: null, endereco: "" };
 let socket: WebSocket | null = null;
 let ultimoEstado = -Infinity;
+/** O mesmo limite que os outros contam ao receber: assim a mensagem é recusada aqui, em vez de sumir lá. */
+let baldeDoChat = BALDE_CHEIO;
 const ouvintes = new Set<() => void>();
 
 function atualizar(parcial: Partial<Conexao>) {
@@ -186,6 +189,17 @@ export function enviarEstado(estado: EstadoDoJogador) {
     ultimoEstado = agora;
   }
   enviar([{ tipo: "estado", ...estado }]);
+}
+
+/** Manda uma mensagem no chat da sala. Devolve false quando passou do limite. */
+export function enviarChat(texto: string) {
+  const limpo = limparTexto(texto);
+  if (!conexao.sala || !limpo) return false;
+  const limite = gastarDoBalde(baldeDoChat, performance.now());
+  baldeDoChat = limite.balde;
+  if (!limite.passa) return false;
+  enviar([{ tipo: "chat", texto: limpo }]);
+  return true;
 }
 
 export function voltarParaASala() {
