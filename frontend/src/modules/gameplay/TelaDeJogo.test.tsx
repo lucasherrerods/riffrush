@@ -5,7 +5,7 @@ import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { carregarMusica, type Nota } from "@/modules/songs";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { OPCOES_PADRAO_DA_PARTIDA, TelaDeJogo, type OpcoesDaPartida } from "./TelaDeJogo";
-import { desempacotarReplay, hashDoChart, type Replay } from "./replay";
+import { desempacotarReplay, hashDoChart, type EventoDaTransmissao, type Replay } from "./replay";
 import { MUSICAS_DE_TESTE } from "@/test/musicas";
 
 vi.mock("@/modules/songs", async (original) => ({
@@ -20,7 +20,7 @@ function carregarCom(notas: Nota[], duracao = 10) {
   vi.mocked(carregarMusica).mockResolvedValue({ audio: {} as AudioBuffer, notas, batidas: [], duracao });
 }
 
-function abrir(opcoes: Partial<OpcoesDaPartida> = {}, recorde?: number, replay?: Replay) {
+function abrir(opcoes: Partial<OpcoesDaPartida> = {}, recorde?: number, replay?: Replay, transmissao?: (evento: EventoDaTransmissao) => void) {
   const aoSair = vi.fn();
   const aoTerminar = vi.fn();
   render(
@@ -33,6 +33,7 @@ function abrir(opcoes: Partial<OpcoesDaPartida> = {}, recorde?: number, replay?:
       aoSair={aoSair}
       aoTerminar={aoTerminar}
       replay={replay}
+      transmissao={transmissao}
     />,
   );
   return { aoSair, aoTerminar, usuario: userEvent.setup() };
@@ -232,6 +233,35 @@ describe("TelaDeJogo", () => {
     carregarCom([nota(0.5)]);
     abrir({}, undefined, { semFalha: false, fantasma: false, hashDoChart: "0".repeat(32), entradas: [] });
     expect(await screen.findByText(/outra versão do chart/)).toBeInTheDocument();
+  });
+
+  it("transmite o início, as entradas em lotes e o fim da partida", async () => {
+    carregarCom([nota(0.5)], 1);
+    const transmissao = vi.fn();
+    const { usuario } = abrir({}, undefined, undefined, transmissao);
+    await partidaPronta();
+    await waitFor(() => expect(transmissao).toHaveBeenCalledWith(expect.objectContaining({ tipo: "inicio", semFalha: false })));
+    irPara(0.5);
+    await usuario.keyboard("a");
+    irPara(1.2);
+    await waitFor(() => expect(transmissao).toHaveBeenCalledWith({ tipo: "fim" }));
+    const entradas = transmissao.mock.calls.filter(([e]) => e.tipo === "lote").flatMap(([e]) => e.entradas);
+    expect(entradas.map((e: { tipo: string }) => e.tipo)).toEqual(["tocar", "soltar"]);
+  });
+
+  it("ao vivo, quem assiste não passa do que já chegou", async () => {
+    carregarCom([nota(0.5)]);
+    const replay: Replay = { semFalha: false, fantasma: false, hashDoChart: await hashDoChart([nota(0.5)]), entradas: [], ateAgora: 0.2 };
+    abrir({}, undefined, replay);
+    await partidaPronta();
+    irPara(1);
+    await new Promise((fim) => setTimeout(fim, 50));
+    // Sem o limite a nota já teria passado e contado como erro.
+    expect(screen.getByLabelText("Sequência")).toHaveTextContent("0");
+    expect(screen.queryByText(/errou/i)).not.toBeInTheDocument();
+    replay.entradas.push({ tempo: 0.5, tipo: "tocar", pista: 0 });
+    replay.ateAgora = 1;
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
   });
 
   it("mostra a vaia quando a vida acaba", async () => {

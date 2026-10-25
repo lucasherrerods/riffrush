@@ -1,0 +1,74 @@
+import { codigoDaEntrada, emTicks, entradaDoCodigo, type EntradaDoReplay } from "@/modules/gameplay";
+import type { Dificuldade, Instrumento } from "@/modules/songs";
+
+// O mesmo contrato do relay (backend/relay/src/presenca.ts), que é publicado à parte.
+
+/** Onde a pessoa está. A música vai com o id do ranking, para quem assiste achar a mesma. */
+export type EstadoOnline =
+  | { tipo: "menu" }
+  | { tipo: "tocando"; musica: string; titulo: string; artista: string; dificuldade: Dificuldade; instrumento: Instrumento; transmitindo: boolean };
+
+export interface PessoaOnline {
+  id: string;
+  nome: string;
+  avatar: string | null;
+  estado: EstadoOnline;
+}
+
+type MensagemDaPresenca = { tipo: "lista"; pessoas: PessoaOnline[] } | { tipo: "pessoa"; pessoa: PessoaOnline } | { tipo: "saiu"; id: string };
+
+/** A partida que quem assiste precisa montar igual. */
+export interface PartidaTransmitida {
+  musica: string;
+  dificuldade: Dificuldade;
+  instrumento: Instrumento;
+  hashDoChart: string;
+  semFalha: boolean;
+}
+
+export type MensagemDaTransmissao =
+  | { tipo: "inicio"; partida: PartidaTransmitida }
+  | { tipo: "lote"; ate: number; entradas: [number, number][] }
+  | { tipo: "pausa"; pausado: boolean }
+  | { tipo: "fim" }
+  | { tipo: "semPartida" };
+
+const semBarraNoFim = (url: string) => url.replace(/\/+$/, "");
+
+export const urlDaPresenca = (relay: string, ficha: string) => `${semBarraNoFim(relay)}/presenca?ficha=${encodeURIComponent(ficha)}`;
+
+/** Com a ficha, quem joga transmite; sem ela, quem assiste só recebe. */
+export const urlDaTransmissao = (relay: string, contaId: string, ficha?: string) =>
+  `${semBarraNoFim(relay)}/transmissao/${contaId}${ficha ? `?ficha=${encodeURIComponent(ficha)}` : ""}`;
+
+/** Aplica uma mensagem do relay na lista; mensagem estranha não mexe em nada. */
+export function aplicarMensagem(pessoas: PessoaOnline[], bruta: string): PessoaOnline[] {
+  let msg: MensagemDaPresenca;
+  try {
+    msg = JSON.parse(bruta);
+  } catch {
+    return pessoas;
+  }
+  if (msg?.tipo === "lista" && Array.isArray(msg.pessoas)) return msg.pessoas;
+  if (msg?.tipo === "pessoa" && msg.pessoa?.id) return [...pessoas.filter((p) => p.id !== msg.pessoa.id), msg.pessoa];
+  if (msg?.tipo === "saiu") return pessoas.filter((p) => p.id !== msg.id);
+  return pessoas;
+}
+
+/** Quem dá para assistir agora vem primeiro, depois quem está tocando, e por fim quem está no menu; dentro de cada grupo, por nome. */
+export function ordenarPessoas(pessoas: PessoaOnline[], euId: string | null): PessoaOnline[] {
+  const peso = (p: PessoaOnline) => (p.estado.tipo === "tocando" ? (p.estado.transmitindo ? 0 : 1) : 2);
+  return pessoas.filter((p) => p.id !== euId).sort((a, b) => peso(a) - peso(b) || a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
+export const entradasParaOLote = (entradas: EntradaDoReplay[]): [number, number][] => entradas.map((e) => [emTicks(e.tempo), codigoDaEntrada(e)]);
+export const entradasDoLote = (lote: [number, number][]): EntradaDoReplay[] => lote.map(([ticks, codigo]) => entradaDoCodigo(ticks, codigo));
+
+export function lerMensagemDaTransmissao(bruta: string): MensagemDaTransmissao | null {
+  try {
+    const msg = JSON.parse(bruta);
+    return typeof msg?.tipo === "string" ? msg : null;
+  } catch {
+    return null;
+  }
+}

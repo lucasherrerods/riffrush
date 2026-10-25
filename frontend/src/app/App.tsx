@@ -5,11 +5,12 @@ import { ROTULOS_DOS_TRASTES, ROTULO_DA_ESTRELA, iniciarControle } from "@/modul
 import { TelaDeJogo, type Resultado, desempacotarReplay, type Replay } from "@/modules/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
-import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, type XpDaPartida } from "@/modules/conta";
+import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type XpDaPartida } from "@/modules/conta";
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/player";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
-import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, escolherNaSala, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
+import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
+import { TelaDeEspectador, TelaOnline, presenca, presencaDisponivel, transmitirPartida, usePresenca, type PessoaOnline } from "@/modules/presenca";
 import { TelaDeBuscaDeMusicas, baixarDoEncore, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
@@ -20,7 +21,7 @@ import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { opcoesDaPartida } from "./opcoes";
 
-type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking";
+type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "espectador";
 
 interface PartidaEmRede {
   musica: Musica;
@@ -46,6 +47,9 @@ export function App() {
   const [voltarDoPersonagemPara, setVoltarDoPersonagemPara] = useState<Tela>("menu");
   const [voltarDoPerfilPara, setVoltarDoPerfilPara] = useState<Tela>("menu");
   const [voltarDaBuscaPara, setVoltarDaBuscaPara] = useState<Tela>("menu");
+  const [espectando, setEspectando] = useState<PessoaOnline | null>(null);
+  const { conta } = useConta();
+  const estadoDaPresenca = usePresenca();
   const conexao = useConexao();
   const estreita = useTelaEstreita();
   const partidasVistas = useRef(0);
@@ -140,7 +144,42 @@ export function App() {
     if (!playerDeMusica.estado().musica && filaDoPlayer[0]) playerDeMusica.seguir(filaDoPlayer[0]);
   }, [filaDoPlayer]);
   useEffect(() => playerDeMusica.definirVolume(configuracoes.volumeDoPlayer), [configuracoes.volumeDoPlayer]);
-  useEffect(() => playerDeMusica.suspender(tela === "jogo"), [tela]);
+  // Assistir ao vivo também é uma partida na tela: sem o player do menu e sem o cabeçalho.
+  const naPista = tela === "jogo" || tela === "espectador";
+  useEffect(() => playerDeMusica.suspender(naPista), [naPista]);
+
+  // Só aparece online quem aceitou, com conta e com o relay configurado.
+  const online = presencaDisponivel && contasLigadas && !!conta && configuracoes.mostrarOnline === true;
+  useEffect(() => {
+    if (online) presenca.ligar();
+    else presenca.desligar();
+  }, [online]);
+  // A partida só vai ao ar quando dá para quem assiste ter a mesma música: as do jogo e as do Encore.
+  const transmitindo = online && configuracoes.permitirEspectadores && tela === "jogo" && !emRede && !assistindo && !configuracoes.bot && podeTocarOnline(musica);
+  useEffect(() => {
+    presenca.definirEstado(
+      tela === "jogo" && !assistindo
+        ? {
+            tipo: "tocando",
+            musica: idDoRanking(musica),
+            titulo: musica.titulo,
+            artista: musica.artista,
+            dificuldade: dificuldadeDaPartida,
+            instrumento: instrumentoDaPartida,
+            transmitindo,
+          }
+        : { tipo: "menu" },
+    );
+  }, [tela, assistindo, musica, dificuldadeDaPartida, instrumentoDaPartida, transmitindo]);
+  // Uma transmissão por partida: recomeçar a música dentro dela manda um início novo pela mesma.
+  const transmissao = useMemo(
+    () =>
+      transmitindo && conta
+        ? transmitirPartida({ contaId: conta.id, musica: idDoRanking(musica), dificuldade: dificuldadeDaPartida, instrumento: instrumentoDaPartida })
+        : undefined,
+    // A partida (contador) entra para uma partida nova ganhar uma transmissão nova.
+    [transmitindo, conta?.id, partida],
+  );
   // Na seleção o player toca a música escolhida, e avançar/voltar mexem no carrossel.
   const escolhida = musicas[indice];
   useSeguirMusica(tela === "selecao" && escolhida && !semAudio(escolhida) ? escolhida : null);
@@ -239,8 +278,8 @@ export function App() {
 
   return (
     <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
-      {!(tela === "jogo" && configuracoes.modoCompetitivo) && <Fundo tocando={tela === "jogo"} />}
-      {tela !== "jogo" && (
+      {!(naPista && configuracoes.modoCompetitivo) && <Fundo tocando={naPista} />}
+      {!naPista && (
         <CabecalhoDoPlayerDeMusica volume={configuracoes.volumeDoPlayer} aoMudarVolume={(volumeDoPlayer) => mudarConfiguracoes({ ...configuracoes, volumeDoPlayer })}>
           {contasLigadas && (
             <CartaoDaConta
@@ -275,6 +314,7 @@ export function App() {
                 }}
                 aoConfigurar={() => setTela("configuracoes")}
                 aoLeaderboard={contasLigadas ? () => setTela("leaderboard") : undefined}
+                aoOnline={presencaDisponivel && contasLigadas ? () => setTela("online") : undefined}
                 aoBuscarMusicas={() => {
                   setVoltarDaBuscaPara("menu");
                   setTela("buscaDeMusicas");
@@ -342,6 +382,34 @@ export function App() {
             {tela === "buscaDeMusicas" && (
               <TelaDeBuscaDeMusicas aoVoltar={() => setTela(voltarDaBuscaPara)} aoBaixar={baixarMusica} baixadas={baixadasDoEncore} aoJogar={jogarBaixada} />
             )}
+            {tela === "online" && (
+              <TelaOnline
+                logado={!!conta}
+                euId={conta?.id ?? null}
+                presenca={estadoDaPresenca}
+                mostrarOnline={configuracoes.mostrarOnline}
+                permitirEspectadores={configuracoes.permitirEspectadores}
+                aoMudar={(preferencias) => mudarConfiguracoes({ ...configuracoes, ...preferencias })}
+                aoAssistir={(pessoa) => {
+                  setEspectando(pessoa);
+                  setTela("espectador");
+                }}
+                aoVoltar={() => setTela("menu")}
+              />
+            )}
+            {tela === "espectador" && espectando && (
+              <TelaDeEspectador
+                pessoa={espectando}
+                musicas={musicas}
+                opcoes={opcoes}
+                personagem={personagem}
+                aoSair={() => setTela("online")}
+                aoBuscarMusicas={() => {
+                  setVoltarDaBuscaPara("online");
+                  setTela("buscaDeMusicas");
+                }}
+              />
+            )}
             {tela === "leaderboard" && <TelaDeLeaderboard aoVoltar={() => setTela("menu")} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />}
             {tela === "perfil" && (
               <TelaDePerfil aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />
@@ -395,6 +463,7 @@ export function App() {
                 placar={contasLigadas && !emRede && !assistindo ? (pontos) => <PlacarAoVivo musicaId={idDoRanking(musica)} dificuldade={dificuldadeDaPartida} instrumento={instrumentoDaPartida} pontos={pontos} /> : undefined}
                 aoSair={assistindo ? sairDoReplay : () => setTela(emRede ? "multijogador" : "selecao")}
                 aoTerminar={assistindo ? sairDoReplay : terminar}
+                transmissao={transmissao}
               />
             )}
             {tela === "resultado" && resultado && (
@@ -425,7 +494,7 @@ export function App() {
           </motion.div>
         </AnimatePresence>
       </div>
-      <SoltarParaImportar ativo={tela !== "jogo"} aoSoltar={(arquivos) => void importar(arquivos)} />
+      <SoltarParaImportar ativo={!naPista} aoSoltar={(arquivos) => void importar(arquivos)} />
       <ProgressoDaImportacao progresso={progresso} />
       <Avisos />
     </main>

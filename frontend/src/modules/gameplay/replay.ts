@@ -24,7 +24,16 @@ export interface Replay {
   /** Identifica o chart: o replay só vale nas mesmas notas. */
   hashDoChart: string;
   entradas: EntradaDoReplay[];
+  /** Ao vivo, as entradas chegam aos poucos: a partida não passa deste tempo até chegar o lote seguinte. */
+  ateAgora?: number;
 }
+
+/** O que a partida conta para quem assiste ao vivo: quem leva isso à rede é o módulo de presença. */
+export type EventoDaTransmissao =
+  | { tipo: "inicio"; hashDoChart: string; semFalha: boolean }
+  | { tipo: "lote"; entradas: EntradaDoReplay[]; ate: number }
+  | { tipo: "pausa"; pausado: boolean }
+  | { tipo: "fim" };
 
 /** Repassa as entradas para a partida e anota cada uma com o tempo que a partida de fato usou. */
 export function criarGravador(partida: Partida) {
@@ -86,7 +95,7 @@ export async function empacotarReplay(replay: Replay) {
   escreverVarint(bytes, replay.entradas.length);
   for (const entrada of replay.entradas) {
     const ticks = emTicks(entrada.tempo);
-    escreverVarint(bytes, (ticks - anterior) * CODIGOS + codigoDa(entrada));
+    escreverVarint(bytes, (ticks - anterior) * CODIGOS + codigoDaEntrada(entrada));
     anterior = ticks;
   }
   const comprimido = await transformar(new Uint8Array(bytes), new CompressionStream("deflate-raw"));
@@ -111,17 +120,23 @@ export async function desempacotarReplay(pacote: Uint8Array): Promise<Replay> {
     const valor = lerVarint(leitor);
     const codigo = valor % CODIGOS;
     ticks += (valor - codigo) / CODIGOS;
-    entradas.push({
-      tempo: ticks / TICKS_POR_SEGUNDO,
-      tipo: codigo === ESTRELA ? "estrela" : codigo < 5 ? "tocar" : "soltar",
-      pista: codigo === ESTRELA ? 0 : codigo % 5,
-    });
+    entradas.push(entradaDoCodigo(ticks, codigo));
   }
   return { semFalha: !!(opcoes & 1), fantasma: !!(opcoes & 2), hashDoChart: hash, entradas };
 }
 
-const emTicks = (tempo: number) => Math.round(tempo * TICKS_POR_SEGUNDO);
-const codigoDa = (e: EntradaDoReplay) => (e.tipo === "estrela" ? ESTRELA : e.tipo === "tocar" ? e.pista : 5 + e.pista);
+export const emTicks = (tempo: number) => Math.round(tempo * TICKS_POR_SEGUNDO);
+
+/** 0 a 4 aperta a pista, 5 a 9 solta, 10 ativa o star power. O mesmo código vai no replay e na transmissão ao vivo. */
+export const codigoDaEntrada = (e: EntradaDoReplay) => (e.tipo === "estrela" ? ESTRELA : e.tipo === "tocar" ? e.pista : 5 + e.pista);
+
+export function entradaDoCodigo(ticks: number, codigo: number): EntradaDoReplay {
+  return {
+    tempo: ticks / TICKS_POR_SEGUNDO,
+    tipo: codigo === ESTRELA ? "estrela" : codigo < 5 ? "tocar" : "soltar",
+    pista: codigo === ESTRELA ? 0 : codigo % 5,
+  };
+}
 
 /** Varint sem sinal com multiplicação, e não deslocamento: os números passam de 32 bits. */
 function escreverVarint(bytes: number[], valor: number) {
