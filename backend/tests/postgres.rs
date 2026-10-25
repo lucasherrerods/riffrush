@@ -462,7 +462,7 @@ async fn moderacao_guarda_equipe_banidos_e_denuncias_e_limpa_com_a_conta() {
     let admin = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let autor = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let quem_denuncia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
-    sqlx::query("INSERT INTO equipe (conta_id) VALUES ($1)")
+    sqlx::query("INSERT INTO equipe_moderacao (conta_id) VALUES ($1)")
         .bind(admin.id)
         .execute(&banco.0)
         .await

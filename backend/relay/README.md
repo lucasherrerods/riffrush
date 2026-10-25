@@ -46,7 +46,7 @@ Quem é da equipe, quem está banido e as denúncias ficam no banco da API. Eles
 `URL_DA_API` fica em `[vars]` no `wrangler.toml`. Para pôr alguém na equipe, rode no banco da API:
 
 ```sql
-INSERT INTO equipe (conta_id) SELECT id FROM contas WHERE email = 'alguem@exemplo.com';
+INSERT INTO equipe_moderacao (conta_id) SELECT id FROM contas WHERE email = 'alguem@exemplo.com';
 ```
 
 ## Limites contra abuso
