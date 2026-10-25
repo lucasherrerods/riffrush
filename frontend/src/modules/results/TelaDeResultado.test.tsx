@@ -36,6 +36,12 @@ function abrir(extra: Partial<Parameters<typeof TelaDeResultado>[0]> = {}) {
 beforeEach(() => vi.stubGlobal("AudioContext", AudioContextFalso));
 
 describe("TelaDeResultado", () => {
+  it("partida de outra pessoa mostra de quem é, e a sequência que a API não tem vira traço", () => {
+    abrir({ resultado: { ...resultado, maiorSequencia: null }, jogador: { nome: "Srr 4", avatar: null } });
+    expect(screen.getByText("Partida de Srr 4")).toBeInTheDocument();
+    expect(screen.getByText("Maior sequência").previousSibling).toHaveTextContent("—");
+  });
+
   it("mostra a música, os pontos e as estrelas", () => {
     abrir();
     expect(screen.getByRole("heading", { name: "Neon Highway" })).toBeInTheDocument();

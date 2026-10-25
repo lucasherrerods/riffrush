@@ -164,6 +164,9 @@ pub struct CorpoDaPartida {
     derrota: bool,
     #[serde(default)]
     fantasma: bool,
+    /// Apps antigos não mandam.
+    #[serde(default)]
+    maior_sequencia: Option<u32>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -200,6 +203,7 @@ pub async fn registrar_partida(
             total: corpo.total,
             derrota: corpo.derrota,
             fantasma: corpo.fantasma,
+            maior_sequencia: corpo.maior_sequencia,
         },
     };
     Ok(Json(estado.conta.registrar_partida(&token, partida).await?.into()))

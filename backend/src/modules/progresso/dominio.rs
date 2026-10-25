@@ -75,6 +75,8 @@ pub struct ResumoDaPartida {
     pub total: u32,
     pub derrota: bool,
     pub fantasma: bool,
+    /// Apps antigos não mandam.
+    pub maior_sequencia: Option<u32>,
 }
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -83,6 +85,8 @@ pub enum PartidaInvalida {
     TotalForaDaFaixa,
     #[error("os acertos passam do total de notas")]
     AcertosDemais,
+    #[error("a maior sequência passa dos acertos")]
+    SequenciaDemais,
 }
 
 /// Bem acima do chart mais longo; acima disso é cliente mentindo.
@@ -97,6 +101,9 @@ impl ResumoDaPartida {
         }
         if self.acertos > self.total {
             return Err(PartidaInvalida::AcertosDemais);
+        }
+        if self.maior_sequencia.is_some_and(|s| s > self.acertos) {
+            return Err(PartidaInvalida::SequenciaDemais);
         }
         Ok(self)
     }
@@ -181,6 +188,7 @@ mod tests {
             total,
             derrota: false,
             fantasma: false,
+            maior_sequencia: None,
         }
     }
 
@@ -220,6 +228,16 @@ mod tests {
         );
         assert_eq!(partida(Dificuldade::Medio, 11, 10).validar(), Err(PartidaInvalida::AcertosDemais));
         assert!(partida(Dificuldade::Medio, 10, 10).validar().is_ok());
+    }
+
+    #[test]
+    fn recusa_sequencia_maior_que_os_acertos() {
+        let com_sequencia = |s| ResumoDaPartida {
+            maior_sequencia: Some(s),
+            ..partida(Dificuldade::Medio, 8, 10)
+        };
+        assert_eq!(com_sequencia(9).validar(), Err(PartidaInvalida::SequenciaDemais));
+        assert!(com_sequencia(8).validar().is_ok());
     }
 
     #[test]

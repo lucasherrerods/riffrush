@@ -11,7 +11,7 @@ use http_body_util::BodyExt;
 use riffrush_api::modules::conta::fakes::{pedido, servicos};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento};
 use riffrush_api::modules::ranking::fakes::{servicos_do_ranking, RankingEmMemoria};
-use riffrush_api::modules::ranking::{LinhaDoGeral, LinhaDoRanking, MusicaPopular};
+use riffrush_api::modules::ranking::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, PartidaPublica};
 use riffrush_api::modules::saude::VerificadorDoBanco;
 use riffrush_api::shared::estado::EstadoDoApp;
 use serde_json::Value;
@@ -32,6 +32,7 @@ fn linha(posicao: u32, conta_id: Uuid, nome: &str, pontos: u64) -> LinhaDoRankin
         posicao,
         jogadores: 928,
         conta_id,
+        partida_id: Uuid::from_u128(u128::from(posicao) + 1000),
         nome: nome.into(),
         avatar: None,
         pontos,
@@ -195,4 +196,50 @@ async fn as_musicas_mais_jogadas_vem_com_partidas_e_jogadores() {
     assert_eq!(corpo[0]["partidas"], 30);
     assert_eq!(corpo[0]["jogadores"], 4);
     assert!(chamar(&app, "/openapi.json", None).await.1["paths"]["/ranking/musicas"]["get"].is_object());
+}
+
+#[tokio::test]
+async fn cada_linha_do_ranking_traz_o_id_da_partida() {
+    let (app, _, _) = app().await;
+    let (_, corpo) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert", None).await;
+    assert_eq!(corpo["top"][0]["partida_id"], Uuid::from_u128(1001).to_string());
+}
+
+#[tokio::test]
+async fn a_partida_do_ranking_e_publica_e_traz_as_estatisticas() {
+    let (app, _, repositorio) = app().await;
+    let id = Uuid::from_u128(42);
+    *repositorio.partidas.lock().unwrap() = vec![PartidaPublica {
+        id,
+        nome: "Srr 4".into(),
+        avatar: None,
+        musica_id: "encore:abc".into(),
+        dificuldade: Dificuldade::Expert,
+        instrumento: Instrumento::Baixo,
+        pontos: 1_099_340,
+        acertos: 9,
+        total: 10,
+        maior_sequencia: Some(7),
+        derrota: false,
+        fantasma: false,
+        jogada_em: DateTime::UNIX_EPOCH,
+    }];
+
+    let (status, corpo) = chamar(&app, &format!("/partidas/{id}"), None).await;
+
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(corpo["nome"], "Srr 4");
+    assert_eq!(corpo["dificuldade"], "expert");
+    assert_eq!(corpo["instrumento"], "baixo");
+    assert_eq!(corpo["maior_sequencia"], 7);
+    assert_eq!(corpo["acertos"], 9);
+}
+
+#[tokio::test]
+async fn partida_que_nao_existe_e_404() {
+    let (app, _, _) = app().await;
+    let (status, _) = chamar(&app, &format!("/partidas/{}", Uuid::from_u128(1)), None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    let (status, _) = chamar(&app, "/partidas/nao-e-uuid", None).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
 }

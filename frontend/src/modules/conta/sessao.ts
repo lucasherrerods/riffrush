@@ -134,6 +134,7 @@ export class SessaoDaConta {
       total: resultado.total,
       derrota: resultado.derrota,
       fantasma: !!resultado.fantasma,
+      maior_sequencia: resultado.maiorSequencia,
     });
     const conta = this.estadoAtual.conta;
     this.mudar({ conta: { ...conta, xp_total: conta.xp_total + xp.xp_ganho, nivel: xp.depois } });

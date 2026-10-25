@@ -10,6 +10,26 @@ export interface PosicaoNoRanking {
   acertos: number;
   total: number;
   jogada_em: string;
+  /** A partida do recorde, para abrir as estatísticas dela. */
+  partida_id: string;
+}
+
+/** Uma partida aberta pelo ranking: o que a tela de resultado mostra. */
+export interface PartidaDoRanking {
+  id: string;
+  nome: string;
+  avatar: string | null;
+  musica_id: string;
+  dificuldade: Dificuldade;
+  instrumento: Instrumento;
+  pontos: number;
+  acertos: number;
+  total: number;
+  /** Partidas antigas não têm. */
+  maior_sequencia: number | null;
+  derrota: boolean;
+  fantasma: boolean;
+  jogada_em: string;
 }
 
 /** Um jogador no ranking geral, ordenado pelo XP total. */
@@ -64,6 +84,8 @@ export function criarApiDoRanking(base: string, buscar?: typeof fetch) {
       chamar<unknown>("GET", `/ranking?${new URLSearchParams({ musica_id: musicaId, dificuldade, instrumento })}`, { token, sinal }).then(conferirRanking<PosicaoNoRanking>),
     geral: ({ token, sinal }: { token?: string; sinal?: AbortSignal } = {}) =>
       chamar<unknown>("GET", "/ranking/geral", { token, sinal }).then(conferirRanking<PosicaoNoGeral>),
+    partida: (id: string, { sinal }: { sinal?: AbortSignal } = {}) =>
+      chamar<PartidaDoRanking>("GET", `/partidas/${encodeURIComponent(id)}`, { sinal }),
     musicas: ({ sinal }: { sinal?: AbortSignal } = {}) => chamar<unknown>("GET", "/ranking/musicas", { sinal }).then(conferirMusicas),
   };
 }

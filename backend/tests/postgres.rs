@@ -79,6 +79,7 @@ async fn partida_soma_xp_e_marca_a_ultima() {
             total: 10,
             derrota: false,
             fantasma: false,
+            maior_sequencia: None,
         },
         xp_ganho: 120,
         jogada_em,
@@ -107,6 +108,7 @@ async fn excluir_apaga_a_conta_com_sessoes_e_partidas() {
             total: 1,
             derrota: false,
             fantasma: false,
+            maior_sequencia: None,
         },
         xp_ganho: 10,
         jogada_em: agora,
@@ -138,6 +140,7 @@ async fn ranking_pega_a_melhor_partida_terminada_de_cada_jogador() {
             total: 10,
             derrota,
             fantasma: false,
+            maior_sequencia: None,
         },
         xp_ganho: 0,
         jogada_em: agora + Duration::seconds(segundos),
@@ -194,6 +197,7 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
             total: 10,
             derrota,
             fantasma: false,
+            maior_sequencia: None,
         },
         xp_ganho: 0,
         jogada_em: agora + Duration::seconds(segundos),
@@ -242,6 +246,7 @@ async fn ranking_geral_ordena_por_xp_e_ignora_quem_nao_jogou() {
                 total: 1,
                 derrota: false,
                 fantasma: false,
+                maior_sequencia: None,
             },
             xp_ganho: 1_000_000_000,
             jogada_em: Utc::now(),
@@ -277,6 +282,7 @@ async fn musicas_mais_jogadas_contam_partidas_e_jogadores_diferentes() {
                     total: 1,
                     derrota: false,
                     fantasma: false,
+                    maior_sequencia: None,
                 },
                 xp_ganho: 0,
                 jogada_em: agora + Duration::seconds(i as i64),
@@ -309,6 +315,7 @@ async fn ranking_geral_da_a_posicao_certa_fora_do_top_e_no_empate() {
             total: 1,
             derrota: false,
             fantasma: false,
+            maior_sequencia: None,
         },
         xp_ganho,
         jogada_em: Utc::now(),
@@ -334,4 +341,46 @@ async fn ranking_geral_da_a_posicao_certa_fora_do_top_e_no_empate() {
     let minha = linhas.iter().find(|l| l.conta_id == empatado.id).unwrap();
     assert_eq!((i64::from(minha.posicao), i64::from(minha.jogadores)), (esperada, jogadores));
     assert_eq!(linhas[0].posicao, 1);
+}
+
+#[tokio::test]
+async fn a_linha_do_ranking_abre_a_partida_com_a_maior_sequencia() {
+    let Some(banco) = banco().await else { return };
+    let ranking = RankingPostgres(banco.0.clone());
+    let musica = format!("teste:{}", Uuid::new_v4());
+    let jogador = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    banco
+        .registrar_partida(&PartidaRegistrada {
+            conta_id: jogador.id,
+            musica_id: musica.clone(),
+            instrumento: Instrumento::Baixo,
+            pontos: 500,
+            resumo: ResumoDaPartida {
+                dificuldade: Dificuldade::Dificil,
+                acertos: 9,
+                total: 10,
+                derrota: false,
+                fantasma: false,
+                maior_sequencia: Some(6),
+            },
+            xp_ganho: 0,
+            jogada_em: Utc::now(),
+        })
+        .await
+        .unwrap();
+
+    let linhas = ranking.linhas(&musica, Dificuldade::Dificil, Instrumento::Baixo, 10, None).await.unwrap();
+    let partida = ranking.partida(linhas[0].partida_id).await.unwrap().unwrap();
+
+    assert_eq!(
+        (
+            partida.musica_id.as_str(),
+            partida.dificuldade,
+            partida.instrumento,
+            partida.pontos,
+            partida.maior_sequencia
+        ),
+        (musica.as_str(), Dificuldade::Dificil, Instrumento::Baixo, 500, Some(6))
+    );
+    assert!(ranking.partida(Uuid::new_v4()).await.unwrap().is_none());
 }

@@ -14,13 +14,13 @@ import { TelaDeBuscaDeMusicas, baixarDoEncore, montarUrlDoChart, type OpcoesDeBa
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
-import { PainelDeRanking, PlacarAoVivo, TelaDeLeaderboard } from "@/modules/ranking";
+import { PainelDeRanking, PlacarAoVivo, TelaDeLeaderboard, TelaDePartidaDoRanking } from "@/modules/ranking";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { opcoesDaPartida } from "./opcoes";
 
-type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard";
+type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking";
 
 interface PartidaEmRede {
   musica: Musica;
@@ -37,6 +37,7 @@ export function App() {
   const [indice, setIndice] = useState(0);
   const [dificuldade, setDificuldade] = useState<Dificuldade>("medio");
   const [instrumento, setInstrumento] = useState<Instrumento>("guitarra");
+  const [partidaAberta, setPartidaAberta] = useState<string | null>(null);
   const [resultado, setResultado] = useState<{ resultado: Resultado; recordeNovo: boolean } | null>(null);
   const [xpDaPartida, setXpDaPartida] = useState<XpDaPartida | null>(null);
   const [partida, setPartida] = useState(0);
@@ -297,8 +298,21 @@ export function App() {
                   });
                   avisar.success(`${removida.titulo} removida.`);
                 }}
-                ranking={contasLigadas && escolhida ? <PainelDeRanking musicaId={idDoRanking(escolhida)} dificuldade={dificuldadeDaSelecao} instrumento={instrumentoDaSelecao} /> : undefined}
+                ranking={contasLigadas && escolhida ? (
+                    <PainelDeRanking
+                      musicaId={idDoRanking(escolhida)}
+                      dificuldade={dificuldadeDaSelecao}
+                      instrumento={instrumentoDaSelecao}
+                      aoAbrirPartida={(id) => {
+                        setPartidaAberta(id);
+                        setTela("partidaDoRanking");
+                      }}
+                    />
+                  ) : undefined}
               />
+            )}
+            {tela === "partidaDoRanking" && escolhida && partidaAberta && (
+              <TelaDePartidaDoRanking partidaId={partidaAberta} titulo={escolhida.titulo} artista={escolhida.artista} aoVoltar={() => setTela("selecao")} />
             )}
             {tela === "buscaDeMusicas" && (
               <TelaDeBuscaDeMusicas aoVoltar={() => setTela(voltarDaBuscaPara)} aoBaixar={baixarMusica} baixadas={baixadasDoEncore} aoJogar={jogarBaixada} />

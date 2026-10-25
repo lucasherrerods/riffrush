@@ -111,7 +111,7 @@ describe("SessaoDaConta", () => {
     await sessao.iniciar();
     const xp = await sessao.registrarPartida(resultado);
     expect(xp?.xp_ganho).toBe(150);
-    expect(vi.mocked(ambiente.api.registrarPartida).mock.calls[0][1]).toMatchObject({ musica_id: "m", instrumento: "guitarra", acertos: 4, fantasma: false });
+    expect(vi.mocked(ambiente.api.registrarPartida).mock.calls[0][1]).toMatchObject({ musica_id: "m", instrumento: "guitarra", acertos: 4, fantasma: false, maior_sequencia: 4 });
     expect(sessao.estado().conta).toMatchObject({ xp_total: 150, nivel: depois });
   });
 

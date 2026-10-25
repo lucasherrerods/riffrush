@@ -13,7 +13,10 @@ import { estrelasDoResultado } from "./recordes";
 interface Props {
   titulo: string;
   artista: string;
-  resultado: Resultado;
+  /** A sequência fica nula em partidas antigas vindas do ranking. */
+  resultado: Omit<Resultado, "maiorSequencia"> & { maiorSequencia: number | null };
+  /** Partida de outra pessoa, aberta pelo ranking. */
+  jogador?: { nome: string; avatar: string | null };
   recordeNovo: boolean;
   volumeDosEfeitos: number;
   aoRepetir: () => void;
@@ -27,7 +30,7 @@ const DURACAO_DA_CONTAGEM = 1.6;
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 export function TelaDeResultado(props: Props) {
-  const { titulo, artista, resultado, recordeNovo, volumeDosEfeitos, aoRepetir, aoContinuar, extra, rotuloDeContinuar } = props;
+  const { titulo, artista, resultado, jogador, recordeNovo, volumeDosEfeitos, aoRepetir, aoContinuar, extra, rotuloDeContinuar } = props;
   const podeRepetir = rotuloDeContinuar === undefined;
   const [pontosNaTela, setPontosNaTela] = useState(0);
   const dispositivo = useDispositivo();
@@ -55,7 +58,7 @@ export function TelaDeResultado(props: Props) {
 
   const estatisticas = [
     { rotulo: "Notas acertadas", valor: `${resultado.acertos} / ${resultado.total}` },
-    { rotulo: "Maior sequência", valor: String(resultado.maiorSequencia) },
+    { rotulo: "Maior sequência", valor: resultado.maiorSequencia === null ? "—" : String(resultado.maiorSequencia) },
     { rotulo: "Dificuldade", valor: DIFICULDADES.find((d) => d.id === resultado.dificuldade)?.rotulo ?? "" },
   ];
 
@@ -68,6 +71,12 @@ export function TelaDeResultado(props: Props) {
             <p className="text-base font-semibold tracking-[0.3em] text-texto-suave">RESULTADO</p>
             <h1 className="mt-2 text-5xl leading-[1.1] font-black tracking-[-0.02em]">{titulo}</h1>
             <p className="mt-1 text-base text-texto-suave">{artista}</p>
+            {jogador && (
+              <p className="mt-4 flex items-center justify-center gap-2 text-base font-bold">
+                {jogador.avatar && <img src={jogador.avatar} alt="" referrerPolicy="no-referrer" className="size-8 rounded-sm" />}
+                Partida de {jogador.nome}
+              </p>
+            )}
           </div>
 
           <div role="img" aria-label={`${estrelas} de 5 estrelas`} className="flex gap-4">
