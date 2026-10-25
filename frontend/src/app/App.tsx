@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { IndicadorDeVolume, definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/character";
 import { iniciarControle, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
 import { TelaDeJogo, type Resultado, desempacotarReplay, type Replay } from "@/modules/gameplay";
@@ -32,7 +33,12 @@ interface PartidaEmRede {
 
 export function App() {
   const [tela, setTela] = useState<Tela>(() => documentoDoEndereco(location.pathname) ?? "menu");
-  const [configuracoes, setConfiguracoes] = useState<Configuracoes>(carregarConfiguracoes);
+  const [configuracoes, setConfiguracoes] = useState<Configuracoes>(() => {
+    const salvas = carregarConfiguracoes();
+    // O volume geral vive no módulo de áudio; ao abrir, ele começa no que estava salvo.
+    definirVolumeGeral(salvas.volumeGeral);
+    return salvas;
+  });
   const [personagem, setPersonagem] = useState<Personagem>(carregarPersonagem);
   const [musicas, setMusicas] = useState<Musica[]>(MUSICAS_EMBUTIDAS);
   const [indice, setIndice] = useState(0);
@@ -142,6 +148,16 @@ export function App() {
     if (!playerDeMusica.estado().musica && filaDoPlayer[0]) playerDeMusica.seguir(filaDoPlayer[0]);
   }, [filaDoPlayer]);
   useEffect(() => playerDeMusica.definirVolume(configuracoes.volumeDoPlayer), [configuracoes.volumeDoPlayer]);
+  // O atalho muda o volume de qualquer tela, direto no módulo de áudio; aqui ele só é guardado nas configurações.
+  const { volume: volumeGeral } = useVolumeGeral();
+  useEffect(() => {
+    setConfiguracoes((atuais) => {
+      if (atuais.volumeGeral === volumeGeral) return atuais;
+      const novas = { ...atuais, volumeGeral };
+      salvarConfiguracoes(novas);
+      return novas;
+    });
+  }, [volumeGeral]);
   // Assistir ao vivo também é uma partida na tela: sem o player do menu e sem o cabeçalho.
   const naPista = tela === "jogo" || tela === "espectador";
   useEffect(() => playerDeMusica.suspender(naPista), [naPista]);
@@ -204,6 +220,8 @@ export function App() {
   }, []);
 
   const mudarConfiguracoes = (novas: Configuracoes) => {
+    // O slider das configurações também passa pelo módulo de áudio, a única fonte do volume geral.
+    if (novas.volumeGeral !== volumeGeral) definirVolumeGeral(novas.volumeGeral);
     setConfiguracoes(novas);
     salvarConfiguracoes(novas);
   };
@@ -297,7 +315,7 @@ export function App() {
     <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
       {!(naPista && configuracoes.modoCompetitivo) && <Fundo tocando={naPista} />}
       {!naPista && (
-        <CabecalhoDoPlayerDeMusica volume={configuracoes.volumeDoPlayer} aoMudarVolume={(volumeDoPlayer) => mudarConfiguracoes({ ...configuracoes, volumeDoPlayer })}>
+        <CabecalhoDoPlayerDeMusica volume={volumeGeral} aoMudarVolume={definirVolumeGeral}>
           {contasLigadas && (
             <CartaoDaConta
               aoVerPerfil={() => {
@@ -513,6 +531,7 @@ export function App() {
           </motion.div>
         </AnimatePresence>
       </div>
+      <IndicadorDeVolume />
       <SoltarParaImportar ativo={!naPista} aoSoltar={(arquivos) => void importar(arquivos)} />
       <ProgressoDaImportacao progresso={progresso} />
       <Avisos />

@@ -1,4 +1,5 @@
 import { obterContextoDeAudio } from "./contexto";
+import { saidaDeAudio } from "./volume";
 
 interface Efeito {
   onda: OscillatorType;
@@ -26,7 +27,7 @@ export function tocarEfeito(nome: NomeDoEfeito, volume: number) {
   const inicio = audio.currentTime;
   const oscilador = audio.createOscillator();
   const ganho = audio.createGain();
-  oscilador.connect(ganho).connect(audio.destination);
+  oscilador.connect(ganho).connect(saidaDeAudio());
 
   oscilador.type = efeito.onda;
   oscilador.frequency.setValueAtTime(efeito.de, inicio);

@@ -24,7 +24,7 @@ function abrir(volumeInicial = 0.3) {
 describe("CabecalhoDoPlayerDeMusica", () => {
   it("o slider de volume mostra o volume atual e muda com as setas", async () => {
     const { aoMudarVolume, usuario } = abrir(0.3);
-    const slider = screen.getByRole("slider", { name: "Volume do player" });
+    const slider = screen.getByRole("slider", { name: "Volume geral" });
     expect(slider).toHaveAttribute("aria-valuenow", "0.3");
     slider.focus();
     await usuario.keyboard("{ArrowRight}");

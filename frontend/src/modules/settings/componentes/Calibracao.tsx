@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Crosshair } from "lucide-react";
-import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio } from "@/modules/audio";
+import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, saidaDeAudio } from "@/modules/audio";
 import { Button } from "@/shared/ui/button";
 import { BATIDAS_DA_CALIBRACAO, INTERVALO_DA_CALIBRACAO, batidasDaCalibracao, medirAtraso } from "../calibracao";
 import { LinhaDeOpcao } from "./LinhaDeOpcao";
@@ -13,7 +13,7 @@ function tocarClique(contexto: AudioContext, tempo: number, forte: boolean) {
   oscilador.frequency.value = forte ? 1600 : 1000;
   ganho.gain.setValueAtTime(0.4, tempo);
   ganho.gain.exponentialRampToValueAtTime(0.001, tempo + 0.06);
-  oscilador.connect(ganho).connect(contexto.destination);
+  oscilador.connect(ganho).connect(saidaDeAudio());
   oscilador.start(tempo);
   oscilador.stop(tempo + 0.07);
 }

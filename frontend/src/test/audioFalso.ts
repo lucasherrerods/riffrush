@@ -13,6 +13,10 @@ export class ParametroFalso {
   exponentialRampToValueAtTime(valor: number, tempo: number) {
     this.eventos.push({ tipo: "exponencial", valor, tempo });
   }
+  setTargetAtTime(valor: number, tempo: number) {
+    this.eventos.push({ tipo: "alvo", valor, tempo });
+    this.value = valor;
+  }
 }
 
 export class OsciladorFalso {
@@ -51,7 +55,9 @@ export class FonteFalsa {
 
 export class GanhoFalso {
   gain = new ParametroFalso();
+  conectadoEm: unknown[] = [];
   connect<T>(destino: T) {
+    this.conectadoEm.push(destino);
     return destino;
   }
   disconnect() {}

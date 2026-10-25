@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Eye, Loader2, Pause, Skull, Zap } from "lucide-react";
-import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, tocarEfeito } from "@/modules/audio";
+import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
 import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "@/modules/character";
 import { cenaDaPartida } from "./cena";
 import { Palco, opacidadeDaPista, type EstadoDoPalco, type QualidadeDoPalco } from "@/modules/stage";
@@ -217,7 +217,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     const audio = obterContextoDeAudio();
     const ganho = audio.createGain();
     ganho.gain.value = opcoes.volumeDaMusica;
-    ganho.connect(audio.destination);
+    ganho.connect(saidaDeAudio());
     const fonte = audio.createBufferSource();
     fonte.buffer = carregada.audio;
     fonte.connect(ganho);

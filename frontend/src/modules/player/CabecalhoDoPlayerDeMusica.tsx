@@ -68,7 +68,7 @@ export function CabecalhoDoPlayerDeMusica({ volume, aoMudarVolume, children }: P
           {volume > 0 ? <Volume2 /> : <VolumeX />}
         </Button>
         <Slider
-          aria-label="Volume do player"
+          aria-label="Volume geral"
           className="w-24 max-sm:w-16"
           min={0}
           max={1}
