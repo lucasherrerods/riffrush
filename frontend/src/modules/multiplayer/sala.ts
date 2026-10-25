@@ -111,8 +111,9 @@ export function entrarNaSala(endereco: string, personagem: Personagem) {
 
 export const temModoOnline = () => !!URL_DO_RELAY;
 
-export function criarSalaOnline(personagem: Personagem) {
-  conectar(urlParaCriarSala(URL_DO_RELAY, personagem.nome), "", personagem, true, { online: true });
+/** `publica` false: a sala não aparece na lista, e só entra quem tem o código. */
+export function criarSalaOnline(personagem: Personagem, publica = true) {
+  conectar(urlParaCriarSala(URL_DO_RELAY, personagem.nome, publica), "", personagem, true, { online: true });
 }
 
 /** As salas online abertas agora. Sem resposta do relay, a lista fica vazia e o código continua funcionando. */

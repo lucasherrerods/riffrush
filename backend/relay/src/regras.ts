@@ -47,6 +47,23 @@ export function novoHost(de: number, hostAtual: number, mensagem: string, presen
   }
 }
 
+/**
+ * Quem sai da sala se `de` mandou `mensagem`: o host atual expulsando alguém que está nela.
+ * Só esconder o expulso no app não basta: conectado, ele continuaria lendo o chat e o placar.
+ */
+export function expulsoPeloHost(de: number, hostAtual: number, mensagem: string, presentes: number[]): number | null {
+  if (de !== hostAtual) return null;
+  try {
+    const { tipo, id } = JSON.parse(mensagem) as { tipo?: unknown; id?: unknown };
+    return tipo === "expulsar" && typeof id === "number" && id !== de && presentes.includes(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Sala privada (`publica=0` ao criar) não aparece em /salas: só entra quem tem o código. */
+export const salaPublica = (valor: string | null) => valor !== "0";
+
 export type MensagemDoServidor = { tipo: "bemVindo"; id: number; codigo: string } | { tipo: "cheia" } | { tipo: "semSala" } | { tipo: "saiu" };
 
 export const mensagemDoServidor = (msg: MensagemDoServidor, de = SERVIDOR) => JSON.stringify({ de, msg });

@@ -38,6 +38,16 @@ function limparNivel(personagem: PersonagemNaSala): PersonagemNaSala {
   return Number.isInteger(nivel) && nivel! >= 1 && nivel! <= NIVEL_MAXIMO ? { ...resto, nivel } : resto;
 }
 
+/** O nome do personagem é livre: repetido, ganha um número, para ninguém se passar por outro na sala e no chat. */
+function nomeUnico(nome: string, outros: Jogador[]): string {
+  const base = String(nome ?? "").trim() || "Jogador";
+  const usados = new Set(outros.map((j) => j.personagem.nome.trim().toLowerCase()));
+  if (!usados.has(base.toLowerCase())) return base;
+  let n = 2;
+  while (usados.has(`${base} (${n})`.toLowerCase())) n++;
+  return `${base} (${n})`;
+}
+
 export type Mensagem =
   | { tipo: "bemVindo"; id: number; /** Só no online: o código para os amigos entrarem. */ codigo?: string }
   | { tipo: "cheia" }
@@ -141,7 +151,9 @@ export function reduzir(estado: EstadoDaSala, de: number, mensagem: Mensagem, ag
       return { ...nada, sair: "Sala não encontrada. Confira o código ou peça um novo ao host." };
     case "oi": {
       if (!estado.souHost || estado.expulsos.includes(de)) return nada;
-      const jogadores = [...estado.jogadores.filter((j) => j.id !== de), { id: de, personagem: limparNivel(mensagem.personagem) }].sort((a, b) => a.id - b.id);
+      const outros = estado.jogadores.filter((j) => j.id !== de);
+      const personagem = { ...limparNivel(mensagem.personagem), nome: nomeUnico(mensagem.personagem.nome, outros) };
+      const jogadores = [...outros, { id: de, personagem }].sort((a, b) => a.id - b.id);
       const novo = { ...estado, jogadores };
       return { estado: novo, enviar: [mensagemDaSala(novo)] };
     }

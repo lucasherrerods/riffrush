@@ -13,7 +13,7 @@ const FORMATO_DO_CODIGO = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{5}$/;
 const semBarraNoFim = (url: string) => url.replace(/\/+$/, "");
 
 /** O nome do host vai junto para aparecer na lista de salas abertas. */
-export const urlParaCriarSala = (base: string, nome: string) => `${semBarraNoFim(base)}/criar?nome=${encodeURIComponent(nome)}`;
+export const urlParaCriarSala = (base: string, nome: string, publica = true) => `${semBarraNoFim(base)}/criar?nome=${encodeURIComponent(nome)}${publica ? "" : "&publica=0"}`;
 export const urlDasSalas = (base: string) => `${semBarraNoFim(base).replace(/^ws/, "http")}/salas`;
 
 export interface SalaOnline {

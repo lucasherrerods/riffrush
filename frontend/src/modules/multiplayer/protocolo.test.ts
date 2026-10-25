@@ -329,3 +329,19 @@ describe("chat da sala", () => {
     expect(sala.chat.at(-1)?.texto).toBe("msg 79");
   });
 });
+
+describe("nomes na sala", () => {
+  it("dois jogadores com o mesmo nome ficam diferentes na lista, para ninguém se passar pelo outro", () => {
+    let sala = reduzir(salaDoHost(), 1, { tipo: "oi", personagem: lucas }, 0).estado;
+    sala = reduzir(sala, 2, { tipo: "oi", personagem: { ...vitor, nome: "Lucas" } }, 0).estado;
+    sala = reduzir(sala, 3, { tipo: "oi", personagem: { ...vitor, nome: " lucas " } }, 0).estado;
+    expect(sala.jogadores.map((j) => j.personagem.nome)).toEqual(["Lucas", "Lucas (2)", "lucas (3)"]);
+  });
+
+  it("quem manda o oi de novo (trocou o personagem) mantém o próprio nome", () => {
+    let sala = reduzir(salaDoHost(), 1, { tipo: "oi", personagem: lucas }, 0).estado;
+    sala = reduzir(sala, 2, { tipo: "oi", personagem: vitor }, 0).estado;
+    sala = reduzir(sala, 2, { tipo: "oi", personagem: vitor }, 0).estado;
+    expect(sala.jogadores.map((j) => j.personagem.nome)).toEqual(["Lucas", "Vitor"]);
+  });
+});

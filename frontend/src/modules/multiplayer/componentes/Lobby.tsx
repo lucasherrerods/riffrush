@@ -278,6 +278,11 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
           className="min-h-48 flex-1"
           mensagens={sala.chat.map((m) => ({ id: String(m.n), autor: m.autor, texto: m.texto, minha: m.de === sala.meuId }))}
           aoEnviar={enviarChat}
+          aviso={
+            codigo
+              ? "Quem entrar na sala lê o chat. Não passe dados pessoais."
+              : "Na rede local, quem estiver no mesmo Wi-Fi consegue ler o chat. Não passe dados pessoais."
+          }
         />
       </div>
       <Dialog open={!!novoLider} onOpenChange={(aberto) => !aberto && setNovoLider(null)}>

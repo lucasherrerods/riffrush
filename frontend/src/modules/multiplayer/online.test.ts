@@ -6,6 +6,8 @@ const estado = { pontos: 10, vida: 0.5, sequencia: 1, pulso: 1, derrota: false, 
 describe("endereços do relay", () => {
   it("monta as rotas a partir da URL configurada, com ou sem barra no fim", () => {
     expect(urlParaCriarSala("wss://relay.exemplo.dev/", "Lucas & Cia")).toBe("wss://relay.exemplo.dev/criar?nome=Lucas%20%26%20Cia");
+    // Sala privada não aparece na lista do relay.
+    expect(urlParaCriarSala("wss://relay.exemplo.dev", "Lu", false)).toBe("wss://relay.exemplo.dev/criar?nome=Lu&publica=0");
     expect(urlParaEntrarNaSala("wss://relay.exemplo.dev", "ABCDE")).toBe("wss://relay.exemplo.dev/sala/ABCDE");
   });
 });
