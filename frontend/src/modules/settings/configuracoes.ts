@@ -10,7 +10,7 @@ export interface Configuracoes {
   botaoDaEstrela: number;
   /** De 1 a 10. */
   velocidade: number;
-  /** O volume de tudo (Alt/Ctrl + roda em qualquer tela). Os outros volumes são a mistura dentro dele. */
+  /** O volume de tudo (Alt + roda em qualquer tela). Os outros volumes são a mistura dentro dele. */
   volumeGeral: number;
   volumeDaMusica: number;
   volumeDosEfeitos: number;

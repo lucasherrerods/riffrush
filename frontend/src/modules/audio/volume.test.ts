@@ -68,10 +68,10 @@ describe("atalhos de volume", () => {
     expect(lerVolumeGeral()).toBe(0.45);
   });
 
-  it("Ctrl + roda também, e o navegador não dá zoom", () => {
+  it("Ctrl + roda fica com o navegador: só o Alt mexe no volume", () => {
     const evento = rodar(-100, { ctrlKey: true });
-    expect(lerVolumeGeral()).toBe(0.55);
-    expect(evento.defaultPrevented).toBe(true);
+    expect(lerVolumeGeral()).toBe(0.5);
+    expect(evento.defaultPrevented).toBe(false);
   });
 
   it("a roda sozinha continua rolando a página", () => {
@@ -86,26 +86,14 @@ describe("atalhos de volume", () => {
     expect(lerVolumeGeral()).toBe(0.55);
   });
 
-  it("Ctrl + ↑/↓ mexe no volume e não chega nas telas (que andariam no menu)", () => {
+  it("Ctrl + ↑/↓ não mexe no volume e segue para as telas", () => {
     const daTela = vi.fn();
     window.addEventListener("keydown", daTela);
     const evento = tecla("keydown", { code: "ArrowUp", key: "ArrowUp", ctrlKey: true });
-    expect(lerVolumeGeral()).toBe(0.55);
-    expect(evento.defaultPrevented).toBe(true);
-    expect(daTela).not.toHaveBeenCalled();
-    tecla("keydown", { code: "ArrowDown", key: "ArrowDown", ctrlKey: true });
     expect(lerVolumeGeral()).toBe(0.5);
-    tecla("keydown", { code: "ArrowDown", key: "ArrowDown" });
-    expect(daTela).toHaveBeenCalledTimes(1);
+    expect(evento.defaultPrevented).toBe(false);
+    expect(daTela).toHaveBeenCalled();
     window.removeEventListener("keydown", daTela);
-  });
-
-  it("Ctrl + ↑/↓ dentro de um campo de texto fica com o campo", () => {
-    const campo = document.createElement("input");
-    document.body.append(campo);
-    campo.dispatchEvent(new KeyboardEvent("keydown", { code: "ArrowUp", key: "ArrowUp", ctrlKey: true, bubbles: true, cancelable: true }));
-    expect(lerVolumeGeral()).toBe(0.5);
-    campo.remove();
   });
 
   it("soltar o Alt depois de mexer no volume não abre a barra de menu do navegador", () => {

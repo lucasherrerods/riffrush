@@ -55,37 +55,27 @@ export function saidaDeAudio(contexto: AudioContext = obterContextoDeAudio()): A
   return mestre;
 }
 
-const ehCampoDeTexto = (alvo: EventTarget | null) =>
-  alvo instanceof HTMLElement && (alvo.isContentEditable || alvo.tagName === "TEXTAREA" || (alvo.tagName === "INPUT" && (alvo as HTMLInputElement).type !== "range"));
-
 /**
- * Atalhos de volume em qualquer tela, como no osu!: Alt + roda (o do osu!), Ctrl + roda
- * (sem deixar o navegador dar zoom) e Ctrl + ↑/↓ para quem não tem mouse.
- * Instale antes de as telas existirem: os ouvintes de captura na janela rodam na ordem em que
- * foram registrados, e o Ctrl + ↑/↓ precisa ser parado antes de chegar no menu.
+ * Alt + roda muda o volume em qualquer tela, como no osu!. Instale antes de as telas existirem:
+ * o atalho é ouvido na captura da janela e não chega nas telas.
  */
 export function instalarAtalhosDeVolume(janela: Window = window) {
   // Mexeu no volume com o Alt: soltar o Alt não pode abrir a barra de menu do navegador.
   let altUsado = false;
 
   const aoRodar = (evento: WheelEvent) => {
-    if (!evento.altKey && !evento.ctrlKey) return;
+    if (!evento.altKey) return;
     evento.preventDefault();
     evento.stopPropagation();
     // Com o Shift junto, alguns navegadores mandam a roda no eixo X.
     const delta = evento.deltaY || evento.deltaX;
     if (!delta) return;
-    if (evento.altKey) altUsado = true;
+    altUsado = true;
     mudar(proximoVolume(estadoAtual.volume, delta < 0 ? 1 : -1), true);
   };
 
   const aoApertar = (evento: KeyboardEvent) => {
     if (evento.key === "Alt") altUsado = false;
-    const seta = evento.code === "ArrowUp" ? 1 : evento.code === "ArrowDown" ? -1 : 0;
-    if (!seta || !evento.ctrlKey || evento.altKey || evento.shiftKey || evento.metaKey || ehCampoDeTexto(evento.target)) return;
-    evento.preventDefault();
-    evento.stopImmediatePropagation();
-    mudar(proximoVolume(estadoAtual.volume, seta), true);
   };
 
   const aoSoltar = (evento: KeyboardEvent) => {

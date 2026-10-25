@@ -7,7 +7,7 @@ import "@/shared/styles/global.css";
 
 aplicarTokens(document.documentElement);
 desbloquearNoPrimeiroToque();
-// Antes das telas: o Ctrl + ↑/↓ do volume precisa ser ouvido antes do teclado de cada tela.
+// Antes das telas: o Alt + roda do volume é ouvido antes de qualquer tela.
 instalarAtalhosDeVolume();
 
 createRoot(document.getElementById("root")!).render(

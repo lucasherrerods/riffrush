@@ -181,7 +181,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
               formatar={porcentagem}
               aoMudar={(volumeGeral) => mudar({ volumeGeral })}
             />
-            <p className="px-2 text-base text-texto-suave">Em qualquer tela: Alt + roda do mouse, Ctrl + roda ou Ctrl + ↑/↓.</p>
+            <p className="px-2 text-base text-texto-suave">Em qualquer tela: Alt + roda do mouse.</p>
             <LinhaDeSlider
               rotulo="Volume da música"
               valor={configuracoes.volumeDaMusica}
