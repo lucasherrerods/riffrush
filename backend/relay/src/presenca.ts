@@ -92,6 +92,9 @@ const CODIGO_MAXIMO = 10;
 /** Um lote por segundo; nem os trechos mais rápidos passam de algumas dezenas de entradas. */
 const ENTRADAS_POR_LOTE = 500;
 
+/** Para quem joga: quantas pessoas estão assistindo agora. */
+export const avisoDeEspectadores = (quantos: number) => JSON.stringify({ tipo: "espectadores", quantos });
+
 export function lerMensagemDaTransmissao(bruta: string): MensagemDaTransmissao | null {
   if (bruta.length > TAMANHO_MAXIMO_DA_MENSAGEM) return null;
   let msg: Record<string, unknown>;

@@ -12,7 +12,7 @@ import {
   type EntradaDaSala,
   type Janela,
 } from "./regras";
-import { lerEstado, lerMensagemDaTransmissao, verificarFicha, type MensagemDaPresenca, type Pessoa, type PessoaOnline } from "./presenca";
+import { avisoDeEspectadores, lerEstado, lerMensagemDaTransmissao, verificarFicha, type MensagemDaPresenca, type Pessoa, type PessoaOnline } from "./presenca";
 
 interface Env {
   SALAS: DurableObjectNamespace<Sala>;
@@ -278,6 +278,8 @@ export class Transmissao extends DurableObject<Env> {
     if (pedido.headers.get(CABECALHO_DA_PESSOA)) {
       for (const antigo of this.ctx.getWebSockets(QUEM_JOGA)) fechar(antigo, "outraPartida");
       this.ctx.acceptWebSocket(servidor, [QUEM_JOGA]);
+      // Recomeçar a música abre uma conexão nova: quem já assistia continua contando.
+      enviar(servidor, avisoDeEspectadores(this.ctx.getWebSockets(QUEM_ASSISTE).length));
       return new Response(null, { status: 101, webSocket: cliente });
     }
     this.ctx.acceptWebSocket(servidor, [QUEM_ASSISTE]);
@@ -295,6 +297,7 @@ export class Transmissao extends DurableObject<Env> {
     }
     const pausado = await this.ctx.storage.get<boolean>("pausado");
     if (pausado) enviar(servidor, JSON.stringify({ tipo: "pausa", pausado: true }));
+    this.contarEspectadores();
     return new Response(null, { status: 101, webSocket: cliente });
   }
 
@@ -328,10 +331,19 @@ export class Transmissao extends DurableObject<Env> {
     await this.saiu(socket);
   }
 
+  /** Avisa quem joga quantas pessoas estão assistindo. `saindo` ainda aparece na lista enquanto fecha. */
+  private contarEspectadores(saindo?: WebSocket) {
+    const quantos = this.ctx.getWebSockets(QUEM_ASSISTE).filter((s) => s !== saindo).length;
+    for (const jogador of this.ctx.getWebSockets(QUEM_JOGA)) enviar(jogador, avisoDeEspectadores(quantos));
+  }
+
   private async saiu(socket: WebSocket) {
     this.janelas.delete(socket);
     fechar(socket, "saiu");
-    if (!this.ctx.getTags(socket).includes(QUEM_JOGA)) return;
+    if (!this.ctx.getTags(socket).includes(QUEM_JOGA)) {
+      this.contarEspectadores(socket);
+      return;
+    }
     if (this.ctx.getWebSockets(QUEM_JOGA).some((s) => s !== socket)) return;
     // Quem jogava saiu: a partida acaba para quem assiste e o armazenamento é liberado.
     await this.ctx.storage.deleteAll();

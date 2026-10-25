@@ -1,10 +1,11 @@
 import type { EventoDaTransmissao } from "@/modules/gameplay";
 import type { Dificuldade, Instrumento } from "@/modules/songs";
-import { entradasParaOLote, urlDaTransmissao, type MensagemDaTransmissao } from "./protocolo";
+import { entradasParaOLote, lerAvisoDeEspectadores, urlDaTransmissao, type MensagemDaTransmissao } from "./protocolo";
 
 interface SocketMinimo {
   readyState: number;
   onopen: (() => void) | null;
+  onmessage: ((evento: { data: string }) => void) | null;
   onclose: ((evento?: { reason?: string }) => void) | null;
   send(texto: string): void;
   close(): void;
@@ -24,6 +25,8 @@ export interface DependenciasDaTransmissao {
   urlDoRelay: string;
   pedirFicha: () => Promise<string>;
   criarSocket?: (url: string) => SocketMinimo;
+  /** Quantas pessoas estão assistindo; volta a 0 quando a transmissão cai ou recomeça. */
+  aoContarEspectadores?: (quantos: number) => void;
 }
 
 const ABERTO = 1;
@@ -38,6 +41,7 @@ export function criarTransmissao(partida: PartidaParaTransmitir, deps: Dependenc
   let encerrada = false;
   /** A ficha ou a conexão falharam: o resto da partida não é transmitido. */
   let desistiu = false;
+  const contar = (quantos: number) => deps.aoContarEspectadores?.(quantos);
 
   const despachar = () => {
     if (socket?.readyState !== ABERTO) return;
@@ -59,16 +63,22 @@ export function criarTransmissao(partida: PartidaParaTransmitir, deps: Dependenc
       const este = criar(urlDaTransmissao(deps.urlDoRelay, partida.contaId, ficha));
       socket = este;
       este.onopen = despachar;
+      este.onmessage = (evento) => {
+        const quantos = lerAvisoDeEspectadores(evento.data);
+        if (socket === este && quantos !== null) contar(quantos);
+      };
       // O fechamento da conexão de uma rodada anterior chega depois e não pode derrubar a nova.
       este.onclose = () => {
         if (socket !== este) return;
         socket = null;
         fila = [];
         desistiu = true;
+        contar(0);
       };
     } catch {
       fila = [];
       desistiu = true;
+      contar(0);
     }
   };
 
@@ -81,6 +91,7 @@ export function criarTransmissao(partida: PartidaParaTransmitir, deps: Dependenc
       fila = [];
       encerrada = false;
       desistiu = false;
+      contar(0);
       mandar({
         tipo: "inicio",
         partida: {

@@ -71,3 +71,27 @@ describe("criarTransmissao", () => {
     expect(WebSocketFalso.ultimo).toBeNull();
   });
 });
+
+describe("quem está assistindo", () => {
+  beforeEach(() => (WebSocketFalso.ultimo = null));
+
+  it("o relay conta quantas pessoas estão assistindo, e cair a conexão zera", async () => {
+    const aoContarEspectadores = vi.fn();
+    const transmitir = criarTransmissao(partida, {
+      urlDoRelay: "wss://relay",
+      pedirFicha: async () => "ficha",
+      criarSocket: (url) => new WebSocketFalso(url),
+      aoContarEspectadores,
+    });
+    transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false });
+    await umInstante();
+    const socket = WebSocketFalso.ultimo!;
+    socket.abrir();
+
+    socket.entregar({ tipo: "espectadores", quantos: 3 });
+    expect(aoContarEspectadores).toHaveBeenLastCalledWith(3);
+
+    socket.fecharPeloServidor("saiu");
+    expect(aoContarEspectadores).toHaveBeenLastCalledWith(0);
+  });
+});

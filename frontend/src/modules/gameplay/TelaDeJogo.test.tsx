@@ -20,7 +20,13 @@ function carregarCom(notas: Nota[], duracao = 10) {
   vi.mocked(carregarMusica).mockResolvedValue({ audio: {} as AudioBuffer, notas, batidas: [], duracao });
 }
 
-function abrir(opcoes: Partial<OpcoesDaPartida> = {}, recorde?: number, replay?: Replay, transmissao?: (evento: EventoDaTransmissao) => void) {
+function abrir(
+  opcoes: Partial<OpcoesDaPartida> = {},
+  recorde?: number,
+  replay?: Replay,
+  transmissao?: (evento: EventoDaTransmissao) => void,
+  espectadores?: number,
+) {
   const aoSair = vi.fn();
   const aoTerminar = vi.fn();
   render(
@@ -34,6 +40,7 @@ function abrir(opcoes: Partial<OpcoesDaPartida> = {}, recorde?: number, replay?:
       aoTerminar={aoTerminar}
       replay={replay}
       transmissao={transmissao}
+      espectadores={espectadores}
     />,
   );
   return { aoSair, aoTerminar, usuario: userEvent.setup() };
@@ -233,6 +240,17 @@ describe("TelaDeJogo", () => {
     carregarCom([nota(0.5)]);
     abrir({}, undefined, { semFalha: false, fantasma: false, hashDoChart: "0".repeat(32), entradas: [] });
     expect(await screen.findByText(/outra versão do chart/)).toBeInTheDocument();
+  });
+
+  it("com gente assistindo, mostra o olho com quantas pessoas são", async () => {
+    abrir({}, undefined, undefined, vi.fn(), 2);
+    expect(await screen.findByRole("status", { name: "2 pessoas assistindo" })).toHaveTextContent("2");
+  });
+
+  it("sem ninguém assistindo, o olho não aparece", async () => {
+    abrir({}, undefined, undefined, vi.fn(), 0);
+    await screen.findByRole("button", { name: "Pausar" });
+    expect(screen.queryByRole("status", { name: /assistindo/ })).not.toBeInTheDocument();
   });
 
   it("transmite o início, as entradas em lotes e o fim da partida", async () => {

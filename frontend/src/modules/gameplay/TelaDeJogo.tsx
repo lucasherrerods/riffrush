@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, Pause, Skull, Zap } from "lucide-react";
+import { Eye, Loader2, Pause, Skull, Zap } from "lucide-react";
 import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, tocarEfeito } from "@/modules/audio";
 import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "@/modules/character";
 import { cenaDaPartida } from "./cena";
@@ -95,6 +95,8 @@ interface Props {
   transmissao?: (evento: EventoDaTransmissao) => void;
   /** O placar do ranking no canto da tela, desenhado com os pontos de agora. */
   placar?: (pontos: number) => ReactNode;
+  /** Quantas pessoas estão assistindo a transmissão. Com alguém, aparece o olho no canto. */
+  espectadores?: number;
 }
 
 interface Hud {
@@ -129,7 +131,7 @@ const LARGURA_DO_PAINEL = 250;
 const LARGURA_DO_HUD_LATERAL = 240;
 const MARGEM_DO_HUD = 16;
 
-export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar, replay, transmissao }: Props) {
+export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar, replay, transmissao, espectadores = 0 }: Props) {
   const recordeAtual = useRef(recorde);
   recordeAtual.current = recorde;
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -610,6 +612,16 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
               </p>
             </div>
             <ProgressoDaMusica loja={loja} />
+            {espectadores > 0 && (
+              <span
+                role="status"
+                aria-label={`${espectadores} ${espectadores === 1 ? "pessoa assistindo" : "pessoas assistindo"}`}
+                className="flex shrink-0 items-center gap-2 rounded-md bg-superficie px-2 py-1 font-mono text-base font-bold tabular-nums"
+              >
+                <Eye className="size-4 opacity-70" aria-hidden />
+                {espectadores}
+              </span>
+            )}
             <Button variant="ghost" size="icon" onClick={() => controles.current.pausar()} aria-label="Pausar">
               <Pause />
             </Button>

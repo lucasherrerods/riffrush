@@ -1,4 +1,4 @@
-import { lerEstado, lerMensagemDaTransmissao, linkDoChartConfere, verificarFicha } from "./presenca";
+import { avisoDeEspectadores, lerEstado, lerMensagemDaTransmissao, linkDoChartConfere, verificarFicha } from "./presenca";
 
 // A mesma ficha do teste da API (backend/src/modules/presenca/dominio.rs): os dois lados precisam concordar.
 const FICHA =
@@ -86,5 +86,11 @@ describe("link do chart", () => {
     const ruim = inicio("https://evil.com/x.sng");
     expect(ruim?.tipo).toBe("inicio");
     expect(ruim?.tipo === "inicio" && ruim.partida.urlDoEncore).toBeUndefined();
+  });
+});
+
+describe("avisoDeEspectadores", () => {
+  it("diz a quem joga quantas pessoas estão assistindo", () => {
+    expect(JSON.parse(avisoDeEspectadores(3))).toEqual({ tipo: "espectadores", quantos: 3 });
   });
 });

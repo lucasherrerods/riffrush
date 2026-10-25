@@ -21,4 +21,5 @@ export function usePresenca() {
 }
 
 /** Uma transmissão nova para a partida que vai começar. */
-export const transmitirPartida = (partida: PartidaParaTransmitir) => criarTransmissao(partida, { urlDoRelay: URL_DO_RELAY, pedirFicha });
+export const transmitirPartida = (partida: PartidaParaTransmitir, aoContarEspectadores?: (quantos: number) => void) =>
+  criarTransmissao(partida, { urlDoRelay: URL_DO_RELAY, pedirFicha, aoContarEspectadores });
