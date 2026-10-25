@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { MessageSquare, Send, VolumeX } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -19,11 +19,13 @@ interface Props {
   /** Quando existe, ninguém digita: aparece este motivo no lugar do campo. */
   bloqueado?: string;
   aoSilenciar?: (mensagem: MensagemDoChat) => void;
+  /** Ao lado do título, à direita. */
+  extra?: ReactNode;
   className?: string;
 }
 
 /** Chat de texto puro: nada vira link nem HTML, e as teclas digitadas não acionam os atalhos das telas. */
-export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, aoSilenciar, className }: Props) {
+export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, aoSilenciar, extra, className }: Props) {
   const [texto, setTexto] = useState("");
   const [devagar, setDevagar] = useState(false);
   const lista = useRef<HTMLOListElement>(null);
@@ -49,11 +51,14 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, aoSilenci
 
   return (
     <section aria-label={titulo} className={cn("flex min-h-0 flex-col gap-2 placa p-4", className)}>
-      <p className="flex items-center gap-2 text-base font-bold">
-        <MessageSquare className="size-4 text-primaria opacity-70" aria-hidden /> {titulo}
-      </p>
+      <div className="flex items-center gap-2">
+        <p className="flex flex-1 items-center gap-2 text-base font-bold">
+          <MessageSquare className="size-4 text-primaria opacity-70" aria-hidden /> {titulo}
+        </p>
+        {extra}
+      </div>
       <ol ref={lista} role="log" aria-label={titulo} className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto text-base">
-        {mensagens.length === 0 && <li className="text-texto-suave">Nenhuma mensagem ainda.</li>}
+        {mensagens.length === 0 && !bloqueado && <li className="text-texto-suave">Nenhuma mensagem ainda.</li>}
         {mensagens.map((m) => (
           <li key={m.id} className="group flex items-start gap-1 break-words">
             <p className="min-w-0 flex-1">

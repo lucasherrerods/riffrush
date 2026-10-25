@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import { sessaoDaConta } from "@/modules/conta";
 import { URL_DO_RELAY } from "@/modules/multiplayer";
 import { apiDaPresenca } from "./api";
+import { ConexaoDoChatGlobal } from "./conexaoDoChat";
 import { ConexaoDePresenca } from "./conexao";
 import { criarTransmissao, type PartidaParaTransmitir } from "./transmissao";
 
@@ -15,6 +16,9 @@ export const presencaDisponivel = !!URL_DO_RELAY;
 
 /** A conexão com a lista de quem está online, uma só para o app. */
 export const presenca = new ConexaoDePresenca({ urlDoRelay: URL_DO_RELAY, pedirFicha });
+
+/** A conexão com o chat global, uma só para o app. */
+export const chatGlobal = new ConexaoDoChatGlobal({ urlDoRelay: URL_DO_RELAY, pedirFicha });
 
 export function usePresenca() {
   return useSyncExternalStore(presenca.inscrever, presenca.estado);
