@@ -57,7 +57,6 @@ const OPCOES_DE_INSTRUMENTO: { id: Instrumento | "todos"; rotulo: string }[] = [
   { id: "guitarra-coop", rotulo: "Guitarra coop" },
   { id: "ritmo", rotulo: "Ritmo" },
   { id: "baixo", rotulo: "Baixo" },
-  { id: "bateria", rotulo: "Bateria" },
   { id: "teclado", rotulo: "Teclado" },
 ];
 

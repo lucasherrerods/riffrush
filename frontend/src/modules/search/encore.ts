@@ -133,6 +133,12 @@ function lerItem(item: Record<string, unknown>): ResultadoDaBusca | null {
   };
 }
 
+/**
+ * O jogo ainda não tem bateria: um chart que só tem bateria abriria com a pista vazia.
+ * Sem a lista de instrumentos (dado faltando no Encore), o chart continua aparecendo.
+ */
+const temAlgoParaTocar = (r: ResultadoDaBusca) => r.instrumentos.length === 0 || r.instrumentos.some((i) => i !== "bateria");
+
 export function lerRespostaDaBusca(json: unknown): RespostaDaBusca {
   const corpo = json as { found?: unknown; data?: unknown } | null;
   if (typeof corpo?.found !== "number" || !Array.isArray(corpo.data)) {
@@ -140,7 +146,7 @@ export function lerRespostaDaBusca(json: unknown): RespostaDaBusca {
   }
   return {
     total: corpo.found,
-    resultados: corpo.data.flatMap((item) => lerItem(item ?? {}) ?? []),
+    resultados: corpo.data.flatMap((item) => lerItem(item ?? {}) ?? []).filter(temAlgoParaTocar),
   };
 }
 
