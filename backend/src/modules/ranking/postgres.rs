@@ -81,17 +81,29 @@ impl From<LinhaGeral> for LinhaDoGeral {
 }
 
 /// Só contas que já ganharam XP. No empate, quem chegou antes fica na frente.
+/// Lê só o top pelo índice; a posição de quem pediu é quantos estão à frente dele, mais um.
 const CONSULTA_DO_GERAL: &str = "
-    WITH numerados AS (
-        SELECT id AS conta_id, nome, avatar, xp_total,
-               ROW_NUMBER() OVER (ORDER BY xp_total DESC, criada_em ASC) AS posicao,
-               COUNT(*) OVER () AS jogadores
+    WITH top AS (
+        SELECT id, nome, avatar, xp_total, criada_em
         FROM contas
         WHERE xp_total > 0
+        ORDER BY xp_total DESC, criada_em ASC
+        LIMIT $1
+    ),
+    total AS (SELECT COUNT(*) AS jogadores FROM contas WHERE xp_total > 0),
+    eu AS (
+        SELECT id, nome, avatar, xp_total, criada_em
+        FROM contas
+        WHERE id = $2 AND xp_total > 0 AND id NOT IN (SELECT id FROM top)
     )
-    SELECT posicao, jogadores, conta_id, nome, avatar, xp_total
-    FROM numerados
-    WHERE posicao <= $1 OR conta_id = $2
+    SELECT ROW_NUMBER() OVER (ORDER BY xp_total DESC, criada_em ASC) AS posicao,
+           total.jogadores, id AS conta_id, nome, avatar, xp_total
+    FROM top, total
+    UNION ALL
+    SELECT 1 + (SELECT COUNT(*) FROM contas c
+                WHERE c.xp_total > eu.xp_total OR (c.xp_total = eu.xp_total AND c.criada_em < eu.criada_em)),
+           total.jogadores, eu.id, eu.nome, eu.avatar, eu.xp_total
+    FROM eu, total
     ORDER BY posicao";
 
 #[derive(FromRow)]
