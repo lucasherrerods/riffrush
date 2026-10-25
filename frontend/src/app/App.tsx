@@ -11,7 +11,7 @@ import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusi
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
 import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
-import { ChatGlobal, TelaDeEspectador, TelaOnline, presenca, presencaDisponivel, transmitirPartida, usePresenca, type PessoaOnline } from "@/modules/presenca";
+import { ChatGlobal, TelaDeEspectador, TelaOnline, presenca, presencaDisponivel, transmitirPartida, usePresenca, useSouDaModeracao, type PessoaOnline } from "@/modules/presenca";
 import { TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
@@ -61,6 +61,7 @@ export function App() {
     [personagem, conta],
   );
   const estadoDaPresenca = usePresenca();
+  const souDaModeracao = useSouDaModeracao();
   const conexao = useConexao();
   const estreita = useTelaEstreita();
   const partidasVistas = useRef(0);
@@ -327,6 +328,7 @@ export function App() {
         <CabecalhoDoPlayerDeMusica volume={volumeGeral} aoMudarVolume={definirVolumeGeral}>
           {contasLigadas && (
             <CartaoDaConta
+              mod={souDaModeracao}
               aoVerPerfil={() => {
                 if (tela === "perfil") return;
                 setVoltarDoPerfilPara(tela);
@@ -462,7 +464,7 @@ export function App() {
             )}
             {tela === "leaderboard" && <TelaDeLeaderboard aoVoltar={() => setTela("menu")} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />}
             {tela === "perfil" && (
-              <TelaDePerfil aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />
+              <TelaDePerfil mod={souDaModeracao} aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />
             )}
             {tela === "configuracoes" && (
               <TelaDeConfiguracoes configuracoes={configuracoes} aoMudar={mudarConfiguracoes} aoVoltar={() => setTela("menu")} />

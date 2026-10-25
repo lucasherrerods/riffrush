@@ -7,12 +7,13 @@ import { avisar } from "@/shared/ui/avisos";
 import { FotoDaConta } from "./FotoDaConta";
 import { LogoDoGoogle } from "./LogoDoGoogle";
 import { sessaoDaConta } from "./sessao";
+import { SeloMod } from "@/shared/ui/SeloMod";
 import { useConta } from "./useConta";
 
 export const URL_DA_AJUDA = "https://github.com/lucasherrerods/riffrush/issues";
 
 /** No canto do cabeçalho: entrar com o Google ou abrir o menu da conta. */
-export function CartaoDaConta({ aoVerPerfil }: { aoVerPerfil: () => void }) {
+export function CartaoDaConta({ aoVerPerfil, mod = false }: { aoVerPerfil: () => void; /** Mostra o selo Mod embaixo do nome. */ mod?: boolean }) {
   const { conta, carregando } = useConta();
 
   if (carregando) return <Loader2 aria-label="Carregando a conta" className="size-4 animate-spin text-texto-suave" />;
@@ -51,6 +52,7 @@ export function CartaoDaConta({ aoVerPerfil }: { aoVerPerfil: () => void }) {
           <FotoDaConta avatar={conta.avatar} className="size-10" />
           <span className="flex min-w-0 flex-1 flex-col gap-1.5">
             <span className="truncate text-base leading-none font-bold">{conta.nome}</span>
+            {mod && <SeloMod />}
             {conta.email && <span className="truncate text-sm leading-none text-texto-suave">{conta.email}</span>}
             <span className="text-sm leading-none text-texto-suave">
               {xp_no_nivel} / {xp_para_o_proximo} XP para o <span className="font-titulo text-destaque">Nv {nivel + 1}</span>
