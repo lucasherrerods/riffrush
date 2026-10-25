@@ -14,7 +14,12 @@ interface Props {
   tituloDaMusica: (id: string) => string | undefined;
   carregarPlayers?: (sinal: AbortSignal) => Promise<RespostaDoGeral>;
   carregarMusicas?: (sinal: AbortSignal) => Promise<MusicaNoRanking[]>;
+  /** Abre a janela de baixar de uma música do Encore. Sem ela, as músicas não são clicáveis. */
+  aoAbrirMusicaDoEncore?: (md5: string) => void;
 }
+
+/** O ranking guarda as músicas do Encore como `encore:<md5>`; as outras não têm de onde baixar. */
+const md5DoEncore = (id: string) => (id.startsWith("encore:") ? id.slice("encore:".length) : null);
 
 const carregarPlayersPadrao = (sinal: AbortSignal) => apiDoRanking.geral({ token: sessaoDaConta.token() ?? undefined, sinal });
 const carregarMusicasPadrao = (sinal: AbortSignal) => apiDoRanking.musicas({ sinal });
@@ -23,7 +28,7 @@ const plural = (n: number, um: string, varios: string) => `${formatar(n)} ${n ==
 const LISTA = "sem-barra-de-rolagem flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto";
 
 /** O leaderboard: os jogadores com mais XP numa aba e as músicas mais jogadas na outra. */
-export function TelaDeLeaderboard({ aoVoltar, tituloDaMusica, carregarPlayers = carregarPlayersPadrao, carregarMusicas = carregarMusicasPadrao }: Props) {
+export function TelaDeLeaderboard({ aoVoltar, tituloDaMusica, carregarPlayers = carregarPlayersPadrao, carregarMusicas = carregarMusicasPadrao, aoAbrirMusicaDoEncore }: Props) {
   return (
     <div className="flex h-full flex-col gap-4 p-6">
       <header className="flex items-center gap-4">
@@ -47,7 +52,7 @@ export function TelaDeLeaderboard({ aoVoltar, tituloDaMusica, carregarPlayers = 
           <AbaDePlayers carregar={carregarPlayers} />
         </TabsContent>
         <TabsContent value="musicas" className="mt-2 flex min-h-0 flex-1 flex-col gap-2 placa p-4">
-          <AbaDeMusicas carregar={carregarMusicas} tituloDaMusica={tituloDaMusica} />
+          <AbaDeMusicas carregar={carregarMusicas} tituloDaMusica={tituloDaMusica} aoAbrir={aoAbrirMusicaDoEncore} />
         </TabsContent>
       </Tabs>
     </div>
@@ -103,7 +108,7 @@ function LinhaDoPlayer({ linha, minha }: { linha: PosicaoNoGeral; minha: boolean
   );
 }
 
-function AbaDeMusicas({ carregar, tituloDaMusica }: { carregar: (sinal: AbortSignal) => Promise<MusicaNoRanking[]>; tituloDaMusica: Props["tituloDaMusica"] }) {
+function AbaDeMusicas({ carregar, tituloDaMusica, aoAbrir }: { carregar: (sinal: AbortSignal) => Promise<MusicaNoRanking[]>; tituloDaMusica: Props["tituloDaMusica"]; aoAbrir?: (md5: string) => void }) {
   const { estado, tentarDeNovo } = useCarregamento(carregar);
   return (
     <ComCarregamento estado={estado} tentarDeNovo={tentarDeNovo} oQue="as músicas">
@@ -114,18 +119,24 @@ function AbaDeMusicas({ carregar, tituloDaMusica }: { carregar: (sinal: AbortSig
           <>
             <p className="px-2 text-base text-texto-suave">As músicas com mais partidas, somando todos os jogadores</p>
             <ol aria-label="Músicas" className={LISTA}>
-              {musicas.map((m) => (
+              {musicas.map((m) => {
+                const md5 = md5DoEncore(m.musica_id);
+                const nome = nomeDaMusica(m, tituloDaMusica);
+                return (
                 <LinhaComPosicao
                   key={m.musica_id}
                   posicao={m.posicao}
-                  nome={nomeDaMusica(m, tituloDaMusica)}
+                  nome={nome}
+                  aoClicar={md5 && aoAbrir ? () => aoAbrir(md5) : undefined}
+                  rotuloDoClique={`Baixar ${nome}`}
                   avatar={m.capa ?? null}
                   semFoto={Music}
                   minha={false}
                   detalhe={plural(m.jogadores, "jogador", "jogadores")}
                   valor={plural(m.partidas, "partida", "partidas")}
                 />
-              ))}
+                );
+              })}
             </ol>
           </>
         )

@@ -14,12 +14,14 @@ interface Props {
   detalhe: React.ReactNode;
   /** O número que decide a posição (pontos, XP). */
   valor: React.ReactNode;
+  /** Nome do botão para leitores de tela, quando a linha é clicável. */
+  rotuloDoClique?: string;
   /** Com ele, a linha vira um botão. */
   aoClicar?: () => void;
 }
 
 /** Uma linha de ranking: posição, foto, nome e o número que ordena. */
-export function LinhaComPosicao({ posicao, nome, avatar, semFoto: SemFoto = UserRound, minha, detalhe, valor, aoClicar }: Props) {
+export function LinhaComPosicao({ posicao, nome, avatar, semFoto: SemFoto = UserRound, minha, detalhe, valor, aoClicar, rotuloDoClique = `Ver a partida de ${nome}` }: Props) {
   const conteudo = (
     <>
       <span className={cn("w-12 shrink-0 text-center font-titulo text-xl", posicao <= 3 ? "text-ouro" : "text-texto-suave")}>#{posicao}</span>
@@ -41,7 +43,7 @@ export function LinhaComPosicao({ posicao, nome, avatar, semFoto: SemFoto = User
   if (!aoClicar) return <li className={classe}>{conteudo}</li>;
   return (
     <li>
-      <button type="button" aria-label={`Ver a partida de ${nome}`} onClick={aoClicar} className={cn(classe, "w-full cursor-pointer text-left hover:bg-superficie-elevada")}>
+      <button type="button" aria-label={rotuloDoClique} onClick={aoClicar} className={cn(classe, "w-full cursor-pointer text-left hover:bg-superficie-elevada")}>
         {conteudo}
       </button>
     </li>

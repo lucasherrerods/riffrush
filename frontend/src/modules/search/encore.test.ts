@@ -1,4 +1,4 @@
-import { FILTROS_PADRAO, buscarNoEncore, montarCorpoDaBuscaAvancada, formatarDuracao, lerRespostaDaBusca, montarCorpoDaBusca, montarUrlDoChart, nomeDoArquivo, urlDaCapa, ehUrlDoEncore, linkDoChartConfere, type ResultadoDaBusca } from "./encore";
+import { FILTROS_PADRAO, buscarChartPeloMd5, buscarNoEncore, montarCorpoDaBuscaAvancada, formatarDuracao, lerRespostaDaBusca, montarCorpoDaBusca, montarUrlDoChart, nomeDoArquivo, urlDaCapa, ehUrlDoEncore, linkDoChartConfere, type ResultadoDaBusca } from "./encore";
 
 const itemDaApi = {
   name: "Enter Sandman",
@@ -107,6 +107,24 @@ describe("formatarDuracao", () => {
     expect(formatarDuracao(263674)).toBe("4:23");
     expect(formatarDuracao(5000)).toBe("0:05");
     expect(formatarDuracao(0)).toBe("");
+  });
+});
+
+describe("buscarChartPeloMd5", () => {
+  it("pede o chart pelo hash na busca avançada e devolve só o do md5 pedido", async () => {
+    const outro = { ...itemDaApi, md5: "f".repeat(32) };
+    const buscar = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ found: 2, data: [outro, itemDaApi] }), { status: 201 }));
+    const chart = await buscarChartPeloMd5(itemDaApi.md5, { buscar: buscar as unknown as typeof fetch });
+    expect(buscar.mock.calls[0][0]).toBe("https://api.enchor.us/search/advanced");
+    expect(JSON.parse(buscar.mock.calls[0][1]!.body as string)).toMatchObject({ hash: itemDaApi.md5 });
+    expect(chart?.md5).toBe(itemDaApi.md5);
+  });
+
+  it("sem o chart no Encore, devolve null; md5 estranho nem chega a buscar", async () => {
+    const buscar = vi.fn(async () => new Response(JSON.stringify({ found: 0, data: [] }), { status: 201 }));
+    expect(await buscarChartPeloMd5(itemDaApi.md5, { buscar })).toBeNull();
+    expect(await buscarChartPeloMd5("../../x", { buscar })).toBeNull();
+    expect(buscar).toHaveBeenCalledTimes(1);
   });
 });
 
