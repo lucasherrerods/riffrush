@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Star } from "lucide-react";
 import { recordeDe, type Recordes } from "@/modules/results";
@@ -20,6 +20,8 @@ interface Props {
   aoJogar: () => void;
   /** Músicas a andar pela roda do mouse (negativo sobe). */
   aoGirar: (passos: number) => void;
+  /** Botão de opções no canto da música selecionada (ex.: apagar a importada). */
+  menuDaSelecionada?: ReactNode;
 }
 
 /** A selecionada sai um pouco da roda, para a esquerda. */
@@ -39,7 +41,7 @@ const COR_DA_DIFICULDADE: Record<Dificuldade, string> = {
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 /** Lista de músicas em roda, como no osu!lazer: a selecionada fica no meio, com as dificuldades abertas embaixo. */
-export function Carrossel({ musicas, indice, dificuldade, instrumento, dificuldades, recordes, aoEscolherMusica, aoEscolherDificuldade, aoJogar, aoGirar }: Props) {
+export function Carrossel({ musicas, indice, dificuldade, instrumento, dificuldades, recordes, aoEscolherMusica, aoEscolherDificuldade, aoJogar, aoGirar, menuDaSelecionada }: Props) {
   const giro = useRef(0);
   const posicoes = posicoesNoCarrossel(musicas.length, indice, dificuldades.length);
   const centro = centroDoGrupoAberto(dificuldades.length);
@@ -69,6 +71,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
             transition={MOLA}
             className="absolute top-1/2 right-0 left-8"
           >
+            <div className="relative">
             <button
               aria-current={selecionada}
               onClick={() => (selecionada ? aoJogar() : aoEscolherMusica(i))}
@@ -76,6 +79,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
               className={cn(
                 "chapa flex w-full items-center gap-4 px-4 text-left transition-colors",
                 selecionada ? "border-destaque bg-destaque/15" : "border-transparent bg-superficie hover:bg-superficie-elevada",
+                selecionada && menuDaSelecionada && "pr-16",
               )}
             >
               <Capa musica={m} decorativa className="size-14 rounded-sm" />
@@ -91,6 +95,8 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
                 </span>
               )}
             </button>
+            {selecionada && menuDaSelecionada && <div className="absolute top-1/2 right-3 -translate-y-1/2">{menuDaSelecionada}</div>}
+            </div>
 
             {selecionada && (
               <div role="radiogroup" aria-label="Dificuldade" className="mt-2 flex flex-col gap-2 pl-12">

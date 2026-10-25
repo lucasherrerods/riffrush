@@ -234,7 +234,8 @@ describe("App", () => {
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     await screen.findByRole("heading", { name: "Selecione a música" });
     await usuario.keyboard("{ArrowUp}");
-    await usuario.click(await screen.findByRole("button", { name: /Remover Para Apagar/ }));
+    await usuario.click(await screen.findByRole("button", { name: /Opções de Para Apagar/ }));
+    await usuario.click(screen.getByRole("menuitem", { name: /Apagar música/ }));
     await usuario.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Remover" }));
     expect(biblioteca.remover).toHaveBeenCalledWith(expect.objectContaining({ id: "arquivo:salva" }));
     await waitFor(() => expect(screen.queryByRole("button", { name: /Para Apagar/ })).not.toBeInTheDocument());
