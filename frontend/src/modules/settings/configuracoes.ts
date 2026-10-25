@@ -10,6 +10,8 @@ export interface Configuracoes {
   botaoDaEstrela: number;
   /** De 1 a 10. */
   velocidade: number;
+  /** O volume de tudo (Alt/Ctrl + roda em qualquer tela). Os outros volumes são a mistura dentro dele. */
+  volumeGeral: number;
   volumeDaMusica: number;
   volumeDosEfeitos: number;
   /** A música que toca nos menus, separada da música da partida. */
@@ -36,6 +38,7 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   botoesDoControle: BOTOES_DOS_TRASTES_PADRAO,
   botaoDaEstrela: BOTAO_DA_ESTRELA_PADRAO,
   velocidade: 6,
+  volumeGeral: 1,
   volumeDaMusica: 0.8,
   volumeDosEfeitos: 0.5,
   volumeDoPlayer: 0.3,

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { definirTelaCheia } from "@/modules/platform";
 import { carregarRecordes, salvarRecorde } from "@/modules/results";
@@ -10,6 +10,7 @@ import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
 import { useSeguirMusica } from "@/modules/player";
 import { sessaoDaConta } from "@/modules/conta";
 import { avisar } from "@/shared/ui/avisos";
+import { definirVolumeGeral, lerVolumeGeral } from "@/modules/audio";
 import { App } from "./App";
 
 const biblioteca = vi.hoisted(() => ({
@@ -97,6 +98,16 @@ beforeEach(() => {
 });
 
 describe("App", () => {
+  it("o volume geral mudado de qualquer lugar (atalho ou cabeçalho) fica salvo e volta ao abrir de novo", () => {
+    const { unmount } = render(<App />);
+    act(() => definirVolumeGeral(0.35));
+    expect(JSON.parse(localStorage.getItem("riffrush.configuracoes")!).volumeGeral).toBe(0.35);
+    unmount();
+    act(() => definirVolumeGeral(1));
+    render(<App />);
+    expect(lerVolumeGeral()).toBe(0.35);
+  });
+
   it("começa no menu principal", () => {
     abrir();
     expect(screen.getByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();

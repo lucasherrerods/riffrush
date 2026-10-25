@@ -173,6 +173,16 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
 
           <TabsContent value="audio" className="flex flex-col gap-2">
             <LinhaDeSlider
+              rotulo="Volume geral"
+              valor={configuracoes.volumeGeral}
+              minimo={0}
+              maximo={1}
+              passo={0.05}
+              formatar={porcentagem}
+              aoMudar={(volumeGeral) => mudar({ volumeGeral })}
+            />
+            <p className="px-2 text-base text-texto-suave">Em qualquer tela: Alt + roda do mouse, Ctrl + roda ou Ctrl + ↑/↓.</p>
+            <LinhaDeSlider
               rotulo="Volume da música"
               valor={configuracoes.volumeDaMusica}
               minimo={0}
@@ -191,7 +201,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
               aoMudar={(volumeDosEfeitos) => mudar({ volumeDosEfeitos })}
             />
             <LinhaDeSlider
-              rotulo="Volume do player"
+              rotulo="Música do menu"
               valor={configuracoes.volumeDoPlayer}
               minimo={0}
               maximo={1}

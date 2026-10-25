@@ -1,4 +1,4 @@
-import { obterContextoDeAudio } from "@/modules/audio";
+import { obterContextoDeAudio, saidaDeAudio } from "@/modules/audio";
 import { carregarMusica, type Musica } from "@/modules/songs";
 import { acaoDeVoltar, indiceVizinho, posicaoNaMusica } from "./fila";
 
@@ -143,7 +143,7 @@ export class PlayerDeMusica {
     if (!this.ganhoCriado) {
       this.ganhoCriado = this.contexto().createGain();
       this.ganhoCriado.gain.value = this.volume;
-      this.ganhoCriado.connect(this.contexto().destination);
+      this.ganhoCriado.connect(saidaDeAudio(this.contexto()));
     }
     return this.ganhoCriado;
   }
