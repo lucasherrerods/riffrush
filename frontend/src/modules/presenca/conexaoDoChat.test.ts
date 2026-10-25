@@ -3,7 +3,7 @@ import { ConexaoDoChatGlobal, aplicarMensagemDoChat, type EstadoDoChatGlobal, ty
 
 const ana: MensagemGlobal = { n: 1, autor: { id: "a", nome: "Ana" }, texto: "oi", em: 1 };
 const bia: MensagemGlobal = { n: 2, autor: { id: "b", nome: "Bia", equipe: true }, texto: "olá", em: 2 };
-const VAZIO: EstadoDoChatGlobal = { conectado: true, mensagens: [], voce: null, denuncias: [], banidos: [] };
+const VAZIO: EstadoDoChatGlobal = { conectado: true, mensagens: [], voce: null };
 const PODE = { podeEscrever: true, admin: false, banido: false, nivelParaEscrever: 2 };
 const aplicar = (estado: EstadoDoChatGlobal, msg: object) => aplicarMensagemDoChat(estado, JSON.stringify(msg));
 
@@ -21,13 +21,6 @@ describe("aplicarMensagemDoChat", () => {
 
   it("banido ou desbanido, a permissão muda", () => {
     expect(aplicar({ ...VAZIO, voce: PODE }, { tipo: "voce", voce: { ...PODE, podeEscrever: false, banido: true } }).voce?.banido).toBe(true);
-  });
-
-  it("a equipe recebe as denúncias e os banidos", () => {
-    const denuncia = { mensagem: ana, por: { id: "c", nome: "Caio" }, em: 3 };
-    const estado = aplicar(aplicar(VAZIO, { tipo: "denuncias", denuncias: [denuncia, { lixo: 1 }] }), { tipo: "banidos", banidos: [{ id: "x", nome: "X" }] });
-    expect(estado.denuncias).toEqual([denuncia]);
-    expect(estado.banidos).toEqual([{ id: "x", nome: "X" }]);
   });
 
   it("limpa de novo o que chega e descarta o que não tem o formato certo", () => {
@@ -76,15 +69,13 @@ describe("ConexaoDoChatGlobal", () => {
     expect(socket().enviadas).toEqual([]);
   });
 
-  it("denúncia e moderação vão pelo mesmo canal", async () => {
+  it("denunciar e apagar vão pelo relay, onde as mensagens ficam", async () => {
     const chat = await conectado();
     chat.denunciar(1);
     chat.apagar(1);
-    chat.banir("a");
     expect(socket().enviadas).toEqual([
       { tipo: "denunciar", n: 1 },
       { tipo: "apagar", n: 1 },
-      { tipo: "banir", id: "a" },
     ]);
   });
 

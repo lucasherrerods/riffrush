@@ -4,6 +4,7 @@
 use chrono::{Duration, Utc};
 use riffrush_api::modules::catalogo::{CatalogoPostgres, DadosDaMusica, RepositorioDoCatalogo};
 use riffrush_api::modules::conta::{ContasPostgres, PartidaRegistrada, PerfilDoGoogle, RepositorioDeContas, RepositorioDeSessoes};
+use riffrush_api::modules::moderacao::{Denuncia, ModeracaoPostgres, RepositorioDeModeracao, Situacao};
 use riffrush_api::modules::perfil::{PerfilPostgres, RepositorioDoPerfil};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento, ResumoDaPartida};
 use riffrush_api::modules::ranking::{RankingPostgres, RepositorioDoRanking};
@@ -452,4 +453,56 @@ async fn catalogo_guarda_atualiza_e_busca_varias_musicas() {
 
     assert_eq!(guardadas.get(&id), Some(&achada));
     assert!(!guardadas.contains_key(&outro));
+}
+
+#[tokio::test]
+async fn moderacao_guarda_equipe_banidos_e_denuncias_e_limpa_com_a_conta() {
+    let Some(banco) = banco().await else { return };
+    let moderacao = ModeracaoPostgres(banco.0.clone());
+    let admin = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let autor = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let quem_denuncia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    sqlx::query("INSERT INTO equipe (conta_id) VALUES ($1)")
+        .bind(admin.id)
+        .execute(&banco.0)
+        .await
+        .unwrap();
+    assert_eq!(moderacao.situacao(admin.id).await.unwrap(), Situacao { admin: true, banido: false });
+
+    // Banir conta que não existe não grava; banir de novo continua dando certo.
+    assert!(!moderacao.banir(Uuid::new_v4(), admin.id).await.unwrap());
+    assert!(moderacao.banir(autor.id, admin.id).await.unwrap());
+    assert!(moderacao.banir(autor.id, admin.id).await.unwrap());
+    assert!(moderacao.situacao(autor.id).await.unwrap().banido);
+    assert!(moderacao.banidos().await.unwrap().iter().any(|b| b.conta_id == autor.id));
+    moderacao.desbanir(autor.id).await.unwrap();
+    assert!(!moderacao.situacao(autor.id).await.unwrap().banido);
+
+    // Número alto e único: o banco é dividido com os outros testes.
+    let n = i64::from(rand_n());
+    let denuncia = Denuncia {
+        mensagem_n: n,
+        autor_id: autor.id,
+        autor_nome: "Lucas".into(),
+        texto: "spam".into(),
+        mensagem_em: Utc::now(),
+        denunciante_id: quem_denuncia.id,
+    };
+    moderacao.registrar_denuncia(&denuncia).await.unwrap();
+    moderacao.registrar_denuncia(&denuncia).await.unwrap();
+    let da_mensagem = |lista: Vec<riffrush_api::modules::moderacao::DenunciaRecebida>| lista.into_iter().filter(|d| d.denuncia.mensagem_n == n).count();
+    assert_eq!(da_mensagem(moderacao.denuncias(200).await.unwrap()), 1);
+    moderacao.resolver(n).await.unwrap();
+    assert_eq!(da_mensagem(moderacao.denuncias(200).await.unwrap()), 0);
+
+    // Excluir a conta leva junto o banimento e as denúncias dela.
+    moderacao.registrar_denuncia(&denuncia).await.unwrap();
+    moderacao.banir(autor.id, admin.id).await.unwrap();
+    banco.excluir(autor.id).await.unwrap();
+    assert_eq!(da_mensagem(moderacao.denuncias(200).await.unwrap()), 0);
+    assert!(!moderacao.banidos().await.unwrap().iter().any(|b| b.conta_id == autor.id));
+}
+
+fn rand_n() -> u32 {
+    (Uuid::new_v4().as_u128() % 1_000_000_000) as u32 + 1_000_000
 }

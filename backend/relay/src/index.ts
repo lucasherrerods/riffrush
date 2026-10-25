@@ -15,21 +15,21 @@ import {
   type EntradaDaSala,
   type Janela,
 } from "./regras";
+import { CABECALHO_DA_ASSINATURA, CABECALHO_DA_HORA, assinarPedido, conferirPedido } from "./assinatura";
 import {
   BALDE_CHEIO,
-  DENUNCIAS_GUARDADAS,
   MENSAGENS_GUARDADAS,
   NIVEL_PARA_ESCREVER,
-  admins,
   chaveDaMensagem,
   gastarDoBalde,
+  lerAvisoDaApi,
   lerComando,
   nomeParaMostrar,
   podeEscrever,
   recentes,
   type Autor,
+  type AvisoDaApi,
   type Balde,
-  type Denuncia,
   type MensagemDoChat,
   type MensagemDoChatGlobal,
   type Permissoes,
@@ -52,8 +52,8 @@ interface Env {
   PRESENCA: DurableObjectNamespace<Presenca>;
   TRANSMISSOES: DurableObjectNamespace<Transmissao>;
   CHAT: DurableObjectNamespace<ChatGlobal>;
-  /** Ids das contas da equipe, separados por vírgula (`npx wrangler secret put ADMINS_DO_CHAT`). */
-  ADMINS_DO_CHAT?: string;
+  /** O endereço da API (`https://...`), para onde vão as denúncias do chat global. */
+  URL_DA_API?: string;
   /** Limite de pedidos por IP (`[[ratelimits]]` no wrangler.toml). */
   LIMITE_POR_IP?: RateLimit;
   /** O mesmo SEGREDO_DO_RELAY da API (`npx wrangler secret put SEGREDO_DA_PRESENCA`). */
@@ -421,12 +421,13 @@ interface Conversando {
   autor: Autor;
   nivel: number;
   admin: boolean;
+  banido: boolean;
 }
 
 /**
  * O chat global: um só para o relay todo. Só entra quem tem conta (a ficha da API), então o nome
- * de quem escreve vem assinado e ninguém fala pelo outro. Escrever pede nível mínimo; as contas de
- * ADMINS_DO_CHAT apagam mensagens, banem e veem as denúncias.
+ * de quem escreve vem assinado e ninguém fala pelo outro. Aqui ficam só as mensagens (24 horas):
+ * quem é da equipe, quem está banido e as denúncias ficam no banco da API.
  */
 export class ChatGlobal extends DurableObject<Env> {
   /**
@@ -442,18 +443,16 @@ export class ChatGlobal extends DurableObject<Env> {
     for (const antiga of this.ctx.getWebSockets(QUEM_CONVERSA)) {
       if ((antiga.deserializeAttachment() as Conversando).autor.id === pessoa.id) fechar(antiga, "outroAparelho");
     }
-    const admin = admins(this.env.ADMINS_DO_CHAT).has(pessoa.id);
     const conversando: Conversando = {
-      autor: { id: pessoa.id, nome: nomeParaMostrar(pessoa.nome, admin), ...(admin && { equipe: true as const }) },
+      autor: { id: pessoa.id, nome: nomeParaMostrar(pessoa.nome, pessoa.admin), ...(pessoa.admin && { equipe: true as const }) },
       nivel: pessoa.nivel,
-      admin,
+      admin: pessoa.admin,
+      banido: pessoa.banido,
     };
     const [cliente, servidor] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(servidor, [QUEM_CONVERSA]);
     servidor.serializeAttachment(conversando);
-    const voce = await this.permissoes(conversando);
-    enviar(servidor, JSON.stringify({ tipo: "historico", mensagens: await this.mensagens(), voce } satisfies MensagemDoChatGlobal));
-    if (admin) await this.mandarModeracao(servidor);
+    enviar(servidor, JSON.stringify({ tipo: "historico", mensagens: await this.mensagens(), voce: permissoes(conversando) } satisfies MensagemDoChatGlobal));
     return respostaDoSocket(pedido, cliente);
   }
 
@@ -469,7 +468,7 @@ export class ChatGlobal extends DurableObject<Env> {
     if (!comando) return;
 
     if (comando.tipo === "mensagem") {
-      if (!(await this.permissoes(quem)).podeEscrever) return;
+      if (!permissoes(quem).podeEscrever) return;
       const n = ((await this.ctx.storage.get<number>("ultima")) ?? 0) + 1;
       const mensagem: MensagemDoChat = { n, autor: quem.autor, texto: comando.texto, em: agora };
       await this.ctx.storage.put({ ultima: n, [chaveDaMensagem(n)]: mensagem });
@@ -478,44 +477,37 @@ export class ChatGlobal extends DurableObject<Env> {
     }
 
     if (comando.tipo === "denunciar") {
+      // O relay tem a mensagem verdadeira: quem denuncia não consegue inventar o que foi escrito.
       const mensagem = await this.ctx.storage.get<MensagemDoChat>(chaveDaMensagem(comando.n));
       if (!mensagem || mensagem.autor.id === quem.autor.id) return;
-      // Uma denúncia por pessoa e mensagem; a mensagem vai junto, para valer mesmo depois de apagada.
-      const chave = `denuncia:${String(comando.n).padStart(8, "0")}:${quem.autor.id}`;
-      if (await this.ctx.storage.get(chave)) return;
-      await this.ctx.storage.put(chave, { mensagem, por: quem.autor, em: agora } satisfies Denuncia);
-      await this.podarDenuncias();
-      return this.paraAdmins();
+      this.ctx.waitUntil(enviarDenuncia(this.env, mensagem, quem.autor.id));
+      return;
     }
 
-    // Daqui para baixo, só a equipe.
+    // Apagar uma mensagem é da equipe e vale só aqui, onde as mensagens ficam.
     if (!quem.admin) return;
-    if (comando.tipo === "apagar") {
-      await this.ctx.storage.delete(chaveDaMensagem(comando.n));
-      return this.paraTodos({ tipo: "apagadas", ns: [comando.n] });
-    }
-    if (comando.tipo === "resolver") {
-      const prefixo = `denuncia:${String(comando.n).padStart(8, "0")}:`;
-      await this.ctx.storage.delete([...(await this.ctx.storage.list({ prefix: prefixo })).keys()]);
-      return this.paraAdmins();
-    }
-    if (comando.tipo === "banir") {
-      if (admins(this.env.ADMINS_DO_CHAT).has(comando.id)) return;
-      const doBanido = (await this.mensagens()).filter((m) => m.autor.id === comando.id);
-      const denunciada = [...(await this.ctx.storage.list<Denuncia>({ prefix: "denuncia:" })).values()].find((d) => d.mensagem.autor.id === comando.id);
-      const nome = doBanido[0]?.autor.nome ?? denunciada?.mensagem.autor.nome ?? comando.id;
-      await this.ctx.storage.put(`ban:${comando.id}`, { id: comando.id, nome } satisfies Autor);
+    await this.ctx.storage.delete(chaveDaMensagem(comando.n));
+    this.paraTodos({ tipo: "apagadas", ns: [comando.n] });
+  }
+
+  /** A API avisa quando a equipe bane ou desbane: quem já está conectado muda na hora. */
+  async moderar(aviso: AvisoDaApi) {
+    const banido = aviso.tipo === "banir";
+    if (banido) {
       // O que o banido escreveu some da conversa de todo mundo.
-      await this.ctx.storage.delete(doBanido.map((m) => chaveDaMensagem(m.n)));
-      if (doBanido.length) this.paraTodos({ tipo: "apagadas", ns: doBanido.map((m) => m.n) });
-    } else {
-      await this.ctx.storage.delete(`ban:${comando.id}`);
+      const dele = (await this.mensagens()).filter((m) => m.autor.id === aviso.id).map((m) => m.n);
+      if (dele.length) {
+        await this.ctx.storage.delete(dele.map(chaveDaMensagem));
+        this.paraTodos({ tipo: "apagadas", ns: dele });
+      }
     }
     for (const conectado of this.ctx.getWebSockets(QUEM_CONVERSA)) {
-      const outro = conectado.deserializeAttachment() as Conversando;
-      if (outro.autor.id === comando.id) enviar(conectado, JSON.stringify({ tipo: "voce", voce: await this.permissoes(outro) } satisfies MensagemDoChatGlobal));
+      const quem = conectado.deserializeAttachment() as Conversando;
+      if (quem.autor.id !== aviso.id || quem.admin) continue;
+      const atualizado = { ...quem, banido };
+      conectado.serializeAttachment(atualizado);
+      enviar(conectado, JSON.stringify({ tipo: "voce", voce: permissoes(atualizado) } satisfies MensagemDoChatGlobal));
     }
-    return this.paraAdmins();
   }
 
   async webSocketClose(socket: WebSocket) {
@@ -526,11 +518,6 @@ export class ChatGlobal extends DurableObject<Env> {
     fechar(socket, "saiu");
   }
 
-  private async permissoes(quem: Conversando): Promise<Permissoes> {
-    const banido = !quem.admin && !!(await this.ctx.storage.get(`ban:${quem.autor.id}`));
-    return { podeEscrever: podeEscrever({ nivel: quem.nivel, admin: quem.admin, banido }), admin: quem.admin, banido, nivelParaEscrever: NIVEL_PARA_ESCREVER };
-  }
-
   /** As mensagens das últimas 24 horas; as mais velhas são apagadas do armazenamento aqui. */
   private async mensagens() {
     const todas = [...(await this.ctx.storage.list<MensagemDoChat>({ prefix: "msg:" })).values()];
@@ -539,28 +526,55 @@ export class ChatGlobal extends DurableObject<Env> {
     return vivas;
   }
 
-  private async podarDenuncias() {
-    const chaves = [...(await this.ctx.storage.list({ prefix: "denuncia:" })).keys()];
-    if (chaves.length > DENUNCIAS_GUARDADAS) await this.ctx.storage.delete(chaves.slice(0, chaves.length - DENUNCIAS_GUARDADAS));
-  }
-
-  private async mandarModeracao(socket: WebSocket) {
-    const denuncias = [...(await this.ctx.storage.list<Denuncia>({ prefix: "denuncia:" })).values()];
-    const banidos = [...(await this.ctx.storage.list<Autor>({ prefix: "ban:" })).values()];
-    enviar(socket, JSON.stringify({ tipo: "denuncias", denuncias } satisfies MensagemDoChatGlobal));
-    enviar(socket, JSON.stringify({ tipo: "banidos", banidos } satisfies MensagemDoChatGlobal));
-  }
-
-  private async paraAdmins() {
-    for (const conectado of this.ctx.getWebSockets(QUEM_CONVERSA)) {
-      if ((conectado.deserializeAttachment() as Conversando).admin) await this.mandarModeracao(conectado);
-    }
-  }
-
   private paraTodos(mensagem: MensagemDoChatGlobal) {
     const texto = JSON.stringify(mensagem);
     for (const conectado of this.ctx.getWebSockets(QUEM_CONVERSA)) enviar(conectado, texto);
   }
+}
+
+const permissoes = (quem: Conversando): Permissoes => ({
+  podeEscrever: podeEscrever(quem),
+  admin: quem.admin,
+  banido: quem.banido && !quem.admin,
+  nivelParaEscrever: NIVEL_PARA_ESCREVER,
+});
+
+/** Manda a cópia da mensagem denunciada para a API, onde a equipe vê. Sem a API configurada, a denúncia não sai. */
+async function enviarDenuncia(env: Env, mensagem: MensagemDoChat, denunciante: string) {
+  const segredo = env.SEGREDO_DA_PRESENCA ?? "";
+  if (!env.URL_DA_API || !segredo) return;
+  const corpo = JSON.stringify({
+    mensagem_n: mensagem.n,
+    autor_id: mensagem.autor.id,
+    autor_nome: mensagem.autor.nome,
+    texto: mensagem.texto,
+    mensagem_em: mensagem.em,
+    denunciante_id: denunciante,
+  });
+  const hora = Math.floor(Date.now() / 1000);
+  try {
+    const resposta = await fetch(`${env.URL_DA_API.replace(/\/+$/, "")}/moderacao/denuncias`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", [CABECALHO_DA_HORA]: String(hora), [CABECALHO_DA_ASSINATURA]: await assinarPedido(segredo, hora, corpo) },
+      body: corpo,
+    });
+    if (!resposta.ok) console.warn("a API recusou a denúncia", resposta.status);
+  } catch (erro) {
+    console.warn("não consegui mandar a denúncia para a API", String(erro));
+  }
+}
+
+/** A rota que a API chama para avisar banimentos, com o pedido assinado pelo segredo em comum. */
+async function avisoDeModeracao(pedido: Request, env: Env) {
+  if (pedido.method !== "POST") return new Response("Esperava POST.", { status: 405 });
+  const corpo = await pedido.text();
+  const hora = Number(pedido.headers.get(CABECALHO_DA_HORA));
+  const confere = await conferirPedido(env.SEGREDO_DA_PRESENCA ?? "", hora, Math.floor(Date.now() / 1000), corpo, pedido.headers.get(CABECALHO_DA_ASSINATURA) ?? "");
+  if (!confere) return new Response("Assinatura inválida.", { status: 401 });
+  const aviso = lerAvisoDaApi(corpo);
+  if (!aviso) return new Response("Aviso inválido.", { status: 400 });
+  await env.CHAT.get(env.CHAT.idFromName("chat")).moderar(aviso);
+  return new Response(null, { status: 204 });
 }
 
 /** Com a ficha no subprotocolo, a resposta precisa aceitar o mesmo protocolo, ou o navegador fecha a conexão. */
@@ -615,6 +629,8 @@ export default {
       if (!autenticado) return new Response("Ficha inválida.", { status: 401 });
       return env.PRESENCA.get(env.PRESENCA.idFromName("presenca")).fetch(autenticado.pedido);
     }
+
+    if (pathname === "/chat/moderacao") return avisoDeModeracao(pedido, env);
 
     if (pathname === "/chat") {
       const autenticado = await comPessoa(pedido, env);

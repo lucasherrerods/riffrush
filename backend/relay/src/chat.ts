@@ -7,19 +7,18 @@ export const MENSAGENS_GUARDADAS = 50;
 export const RETENCAO_MS = 24 * 60 * 60 * 1000;
 /** Conta nova não escreve: criar contas em massa para spam fica caro. */
 export const NIVEL_PARA_ESCREVER = 2;
-export const DENUNCIAS_GUARDADAS = 200;
 /** Folga para o JSON e para textos com acentos escapados. */
 const TAMANHO_MAXIMO_DA_MENSAGEM = 2048;
 const RAJADA = 5;
 const RECARGA_MS = 1000;
 
-const INVISIVEIS = /[\p{Cc}​-‏‪-‮⁠-⁩﻿]/gu;
+const INVISIVEIS = /[\p{Cc}\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/gu;
 
 /** Quem escreveu, como os outros veem. O id da conta serve para silenciar e para a moderação. */
 export interface Autor {
   id: string;
   nome: string;
-  /** Selo "Equipe": só as contas da variável ADMINS_DO_CHAT. */
+  /** Selo "Equipe": só quem a API marcou como equipe na ficha. */
   equipe?: true;
 }
 
@@ -28,13 +27,6 @@ export interface MensagemDoChat {
   autor: Autor;
   texto: string;
   /** Hora de chegada no relay, em ms. */
-  em: number;
-}
-
-export interface Denuncia {
-  mensagem: MensagemDoChat;
-  /** Quem denunciou. */
-  por: Autor;
   em: number;
 }
 
@@ -50,20 +42,26 @@ export type MensagemDoChatGlobal =
   | { tipo: "historico"; mensagens: MensagemDoChat[]; voce: Permissoes }
   | { tipo: "mensagem"; mensagem: MensagemDoChat }
   | { tipo: "apagadas"; ns: number[] }
-  | { tipo: "voce"; voce: Permissoes }
-  /** Só para admins. */
-  | { tipo: "denuncias"; denuncias: Denuncia[] }
-  | { tipo: "banidos"; banidos: Autor[] };
+  | { tipo: "voce"; voce: Permissoes };
 
 export type Comando =
   | { tipo: "mensagem"; texto: string }
   | { tipo: "denunciar"; n: number }
-  | { tipo: "apagar"; n: number }
-  | { tipo: "resolver"; n: number }
-  | { tipo: "banir"; id: string }
-  | { tipo: "desbanir"; id: string };
+  | { tipo: "apagar"; n: number };
+
+/** O que a API avisa quando a equipe bane ou desbane alguém (as denúncias e os banidos ficam no banco). */
+export type AvisoDaApi = { tipo: "banir" | "desbanir"; id: string };
 
 const ID_DA_CONTA = /^[0-9a-f-]{36}$/;
+
+export function lerAvisoDaApi(corpo: string): AvisoDaApi | null {
+  try {
+    const { tipo, id } = JSON.parse(corpo) as Record<string, unknown>;
+    return (tipo === "banir" || tipo === "desbanir") && typeof id === "string" && ID_DA_CONTA.test(id) ? { tipo, id } : null;
+  } catch {
+    return null;
+  }
+}
 
 /** O texto que o app mandou (`{"texto": "..."}`), limpo, ou null quando não é uma mensagem de chat. */
 export function lerTextoDoChat(bruta: string): string | null {
@@ -86,8 +84,7 @@ export function lerComando(bruta: string): Comando | null {
     const texto = limparTexto(dados.texto);
     return texto ? { tipo, texto } : null;
   }
-  if ((tipo === "denunciar" || tipo === "apagar" || tipo === "resolver") && Number.isInteger(dados.n) && (dados.n as number) > 0) return { tipo, n: dados.n as number };
-  if ((tipo === "banir" || tipo === "desbanir") && typeof dados.id === "string" && ID_DA_CONTA.test(dados.id)) return { tipo, id: dados.id };
+  if ((tipo === "denunciar" || tipo === "apagar") && Number.isInteger(dados.n) && (dados.n as number) > 0) return { tipo, n: dados.n as number };
   return null;
 }
 
@@ -121,9 +118,6 @@ export function gastarDoBalde(balde: Balde, agora: number): { passa: boolean; ba
 
 /** Chaves com zeros à esquerda: a listagem do storage sai em ordem de chegada. */
 export const chaveDaMensagem = (n: number) => `msg:${String(n).padStart(8, "0")}`;
-
-/** Os ids de conta da variável ADMINS_DO_CHAT, separados por vírgula. */
-export const admins = (variavel: string | undefined) => new Set((variavel ?? "").split(",").map((id) => id.trim()).filter(Boolean));
 
 export const podeEscrever = (p: { nivel: number; admin: boolean; banido: boolean }) => p.admin || (!p.banido && p.nivel >= NIVEL_PARA_ESCREVER);
 

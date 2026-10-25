@@ -8,8 +8,11 @@ export interface Pessoa {
   avatar: string | null;
 }
 
-/** Quem a ficha diz que é, com o nível da conta (o chat global só deixa escrever a partir de um nível). */
-export type PessoaDaFicha = Pessoa & { nivel: number };
+/**
+ * Quem a ficha diz que é, com o que vale no chat global: o nível (escrever pede um mínimo),
+ * se é da equipe e se está banido. Quem decide é a API, que assina a ficha.
+ */
+export type PessoaDaFicha = Pessoa & { nivel: number; admin: boolean; banido: boolean };
 
 /**
  * O app manda a ficha como subprotocolo do WebSocket (`new WebSocket(url, [PROTOCOLO_DO_JOGO, ficha])`):
@@ -54,7 +57,14 @@ export async function verificarFicha(ficha: string, segredo: string, agoraEmSegu
     const dados = JSON.parse(new TextDecoder().decode(decodificarBase64Url(corpo)));
     if (typeof dados?.id !== "string" || typeof dados.nome !== "string" || typeof dados.exp !== "number" || dados.exp < agoraEmSegundos) return null;
     const nivel = Number.isInteger(dados.nivel) && dados.nivel > 0 ? dados.nivel : 0;
-    return { id: dados.id, nome: dados.nome.slice(0, TAMANHO_MAXIMO_DO_TEXTO), avatar: typeof dados.avatar === "string" ? dados.avatar : null, nivel };
+    return {
+      id: dados.id,
+      nome: dados.nome.slice(0, TAMANHO_MAXIMO_DO_TEXTO),
+      avatar: typeof dados.avatar === "string" ? dados.avatar : null,
+      nivel,
+      admin: dados.admin === true,
+      banido: dados.banido === true,
+    };
   } catch {
     return null;
   }

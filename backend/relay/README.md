@@ -36,12 +36,17 @@ A ficha vai como subprotocolo do WebSocket (`riffrush, <ficha>`), para não apar
 
 ## Chat global
 
-O chat global (`/chat`) usa a mesma ficha. Escrever pede nível 2, que vem assinado na ficha. As últimas 50 mensagens das últimas 24 horas ficam guardadas.
+O chat global (`/chat`) usa a mesma ficha. Aqui ficam só as mensagens: as últimas 50, das últimas 24 horas.
 
-A equipe, que vê as denúncias, apaga mensagens e bane, são as contas listadas em `ADMINS_DO_CHAT`. Os ids das contas ficam separados por vírgula e estão na tabela `contas` da API:
+Quem é da equipe, quem está banido e as denúncias ficam no banco da API. Eles chegam no relay assim:
+- **Na ficha:** a API assina `nivel`, `admin` e `banido`. Escrever pede nível 2.
+- **Denúncias:** o relay manda a cópia da mensagem para a API em `URL_DA_API`/moderacao/denuncias, assinada com o segredo em comum.
+- **Banimentos:** a API avisa o relay em `/chat/moderacao`, também assinado, para valer na hora para quem já está conectado.
 
-```bash
-npx wrangler secret put ADMINS_DO_CHAT   # ex.: 7f1c...-...,a2b4...-...
+`URL_DA_API` fica em `[vars]` no `wrangler.toml`. Para pôr alguém na equipe, rode no banco da API:
+
+```sql
+INSERT INTO equipe (conta_id) SELECT id FROM contas WHERE email = 'alguem@exemplo.com';
 ```
 
 ## Limites contra abuso

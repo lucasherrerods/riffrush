@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::modules::conta::ServicosDaConta;
+use crate::modules::moderacao::ServicosDeModeracao;
 use crate::modules::perfil::ServicosDoPerfil;
 use crate::modules::presenca::ServicosDePresenca;
 use crate::modules::ranking::ServicosDoRanking;
@@ -14,4 +15,5 @@ pub struct EstadoDoApp {
     pub ranking: ServicosDoRanking,
     pub perfil: ServicosDoPerfil,
     pub presenca: ServicosDePresenca,
+    pub moderacao: ServicosDeModeracao,
 }

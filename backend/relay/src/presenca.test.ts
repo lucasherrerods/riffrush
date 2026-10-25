@@ -3,14 +3,17 @@ import { PROTOCOLO_DO_JOGO, avisoDeEspectadores, fichaDoPedido, lerEstado, lerMe
 // A mesma ficha do teste da API (backend/src/modules/presenca/dominio.rs): os dois lados precisam concordar.
 const FICHA_COM_NIVEL =
   "eyJpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNyIsIm5vbWUiOiJMdWNhcyIsImF2YXRhciI6bnVsbCwibml2ZWwiOjMsImV4cCI6MTkwMDAwMDAwMH0.GcC-2VOsr_or75WtX3gQNBTBIKzZyYE3vwmey0C-eJY";
-// Ficha da API antes de mandar o nível: continua valendo, com nível 0.
+const FICHA_COMPLETA =
+  "eyJpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNyIsIm5vbWUiOiJMdWNhcyIsImF2YXRhciI6bnVsbCwibml2ZWwiOjMsImFkbWluIjpmYWxzZSwiYmFuaWRvIjpmYWxzZSwiZXhwIjoxOTAwMDAwMDAwfQ.9401CmmfteL1hrpnUWwo073vskes2uCyA8VskxNS7Ls";
+// Fichas de versões antigas da API, sem nível ou sem equipe/banido: continuam valendo, com nível 0 e sem poderes.
 const FICHA =
   "eyJpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNyIsIm5vbWUiOiJMdWNhcyIsImF2YXRhciI6bnVsbCwiZXhwIjoxOTAwMDAwMDAwfQ.g3x_8V8_Mc8fiEU3TwanHW2LnkX5ipNmEHy9XUb6HhA";
 const SEGREDO = "segredo-de-teste";
 
 describe("verificarFicha", () => {
   it("aceita a ficha assinada pela API e devolve quem é", async () => {
-    expect(await verificarFicha(FICHA_COM_NIVEL, SEGREDO, 1_800_000_000)).toEqual({ id: "00000000-0000-0000-0000-000000000007", nome: "Lucas", avatar: null, nivel: 3 });
+    expect(await verificarFicha(FICHA_COMPLETA, SEGREDO, 1_800_000_000)).toEqual({ id: "00000000-0000-0000-0000-000000000007", nome: "Lucas", avatar: null, nivel: 3, admin: false, banido: false });
+    expect(await verificarFicha(FICHA_COM_NIVEL, SEGREDO, 1_800_000_000)).toMatchObject({ nivel: 3, admin: false, banido: false });
   });
 
   it("ficha antiga, sem nível, vale como nível 0", async () => {

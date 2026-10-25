@@ -1,4 +1,4 @@
-import { BALDE_CHEIO, MENSAGENS_GUARDADAS, NIVEL_PARA_ESCREVER, RETENCAO_MS, admins, chaveDaMensagem, gastarDoBalde, lerComando, lerTextoDoChat, nomeParaMostrar, podeEscrever, recentes } from "./chat";
+import { BALDE_CHEIO, MENSAGENS_GUARDADAS, NIVEL_PARA_ESCREVER, RETENCAO_MS, chaveDaMensagem, gastarDoBalde, lerAvisoDaApi, lerComando, lerTextoDoChat, nomeParaMostrar, podeEscrever, recentes } from "./chat";
 
 describe("lerTextoDoChat", () => {
   it("lê o texto e limpa como o app limpa", () => {
@@ -7,7 +7,7 @@ describe("lerTextoDoChat", () => {
 
   it("corta no tamanho máximo e tira os invisíveis", () => {
     expect(lerTextoDoChat(JSON.stringify({ texto: "a".repeat(900) }))).toHaveLength(200);
-    expect(lerTextoDoChat(JSON.stringify({ texto: "a‮b​c" }))).toBe("abc");
+    expect(lerTextoDoChat(JSON.stringify({ texto: "a\u202Eb\u200Bc" }))).toBe("abc");
   });
 
   it("recusa o que não é uma mensagem de chat", () => {
@@ -50,29 +50,20 @@ describe("lerComando", () => {
     expect(lerComando(JSON.stringify({ tipo: "mensagem", texto: "oi" }))).toEqual({ tipo: "mensagem", texto: "oi" });
   });
 
-  it("lê denúncia e os comandos de moderação, com os números e ids conferidos", () => {
+  it("lê denúncia e o apagar da equipe; banir é com a API, não pelo chat", () => {
     expect(lerComando(JSON.stringify({ tipo: "denunciar", n: 4 }))).toEqual({ tipo: "denunciar", n: 4 });
     expect(lerComando(JSON.stringify({ tipo: "apagar", n: 4 }))).toEqual({ tipo: "apagar", n: 4 });
-    expect(lerComando(JSON.stringify({ tipo: "resolver", n: 4 }))).toEqual({ tipo: "resolver", n: 4 });
-    const id = "00000000-0000-0000-0000-000000000007";
-    expect(lerComando(JSON.stringify({ tipo: "banir", id }))).toEqual({ tipo: "banir", id });
-    expect(lerComando(JSON.stringify({ tipo: "desbanir", id }))).toEqual({ tipo: "desbanir", id });
+    expect(lerComando(JSON.stringify({ tipo: "banir", id: "00000000-0000-0000-0000-000000000007" }))).toBeNull();
   });
 
   it("recusa o resto", () => {
     expect(lerComando(JSON.stringify({ tipo: "denunciar", n: "4" }))).toBeNull();
-    expect(lerComando(JSON.stringify({ tipo: "banir", id: "../x" }))).toBeNull();
     expect(lerComando(JSON.stringify({ tipo: "virarAdmin" }))).toBeNull();
     expect(lerComando("lixo")).toBeNull();
   });
 });
 
 describe("quem pode o quê", () => {
-  it("lê os admins da variável, separados por vírgula", () => {
-    expect(admins(" a , b,,c ")).toEqual(new Set(["a", "b", "c"]));
-    expect(admins(undefined)).toEqual(new Set());
-  });
-
   it("escreve quem tem o nível mínimo e não está banido; admin sempre", () => {
     expect(NIVEL_PARA_ESCREVER).toBe(2);
     expect(podeEscrever({ nivel: 2, admin: false, banido: false })).toBe(true);
@@ -96,5 +87,15 @@ describe("recentes", () => {
     const agora = 10 * RETENCAO_MS;
     const m = (n: number, em: number) => ({ n, autor: { id: "a", nome: "A" }, texto: "x", em });
     expect(recentes([m(1, agora - RETENCAO_MS - 1), m(2, agora - 1000)], agora).map((x) => x.n)).toEqual([2]);
+  });
+});
+
+describe("lerAvisoDaApi", () => {
+  it("lê o banir e o desbanir que a API manda", () => {
+    const id = "00000000-0000-0000-0000-000000000007";
+    expect(lerAvisoDaApi(JSON.stringify({ tipo: "banir", id }))).toEqual({ tipo: "banir", id });
+    expect(lerAvisoDaApi(JSON.stringify({ tipo: "desbanir", id }))).toEqual({ tipo: "desbanir", id });
+    expect(lerAvisoDaApi(JSON.stringify({ tipo: "banir", id: "../x" }))).toBeNull();
+    expect(lerAvisoDaApi("lixo")).toBeNull();
   });
 });

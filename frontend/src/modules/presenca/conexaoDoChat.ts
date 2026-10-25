@@ -25,20 +25,11 @@ export interface Permissoes {
   nivelParaEscrever: number;
 }
 
-export interface Denuncia {
-  mensagem: MensagemGlobal;
-  por: AutorGlobal;
-  em: number;
-}
-
 export interface EstadoDoChatGlobal {
   conectado: boolean;
   mensagens: MensagemGlobal[];
   /** null até o relay dizer o que a pessoa pode fazer. */
   voce: Permissoes | null;
-  /** Só chegam para a equipe. */
-  denuncias: Denuncia[];
-  banidos: AutorGlobal[];
 }
 
 const TAMANHO_MAXIMO_DO_NOME = 80;
@@ -70,13 +61,6 @@ function lerPermissoes(valor: unknown): Permissoes | null {
   };
 }
 
-function lerDenuncia(valor: unknown): Denuncia | null {
-  if (!ehObjeto(valor)) return null;
-  const mensagem = lerMensagem(valor.mensagem);
-  const por = lerAutor(valor.por);
-  return mensagem && por && typeof valor.em === "number" ? { mensagem, por, em: valor.em } : null;
-}
-
 const validos = <T,>(lista: unknown, ler: (v: unknown) => T | null) => (Array.isArray(lista) ? lista.map(ler).filter((v): v is T => v !== null) : []);
 
 export function aplicarMensagemDoChat(estado: EstadoDoChatGlobal, bruta: string): EstadoDoChatGlobal {
@@ -100,10 +84,6 @@ export function aplicarMensagemDoChat(estado: EstadoDoChatGlobal, bruta: string)
     }
     case "voce":
       return { ...estado, voce: lerPermissoes(msg.voce) ?? estado.voce };
-    case "denuncias":
-      return { ...estado, denuncias: validos(msg.denuncias, lerDenuncia) };
-    case "banidos":
-      return { ...estado, banidos: validos(msg.banidos, lerAutor) };
     default:
       return estado;
   }
@@ -113,7 +93,7 @@ export interface DependenciasDoChat extends DependenciasDoSocket {
   urlDoRelay: string;
 }
 
-const DESLIGADO: EstadoDoChatGlobal = { conectado: false, mensagens: [], voce: null, denuncias: [], banidos: [] };
+const DESLIGADO: EstadoDoChatGlobal = { conectado: false, mensagens: [], voce: null };
 
 /** A conexão com o chat global. Liga quando alguma tela mostra o chat e desliga quando nenhuma mostra. */
 export class ConexaoDoChatGlobal {
@@ -121,7 +101,7 @@ export class ConexaoDoChatGlobal {
   private ouvintes = new Set<() => void>();
   private socket: SocketComFicha;
   private usos = 0;
-  /** O mesmo limite que o relay conta (mensagens, denúncias e comandos): o pedido é recusado aqui, em vez de sumir lá. */
+  /** O mesmo limite que o relay conta (mensagens, denúncias e o apagar): o pedido é recusado aqui, em vez de sumir lá. */
   private balde = BALDE_CHEIO;
 
   constructor(private deps: DependenciasDoChat) {
@@ -166,11 +146,10 @@ export class ConexaoDoChatGlobal {
     return this.comando({ tipo: "mensagem", texto: limpo });
   }
 
+  /** O relay manda a cópia verdadeira da mensagem para a API, onde a equipe vê. */
   denunciar = (n: number) => this.comando({ tipo: "denunciar", n });
+  /** Só a equipe: as mensagens ficam no relay, então apagar é por aqui. Banir é pela API. */
   apagar = (n: number) => this.comando({ tipo: "apagar", n });
-  resolver = (n: number) => this.comando({ tipo: "resolver", n });
-  banir = (id: string) => this.comando({ tipo: "banir", id });
-  desbanir = (id: string) => this.comando({ tipo: "desbanir", id });
 
   private comando(comando: object) {
     if (!this.socket.aberto) return false;

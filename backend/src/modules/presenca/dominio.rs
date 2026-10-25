@@ -16,6 +16,10 @@ pub struct Ficha {
     pub avatar: Option<String>,
     /// O relay só deixa escrever no chat global a partir de um nível mínimo.
     pub nivel: u32,
+    /// Da equipe: modera o chat global e aparece com o selo.
+    pub admin: bool,
+    /// Banido do chat global: lê, mas não escreve.
+    pub banido: bool,
     /// Segundos Unix.
     pub exp: i64,
 }
@@ -70,7 +74,7 @@ mod tests {
     }
 
     /// O mesmo valor está no teste do relay (backend/relay/src/presenca.test.ts): os dois lados precisam concordar.
-    const FICHA_DE_EXEMPLO: &str = "eyJpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNyIsIm5vbWUiOiJMdWNhcyIsImF2YXRhciI6bnVsbCwibml2ZWwiOjMsImV4cCI6MTkwMDAwMDAwMH0.GcC-2VOsr_or75WtX3gQNBTBIKzZyYE3vwmey0C-eJY";
+    const FICHA_DE_EXEMPLO: &str = "eyJpZCI6IjAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwNyIsIm5vbWUiOiJMdWNhcyIsImF2YXRhciI6bnVsbCwibml2ZWwiOjMsImFkbWluIjpmYWxzZSwiYmFuaWRvIjpmYWxzZSwiZXhwIjoxOTAwMDAwMDAwfQ.9401CmmfteL1hrpnUWwo073vskes2uCyA8VskxNS7Ls";
 
     #[test]
     fn assina_a_ficha_no_formato_que_o_relay_confere() {
@@ -79,6 +83,8 @@ mod tests {
             nome: "Lucas".into(),
             avatar: None,
             nivel: 3,
+            admin: false,
+            banido: false,
             exp: 1_900_000_000,
         };
         assert_eq!(assinar_ficha(&ficha, b"segredo-de-teste"), FICHA_DE_EXEMPLO);

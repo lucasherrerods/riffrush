@@ -5,12 +5,15 @@ use chrono::Duration;
 use uuid::Uuid;
 
 use super::dominio::{assinar_ficha, dentro_do_limite, Ficha, Janela, VALIDADE_DA_FICHA_EM_SEGUNDOS};
-use crate::modules::conta::ServicosDaConta;
+use crate::modules::conta::{FalhaExterna, ServicosDaConta};
+use crate::modules::moderacao::ServicosDeModeracao;
 
 #[derive(Clone)]
 pub struct ServicosDePresenca {
     /// Para achar a conta pela sessão e ler o relógio.
     pub conta: ServicosDaConta,
+    /// Se a pessoa é da equipe ou está banida do chat: vai na ficha.
+    pub moderacao: ServicosDeModeracao,
     /// O mesmo segredo do relay. Sem ele, a presença fica desligada.
     pub segredo: Option<Arc<Vec<u8>>>,
     /// A janela de fichas de cada conta. Só em memória: reiniciar a API zera, e tudo bem.
@@ -28,6 +31,8 @@ pub enum ErroDaPresenca {
     SessaoInvalida,
     #[error("fichas demais em pouco tempo")]
     RapidoDemais,
+    #[error(transparent)]
+    Falha(#[from] FalhaExterna),
 }
 
 impl ServicosDePresenca {
@@ -49,11 +54,14 @@ impl ServicosDePresenca {
         }
         let exp = (agora + Duration::seconds(VALIDADE_DA_FICHA_EM_SEGUNDOS)).timestamp();
         let nivel = conta.nivel().nivel;
+        let situacao = self.moderacao.situacao(conta.id).await?;
         let ficha = Ficha {
             id: conta.id,
             nome: conta.nome,
             avatar: conta.avatar,
             nivel,
+            admin: situacao.admin,
+            banido: situacao.banido,
             exp,
         };
         Ok(assinar_ficha(&ficha, segredo))
@@ -73,6 +81,7 @@ mod tests {
         let (conta, _, relogio) = servicos();
         let entrada = conta.entrar_com_google(&pedido("bom")).await.unwrap();
         let presenca = ServicosDePresenca {
+            moderacao: crate::modules::moderacao::fakes::servicos_de_moderacao(conta.clone(), None).0,
             conta,
             segredo: Some(Arc::new(b"segredo".to_vec())),
             janelas: Default::default(),
@@ -92,6 +101,7 @@ mod tests {
         let (conta, _, _) = servicos();
         let entrada = conta.entrar_com_google(&pedido("bom")).await.unwrap();
         let presenca = ServicosDePresenca {
+            moderacao: crate::modules::moderacao::fakes::servicos_de_moderacao(conta.clone(), None).0,
             conta,
             segredo: Some(Arc::new(b"s".to_vec())),
             janelas: Default::default(),
@@ -106,12 +116,14 @@ mod tests {
     async fn sem_segredo_fica_desligada_e_sem_sessao_recusa() {
         let (conta, _, _) = servicos();
         let desligada = ServicosDePresenca {
+            moderacao: crate::modules::moderacao::fakes::servicos_de_moderacao(conta.clone(), None).0,
             conta: conta.clone(),
             segredo: None,
             janelas: Default::default(),
         };
         assert!(matches!(desligada.ficha("x").await, Err(ErroDaPresenca::Desligada)));
         let ligada = ServicosDePresenca {
+            moderacao: crate::modules::moderacao::fakes::servicos_de_moderacao(conta.clone(), None).0,
             conta,
             segredo: Some(Arc::new(b"s".to_vec())),
             janelas: Default::default(),

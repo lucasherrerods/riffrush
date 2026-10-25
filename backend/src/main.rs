@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use riffrush_api::modules::catalogo::{CatalogoPostgres, Encore, ServicosDoCatalogo};
 use riffrush_api::modules::conta::{ContasPostgres, CredenciaisDoGoogle, GeradorAleatorio, Google, RelogioDoSistema, ServicosDaConta};
+use riffrush_api::modules::moderacao::{ModeracaoPostgres, RelayHttp, ServicosDeModeracao};
 use riffrush_api::modules::perfil::{PerfilPostgres, ServicosDoPerfil};
 use riffrush_api::modules::presenca::ServicosDePresenca;
 use riffrush_api::modules::ranking::{RankingPostgres, ServicosDoRanking};
@@ -54,9 +55,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         conta: conta.clone(),
         catalogo: catalogo.clone(),
     };
+    let segredo_do_relay = config.segredo_do_relay.as_ref().map(|s| Arc::new(s.clone().into_bytes()));
+    let moderacao = ServicosDeModeracao {
+        repositorio: Arc::new(ModeracaoPostgres(banco.clone())),
+        relay: Arc::new(RelayHttp {
+            http: reqwest::Client::new(),
+            url: config.url_do_relay.clone(),
+            segredo: segredo_do_relay.clone(),
+            relogio: conta.relogio.clone(),
+        }),
+        conta: conta.clone(),
+        segredo: segredo_do_relay.clone(),
+    };
     let presenca = ServicosDePresenca {
         conta: conta.clone(),
-        segredo: config.segredo_do_relay.as_ref().map(|s| Arc::new(s.clone().into_bytes())),
+        moderacao: moderacao.clone(),
+        segredo: segredo_do_relay,
         janelas: Default::default(),
     };
     let estado = EstadoDoApp {
@@ -65,6 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ranking,
         perfil,
         presenca,
+        moderacao,
     };
     let app = riffrush_api::app(estado, &config.origens_permitidas);
 
