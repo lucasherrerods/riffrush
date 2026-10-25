@@ -38,9 +38,11 @@ vi.mock("@/modules/platform", () => ({
 }));
 
 // A partida de verdade é testada no módulo de gameplay; aqui só importa a ligação entre as telas.
+const opcoesRecebidas: unknown[] = [];
 vi.mock("@/modules/gameplay", async (original) => ({
   ...(await original<typeof import("@/modules/gameplay")>()),
-  TelaDeJogo: ({ musica, dificuldade, recorde, rede, aoTerminar, aoSair }: { musica: { id: string; titulo: string }; dificuldade: string; recorde?: number; rede?: { adversarios?: React.ReactNode }; aoTerminar: (r: unknown) => void; aoSair: () => void }) => (
+  TelaDeJogo: ({ musica, dificuldade, recorde, rede, opcoes, aoTerminar, aoSair }: { musica: { id: string; titulo: string }; dificuldade: string; recorde?: number; rede?: { adversarios?: React.ReactNode }; opcoes: unknown; aoTerminar: (r: unknown) => void; aoSair: () => void }) => (
+    opcoesRecebidas.push(opcoes),
     <div>
       <h1>Jogando {musica.titulo}{rede ? " em rede" : ""}</h1>
       {recorde !== undefined && <p>Recorde da partida: {recorde}</p>}
@@ -148,6 +150,16 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Do Encore" })).toBeInTheDocument();
     expect(biblioteca.guardar).toHaveBeenCalledWith([expect.objectContaining({ titulo: "Do Encore", md5DoEncore: md5, urlDoEncore: `https://files.enchor.us/${md5}.sng` })]);
+  });
+
+  it("mudar o volume geral (Alt + roda) no meio da partida não troca as opções dela, para a partida não reiniciar", async () => {
+    const usuario = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
+    await screen.findByRole("button", { name: "terminar" });
+    const antes = opcoesRecebidas.at(-1);
+    act(() => definirVolumeGeral(0.4));
+    expect(opcoesRecebidas.at(-1)).toBe(antes);
   });
 
   it("toca a música escolhida e mostra o resultado, salvando o recorde", async () => {

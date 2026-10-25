@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { IndicadorDeVolume, definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/character";
 import { iniciarControle, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
-import { TelaDeJogo, type Resultado, desempacotarReplay, type Replay } from "@/modules/gameplay";
+import { TelaDeJogo, type Resultado, desempacotarReplay, type Replay, type OpcoesDaPartida } from "@/modules/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
 import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type XpDaPartida } from "@/modules/conta";
@@ -20,7 +20,7 @@ import { PainelDeRanking, PlacarAoVivo, TelaDeLeaderboard, TelaDePartidaDoRankin
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
-import { opcoesDaPartida } from "./opcoes";
+import { mesmasOpcoes, opcoesDaPartida } from "./opcoes";
 
 type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "espectador";
 
@@ -86,10 +86,15 @@ export function App() {
   const dificuldadeDaPartida = assistindo?.dificuldade ?? emRede?.dificuldade ?? dificuldadeDaSelecao;
   const instrumentoDaPartida = assistindo?.instrumento ?? emRede?.instrumento ?? instrumentoDaSelecao;
   const comControle = useControleConectado();
+  // A partida recomeça quando as opções trocam: configurações que ela não usa (como o volume geral do Alt + roda) não podem gerar um objeto novo.
+  const opcoesAnteriores = useRef<OpcoesDaPartida | null>(null);
   const opcoes = useMemo(() => {
     const base = opcoesDaPartida(configuracoes);
-    if (!comControle) return base;
-    return { ...base, rotulosDosTrastes: configuracoes.botoesDoControle.map(nomeDoBotao), rotuloDaTeclaDaEstrela: nomeDoBotao(configuracoes.botaoDaEstrela) };
+    const novas = comControle
+      ? { ...base, rotulosDosTrastes: configuracoes.botoesDoControle.map(nomeDoBotao), rotuloDaTeclaDaEstrela: nomeDoBotao(configuracoes.botaoDaEstrela) }
+      : base;
+    if (opcoesAnteriores.current && mesmasOpcoes(opcoesAnteriores.current, novas)) return opcoesAnteriores.current;
+    return (opcoesAnteriores.current = novas);
   }, [configuracoes, comControle]);
 
   useTeclado((evento) => {
