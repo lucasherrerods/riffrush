@@ -45,6 +45,7 @@ Valem para o frontend e para o backend.
 - Nunca adicione co-autor nos commits nem assinatura nas descrições de PR.
 - Um PR por funcionalidade ou pedido, sem misturar contextos. Abra o PR ao terminar.
 - A descrição do PR é escrita para quem vai revisar o código, não como resposta para quem pediu. Escreva como um engenheiro sênior explicando a mudança de forma simples: o problema, o que mudou e por quê, como foi testado e o que precisa no deploy. Nada de falar com o leitor ("você", "se você já rodou..."), recados da conversa ou instruções pessoais.
+- Nada que comprometa a segurança entra em commit, mensagem de commit, título ou descrição de PR: segredos, tokens, chaves, senhas, valores de `.env`, fichas ou assinaturas reais, e-mails e ids de contas reais, endereços internos ou o passo a passo de uma falha ainda não corrigida. Em exemplos, use valores fictícios (`'...'`, `alguem@exemplo.com`). O repositório é público, e o que entra no histórico do git não sai mais.
 - Cada PR parte da `main` atualizada.
 - Todo PR aponta para a `main`, nunca para a branch de outro PR. Se depender de outro PR, espere ele entrar na `main` e atualize a sua branch; PR mesclado em outra branch não chega na `main` e o trabalho se perde.
 - Mudança que precisa dos dois lados (API + tela) pode ir num PR só, desde que seja uma funcionalidade só.
