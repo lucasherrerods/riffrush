@@ -59,10 +59,10 @@ describe("ChatGlobal", () => {
     expect(usar).toHaveBeenCalledTimes(1);
     chegou({});
     expect(screen.getByRole("log", { name: "Chat global" })).toHaveTextContent("Ana: spam");
-    expect(screen.getByText("Moderação")).toBeInTheDocument();
-    expect(screen.queryByText(/Só quem tem o selo Moderação/)).not.toBeInTheDocument();
+    expect(screen.getByText("Mod")).toBeInTheDocument();
+    expect(screen.queryByText(/Só quem tem o selo Mod/)).not.toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("button", { name: "Sobre a moderação" }));
-    expect(screen.getByRole("dialog")).toHaveTextContent("Só quem tem o selo Moderação");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Só quem tem o selo Mod");
   });
 
   it("abaixo do nível, lê mas não escreve; banido, avisa", () => {

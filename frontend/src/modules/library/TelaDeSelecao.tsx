@@ -174,7 +174,7 @@ export function TelaDeSelecao(props: Props) {
         <h1 className="text-4xl leading-[1.1] text-destaque max-md:text-2xl">Selecione a música</h1>
         <div className="flex-1" />
         <Button variant="outline" asChild>
-          <label className="cursor-pointer">
+          <label className="">
             <FileAudio className="opacity-70" />
             <span className="max-md:sr-only">Importar música, clipe ou .sng</span>
             <input
@@ -249,7 +249,7 @@ export function TelaDeSelecao(props: Props) {
             <div className="flex flex-col gap-2">
               <p className="text-base text-texto-suave">O áudio não está mais salvo neste aparelho. Escolha o arquivo de novo para tocar.</p>
               <Button size="lg" className="h-14 font-titulo text-2xl tracking-widest" asChild>
-                <label className="cursor-pointer">
+                <label className="">
                   <RotateCcw className="opacity-70" /> Importar de novo
                   <input ref={reimportar} type="file" accept={TIPOS_IMPORTAVEIS} className="sr-only" onChange={(e) => importarEscolhidos(e.target)} />
                 </label>

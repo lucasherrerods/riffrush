@@ -27,3 +27,8 @@ export function usePresenca() {
 /** Uma transmissão nova para a partida que vai começar. */
 export const transmitirPartida = (partida: PartidaParaTransmitir, aoContarEspectadores?: (quantos: number) => void) =>
   criarTransmissao(partida, { urlDoRelay: URL_DO_RELAY, pedirFicha, aoContarEspectadores });
+
+/** Se quem está jogando é da moderação do chat; só se sabe com o chat global conectado. */
+export function useSouDaModeracao() {
+  return useSyncExternalStore(chatGlobal.inscrever, () => !!chatGlobal.estado().voce?.admin);
+}
