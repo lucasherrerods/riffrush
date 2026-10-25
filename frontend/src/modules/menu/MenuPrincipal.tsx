@@ -113,7 +113,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
       </nav>
 
       {chat && (
-        <aside aria-label="Chat" className="absolute bottom-6 left-6 flex h-80 w-[26rem] max-lg:hidden">
+        <aside aria-label="Chat" className="absolute bottom-6 left-6 flex max-h-80 w-[26rem] flex-col justify-end max-lg:hidden">
           {chat}
         </aside>
       )}

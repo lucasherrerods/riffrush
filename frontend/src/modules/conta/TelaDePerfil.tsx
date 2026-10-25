@@ -8,12 +8,15 @@ import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
 import { ComCarregamento } from "@/shared/ui/ComCarregamento";
 import type { PerfilDaApi } from "./api";
 import { FotoDaConta } from "./FotoDaConta";
+import { SeloMod } from "@/shared/ui/SeloMod";
 import { sessaoDaConta } from "./sessao";
 
 interface Props {
   aoVoltar: () => void;
   /** O nome da música na biblioteca a partir do id do ranking. Música que não está aqui aparece pelo id. */
   tituloDaMusica: (id: string) => string | undefined;
+  /** Mostra o selo Mod embaixo do nome. */
+  mod?: boolean;
   carregar?: (sinal: AbortSignal) => Promise<PerfilDaApi>;
 }
 
@@ -34,7 +37,7 @@ function Numero({ rotulo, valor, detalhe }: { rotulo: string; valor: string; det
 }
 
 /** O perfil de quem está logado: nível, números das partidas, desempenho por dificuldade e as últimas jogadas. */
-export function TelaDePerfil({ aoVoltar, tituloDaMusica, carregar = (sinal) => sessaoDaConta.perfil(sinal) }: Props) {
+export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar = (sinal) => sessaoDaConta.perfil(sinal) }: Props) {
   const { estado, tentarDeNovo } = useCarregamento(carregar);
 
   return (
@@ -65,6 +68,7 @@ function Conteudo({ perfil, tituloDaMusica }: { perfil: PerfilDaApi; tituloDaMus
         <FotoDaConta avatar={perfil.avatar} className="size-20" />
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <h2 className="truncate text-2xl leading-[1.1] font-bold">{perfil.nome}</h2>
+          {mod && <SeloMod />}
           <p className="truncate text-base text-texto-suave">
             {perfil.email && <>{perfil.email} · </>}Jogando desde {mesEAno(perfil.criada_em)}
           </p>

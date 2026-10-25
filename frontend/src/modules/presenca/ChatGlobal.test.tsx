@@ -59,7 +59,7 @@ describe("ChatGlobal", () => {
     expect(usar).toHaveBeenCalledTimes(1);
     chegou({});
     expect(screen.getByRole("log", { name: "Chat global" })).toHaveTextContent("Ana: spam");
-    expect(screen.getByText("Moderação")).toBeInTheDocument();
+    expect(screen.getByText("Mod")).toBeInTheDocument();
     expect(screen.getByText(/Só quem tem o selo Moderação/)).toBeInTheDocument();
   });
 

@@ -46,7 +46,7 @@ function guardarSilenciados(ids: string[]) {
   }
 }
 
-const AVISO = "A moderação nunca pede senha nem dados pessoais. Só quem tem o selo Moderação fala pela moderação.";
+const AVISO = "A moderação nunca pede senha nem dados pessoais. Só quem tem o selo Mod fala pela moderação.";
 
 /** As denúncias e os banidos vêm da API (ficam no banco); só a moderação consegue ler. */
 function useModeracao(ativa: boolean) {
@@ -160,7 +160,7 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
         aviso={ligado ? AVISO : undefined}
         mensagens={mensagens
           .filter((m) => !silenciados.includes(m.autor.id))
-          .map((m) => ({ id: String(m.n), autor: m.autor.nome, texto: m.texto, minha: m.autor.id === conta?.id, selo: m.autor.moderacao ? "Moderação" : undefined }))}
+          .map((m) => ({ id: String(m.n), autor: m.autor.nome, texto: m.texto, minha: m.autor.id === conta?.id, selo: m.autor.moderacao ? "Mod" : undefined }))}
         aoEnviar={(texto) => chatGlobal.enviar(texto)}
         acoesDaMensagem={acoes}
         minimizar={{
@@ -206,7 +206,7 @@ function Regras({ aoResponder, className }: { aoResponder: (aceito: boolean) => 
       <ul className="flex flex-1 list-disc flex-col gap-1 overflow-y-auto pl-5 text-base text-texto-suave">
         <li>É público: todo mundo com conta lê o que você escreve.</li>
         <li>Não passe dados pessoais (telefone, endereço, senha).</li>
-        <li>A moderação nunca pede senha. Só quem tem o selo Moderação fala por ela.</li>
+        <li>A moderação nunca pede senha. Só quem tem o selo Mod fala por ela.</li>
         <li>Sem ofensas, spam ou golpes: dá para silenciar e denunciar, e a moderação pode banir.</li>
       </ul>
       <div className="flex gap-2">
