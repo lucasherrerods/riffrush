@@ -5,7 +5,7 @@ import type { EstadoDoJogador } from "@/modules/gameplay";
 import { dificuldadeMaisProxima, dificuldadesDaMusica, instrumentoDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { paraRede } from "./musicaNaRede";
 import { URL_DO_RELAY, deveEnviarEstado, lerSalasOnline, normalizarCodigo, podeTocarOnline, urlDasSalas, urlParaCriarSala, urlParaEntrarNaSala, type SalaOnline } from "./online";
-import { comecarPartida, escolherMusica, estadoInicial, reduzir, todosProntos, type EstadoDaSala, type Mensagem } from "./protocolo";
+import { comecarPartida, escolherMusica, estadoInicial, expulsarJogador, reduzir, todosProntos, type EstadoDaSala, type Mensagem } from "./protocolo";
 
 export const PORTA_DA_SALA = 7777;
 
@@ -151,6 +151,14 @@ export async function escolher(musica: Musica, dificuldade: Dificuldade, instrum
   const disponiveis = dificuldadesDaMusica(musica, tocado).map((d) => d.id);
   const ajustada = dificuldadeMaisProxima(disponiveis, dificuldade) ?? dificuldade;
   const reacao = escolherMusica(conexao.sala, paraRede(musica, { online: conexao.online }), ajustada, tocado);
+  atualizar({ sala: reacao.estado });
+  enviar(reacao.enviar);
+}
+
+/** Só o host: tira o jogador `id` da sala. */
+export function expulsar(id: number) {
+  if (!conexao.sala) return;
+  const reacao = expulsarJogador(conexao.sala, id);
   atualizar({ sala: reacao.estado });
   enviar(reacao.enviar);
 }

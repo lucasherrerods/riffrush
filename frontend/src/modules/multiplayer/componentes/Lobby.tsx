@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { Check, ChevronDown, ChevronUp, Globe, Loader2, Play, Smartphone, Users } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Globe, Loader2, Play, Smartphone, UserX, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar } from "@/modules/character";
 import { useSeguirMusica } from "@/modules/player";
@@ -11,7 +11,7 @@ import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { MAXIMO_DE_JOGADORES, type EstadoDaSala } from "../protocolo";
 import { todosProntos } from "../protocolo";
-import { comecar, escolher, marcarPronto, type InfoDaSala } from "../sala";
+import { comecar, escolher, expulsar, marcarPronto, type InfoDaSala } from "../sala";
 import { useMusicaDaSala } from "../useMusicaDaSala";
 
 interface Props {
@@ -78,14 +78,26 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
               <li
                 key={jogador?.id ?? `vaga-${i}`}
                 className={cn(
-                  "chapa flex flex-col items-center p-4",
+                  "chapa relative flex flex-col items-center p-4",
                   jogador ? "border-borda bg-superficie" : "border-dashed border-borda bg-fundo",
                 )}
               >
                 {jogador ? (
                   <>
+                    {sala.souHost && jogador.id !== sala.meuId && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Expulsar ${jogador.personagem.nome}`}
+                        className="absolute top-2 right-2 text-texto-suave hover:text-perigo"
+                        onClick={() => expulsar(jogador.id)}
+                      >
+                        <UserX />
+                      </Button>
+                    )}
                     <Avatar personagem={jogador.personagem} className="h-24 w-auto" />
                     <p className="mt-2 truncate text-base font-bold">{jogador.personagem.nome}</p>
+                    {jogador.personagem.nivel && <p className="font-titulo text-base leading-none text-destaque">Nv {jogador.personagem.nivel}</p>}
                     <div className="flex gap-1">
                       {jogador.id === sala.hostId && <span className="rounded-full bg-ouro px-2 text-base font-bold text-fundo">Host</span>}
                       {jogador.id === sala.meuId && <span className="rounded-full bg-superficie-elevada px-2 text-base">Você</span>}

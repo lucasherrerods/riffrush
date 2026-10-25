@@ -344,6 +344,7 @@ describe("App em rede", () => {
     instrumento: "guitarra" as const,
     personagem: vitor,
     jogadores: [{ id: 1, personagem: PERSONAGEM_PADRAO }, { id: 2, personagem: vitor }],
+    expulsos: [],
     musica: { tipo: "embutida" as const, id: "spektrem-shine" },
     dificuldade: "expert" as const,
     prontos: [],

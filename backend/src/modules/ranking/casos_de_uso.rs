@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::dominio::{montar_ranking, LinhaDoGeral, MusicaPopular, PartidaPublica, Ranking, TAMANHO_DO_TOP};
+use super::dominio::{juntar_mesmas_musicas, montar_ranking, LinhaDoGeral, MusicaPopular, PartidaPublica, Ranking, TAMANHO_DO_TOP};
 use super::portas::RepositorioDoRanking;
 use crate::modules::catalogo::{DadosDaMusica, ServicosDoCatalogo};
 use crate::modules::conta::{FalhaExterna, ServicosDaConta, TAMANHO_MAXIMO_DO_ID_DA_MUSICA};
@@ -44,16 +44,18 @@ impl ServicosDoRanking {
 
     /// As músicas com mais partidas, somando todos os jogadores, com o que o catálogo sabe de cada uma.
     pub async fn musicas(&self) -> Result<Vec<(MusicaPopular, DadosDaMusica)>, ErroDoRanking> {
-        let musicas = self.repositorio.musicas(TAMANHO_DO_TOP).await?;
+        // Pede o dobro: depois de juntar a mesma música com ids diferentes, o top continua cheio.
+        let musicas = self.repositorio.musicas(TAMANHO_DO_TOP * 2).await?;
         let ids: Vec<String> = musicas.iter().map(|m| m.musica_id.clone()).collect();
         let mut dados = self.catalogo.dados(&ids).await;
-        Ok(musicas
+        let com_dados = musicas
             .into_iter()
             .map(|m| {
                 let dados_da_musica = dados.remove(&m.musica_id).unwrap_or_default();
                 (m, dados_da_musica)
             })
-            .collect())
+            .collect();
+        Ok(juntar_mesmas_musicas(com_dados, TAMANHO_DO_TOP as usize))
     }
 
     /// A partida que alguém abriu no ranking. É pública, como o próprio ranking.
@@ -273,7 +275,7 @@ mod tests {
         assert_eq!(musicas.len(), 1);
         // Sem nada no catálogo, a música vem sem nome, e o app usa o da biblioteca ou o id.
         assert_eq!(musicas[0].1, DadosDaMusica::default());
-        assert_eq!(*repositorio.ultimo_limite.lock().unwrap(), Some(TAMANHO_DO_TOP));
+        assert_eq!(*repositorio.ultimo_limite.lock().unwrap(), Some(TAMANHO_DO_TOP * 2));
     }
 
     #[tokio::test]

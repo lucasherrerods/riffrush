@@ -1,6 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { CartaoDaConta } from "./CartaoDaConta";
+import { abrirLink } from "@/modules/platform";
+import { CartaoDaConta, URL_DA_AJUDA } from "./CartaoDaConta";
+
+vi.mock("@/modules/platform", () => ({ abrirLink: vi.fn(async () => {}) }));
 import { sessaoDaConta } from "./sessao";
 
 const conta = { id: "1", nome: "Lucas", avatar: null, email: "lucas@exemplo.com", xp_total: 0, nivel: { nivel: 3, xp_no_nivel: 10, xp_para_o_proximo: 100 } };
@@ -42,5 +45,16 @@ describe("CartaoDaConta", () => {
     await usuario.click(screen.getByRole("button", { name: /Lucas/ }));
     await usuario.click(screen.getByRole("menuitem", { name: "Ver perfil" }));
     expect(aoVerPerfil).toHaveBeenCalled();
+  });
+
+  it("ajuda no menu abre as issues do projeto", async () => {
+    vi.spyOn(sessaoDaConta, "estado").mockReturnValue({ conta, carregando: false });
+    const usuario = userEvent.setup();
+    render(<CartaoDaConta aoVerPerfil={() => {}} />);
+
+    await usuario.click(screen.getByRole("button", { name: /Lucas/ }));
+    await usuario.click(screen.getByRole("menuitem", { name: "Ajuda" }));
+    expect(abrirLink).toHaveBeenCalledWith(URL_DA_AJUDA);
+    expect(URL_DA_AJUDA).toBe("https://github.com/lucasherrerods/riffrush/issues");
   });
 });

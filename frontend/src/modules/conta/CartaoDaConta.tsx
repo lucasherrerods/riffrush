@@ -1,4 +1,5 @@
-import { ChevronsUpDown, Loader2, LogOut, UserRound } from "lucide-react";
+import { ChevronsUpDown, CircleHelp, Loader2, LogOut, UserRound } from "lucide-react";
+import { abrirLink } from "@/modules/platform";
 import { Button } from "@/shared/ui/button";
 import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu";
@@ -7,6 +8,8 @@ import { FotoDaConta } from "./FotoDaConta";
 import { LogoDoGoogle } from "./LogoDoGoogle";
 import { sessaoDaConta } from "./sessao";
 import { useConta } from "./useConta";
+
+export const URL_DA_AJUDA = "https://github.com/lucasherrerods/riffrush/issues";
 
 /** No canto do cabeçalho: entrar com o Google ou abrir o menu da conta. */
 export function CartaoDaConta({ aoVerPerfil }: { aoVerPerfil: () => void }) {
@@ -58,6 +61,10 @@ export function CartaoDaConta({ aoVerPerfil }: { aoVerPerfil: () => void }) {
         <DropdownMenuItem onSelect={aoVerPerfil}>
           <UserRound />
           Ver perfil
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => void abrirLink(URL_DA_AJUDA)}>
+          <CircleHelp />
+          Ajuda
         </DropdownMenuItem>
         <DropdownMenuItem variant="perigo" onSelect={() => void sessaoDaConta.sair()}>
           <LogOut />

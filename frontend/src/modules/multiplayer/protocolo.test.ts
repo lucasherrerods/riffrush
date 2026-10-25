@@ -2,6 +2,7 @@ import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
 import { PERSONAGEM_PADRAO, type Personagem } from "@/modules/character";
 import type { EstadoDoJogador } from "@/modules/gameplay";
 import {
+  expulsarJogador,
   ATRASO_DO_INICIO_MS,
   MAXIMO_DE_JOGADORES,
   comecarPartida,
@@ -194,5 +195,53 @@ describe("ações do host", () => {
   it("começar a partida avisa todos com a música e a dificuldade", () => {
     expect(comecarPartida(salaDoHost())).toEqual([{ tipo: "comecar", musica: salaDoHost().musica, dificuldade: salaDoHost().dificuldade, instrumento: "guitarra" }]);
     expect(comecarPartida(salaDoConvidado())).toEqual([]);
+  });
+});
+
+describe("expulsar", () => {
+  const lucas = { ...PERSONAGEM_PADRAO, nome: "Lucas" };
+  const vitor = { ...PERSONAGEM_PADRAO, nome: "Vitor" };
+  const hostComVitor = () => {
+    const host = { ...estadoInicial(lucas, true), status: "naSala" as const, meuId: 1, hostId: 1, jogadores: [{ id: 1, personagem: lucas }] };
+    return reduzir(host, 2, { tipo: "oi", personagem: vitor }, 0).estado;
+  };
+
+  it("o host tira o convidado, avisa a sala e não o deixa voltar", () => {
+    const { estado, enviar } = expulsarJogador({ ...hostComVitor(), prontos: [2] }, 2);
+    expect(estado.jogadores.map((j) => j.id)).toEqual([1]);
+    expect(estado.prontos).toEqual([]);
+    expect(enviar[0]).toEqual({ tipo: "expulsar", id: 2 });
+    expect(enviar[1]).toMatchObject({ tipo: "sala", jogadores: [{ id: 1 }] });
+    expect(reduzir(estado, 2, { tipo: "oi", personagem: vitor }, 0).estado.jogadores).toHaveLength(1);
+  });
+
+  it("o host não expulsa a si mesmo, e convidado não expulsa ninguém", () => {
+    expect(expulsarJogador(hostComVitor(), 1).enviar).toEqual([]);
+    const convidado = { ...estadoInicial(vitor, false), meuId: 2, hostId: 1, jogadores: [{ id: 1, personagem: lucas }] };
+    expect(expulsarJogador(convidado, 1).enviar).toEqual([]);
+  });
+
+  it("o convidado expulso pelo host sai da sala com um aviso", () => {
+    const convidado = { ...estadoInicial(vitor, false), status: "naSala" as const, meuId: 2, hostId: 1 };
+    expect(reduzir(convidado, 1, { tipo: "expulsar", id: 2 }, 0).sair).toBe("O host tirou você da sala.");
+    // Expulsar outro, ou um pedido que não veio do host, não tira ninguém.
+    expect(reduzir(convidado, 1, { tipo: "expulsar", id: 3 }, 0).sair).toBeUndefined();
+    expect(reduzir(convidado, 3, { tipo: "expulsar", id: 2 }, 0).sair).toBeUndefined();
+  });
+});
+
+describe("nível no lobby", () => {
+  const host = () => ({ ...estadoInicial(PERSONAGEM_PADRAO, true), status: "naSala" as const, meuId: 1, hostId: 1 });
+
+  it("o nível que o convidado manda vai para a lista de jogadores", () => {
+    const { estado } = reduzir(host(), 2, { tipo: "oi", personagem: { ...PERSONAGEM_PADRAO, nivel: 12 } }, 0);
+    expect(estado.jogadores[0].personagem.nivel).toBe(12);
+  });
+
+  it("nível estranho é descartado", () => {
+    for (const nivel of [0, -3, 2.5, 1e9, "7" as unknown as number]) {
+      const { estado } = reduzir(host(), 2, { tipo: "oi", personagem: { ...PERSONAGEM_PADRAO, nivel } }, 0);
+      expect(estado.jogadores[0].personagem).not.toHaveProperty("nivel");
+    }
   });
 });
