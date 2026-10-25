@@ -52,7 +52,7 @@ describe("ChatGlobal", () => {
     expect(aoResponder).toHaveBeenCalledWith(true);
   });
 
-  it("aceito, liga a conexão, mostra o selo da moderação e o aviso fixo", () => {
+  it("aceito, liga a conexão, mostra o selo da moderação e o aviso fica no ícone de informação", async () => {
     logado();
     const usar = vi.spyOn(chatGlobal, "usar");
     abrir();
@@ -60,7 +60,9 @@ describe("ChatGlobal", () => {
     chegou({});
     expect(screen.getByRole("log", { name: "Chat global" })).toHaveTextContent("Ana: spam");
     expect(screen.getByText("Mod")).toBeInTheDocument();
-    expect(screen.getByText(/Só quem tem o selo Moderação/)).toBeInTheDocument();
+    expect(screen.queryByText(/Só quem tem o selo Mod/)).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Sobre a moderação" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("Só quem tem o selo Mod");
   });
 
   it("abaixo do nível, lê mas não escreve; banido, avisa", () => {

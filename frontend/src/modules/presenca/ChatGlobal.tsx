@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { Ban, Flag, MessageSquare, ShieldAlert, Trash2, VolumeX } from "lucide-react";
+import { Ban, Flag, Info, MessageSquare, ShieldAlert, Trash2, VolumeX } from "lucide-react";
 import { PainelDeChat, type AcaoDaMensagem, type MensagemDoChat } from "@/modules/chat";
 import { sessaoDaConta, useConta } from "@/modules/conta";
 import { cn } from "@/shared/lib/utils";
@@ -149,6 +149,7 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
     return lista;
   };
 
+  const [sobreAberto, setSobreAberto] = useState(false);
   const mensagensDenunciadas = new Set(moderacao.denuncias.map((d) => d.mensagem_n)).size;
 
   return (
@@ -157,7 +158,6 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
         titulo="Chat global"
         className={className}
         bloqueado={bloqueado}
-        aviso={ligado ? AVISO : undefined}
         mensagens={mensagens
           .filter((m) => !silenciados.includes(m.autor.id))
           .map((m) => ({ id: String(m.n), autor: m.autor.nome, texto: m.texto, minha: m.autor.id === conta?.id, selo: m.autor.moderacao ? "Mod" : undefined }))}
@@ -172,6 +172,11 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
         }}
         extra={
           <>
+            {ligado && (
+              <Button variant="ghost" size="icon" aria-label="Sobre a moderação" onClick={() => setSobreAberto(true)}>
+                <Info className="opacity-70" />
+              </Button>
+            )}
             {silenciados.length > 0 && (
               <button type="button" onClick={() => mudarSilenciados([])} className="text-base text-texto-suave hover:text-texto">
                 Mostrar silenciados ({silenciados.length})
@@ -192,6 +197,12 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
           </>
         }
       />
+      <Dialog open={sobreAberto} onOpenChange={setSobreAberto}>
+        <DialogContent>
+          <DialogTitle>Sobre a moderação</DialogTitle>
+          <DialogDescription>{AVISO}</DialogDescription>
+        </DialogContent>
+      </Dialog>
       {voce?.admin && <Moderacao aberta={moderando} aoFechar={() => setModerando(false)} {...moderacao} />}
     </>
   );
