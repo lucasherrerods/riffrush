@@ -23,7 +23,7 @@ function ouvirTeclas() {
   };
 }
 
-const MAPA = { teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"], teclaDaEstrela: "Space", botoesDoControle: BOTOES_DOS_TRASTES_PADRAO, botaoDaEstrela: BOTAO_DA_ESTRELA_PADRAO };
+const MAPA = { teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL", "KeyD"], teclaDaEstrela: "Space", botoesDoControle: BOTOES_DOS_TRASTES_PADRAO, botaoDaEstrela: BOTAO_DA_ESTRELA_PADRAO };
 
 const proximoQuadro = () => vi.advanceTimersByTime(5);
 

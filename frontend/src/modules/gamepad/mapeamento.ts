@@ -16,8 +16,8 @@ export const BOTOES = {
   DIREITA: 15,
 } as const;
 
-/** Os botões do jogo quando o jogador não escolheu outros: verde, vermelho, amarelo, azul e laranja, e o star power. */
-export const BOTOES_DOS_TRASTES_PADRAO = [BOTOES.LT, BOTOES.LB, BOTOES.RB, BOTOES.RT, BOTOES.A];
+/** Os botões do jogo quando o jogador não escolheu outros: verde, vermelho, amarelo, azul, laranja e a nota aberta, e o star power. */
+export const BOTOES_DOS_TRASTES_PADRAO = [BOTOES.LT, BOTOES.LB, BOTOES.RB, BOTOES.RT, BOTOES.A, BOTOES.X];
 export const BOTAO_DA_ESTRELA_PADRAO = BOTOES.SELECT;
 
 const NOMES_DOS_BOTOES: Record<number, string> = {

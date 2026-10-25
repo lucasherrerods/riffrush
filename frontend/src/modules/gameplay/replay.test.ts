@@ -1,6 +1,6 @@
 import type { Nota } from "@/modules/songs";
 import { avancar, criarPartida, quantizar } from "./partida";
-import { VERSAO_DO_REPLAY, aplicarEntradas, criarGravador, desempacotarReplay, empacotarReplay, hashDoChart, type Replay } from "./replay";
+import { VERSAO_DO_REPLAY, aplicarEntradas, codigoDaEntrada, entradaDoCodigo, criarGravador, desempacotarReplay, empacotarReplay, hashDoChart, type Replay } from "./replay";
 
 const nota = (tempo: number, pista = 0, duracao = 0): Nota => ({ tempo, pista, duracao, frase: -1 });
 
@@ -14,6 +14,8 @@ const replay: Replay = {
     { tempo: 1.001, tipo: "tocar", pista: 4 },
     { tempo: 3.25, tipo: "estrela", pista: 0 },
     { tempo: 300.5, tipo: "soltar", pista: 4 },
+    { tempo: 301, tipo: "tocar", pista: 5 },
+    { tempo: 301.2, tipo: "soltar", pista: 5 },
   ],
 };
 
@@ -24,6 +26,26 @@ describe("empacotarReplay", () => {
 
   it("o primeiro byte é a versão, fora da compressão, para a API conferir", async () => {
     expect((await empacotarReplay(replay))[0]).toBe(VERSAO_DO_REPLAY);
+  });
+
+  it("continua lendo os replays da versão 1, de antes da nota aberta", async () => {
+    // Versão 1: intervalo vezes 11 mais o código. Uma entrada: aperta o verde no tick 0.
+    const corpo = new Uint8Array([0, ...new Uint8Array(16), 0, 2, 0, 11 * 5 + 5]);
+    const comprimido = new Uint8Array(await new Response(new Response(corpo).body!.pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer());
+    const lido = await desempacotarReplay(new Uint8Array([1, ...comprimido]));
+    expect(lido.entradas).toEqual([
+      { tempo: 0, tipo: "tocar", pista: 0 },
+      { tempo: 0.005, tipo: "soltar", pista: 0 },
+    ]);
+  });
+
+  it("os códigos de 0 a 10 não mudaram: a aberta usa 11 (aperta) e 12 (solta)", () => {
+    expect(codigoDaEntrada({ tempo: 0, tipo: "tocar", pista: 4 })).toBe(4);
+    expect(codigoDaEntrada({ tempo: 0, tipo: "soltar", pista: 4 })).toBe(9);
+    expect(codigoDaEntrada({ tempo: 0, tipo: "estrela", pista: 0 })).toBe(10);
+    expect(codigoDaEntrada({ tempo: 0, tipo: "tocar", pista: 5 })).toBe(11);
+    expect(codigoDaEntrada({ tempo: 0, tipo: "soltar", pista: 5 })).toBe(12);
+    expect(entradaDoCodigo(0, 12)).toEqual({ tempo: 0, tipo: "soltar", pista: 5 });
   });
 
   it("recusa versão desconhecida", async () => {

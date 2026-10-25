@@ -29,7 +29,7 @@ describe("bot", () => {
   // Bug do projeto antigo: os 5 trastes apareciam apertados durante a contagem.
   it("não aperta nenhum traste antes da música começar", () => {
     const bot = criarBot();
-    expect(jogarSozinho(bot, criarPartida([nota(1)]), -2)).toEqual([false, false, false, false, false]);
+    expect(jogarSozinho(bot, criarPartida([nota(1)]), -2)).toEqual([false, false, false, false, false, false]);
   });
 
   it("segura o traste durante o sustain", () => {

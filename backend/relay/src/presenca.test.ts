@@ -55,7 +55,7 @@ describe("lerMensagemDaTransmissao", () => {
   });
 
   it("recusa lotes com entradas inválidas, mensagens grandes e JSON quebrado", () => {
-    expect(lerMensagemDaTransmissao('{"tipo":"lote","ate":1,"entradas":[[1,11]]}')).toBeNull();
+    expect(lerMensagemDaTransmissao('{"tipo":"lote","ate":1,"entradas":[[1,13]]}')).toBeNull();
     expect(lerMensagemDaTransmissao('{"tipo":"lote","ate":1,"entradas":[["x",0]]}')).toBeNull();
     expect(lerMensagemDaTransmissao(`{"tipo":"lote","ate":1,"entradas":[${"[1,0],".repeat(2000)}[1,0]]}`)).toBeNull();
     expect(lerMensagemDaTransmissao("{quebrado")).toBeNull();

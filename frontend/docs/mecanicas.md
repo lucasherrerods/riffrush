@@ -42,3 +42,9 @@ Como o `.osr` do osu!, o replay guarda só as entradas do jogador, não vídeo (
 - **Quem assiste:** fica 2 s atrás de quem joga e monta a mesma partida com o modo replay. A partida não passa do último lote que chegou (`ateAgora`). Se sair mais de 1,5 s do ponto certo, como numa pausa ou num travamento da rede, a partida recomeça no lugar certo.
 - **Música diferente:** sem a mesma música, ou com outro chart (hash diferente), a tela avisa em vez de tocar.
 - **Baixar para assistir:** se a música for do Encore, o início da transmissão leva o link do chart. O relay e o app só aceitam o caminho exato de um `.sng` em `https://files.enchor.us` com o md5 da própria música (`linkDoChartConfere`). O download confere a assinatura do `.sng`, recusa arquivos acima do limite (esses ficam para a busca) e, antes de tocar, o hash das notas ainda tem que bater.
+
+## Notas abertas, HOPO e tap
+
+- **Nota aberta** (`N 7` no .chart; no .mid, a nota abaixo do verde com `ENHANCED_OPENS` ou o verde dentro do sysex do Phase Shift): vira a pista 5, desenhada como barra roxa atravessando o braço. Sai com uma tecla própria (padrão `D`, botão X no controle; configurável). Aberta junto com traste no mesmo tick é descartada, fica o traste, como no Clone Hero.
+- **HOPO e tap** são lidos como no Clone Hero (HOPO natural até 65/192 de semínima no .chart e 170/480 no .mid; `N 5` inverte, notas 101/102 forçam, `N 6`/nota 104/sysex marcam tap), mas mudam só o visual: o Riff Rush não tem palhetada, então toda nota continua saindo só com o traste. O `hopo_frequency` do song.ini ainda não é lido.
+- **Replay v2**: o intervalo vai vezes 13. Códigos 0 a 10 não mudaram (transmissão ao vivo compatível); 11 aperta e 12 solta a aberta. Replays v1 continuam sendo lidos.

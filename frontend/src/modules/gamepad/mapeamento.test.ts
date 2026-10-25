@@ -11,7 +11,7 @@ import {
 } from "./mapeamento";
 
 const mapa: Mapa = {
-  teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"],
+  teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL", "KeyD"],
   teclaDaEstrela: "Space",
   botoesDoControle: BOTOES_DOS_TRASTES_PADRAO,
   botaoDaEstrela: BOTAO_DA_ESTRELA_PADRAO,

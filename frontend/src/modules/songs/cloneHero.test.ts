@@ -85,9 +85,6 @@ describe("lerChart", () => {
     expect(resumo(chart.notas.guitarra!.expert!)).toEqual(["0.500:0", "1.000:1 s0.25", "1.500:2", "1.500:4", "2.000:3 *", "2.500:0 *"]);
   });
 
-  it("ignora a nota aberta (7) e os marcadores", () => {
-    expect(chart.notas.guitarra!.expert!.every((n) => n.pista <= 4)).toBe(true);
-  });
 
   it("lê cada dificuldade separada e deixa de fora as que não existem", () => {
     expect(chart.notas.guitarra!.facil).toHaveLength(1);
@@ -100,6 +97,59 @@ describe("lerChart", () => {
     expect(resumo(chart.notas.coop!.expert!)).toEqual(["0.500:4"]);
     expect(resumo(chart.notas.teclado!.expert!)).toEqual(["0.500:0"]);
     expect(Object.keys(chart.notas)).toEqual(["guitarra", "baixo", "ritmica", "coop", "teclado"]);
+  });
+});
+
+const tipos = (notas: { tempo: number; pista: number; tipo?: string }[]) => notas.map((n) => `${n.pista}${n.tipo ? ":" + n.tipo : ""}`);
+const chartCom = (notas: string) => lerChart(`[Song]
+{
+  Resolution = 192
+}
+[ExpertSingle]
+{
+${notas}
+}`).notas.guitarra!.expert!;
+
+describe("lerChart: notas abertas, HOPO e tap", () => {
+  it("a nota aberta (7) vira a pista 5", () => {
+    expect(tipos(chartCom(`0 = N 7 0
+768 = N 7 96`))).toEqual(["5", "5"]);
+  });
+
+  it("aberta junto com traste não vale: fica o traste, como no Clone Hero", () => {
+    expect(tipos(chartCom(`0 = N 0 0
+0 = N 7 0`))).toEqual(["0"]);
+  });
+
+  it("nota simples perto da anterior e de outra cor vira HOPO natural", () => {
+    // Limiar do .chart: 65/192 da semínima. 64 ticks passa, 96 não.
+    expect(tipos(chartCom(`0 = N 0 0
+64 = N 1 0
+160 = N 2 0
+224 = N 2 0`))).toEqual(["0", "1:hopo", "2", "2"]);
+  });
+
+  it("acorde não é HOPO natural, e nota que já estava no acorde anterior também não", () => {
+    expect(tipos(chartCom(`0 = N 0 0
+64 = N 1 0
+64 = N 2 0
+128 = N 1 0
+192 = N 3 0`))).toEqual(["0", "1", "2", "1", "3:hopo"]);
+  });
+
+  it("o marcador 5 inverte o HOPO natural; o 6 deixa a nota tap", () => {
+    expect(tipos(chartCom(`0 = N 0 0
+64 = N 1 0
+64 = N 5 0
+500 = N 2 0
+500 = N 5 0
+900 = N 3 0
+900 = N 6 0`))).toEqual(["0", "1", "2:hopo", "3:tap"]);
+  });
+
+  it("a nota aberta também pode ser HOPO", () => {
+    expect(tipos(chartCom(`0 = N 0 0
+64 = N 7 0`))).toEqual(["0", "5:hopo"]);
   });
 });
 
@@ -163,6 +213,39 @@ describe("lerMidi", () => {
 
   it("recusa arquivos que não são MIDI", () => {
     expect(() => lerMidi(new Uint8Array([1, 2, 3, 4]))).toThrow();
+  });
+});
+
+describe("lerMidi: notas abertas, HOPO e tap", () => {
+  const texto = (delta: number, conteudo: string) => ({ delta, bytes: [0xff, 0x01, conteudo.length, ...new TextEncoder().encode(conteudo)] });
+  // Phase Shift: F0, tamanho, "PS", 0, 0, dificuldade (3 = expert, 0xFF = todas), tipo (1 = aberta, 4 = tap), liga/desliga, F7.
+  const sysex = (delta: number, dificuldade: number, tipo: number, liga: boolean) => ({ delta, bytes: [0xf0, 8, 0x50, 0x53, 0, 0, dificuldade, tipo, liga ? 1 : 0, 0xf7] });
+  const ler = (...eventos: { delta: number; bytes: number[] }[]) => lerMidi(construirMidi(480, [andamento(500000)], [nomeDaFaixa("PART GUITAR"), ...eventos])).notas.guitarra!.expert!;
+
+  it("com ENHANCED_OPENS, a nota logo abaixo do verde é a aberta", () => {
+    expect(tipos(ler(texto(0, "[ENHANCED_OPENS]"), notaLigada(0, 95), notaDesligada(60, 95), notaLigada(900, 96), notaDesligada(60, 96)))).toEqual(["5", "0"]);
+  });
+
+  it("o sysex do Phase Shift transforma o verde em aberta, e outro sysex deixa tap", () => {
+    expect(
+      tipos(
+        ler(sysex(0, 3, 1, true), notaLigada(0, 96), notaDesligada(60, 96), sysex(0, 3, 1, false), sysex(900, 0xff, 4, true), notaLigada(0, 97), notaDesligada(60, 97), sysex(0, 0xff, 4, false)),
+      ),
+    ).toEqual(["5", "1:tap"]);
+  });
+
+  it("HOPO natural pelo limiar, forçado pela nota 101, nota normal forçada pela 102, e tap pela 104", () => {
+    expect(
+      tipos(
+        ler(
+          notaLigada(0, 96), notaDesligada(10, 96),
+          notaLigada(100, 97), notaDesligada(10, 97), // 110 ticks depois: HOPO natural
+          notaLigada(100, 102), notaLigada(0, 98), notaDesligada(10, 98), notaDesligada(0, 102), // natural, mas forçada a normal
+          notaLigada(900, 101), notaLigada(0, 99), notaDesligada(10, 99), notaDesligada(0, 101), // longe, mas forçada a HOPO
+          notaLigada(900, 104), notaLigada(0, 100), notaDesligada(10, 100), notaDesligada(0, 104),
+        ),
+      ),
+    ).toEqual(["0", "1:hopo", "2", "3:hopo", "4:tap"]);
   });
 });
 

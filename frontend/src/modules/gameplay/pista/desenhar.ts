@@ -1,6 +1,6 @@
-import type { Batida } from "@/modules/songs";
+import { PISTA_ABERTA, type Batida, type TipoDaNota } from "@/modules/songs";
 import { cores, comAlfa } from "@/shared/styles/tokens";
-import { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ESTRELA, COR_DA_NOTA_PERDIDA, TRILHO_DA_ESTRELA } from "../cores";
+import { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ABERTA, COR_DA_ESTRELA, COR_DA_NOTA_PERDIDA, TRILHO_DA_ESTRELA, corDaPista } from "../cores";
 import type { NotaEmJogo } from "../partida";
 import { pontosDoRaio, tremor } from "./efeitos";
 import { cordasDaPista, layoutDaPista, projetar, xDaPista, type LayoutDaPista } from "./geometria";
@@ -22,7 +22,10 @@ export interface Cena {
 
 /** Imagens pré-desenhadas das notas e dos brilhos (ver sprites.ts). */
 export interface Sprites {
-  nota(cor: string, estrela: boolean, brilho: boolean): CanvasImageSource;
+  /** Sem tipo é a nota comum; HOPO e tap têm o visual do Clone Hero. */
+  nota(cor: string, estrela: boolean, brilho: boolean, tipo?: TipoDaNota): CanvasImageSource;
+  /** A nota aberta: uma barra deitada que atravessa os cinco trastes. */
+  aberta(cor: string, estrela: boolean, brilho: boolean, tipo?: TipoDaNota): CanvasImageSource;
   brilho(cor: string): CanvasImageSource;
   /** Ruído e arranhões que deixam o braço com cara de gasto. */
   textura(): CanvasImageSource;
@@ -30,6 +33,10 @@ export interface Sprites {
 
 /** Tamanho do sprite de nota comparado com o raio da nota. */
 export const SPRITE_DA_NOTA = { raio: 56, largura: 160, altura: 110 };
+/** A barra da nota aberta: `barra` é a parte que cobre os cinco trastes. */
+export const SPRITE_DA_ABERTA = { barra: 600, largura: 640, altura: 80 };
+/** Quantos trastes de largura o rastro do sustain da aberta tem, comparado com o de uma nota. */
+const LARGURA_DO_RASTRO_DA_ABERTA = 4;
 const DURACAO_DA_EXPLOSAO = 0.3;
 const DURACAO_DO_TROVAO = 0.5;
 const ATRAS_DA_LINHA = -0.12;
@@ -232,6 +239,15 @@ export function desenharPista(
     c.fill();
   }
 
+  // A tecla da aberta acende a linha de batida inteira, de ponta a ponta.
+  if (cena.apertados[PISTA_ABERTA] && efeitos) {
+    const largura = larguraDoTraste * 5.4;
+    const altura = larguraDoTraste * 0.9;
+    c.globalAlpha = 0.6;
+    c.drawImage(sprites.brilho(COR_DA_ABERTA), layout.centro - largura / 2, linhaDeBatida - altura / 2, largura, altura);
+    c.globalAlpha = 1;
+  }
+
   let ultima = cena.primeira;
   while (ultima < cena.notas.length && cena.notas[ultima].tempo - tempo < antecedencia) ultima++;
 
@@ -244,14 +260,18 @@ export function desenharPista(
     if (fim <= inicio) continue;
     const p0 = projetar(layout, inicio);
     const p1 = projetar(layout, fim);
-    const x0 = xDaPista(layout, nota.pista, p0.escala);
-    const x1 = xDaPista(layout, nota.pista, p1.escala);
+    // O rastro da aberta corre pelo meio do braço, mais largo.
+    const aberta = nota.pista === PISTA_ABERTA;
+    const pistaDoRastro = aberta ? 2 : nota.pista;
+    const x0 = xDaPista(layout, pistaDoRastro, p0.escala);
+    const x1 = xDaPista(layout, pistaDoRastro, p1.escala);
     // O rastro vibra enquanto está sendo segurado, como no Guitar Hero.
     const vibracao = nota.segurando ? 1 + Math.sin(tempo * 40) * 0.25 : 1;
     const morto = nota.perdida || nota.solta;
     const faixa = (fator: number) => {
-      const l0 = larguraDoTraste * 0.13 * p0.escala * vibracao * fator;
-      const l1 = larguraDoTraste * 0.13 * p1.escala * vibracao * fator;
+      const largo = aberta ? LARGURA_DO_RASTRO_DA_ABERTA : 1;
+      const l0 = larguraDoTraste * 0.13 * p0.escala * vibracao * fator * largo;
+      const l1 = larguraDoTraste * 0.13 * p1.escala * vibracao * fator * largo;
       c.beginPath();
       c.moveTo(x0 - l0, p0.y);
       c.lineTo(x0 + l0, p0.y);
@@ -261,7 +281,7 @@ export function desenharPista(
       c.fill();
     };
     c.globalAlpha = morto ? 0.3 : 1;
-    c.fillStyle = morto ? COR_DA_NOTA_PERDIDA : cena.estrelaAtiva ? COR_DA_ESTRELA : CORES_DAS_PISTAS[nota.pista];
+    c.fillStyle = morto ? COR_DA_NOTA_PERDIDA : cena.estrelaAtiva ? COR_DA_ESTRELA : corDaPista(nota.pista);
     faixa(1);
     if (nota.segurando) {
       c.fillStyle = comAlfa(cores.texto, 0.55);
@@ -278,11 +298,19 @@ export function desenharPista(
     if (distancia < ATRAS_DA_LINHA) continue;
     const p = projetar(layout, distancia);
     const estrela = nota.frase >= 0 && !cena.frasesFalhas.has(nota.frase);
-    const sprite = sprites.nota(cena.estrelaAtiva ? COR_DA_ESTRELA : CORES_DAS_PISTAS[nota.pista], estrela, efeitos);
+    const cor = cena.estrelaAtiva ? COR_DA_ESTRELA : corDaPista(nota.pista);
+    c.globalAlpha = nota.perdida ? 0.35 : 1;
+    if (nota.pista === PISTA_ABERTA) {
+      const escala = (larguraDoTraste * 5 * p.escala) / SPRITE_DA_ABERTA.barra;
+      const largura = SPRITE_DA_ABERTA.largura * escala;
+      const alturaDoSprite = SPRITE_DA_ABERTA.altura * escala;
+      c.drawImage(sprites.aberta(cor, estrela, efeitos, nota.tipo), layout.centro - largura / 2, p.y - alturaDoSprite / 2, largura, alturaDoSprite);
+      continue;
+    }
+    const sprite = sprites.nota(cor, estrela, efeitos, nota.tipo);
     const escala = (larguraDoTraste * 0.36 * p.escala) / SPRITE_DA_NOTA.raio;
     const largura = SPRITE_DA_NOTA.largura * escala;
     const alturaDoSprite = SPRITE_DA_NOTA.altura * escala;
-    c.globalAlpha = nota.perdida ? 0.35 : 1;
     c.drawImage(sprite, xDaPista(layout, nota.pista, p.escala) - largura / 2, p.y - alturaDoSprite / 2 + 6 * escala, largura, alturaDoSprite);
   }
   c.globalAlpha = 1;
@@ -305,9 +333,11 @@ export function desenharPista(
     const idade = tempo - explosao.tempo;
     if (idade < 0 || idade > DURACAO_DA_EXPLOSAO) continue;
     const k = idade / DURACAO_DA_EXPLOSAO;
-    const x = xDaPista(layout, explosao.pista, 1);
-    const cor = cena.estrelaAtiva ? COR_DA_ESTRELA : CORES_DAS_PISTAS[explosao.pista];
-    const tamanho = larguraDoTraste * 2 * (0.4 + k);
+    // A explosão da aberta sai do meio do braço e é bem maior, porque a nota cobre os cinco trastes.
+    const aberta = explosao.pista === PISTA_ABERTA;
+    const x = aberta ? layout.centro : xDaPista(layout, explosao.pista, 1);
+    const cor = cena.estrelaAtiva ? COR_DA_ESTRELA : corDaPista(explosao.pista);
+    const tamanho = larguraDoTraste * (aberta ? 5 : 2) * (0.4 + k);
     c.globalAlpha = 1 - k;
     c.drawImage(sprites.brilho(cor), x - tamanho / 2, linhaDeBatida - tamanho / 2, tamanho, tamanho);
     c.strokeStyle = cor;

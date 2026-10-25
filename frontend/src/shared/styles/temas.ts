@@ -25,6 +25,8 @@ export interface Tema {
   /** Skin do canvas da pista, onde o brilho neon é permitido. */
   pista: {
     trastes: string[];
+    /** A nota aberta, a barra que atravessa a pista. */
+    aberta: string;
     notaDeEstrela: string;
     multiplicador: string[];
     notaPerdida: string;
@@ -35,6 +37,7 @@ export interface Tema {
 
 const PISTA_CLASSICA: Tema["pista"] = {
   trastes: ["#22c55e", "#ef4444", "#eab308", "#3b82f6", "#f97316"],
+  aberta: "#a855f7",
   notaDeEstrela: "#e0f2fe",
   multiplicador: ["#e5e7eb", "#facc15", "#22c55e", "#a855f7"],
   notaPerdida: "#71717a",

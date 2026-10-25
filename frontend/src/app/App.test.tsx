@@ -303,7 +303,7 @@ describe("App", () => {
     const usuario = abrir();
     const { modo, mapa } = vi.mocked(iniciarControle).mock.lastCall![0];
     expect(modo()).toBe("menu");
-    expect(mapa().teclas).toEqual(["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"]);
+    expect(mapa().teclas).toEqual(["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL", "KeyD"]);
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
     await screen.findByRole("button", { name: "terminar" });

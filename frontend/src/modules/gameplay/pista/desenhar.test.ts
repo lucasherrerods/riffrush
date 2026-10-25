@@ -1,11 +1,12 @@
 import { criarCanvasFalso } from "@/test/canvasFalso";
-import type { Nota } from "@/modules/songs";
+import { PISTA_ABERTA, type Nota } from "@/modules/songs";
 import { criarPartida } from "../partida";
-import { CORES_DAS_PISTAS, COR_DA_ESTRELA } from "../cores";
+import { CORES_DAS_PISTAS, COR_DA_ABERTA, COR_DA_ESTRELA } from "../cores";
 import { desenharPista, type Cena, type Sprites } from "./desenhar";
 
 const sprites: Sprites = {
-  nota: (cor, estrela) => ({ tipo: "nota", cor, estrela }) as unknown as CanvasImageSource,
+  nota: (cor, estrela, _brilho, tipoDaNota) => ({ tipo: "nota", cor, estrela, ...(tipoDaNota && { tipoDaNota }) }) as unknown as CanvasImageSource,
+  aberta: (cor, estrela, _brilho, tipoDaNota) => ({ tipo: "aberta", cor, estrela, ...(tipoDaNota && { tipoDaNota }) }) as unknown as CanvasImageSource,
   brilho: (cor) => ({ tipo: "brilho", cor }) as unknown as CanvasImageSource,
   textura: () => ({ tipo: "textura" }) as unknown as CanvasImageSource,
 };
@@ -18,7 +19,7 @@ function cena(notas: Nota[], extra: Partial<Cena> = {}): Cena {
     notas: partida.notas,
     primeira: 0,
     batidas: [],
-    apertados: [false, false, false, false, false],
+    apertados: [false, false, false, false, false, false],
     explosoes: [],
     estrelaAtiva: false,
     multiplicador: 1,
@@ -52,6 +53,27 @@ describe("desenharPista", () => {
       { tipo: "nota", cor: CORES_DAS_PISTAS[3], estrela: false },
       { tipo: "nota", cor: CORES_DAS_PISTAS[1], estrela: false },
     ]);
+  });
+
+  it("HOPO e tap usam o sprite do próprio tipo, como no Clone Hero", () => {
+    const desenhos = desenhar(cena([nota(0.5, 1, { tipo: "hopo" }), nota(1, 3, { tipo: "tap" })])).desenhos();
+    expect(desenhos).toEqual([
+      { tipo: "nota", cor: CORES_DAS_PISTAS[3], estrela: false, tipoDaNota: "tap" },
+      { tipo: "nota", cor: CORES_DAS_PISTAS[1], estrela: false, tipoDaNota: "hopo" },
+    ]);
+  });
+
+  it("a nota aberta é uma barra roxa que atravessa os cinco trastes", () => {
+    const canvas = desenhar(cena([nota(0.5, PISTA_ABERTA, { tipo: "hopo" })]));
+    expect(canvas.desenhos()).toEqual([{ tipo: "aberta", cor: COR_DA_ABERTA, estrela: false, tipoDaNota: "hopo" }]);
+    const [, , , largura] = canvas.chamadas.find((c) => c.metodo === "drawImage")!.args as number[];
+    const traste = canvas.chamadas.length && desenhar(cena([nota(0.5, 2)])).chamadas.find((c) => c.metodo === "drawImage")!.args[3] as number;
+    expect(largura).toBeGreaterThan(traste * 3);
+  });
+
+  it("apertar a tecla da aberta acende a linha de batida inteira", () => {
+    const apertada = cena([], { apertados: [false, false, false, false, false, true] });
+    expect(desenhar(apertada).desenhos()).toEqual([{ tipo: "brilho", cor: COR_DA_ABERTA }]);
   });
 
   it("não desenha notas além do horizonte", () => {

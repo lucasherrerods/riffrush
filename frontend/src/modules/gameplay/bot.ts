@@ -1,7 +1,9 @@
+import { PISTA_ABERTA } from "@/modules/songs";
 import { acertar, ativarEstrela, type Partida } from "./partida";
 
 const TOQUE_RAPIDO = 0.08;
-const PISTAS = 5;
+/** Os 5 trastes e a nota aberta. */
+const PISTAS = PISTA_ABERTA + 1;
 
 export interface Bot {
   /** Até quando cada traste fica apertado. */

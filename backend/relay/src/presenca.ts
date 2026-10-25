@@ -108,7 +108,8 @@ export function linkDoChartConfere(url: unknown, musica: string): url is string 
 }
 
 /**
- * Cada entrada é `[tempo em ms, código]`: código 0 a 4 aperta a pista, 5 a 9 solta, 10 ativa o star power.
+ * Cada entrada é `[tempo em ms, código]`: código 0 a 4 aperta a pista, 5 a 9 solta, 10 ativa o star power,
+ * 11 aperta e 12 solta a nota aberta.
  * `ate` é até onde a partida de quem joga já chegou, em segundos.
  */
 export type MensagemDaTransmissao =
@@ -117,7 +118,7 @@ export type MensagemDaTransmissao =
   | { tipo: "pausa"; pausado: boolean }
   | { tipo: "fim" };
 
-const CODIGO_MAXIMO = 10;
+const CODIGO_MAXIMO = 12;
 /** Um lote por segundo; nem os trechos mais rápidos passam de algumas dezenas de entradas. */
 const ENTRADAS_POR_LOTE = 500;
 

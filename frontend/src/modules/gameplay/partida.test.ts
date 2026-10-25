@@ -1,4 +1,4 @@
-import type { Nota } from "@/modules/songs";
+import { PISTA_ABERTA, type Nota } from "@/modules/songs";
 import { JANELA_DE_ACERTO, ativarEstrela, avancar, criarPartida, multiplicador, precisao, retirarEventos, soltar, tocar } from "./partida";
 
 const nota = (tempo: number, pista = 0, extra: Partial<Nota> = {}): Nota => ({ tempo, pista, frase: -1, duracao: 0, ...extra });
@@ -15,6 +15,14 @@ describe("tocar", () => {
     const partida = criarPartida([nota(1)]);
     expect(tocar(partida, 0, 1 - JANELA_DE_ACERTO * 1.5)).toBe(false);
     expect(partida.notas[0].acertada).toBe(false);
+  });
+
+  it("a nota aberta só sai com a tecla dela, e a tecla dela não toca trastes", () => {
+    const partida = criarPartida([nota(1, PISTA_ABERTA), nota(2, 0)]);
+    expect(tocar(partida, 0, 1)).toBe(false);
+    expect(tocar(partida, PISTA_ABERTA, 1)).toBe(true);
+    expect(tocar(partida, PISTA_ABERTA, 2)).toBe(false);
+    expect(partida.acertos).toBe(1);
   });
 
   it("não acerta nota de outra pista", () => {
