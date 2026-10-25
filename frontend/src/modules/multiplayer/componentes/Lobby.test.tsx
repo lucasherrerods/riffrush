@@ -91,4 +91,12 @@ describe("Lobby", () => {
     await userEvent.type(screen.getByRole("textbox", { name: "Mensagem" }), "vamo{Enter}");
     expect(enviarChat).toHaveBeenCalledWith("vamo");
   });
+
+  it("o chat avisa quem consegue ler: na LAN, a rede inteira; no online, quem entrar na sala", () => {
+    const { unmount } = render(lobby(primeira.id));
+    expect(screen.getByText(/mesmo Wi-Fi consegue ler o chat/)).toBeInTheDocument();
+    unmount();
+    render(<Lobby sala={sala(primeira.id)} codigo="K7QXM" endereco="" musicas={MUSICAS_DE_TESTE} volumeDosEfeitos={0} />);
+    expect(screen.getByText(/Quem entrar na sala lê o chat/)).toBeInTheDocument();
+  });
 });

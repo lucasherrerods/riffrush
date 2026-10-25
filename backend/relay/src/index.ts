@@ -5,10 +5,12 @@ import {
   codigoValido,
   dentroDoLimite,
   embrulhar,
+  expulsoPeloHost,
   gerarCodigo,
   listarSalas,
   mensagemDoServidor,
   nomeDoHost,
+  salaPublica,
   novoHost,
   type EntradaDaSala,
   type Janela,
@@ -65,6 +67,7 @@ interface Anexo {
 const CABECALHO_DE_CRIAR = "x-riffrush-criar";
 const CABECALHO_DO_CODIGO = "x-riffrush-codigo";
 const CABECALHO_DO_NOME = "x-riffrush-nome";
+const CABECALHO_DA_VISIBILIDADE = "x-riffrush-publica";
 /** De quanto em quanto tempo a sala aberta renova a entrada no diretório. */
 const RENOVACAO_MS = 60 * 1000;
 const PREFIXO = "sala:";
@@ -126,7 +129,14 @@ export class Sala extends DurableObject<Env> {
     if (this.ctx.getWebSockets(JOGADOR).length >= MAXIMO_DE_JOGADORES) return recusar("cheia");
 
     if (criar) {
-      await this.ctx.storage.put({ aberta: true, usada: true, proximoId: HOST, codigo, nome: nomeDoHost(pedido.headers.get(CABECALHO_DO_NOME)) });
+      await this.ctx.storage.put({
+        aberta: true,
+        usada: true,
+        proximoId: HOST,
+        codigo,
+        nome: nomeDoHost(pedido.headers.get(CABECALHO_DO_NOME)),
+        publica: salaPublica(pedido.headers.get(CABECALHO_DA_VISIBILIDADE)),
+      });
       await this.ctx.storage.setAlarm(Date.now() + RENOVACAO_MS);
     }
     const id = (await this.ctx.storage.get<number>("proximoId")) ?? HOST;
@@ -149,7 +159,8 @@ export class Sala extends DurableObject<Env> {
   private async publicar(saindo?: WebSocket) {
     const codigo = await this.ctx.storage.get<string>("codigo");
     if (!codigo) return;
-    if (!(await this.ctx.storage.get<boolean>("aberta"))) return void (await diretorio(this.env).remover(codigo));
+    const listada = (await this.ctx.storage.get<boolean>("aberta")) && (await this.ctx.storage.get<boolean>("publica")) !== false;
+    if (!listada) return void (await diretorio(this.env).remover(codigo));
     const jogadores = this.ctx.getWebSockets(JOGADOR).filter((s) => s !== saindo).length;
     await diretorio(this.env).publicar({ codigo, nome: (await this.ctx.storage.get<string>("nome")) ?? nomeDoHost(null), jogadores });
   }
@@ -163,9 +174,14 @@ export class Sala extends DurableObject<Env> {
     const embrulhada = embrulhar(id, mensagem);
     if (!embrulhada) return;
     const presentes = this.ctx.getWebSockets(JOGADOR).map((s) => (s.deserializeAttachment() as Anexo).id);
-    const novo = novoHost(id, await this.hostAtual(), mensagem, presentes);
+    const host = await this.hostAtual();
+    const novo = novoHost(id, host, mensagem, presentes);
     if (novo !== null) await this.ctx.storage.put("host", novo);
     this.paraTodos(embrulhada);
+    // O expulso recebe o aviso acima e só então sai: assim ele vê o motivo, e não "a conexão caiu".
+    const expulso = expulsoPeloHost(id, host, mensagem, presentes);
+    const socketDoExpulso = this.ctx.getWebSockets(JOGADOR).find((s) => (s.deserializeAttachment() as Anexo).id === expulso);
+    if (socketDoExpulso) await this.saiu(socketDoExpulso);
   }
 
   async webSocketClose(socket: WebSocket) {
@@ -579,7 +595,10 @@ async function comPessoa(pedido: Request, env: Env) {
 
 function encaminhar(pedido: Request, env: Env, codigo: string, criar: boolean) {
   const cabecalhos = new Headers(pedido.headers);
-  if (criar) cabecalhos.set(CABECALHO_DO_NOME, new URL(pedido.url).searchParams.get("nome") ?? "");
+  if (criar) {
+    cabecalhos.set(CABECALHO_DO_NOME, new URL(pedido.url).searchParams.get("nome") ?? "");
+    cabecalhos.set(CABECALHO_DA_VISIBILIDADE, new URL(pedido.url).searchParams.get("publica") ?? "1");
+  }
   cabecalhos.set(CABECALHO_DO_CODIGO, codigo);
   cabecalhos.set(CABECALHO_DE_CRIAR, criar ? "1" : "0");
   return env.SALAS.get(env.SALAS.idFromName(codigo)).fetch(new Request(pedido, { headers: cabecalhos }));

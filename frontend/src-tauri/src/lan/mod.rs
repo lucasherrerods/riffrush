@@ -35,7 +35,10 @@ use rust_embed::RustEmbed;
 use serde::Serialize;
 use tokio::sync::{broadcast, oneshot, RwLock};
 
-use protocolo::{caminho_do_arquivo, embrulhar, ler_anuncio, Anuncio, MAXIMO_DE_JOGADORES, PORTA_DA_SALA, PORTA_DO_ANUNCIO};
+use protocolo::{
+    caminho_do_arquivo, dentro_do_limite, embrulhar, expulsa, ler_anuncio, Anuncio, Janela, MAXIMO_DE_JOGADORES, PORTA_DA_SALA,
+    PORTA_DO_ANUNCIO, TAMANHO_MAXIMO_DA_MENSAGEM,
+};
 
 #[derive(RustEmbed)]
 #[folder = "../dist"]
@@ -200,7 +203,8 @@ fn anunciar(nome: String, jogadores: Arc<AtomicUsize>, parar: Arc<AtomicBool>) {
 }
 
 async fn abrir_websocket(ws: WebSocketUpgrade, State(c): State<Compartilhado>) -> Response {
-    ws.on_upgrade(move |socket| atender_jogador(socket, c))
+    // Mensagem maior que isso nem é lida: o servidor corta a conexão.
+    ws.max_message_size(TAMANHO_MAXIMO_DA_MENSAGEM).on_upgrade(move |socket| atender_jogador(socket, c))
 }
 
 async fn atender_jogador(socket: WebSocket, c: Compartilhado) {
@@ -220,7 +224,10 @@ async fn atender_jogador(socket: WebSocket, c: Compartilhado) {
         loop {
             match recebidas.recv().await {
                 Ok(texto) => {
-                    if saida.send(Message::Text(texto.into())).await.is_err() {
+                    let expulso = expulsa(&texto, id);
+                    if saida.send(Message::Text(texto.into())).await.is_err() || expulso {
+                        // O expulso já recebeu o aviso: a conexão fecha aqui.
+                        let _ = saida.close().await;
                         break;
                     }
                 }
@@ -232,9 +239,16 @@ async fn atender_jogador(socket: WebSocket, c: Compartilhado) {
 
     let canal = c.canal.clone();
     let mut receber = tokio::spawn(async move {
+        let inicio = Instant::now();
+        let mut janela = Janela::default();
         while let Some(Ok(mensagem)) = entrada.next().await {
             match mensagem {
                 Message::Text(texto) => {
+                    let (passa, nova) = dentro_do_limite(janela, inicio.elapsed().as_millis());
+                    janela = nova;
+                    if !passa {
+                        continue;
+                    }
                     if let Some(embrulhada) = embrulhar(id, texto.as_str()) {
                         let _ = canal.send(embrulhada);
                     }

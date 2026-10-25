@@ -5,6 +5,7 @@ import { Avatar, type Personagem } from "@/modules/character";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { Switch } from "@/shared/ui/switch";
 import { cn } from "@/shared/lib/utils";
 import type { SalaOnline } from "../online";
 import { MAXIMO_DE_JOGADORES } from "../protocolo";
@@ -23,6 +24,7 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
   const [procurando, setProcurando] = useState(false);
   const [ip, setIp] = useState("");
   const [codigo, setCodigo] = useState("");
+  const [publica, setPublica] = useState(true);
   const [salasOnline, setSalasOnline] = useState<SalaOnline[]>([]);
   const noCelular = ehClienteWebDaSala();
   // O celular que entrou pelo QR code só entra na sala de quem serviu a página.
@@ -79,17 +81,26 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
           </Button>
         )}
         {online && (
-          <Button
+          <>
+            <Button
               size="lg"
               variant="outline"
               className="w-full"
               onClick={() => {
                 tocarEfeito("selecionar", volumeDosEfeitos);
-                criarSalaOnline(personagem);
+                criarSalaOnline(personagem, publica);
               }}
             >
               <Globe className="opacity-70" /> Criar sala online
             </Button>
+            {/* Desligado, a sala não aparece para quem procura: só entra quem tem o código. */}
+            <div className="flex w-full items-center justify-between gap-2">
+              <Label htmlFor="sala-publica" className="text-base text-texto-suave">
+                Aparecer na lista
+              </Label>
+              <Switch id="sala-publica" checked={publica} onCheckedChange={setPublica} />
+            </div>
+          </>
         )}
       </section>
 

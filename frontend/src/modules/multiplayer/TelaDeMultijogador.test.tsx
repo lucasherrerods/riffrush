@@ -90,7 +90,15 @@ describe("fora de uma sala", () => {
   it("cria uma sala online", async () => {
     const { usuario } = abrir({ sala: null, endereco: "" });
     await usuario.click(screen.getByRole("button", { name: /Criar sala online/ }));
-    expect(sala.criarSalaOnline).toHaveBeenCalledWith(lucas);
+    expect(sala.criarSalaOnline).toHaveBeenCalledWith(lucas, true);
+  });
+
+  it("cria uma sala online privada, que não aparece na lista", async () => {
+    const { usuario } = abrir({ sala: null, endereco: "" });
+    expect(screen.getByRole("switch", { name: "Aparecer na lista" })).toBeChecked();
+    await usuario.click(screen.getByRole("switch", { name: "Aparecer na lista" }));
+    await usuario.click(screen.getByRole("button", { name: /Criar sala online/ }));
+    expect(sala.criarSalaOnline).toHaveBeenCalledWith(lucas, false);
   });
 
   it("entra numa sala online pelo código", async () => {

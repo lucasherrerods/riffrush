@@ -1,4 +1,4 @@
-import { HOST, LIMITE_DE_MENSAGENS_POR_SEGUNDO, MAXIMO_DE_JOGADORES, TAMANHO_MAXIMO_DA_MENSAGEM, VALIDADE_DA_ENTRADA_MS, codigoValido, dentroDoLimite, embrulhar, gerarCodigo, listarSalas, mensagemDoServidor, nomeDoHost, novoHost, type EntradaDaSala } from "./regras";
+import { HOST, LIMITE_DE_MENSAGENS_POR_SEGUNDO, MAXIMO_DE_JOGADORES, TAMANHO_MAXIMO_DA_MENSAGEM, VALIDADE_DA_ENTRADA_MS, codigoValido, dentroDoLimite, embrulhar, gerarCodigo, listarSalas, mensagemDoServidor, nomeDoHost, expulsoPeloHost, novoHost, salaPublica, type EntradaDaSala } from "./regras";
 
 describe("gerarCodigo", () => {
   it("gera 5 caracteres sem letras que se confundem", () => {
@@ -108,5 +108,31 @@ describe("novoHost", () => {
   it("outras mensagens não mudam o host", () => {
     expect(novoHost(1, 1, '{"tipo":"oi"}', ids)).toBeNull();
     expect(novoHost(1, 1, "lixo", ids)).toBeNull();
+  });
+});
+
+describe("expulsoPeloHost", () => {
+  const expulsar = (id: unknown) => JSON.stringify({ tipo: "expulsar", id });
+
+  it("o host atual expulsa quem está na sala, e o relay derruba a conexão", () => {
+    expect(expulsoPeloHost(1, 1, expulsar(3), [1, 2, 3])).toBe(3);
+    // Depois de passar a liderança, quem expulsa é o host novo.
+    expect(expulsoPeloHost(2, 2, expulsar(1), [1, 2])).toBe(1);
+  });
+
+  it("convidado não expulsa, ninguém expulsa o host nem quem não está", () => {
+    expect(expulsoPeloHost(2, 1, expulsar(3), [1, 2, 3])).toBeNull();
+    expect(expulsoPeloHost(1, 1, expulsar(1), [1, 2])).toBeNull();
+    expect(expulsoPeloHost(1, 1, expulsar(9), [1, 2])).toBeNull();
+    expect(expulsoPeloHost(1, 1, expulsar("2"), [1, 2])).toBeNull();
+    expect(expulsoPeloHost(1, 1, "lixo", [1, 2])).toBeNull();
+  });
+});
+
+describe("salaPublica", () => {
+  it("aparece na lista a não ser que o host peça sala privada", () => {
+    expect(salaPublica(null)).toBe(true);
+    expect(salaPublica("1")).toBe(true);
+    expect(salaPublica("0")).toBe(false);
   });
 });
