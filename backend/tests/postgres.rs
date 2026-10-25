@@ -254,3 +254,45 @@ async fn ranking_geral_ordena_por_xp_e_ignora_quem_nao_jogou() {
     // Com um XP tão alto, este jogador é o primeiro mesmo com outras contas no banco.
     assert_eq!(linhas.iter().map(|l| (l.posicao, l.conta_id)).collect::<Vec<_>>(), [(1, jogador.id)]);
 }
+
+#[tokio::test]
+async fn ranking_geral_da_a_posicao_certa_fora_do_top_e_no_empate() {
+    let Some(banco) = banco().await else { return };
+    let ranking = RankingPostgres(banco.0.clone());
+    let partida = |conta_id, xp_ganho| PartidaRegistrada {
+        conta_id,
+        musica_id: "teste:geral".into(),
+        instrumento: Instrumento::Guitarra,
+        pontos: 10,
+        resumo: ResumoDaPartida {
+            dificuldade: Dificuldade::Facil,
+            acertos: 1,
+            total: 1,
+            derrota: false,
+            fantasma: false,
+        },
+        xp_ganho,
+        jogada_em: Utc::now(),
+    };
+    let primeiro = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let empatado = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    banco.registrar_partida(&partida(primeiro.id, 7)).await.unwrap();
+    banco.registrar_partida(&partida(empatado.id, 7)).await.unwrap();
+
+    let linhas = ranking.geral(1, Some(empatado.id)).await.unwrap();
+
+    // A posição tem que bater com a numeração de todas as contas.
+    let (esperada, jogadores): (i64, i64) = sqlx::query_as(
+        "SELECT posicao, jogadores FROM (
+             SELECT id, ROW_NUMBER() OVER (ORDER BY xp_total DESC, criada_em ASC) AS posicao, COUNT(*) OVER () AS jogadores
+             FROM contas WHERE xp_total > 0
+         ) n WHERE id = $1",
+    )
+    .bind(empatado.id)
+    .fetch_one(&banco.0)
+    .await
+    .unwrap();
+    let minha = linhas.iter().find(|l| l.conta_id == empatado.id).unwrap();
+    assert_eq!((i64::from(minha.posicao), i64::from(minha.jogadores)), (esperada, jogadores));
+    assert_eq!(linhas[0].posicao, 1);
+}
