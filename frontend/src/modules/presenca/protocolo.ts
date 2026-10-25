@@ -37,13 +37,19 @@ export type MensagemDaTransmissao =
 
 const semBarraNoFim = (url: string) => url.replace(/\/+$/, "");
 
-export const urlDaPresenca = (relay: string, ficha: string) => `${semBarraNoFim(relay)}/presenca?ficha=${encodeURIComponent(ficha)}`;
+/**
+ * A ficha vai como subprotocolo do WebSocket, não na URL: a URL acaba em logs.
+ * O relay responde aceitando PROTOCOLO_DO_JOGO.
+ */
+export const PROTOCOLO_DO_JOGO = "riffrush";
+export const protocolosComFicha = (ficha: string) => [PROTOCOLO_DO_JOGO, ficha];
 
-export const urlDoChat = (relay: string, ficha: string) => `${semBarraNoFim(relay)}/chat?ficha=${encodeURIComponent(ficha)}`;
+export const urlDaPresenca = (relay: string) => `${semBarraNoFim(relay)}/presenca`;
 
-/** Com a ficha, quem joga transmite; sem ela, quem assiste só recebe. */
-export const urlDaTransmissao = (relay: string, contaId: string, ficha?: string) =>
-  `${semBarraNoFim(relay)}/transmissao/${contaId}${ficha ? `?ficha=${encodeURIComponent(ficha)}` : ""}`;
+export const urlDoChat = (relay: string) => `${semBarraNoFim(relay)}/chat`;
+
+/** Com a ficha (no subprotocolo), quem joga transmite; sem ela, quem assiste só recebe. */
+export const urlDaTransmissao = (relay: string, contaId: string) => `${semBarraNoFim(relay)}/transmissao/${contaId}`;
 
 /** Aplica uma mensagem do relay na lista; mensagem estranha não mexe em nada. */
 export function aplicarMensagem(pessoas: PessoaOnline[], bruta: string): PessoaOnline[] {

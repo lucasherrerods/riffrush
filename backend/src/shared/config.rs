@@ -12,6 +12,8 @@ pub struct Config {
     pub google_desktop: Option<(String, String)>,
     /// O mesmo segredo configurado no relay; sem ele, a lista de quem está online fica desligada.
     pub segredo_do_relay: Option<String>,
+    /// O endereço do relay (`wss://...`), para a API avisar banimentos na hora.
+    pub url_do_relay: Option<String>,
 }
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -45,8 +47,10 @@ impl Config {
         let google_client_secret = variavel("GOOGLE_CLIENT_SECRET").ok_or(ErroDeConfig::Faltando("GOOGLE_CLIENT_SECRET"))?;
         let google_desktop = variavel("GOOGLE_DESKTOP_CLIENT_ID").zip(variavel("GOOGLE_DESKTOP_CLIENT_SECRET"));
         let segredo_do_relay = variavel("SEGREDO_DO_RELAY").filter(|s| !s.is_empty());
+        let url_do_relay = variavel("URL_DO_RELAY").filter(|s| !s.is_empty());
         Ok(Self {
             segredo_do_relay,
+            url_do_relay,
             endereco,
             url_do_banco,
             origens_permitidas,

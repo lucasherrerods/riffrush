@@ -8,6 +8,27 @@ export interface Pessoa {
   avatar: string | null;
 }
 
+/**
+ * Quem a ficha diz que é, com o que vale no chat global: o nível (escrever pede um mínimo),
+ * se é da equipe e se está banido. Quem decide é a API, que assina a ficha.
+ */
+export type PessoaDaFicha = Pessoa & { nivel: number; admin: boolean; banido: boolean };
+
+/**
+ * O app manda a ficha como subprotocolo do WebSocket (`new WebSocket(url, [PROTOCOLO_DO_JOGO, ficha])`):
+ * assim ela não aparece na URL, que acaba em logs. A resposta precisa devolver PROTOCOLO_DO_JOGO.
+ */
+export const PROTOCOLO_DO_JOGO = "riffrush";
+
+export function fichaDoPedido(pedido: Request): { ficha: string; peloProtocolo: boolean } {
+  const protocolos = (pedido.headers.get("Sec-WebSocket-Protocol") ?? "").split(",").map((p) => p.trim());
+  if (protocolos.includes(PROTOCOLO_DO_JOGO)) {
+    const ficha = protocolos.find((p) => p && p !== PROTOCOLO_DO_JOGO);
+    if (ficha) return { ficha, peloProtocolo: true };
+  }
+  return { ficha: new URL(pedido.url).searchParams.get("ficha") ?? "", peloProtocolo: false };
+}
+
 /** Onde a pessoa está. A música vai com o id do ranking, para quem assiste achar a mesma. */
 export type EstadoOnline =
   | { tipo: "menu" }
@@ -27,7 +48,7 @@ const decodificarBase64Url = (texto: string) => Uint8Array.from(atob(texto.repla
  * Confere a ficha que a API assinou (`base64url(json).base64url(hmac-sha256)`) e devolve quem é.
  * Sem segredo configurado, ninguém entra.
  */
-export async function verificarFicha(ficha: string, segredo: string, agoraEmSegundos: number): Promise<Pessoa | null> {
+export async function verificarFicha(ficha: string, segredo: string, agoraEmSegundos: number): Promise<PessoaDaFicha | null> {
   const [corpo, assinatura, sobra] = ficha.split(".");
   if (!segredo || !corpo || !assinatura || sobra !== undefined) return null;
   try {
@@ -35,7 +56,15 @@ export async function verificarFicha(ficha: string, segredo: string, agoraEmSegu
     if (!(await crypto.subtle.verify("HMAC", chave, decodificarBase64Url(assinatura), new TextEncoder().encode(corpo)))) return null;
     const dados = JSON.parse(new TextDecoder().decode(decodificarBase64Url(corpo)));
     if (typeof dados?.id !== "string" || typeof dados.nome !== "string" || typeof dados.exp !== "number" || dados.exp < agoraEmSegundos) return null;
-    return { id: dados.id, nome: dados.nome.slice(0, TAMANHO_MAXIMO_DO_TEXTO), avatar: typeof dados.avatar === "string" ? dados.avatar : null };
+    const nivel = Number.isInteger(dados.nivel) && dados.nivel > 0 ? dados.nivel : 0;
+    return {
+      id: dados.id,
+      nome: dados.nome.slice(0, TAMANHO_MAXIMO_DO_TEXTO),
+      avatar: typeof dados.avatar === "string" ? dados.avatar : null,
+      nivel,
+      admin: dados.admin === true,
+      banido: dados.banido === true,
+    };
   } catch {
     return null;
   }

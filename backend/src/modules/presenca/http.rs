@@ -14,6 +14,8 @@ impl From<ErroDaPresenca> for ErroDaApi {
         match erro {
             ErroDaPresenca::Desligada => Self::Indisponivel,
             ErroDaPresenca::SessaoInvalida => Self::NaoAutorizado,
+            ErroDaPresenca::RapidoDemais => Self::MuitasRequisicoes,
+            ErroDaPresenca::Falha(falha) => Self::Interno(falha.0),
         }
     }
 }
@@ -25,7 +27,7 @@ pub struct RespostaDaFicha {
 }
 
 /// Uma ficha assinada, de poucos minutos, para entrar na lista de quem está online.
-#[utoipa::path(post, path = "/presenca/ficha", responses((status = 200, body = RespostaDaFicha), (status = 401), (status = 503)), security(("token" = [])))]
+#[utoipa::path(post, path = "/presenca/ficha", responses((status = 200, body = RespostaDaFicha), (status = 401), (status = 429), (status = 503)), security(("token" = [])))]
 pub async fn ficha(State(estado): State<EstadoDoApp>, Token(token): Token) -> Result<Json<RespostaDaFicha>, ErroDaApi> {
     Ok(Json(RespostaDaFicha {
         ficha: estado.presenca.ficha(&token).await?,

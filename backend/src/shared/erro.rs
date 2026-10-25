@@ -10,6 +10,8 @@ pub enum ErroDaApi {
     Invalido(String),
     #[error("não autorizado")]
     NaoAutorizado,
+    #[error("sem permissão")]
+    Proibido,
     #[error("não encontrado")]
     NaoEncontrado,
     #[error("muitas requisições, tente de novo em instantes")]
@@ -25,6 +27,7 @@ impl ErroDaApi {
         match self {
             Self::Invalido(_) => StatusCode::BAD_REQUEST,
             Self::NaoAutorizado => StatusCode::UNAUTHORIZED,
+            Self::Proibido => StatusCode::FORBIDDEN,
             Self::NaoEncontrado => StatusCode::NOT_FOUND,
             Self::MuitasRequisicoes => StatusCode::TOO_MANY_REQUESTS,
             Self::Indisponivel => StatusCode::SERVICE_UNAVAILABLE,

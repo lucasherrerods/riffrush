@@ -1,6 +1,12 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
-import { PainelDeChat } from "@/modules/chat";
-import { useConta } from "@/modules/conta";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { Ban, Flag, MessageSquare, ShieldAlert, Trash2, VolumeX } from "lucide-react";
+import { PainelDeChat, type AcaoDaMensagem, type MensagemDoChat } from "@/modules/chat";
+import { sessaoDaConta, useConta } from "@/modules/conta";
+import { cn } from "@/shared/lib/utils";
+import { avisar } from "@/shared/ui/avisos";
+import { Button } from "@/shared/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/ui/dialog";
+import { apiDaPresenca, type BanidoDaEquipe, type DenunciaDaEquipe } from "./api";
 import { chatGlobal } from "./presenca";
 
 const CHAVE_DOS_SILENCIADOS = "riffrush:chat:silenciados";
@@ -22,41 +28,243 @@ function guardarSilenciados(ids: string[]) {
   }
 }
 
-/** O chat de todo mundo que tem conta. Silenciar é só neste aparelho: a pessoa some da tela, não do chat. */
-export function ChatGlobal({ className }: { className?: string }) {
+const AVISO = "A equipe nunca pede senha nem dados pessoais. Só quem tem o selo Equipe fala pela equipe.";
+
+/** As denúncias e os banidos vêm da API (ficam no banco); só a equipe consegue ler. */
+function useModeracao(ativa: boolean) {
+  const [denuncias, setDenuncias] = useState<DenunciaDaEquipe[]>([]);
+  const [banidos, setBanidos] = useState<BanidoDaEquipe[]>([]);
+
+  const recarregar = useCallback(async () => {
+    const token = sessaoDaConta.token();
+    if (!token) return;
+    try {
+      const [novasDenuncias, novosBanidos] = await Promise.all([apiDaPresenca.denuncias(token), apiDaPresenca.banidos(token)]);
+      setDenuncias(novasDenuncias);
+      setBanidos(novosBanidos);
+    } catch (erro) {
+      avisar.error(erro instanceof Error ? erro.message : String(erro));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (ativa) void recarregar();
+  }, [ativa, recarregar]);
+
+  /** Faz a ação na API e recarrega as listas. */
+  const agir = async (acao: (token: string) => Promise<unknown>, aviso?: string) => {
+    const token = sessaoDaConta.token();
+    if (!token) return;
+    try {
+      await acao(token);
+      if (aviso) avisar(aviso);
+      await recarregar();
+    } catch (erro) {
+      avisar.error(erro instanceof Error ? erro.message : String(erro));
+    }
+  };
+
+  return { denuncias, banidos, recarregar, agir };
+}
+
+interface Props {
+  /** A resposta da pessoa às regras: null enquanto ela não respondeu, e nada liga sem ela aceitar. */
+  aceito: boolean | null;
+  aoResponder: (aceito: boolean) => void;
+  className?: string;
+}
+
+/** O chat de todo mundo que tem conta. Silenciar é só neste aparelho; denunciar avisa a equipe. */
+export function ChatGlobal({ aceito, aoResponder, className }: Props) {
   const { conta } = useConta();
   const logado = !!conta;
-  const { conectado, mensagens } = useSyncExternalStore(chatGlobal.inscrever, chatGlobal.estado);
+  const ligado = logado && aceito === true;
+  const estado = useSyncExternalStore(chatGlobal.inscrever, chatGlobal.estado);
   const [silenciados, setSilenciados] = useState(lerSilenciados);
+  const [moderando, setModerando] = useState(false);
+  const moderacao = useModeracao(ligado && !!estado.voce?.admin);
 
-  useEffect(() => (logado ? chatGlobal.usar() : undefined), [logado]);
+  useEffect(() => (ligado ? chatGlobal.usar() : undefined), [ligado]);
+
+  if (logado && aceito === null) return <Regras className={className} aoResponder={aoResponder} />;
 
   const mudarSilenciados = (ids: string[]) => {
     setSilenciados(ids);
     guardarSilenciados(ids);
   };
 
-  const visiveis = mensagens.filter((m) => !silenciados.includes(m.autor.id));
-  const bloqueado = !logado ? "Entre com a sua conta para ver e usar o chat global." : !conectado ? "Conectando ao chat..." : undefined;
+  const { conectado, mensagens, voce } = estado;
+  const original = (m: MensagemDoChat) => mensagens.find((o) => String(o.n) === m.id);
+  const bloqueado = !logado
+    ? "Entre com a sua conta para ver e usar o chat global."
+    : !conectado || !voce
+      ? "Conectando ao chat..."
+      : voce.banido
+        ? "Você foi banido do chat global."
+        : !voce.podeEscrever
+          ? `Chegue ao nível ${voce.nivelParaEscrever} para escrever. Até lá, dá para ler.`
+          : undefined;
+
+  const acoes = (m: MensagemDoChat): AcaoDaMensagem[] => {
+    const msg = original(m);
+    if (!msg) return [];
+    const apagar: AcaoDaMensagem = { rotulo: "Apagar mensagem", icone: Trash2, aoClicar: () => chatGlobal.apagar(msg.n) };
+    if (m.minha) return voce?.admin ? [apagar] : [];
+    const lista: AcaoDaMensagem[] = [
+      { rotulo: `Silenciar ${m.autor}`, icone: VolumeX, aoClicar: () => mudarSilenciados([...silenciados, msg.autor.id]) },
+      {
+        rotulo: `Denunciar mensagem de ${m.autor}`,
+        icone: Flag,
+        aoClicar: () => {
+          if (chatGlobal.denunciar(msg.n)) avisar("Denúncia enviada para a equipe. Obrigado!");
+        },
+      },
+    ];
+    if (voce?.admin) {
+      lista.push(apagar);
+      // Ninguém da equipe é banido pelo botão (a API também recusa).
+      if (!msg.autor.equipe) {
+        lista.push({ rotulo: `Banir ${m.autor}`, icone: Ban, aoClicar: () => void moderacao.agir((t) => apiDaPresenca.banir(t, msg.autor.id), `${m.autor} foi banido do chat.`) });
+      }
+    }
+    return lista;
+  };
+
+  const mensagensDenunciadas = new Set(moderacao.denuncias.map((d) => d.mensagem_n)).size;
 
   return (
-    <PainelDeChat
-      titulo="Chat global"
-      className={className}
-      bloqueado={bloqueado}
-      mensagens={visiveis.map((m) => ({ id: String(m.n), autor: m.autor.nome, texto: m.texto, minha: m.autor.id === conta?.id }))}
-      aoEnviar={(texto) => chatGlobal.enviar(texto)}
-      aoSilenciar={(m) => {
-        const autor = mensagens.find((original) => String(original.n) === m.id)?.autor.id;
-        if (autor) mudarSilenciados([...silenciados, autor]);
-      }}
-      extra={
-        silenciados.length > 0 && (
-          <button type="button" onClick={() => mudarSilenciados([])} className="text-base text-texto-suave hover:text-texto">
-            Mostrar silenciados ({silenciados.length})
-          </button>
-        )
-      }
-    />
+    <>
+      <PainelDeChat
+        titulo="Chat global"
+        className={className}
+        bloqueado={bloqueado}
+        aviso={ligado ? AVISO : undefined}
+        mensagens={mensagens
+          .filter((m) => !silenciados.includes(m.autor.id))
+          .map((m) => ({ id: String(m.n), autor: m.autor.nome, texto: m.texto, minha: m.autor.id === conta?.id, selo: m.autor.equipe ? "Equipe" : undefined }))}
+        aoEnviar={(texto) => chatGlobal.enviar(texto)}
+        acoesDaMensagem={acoes}
+        extra={
+          <>
+            {silenciados.length > 0 && (
+              <button type="button" onClick={() => mudarSilenciados([])} className="text-base text-texto-suave hover:text-texto">
+                Mostrar silenciados ({silenciados.length})
+              </button>
+            )}
+            {voce?.admin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setModerando(true);
+                  void moderacao.recarregar();
+                }}
+              >
+                <ShieldAlert className="opacity-70" /> Moderação ({mensagensDenunciadas})
+              </Button>
+            )}
+          </>
+        }
+      />
+      {voce?.admin && <Moderacao aberta={moderando} aoFechar={() => setModerando(false)} {...moderacao} />}
+    </>
+  );
+}
+
+function Regras({ aoResponder, className }: { aoResponder: (aceito: boolean) => void; className?: string }) {
+  return (
+    <section aria-label="Chat global" className={cn("flex min-h-0 flex-col gap-2 placa p-4", className)}>
+      <p className="flex items-center gap-2 text-base font-bold">
+        <MessageSquare className="size-4 text-primaria opacity-70" aria-hidden /> Chat global
+      </p>
+      <ul className="flex flex-1 list-disc flex-col gap-1 overflow-y-auto pl-5 text-base text-texto-suave">
+        <li>É público: todo mundo com conta lê o que você escreve.</li>
+        <li>Não passe dados pessoais (telefone, endereço, senha).</li>
+        <li>A equipe nunca pede senha. Só quem tem o selo Equipe fala por ela.</li>
+        <li>Sem ofensas, spam ou golpes: dá para silenciar e denunciar, e a equipe pode banir.</li>
+      </ul>
+      <div className="flex gap-2">
+        <Button className="flex-1" onClick={() => aoResponder(true)}>
+          Ligar o chat
+        </Button>
+        <Button variant="ghost" onClick={() => aoResponder(false)}>
+          Agora não
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+interface PropsDaModeracao extends ReturnType<typeof useModeracao> {
+  aberta: boolean;
+  aoFechar: () => void;
+}
+
+function Moderacao({ aberta, aoFechar, denuncias, banidos, agir }: PropsDaModeracao) {
+  // Uma linha por mensagem denunciada, com quem denunciou.
+  const porMensagem = new Map<number, DenunciaDaEquipe[]>();
+  for (const d of denuncias) porMensagem.set(d.mensagem_n, [...(porMensagem.get(d.mensagem_n) ?? []), d]);
+  return (
+    <Dialog open={aberta} onOpenChange={(aberto) => !aberto && aoFechar()}>
+      <DialogContent className="max-h-[80vh] overflow-y-auto">
+        <DialogTitle>Moderação do chat</DialogTitle>
+        <DialogDescription>Denúncias das mensagens e contas banidas. Fica tudo guardado no servidor do jogo.</DialogDescription>
+        <section aria-label="Denúncias" className="flex flex-col gap-2">
+          {porMensagem.size === 0 && <p className="text-base text-texto-suave">Nenhuma denúncia.</p>}
+          {[...porMensagem.entries()].map(([n, grupo]) => {
+            const { autor_id: autorId, autor_nome: autor, texto } = grupo[0];
+            return (
+              <div key={n} className="chapa flex flex-col gap-2 border-borda bg-superficie p-4">
+                <p className="break-words">
+                  <span className="font-bold">{autor}</span>: {texto}
+                </p>
+                <p className="text-base text-texto-suave">
+                  {grupo.length} {grupo.length === 1 ? "denúncia" : "denúncias"} ({grupo.map((d) => d.denunciante_nome).join(", ")})
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => {
+                      chatGlobal.apagar(n);
+                      void agir((t) => apiDaPresenca.resolver(t, n), "Mensagem apagada.");
+                    }}
+                  >
+                    <Trash2 className="opacity-70" /> Apagar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() =>
+                      void agir(async (t) => {
+                        await apiDaPresenca.banir(t, autorId);
+                        await apiDaPresenca.resolver(t, n);
+                      }, `${autor} foi banido do chat.`)
+                    }
+                  >
+                    <Ban className="opacity-70" /> Banir {autor}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => void agir((t) => apiDaPresenca.resolver(t, n))}>
+                    Descartar
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </section>
+        <section aria-label="Banidos" className="flex flex-col gap-2">
+          <p className="text-base font-bold">Banidos</p>
+          {banidos.length === 0 && <p className="text-base text-texto-suave">Ninguém banido.</p>}
+          {banidos.map((b) => (
+            <div key={b.conta_id} className="flex items-center gap-2">
+              <span className="flex-1 truncate">{b.nome}</span>
+              <Button size="sm" variant="ghost" onClick={() => void agir((t) => apiDaPresenca.desbanir(t, b.conta_id), `${b.nome} pode escrever de novo.`)}>
+                Desbanir
+              </Button>
+            </div>
+          ))}
+        </section>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -5,7 +5,7 @@ const partida = { contaId: "id-1", musica: "encore:abc", dificuldade: "expert", 
 const umInstante = () => new Promise((fim) => setTimeout(fim, 0));
 
 function montar(pedirFicha = vi.fn(async () => "ficha")) {
-  return criarTransmissao(partida, { urlDoRelay: "wss://relay", pedirFicha, criarSocket: (url) => new WebSocketFalso(url) });
+  return criarTransmissao(partida, { urlDoRelay: "wss://relay", pedirFicha, criarSocket: (url, protocolos) => new WebSocketFalso(url, protocolos) });
 }
 
 describe("criarTransmissao", () => {
@@ -17,7 +17,8 @@ describe("criarTransmissao", () => {
     transmitir({ tipo: "lote", entradas: [{ tempo: 1.5, tipo: "tocar", pista: 2 }], ate: 1.6 });
     await umInstante();
     const socket = WebSocketFalso.ultimo!;
-    expect(socket.url).toBe("wss://relay/transmissao/id-1?ficha=ficha");
+    expect(socket.url).toBe("wss://relay/transmissao/id-1");
+    expect(socket.protocolos).toEqual(["riffrush", "ficha"]);
     socket.abrir();
     expect(socket.enviadas).toEqual([
       { tipo: "inicio", partida: { musica: "encore:abc", dificuldade: "expert", instrumento: "baixo", hashDoChart: "a".repeat(32), semFalha: false } },
@@ -40,7 +41,7 @@ describe("criarTransmissao", () => {
   it("o link do chart do Encore vai junto no início", async () => {
     const transmitir = criarTransmissao(
       { ...partida, urlDoEncore: "https://files.enchor.us/x.sng" },
-      { urlDoRelay: "wss://relay", pedirFicha: async () => "ficha", criarSocket: (url) => new WebSocketFalso(url) },
+      { urlDoRelay: "wss://relay", pedirFicha: async () => "ficha", criarSocket: (url, protocolos) => new WebSocketFalso(url, protocolos) },
     );
     transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false });
     await umInstante();
@@ -80,7 +81,7 @@ describe("quem está assistindo", () => {
     const transmitir = criarTransmissao(partida, {
       urlDoRelay: "wss://relay",
       pedirFicha: async () => "ficha",
-      criarSocket: (url) => new WebSocketFalso(url),
+      criarSocket: (url, protocolos) => new WebSocketFalso(url, protocolos),
       aoContarEspectadores,
     });
     transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false });

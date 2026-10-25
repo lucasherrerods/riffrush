@@ -12,7 +12,7 @@ use shared::estado::EstadoDoApp;
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida, modules::ranking::ranking, modules::ranking::geral, modules::ranking::musicas, modules::ranking::partida, modules::ranking::replay, modules::perfil::perfil, modules::presenca::ficha),
+    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida, modules::ranking::ranking, modules::ranking::geral, modules::ranking::musicas, modules::ranking::partida, modules::ranking::replay, modules::perfil::perfil, modules::presenca::ficha, modules::moderacao::denunciar, modules::moderacao::denuncias, modules::moderacao::resolver, modules::moderacao::banidos, modules::moderacao::banir, modules::moderacao::desbanir),
     components(schemas(
         modules::saude::RespostaDeSaude,
         modules::conta::CorpoDoLogin,
@@ -29,6 +29,9 @@ use shared::estado::EstadoDoApp;
         modules::ranking::PartidaDoRanking,
         modules::perfil::RespostaDoPerfil,
         modules::presenca::RespostaDaFicha,
+        modules::moderacao::CorpoDaDenuncia,
+        modules::moderacao::DenunciaDaEquipe,
+        modules::moderacao::BanidoDaEquipe,
         modules::perfil::DificuldadeDoPerfil,
         modules::perfil::PartidaDoPerfil,
         modules::perfil::InstrumentoDoPerfil,
@@ -65,6 +68,7 @@ pub fn app(estado: EstadoDoApp, origens_permitidas: &[String]) -> Router {
         .merge(modules::ranking::rotas())
         .merge(modules::perfil::rotas())
         .merge(modules::presenca::rotas())
+        .merge(modules::moderacao::rotas())
         .route("/openapi.json", get(|| async { Json(Documentacao::openapi()) }))
         .with_state(estado)
         .layer(cors)

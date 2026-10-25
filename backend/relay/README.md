@@ -32,6 +32,28 @@ npx wrangler secret put SEGREDO_DA_PRESENCA   # no relay
 
 Na API, o mesmo valor vai em `SEGREDO_DO_RELAY`. Sem o segredo, essas duas partes ficam desligadas e as salas continuam funcionando.
 
+A ficha vai como subprotocolo do WebSocket (`riffrush, <ficha>`), para não aparecer em logs de URL. Ainda se aceita `?ficha=` das versões antigas do app.
+
+## Chat global
+
+O chat global (`/chat`) usa a mesma ficha. Aqui ficam só as mensagens: as últimas 50, das últimas 24 horas.
+
+Quem é da equipe, quem está banido e as denúncias ficam no banco da API. Eles chegam no relay assim:
+- **Na ficha:** a API assina `nivel`, `admin` e `banido`. Escrever pede nível 2.
+- **Denúncias:** o relay manda a cópia da mensagem para a API em `URL_DA_API`/moderacao/denuncias, assinada com o segredo em comum.
+- **Banimentos:** a API avisa o relay em `/chat/moderacao`, também assinado, para valer na hora para quem já está conectado.
+
+`URL_DA_API` fica em `[vars]` no `wrangler.toml`. Para pôr alguém na equipe, rode no banco da API:
+
+```sql
+INSERT INTO equipe (conta_id) SELECT id FROM contas WHERE email = 'alguem@exemplo.com';
+```
+
+## Limites contra abuso
+
+- Cada IP pode fazer 120 pedidos por minuto (`[[ratelimits]]` no `wrangler.toml`). Acima disso, o Worker responde 429 antes de acordar os Durable Objects.
+- Os pedidos barrados ainda contam na cota grátis de 100 mil por dia. Para proteger a cota, crie também uma regra de rate limiting no painel da Cloudflare: Security > WAF > Rate limiting rules, por exemplo 300 pedidos a cada 10 s por IP, bloqueando por 1 minuto. Essa regra exige o relay num domínio próprio, porque não vale no `workers.dev`.
+
 ## Testes
 
 ```bash

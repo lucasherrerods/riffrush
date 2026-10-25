@@ -6,7 +6,7 @@ function montar(pedirFicha = vi.fn(async () => "ficha")) {
   const conexao = new ConexaoDePresenca({
     urlDoRelay: "wss://relay",
     pedirFicha,
-    criarSocket: (url) => new WebSocketFalso(url),
+    criarSocket: (url, protocolos) => new WebSocketFalso(url, protocolos),
     esperar: (fn) => esperas.push(fn),
   });
   return { conexao, esperas, pedirFicha };
@@ -21,7 +21,8 @@ describe("ConexaoDePresenca", () => {
     conexao.definirEstado({ tipo: "menu" });
     conexao.ligar();
     await umInstante();
-    expect(socket().url).toBe("wss://relay/presenca?ficha=ficha");
+    expect(socket().url).toBe("wss://relay/presenca");
+    expect(socket().protocolos).toEqual(["riffrush", "ficha"]);
     socket().abrir();
     expect(socket().enviadas).toEqual([{ estado: { tipo: "menu" } }]);
     socket().entregar({ tipo: "lista", pessoas: [{ id: "a", nome: "Ana", avatar: null, estado: { tipo: "menu" } }] });

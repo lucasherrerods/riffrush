@@ -225,7 +225,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
               <Switch id="personagem-3d" checked={configuracoes.personagem3d} onCheckedChange={(personagem3d) => mudar({ personagem3d })} />
             </LinhaDeOpcao>
             <LinhaDeOpcao rotulo="Chat global no menu" dica="Precisa estar com a conta conectada" para="chat-global">
-              <Switch id="chat-global" checked={configuracoes.chatGlobal} onCheckedChange={(chatGlobal) => mudar({ chatGlobal })} />
+              <Switch id="chat-global" checked={configuracoes.chatGlobal === true} onCheckedChange={(chatGlobal) => mudar({ chatGlobal })} />
             </LinhaDeOpcao>
             <LinhaDeOpcao rotulo="Mostrar FPS" dica="Quadros por segundo durante a música" para="mostrar-fps">
               <Switch id="mostrar-fps" checked={configuracoes.mostrarFps} onCheckedChange={(mostrarFps) => mudar({ mostrarFps })} />
