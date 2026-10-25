@@ -1,4 +1,4 @@
-import { FILTROS_PADRAO, buscarNoEncore, formatarDuracao, lerRespostaDaBusca, montarCorpoDaBusca, montarUrlDoChart, nomeDoArquivo, urlDaCapa, ehUrlDoEncore, linkDoChartConfere, type ResultadoDaBusca } from "./encore";
+import { FILTROS_PADRAO, buscarNoEncore, montarCorpoDaBuscaAvancada, formatarDuracao, lerRespostaDaBusca, montarCorpoDaBusca, montarUrlDoChart, nomeDoArquivo, urlDaCapa, ehUrlDoEncore, linkDoChartConfere, type ResultadoDaBusca } from "./encore";
 
 const itemDaApi = {
   name: "Enter Sandman",
@@ -18,7 +18,7 @@ const itemDaApi = {
 
 describe("montarCorpoDaBusca", () => {
   it("traduz os filtros para o formato da API", () => {
-    expect(montarCorpoDaBusca({ texto: " sandman ", instrumento: "bateria", dificuldade: "expert" }, 2)).toEqual({
+    expect(montarCorpoDaBusca({ texto: " sandman ", instrumento: "bateria", dificuldade: "expert", genero: "todos" }, 2)).toEqual({
       search: "sandman",
       page: 2,
       instrument: "drums",
@@ -33,6 +33,25 @@ describe("montarCorpoDaBusca", () => {
     const corpo = montarCorpoDaBusca(FILTROS_PADRAO, 1);
     expect(corpo.instrument).toBeNull();
     expect(corpo.difficulty).toBeNull();
+  });
+});
+
+describe("montarCorpoDaBuscaAvancada", () => {
+  it("leva o gênero e o texto como pedaço do nome da música, além dos outros filtros", () => {
+    expect(montarCorpoDaBuscaAvancada({ texto: " master ", instrumento: "baixo", dificuldade: "expert", genero: "metal" }, 3)).toEqual({
+      page: 3,
+      instrument: "bass",
+      difficulty: "expert",
+      drumType: null,
+      drumsReviewed: false,
+      source: "api",
+      genre: { value: "Metal", exact: false, exclude: false },
+      name: { value: "master", exact: false, exclude: false },
+    });
+  });
+
+  it("sem texto, não filtra pelo nome", () => {
+    expect(montarCorpoDaBuscaAvancada({ ...FILTROS_PADRAO, genero: "rock" }, 1)).not.toHaveProperty("name");
   });
 });
 
@@ -168,5 +187,16 @@ describe("linkDoChartConfere", () => {
     ]) {
       expect(linkDoChartConfere(url, `encore:${md5}`)).toBe(false);
     }
+  });
+
+  it("com gênero, usa a busca avançada do Encore", async () => {
+    const buscar = vi.fn(async () => new Response(JSON.stringify({ found: 0, data: [] }), { status: 200 }));
+    await buscarNoEncore({ ...FILTROS_PADRAO, genero: "punk" }, 1, { buscar });
+    const [url, init] = buscar.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://api.enchor.us/search/advanced");
+    expect(JSON.parse(init.body as string).genre).toEqual({ value: "Punk", exact: false, exclude: false });
+
+    await buscarNoEncore(FILTROS_PADRAO, 1, { buscar });
+    expect((buscar.mock.calls[1] as unknown as [string])[0]).toBe("https://api.enchor.us/search");
   });
 });

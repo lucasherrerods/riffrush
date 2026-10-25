@@ -1,19 +1,21 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { ListOrdered, LogOut, Play, RotateCcw, Skull } from "lucide-react";
+import { EyeOff, ListOrdered, LogOut, Play, RotateCcw, Skull } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 
 interface Props {
   derrota: boolean;
   /** Em rede não dá para recomeçar nem sair sozinho: só desistir e ver o placar. */
   emRede: boolean;
+  /** Assistindo a partida de alguém ao vivo: sair só para de assistir, sem placar. */
+  aoVivo?: boolean;
   aoContinuar: () => void;
   aoRecomecar: () => void;
   aoSair: () => void;
   aoDesistir: () => void;
 }
 
-export function MenuDePausa({ derrota, emRede, aoContinuar, aoRecomecar, aoSair, aoDesistir }: Props) {
+export function MenuDePausa({ derrota, emRede, aoVivo = false, aoContinuar, aoRecomecar, aoSair, aoDesistir }: Props) {
   // Nenhum botão abre com foco: uma tecla do jogo (Espaço, Enter) apertada na hora não pode recomeçar a partida.
   useEffect(() => {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
@@ -40,7 +42,11 @@ export function MenuDePausa({ derrota, emRede, aoContinuar, aoRecomecar, aoSair,
             <Play className="opacity-70" /> Continuar
           </Button>
         )}
-        {emRede ? (
+        {aoVivo ? (
+          <Button size="lg" variant="ghost" onClick={aoSair}>
+            <EyeOff className="opacity-70" /> Parar de assistir
+          </Button>
+        ) : emRede ? (
           <Button size="lg" variant={derrota ? "default" : "ghost"} onClick={aoDesistir}>
             <ListOrdered className="opacity-70" /> {derrota ? "Ver placar" : "Desistir e ver placar"}
           </Button>

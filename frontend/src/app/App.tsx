@@ -452,7 +452,7 @@ export function App() {
                 musicas={musicas}
                 opcoes={opcoes}
                 personagem={personagemEmJogo}
-                aoSair={() => setTela("online")}
+                aoSair={() => setTela("menu")}
                 aoBuscarMusicas={() => {
                   setVoltarDaBuscaPara("online");
                   setTela("buscaDeMusicas");
