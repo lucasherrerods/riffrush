@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Eye, Loader2, Pause, Skull, Zap } from "lucide-react";
-import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
+import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
 import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "@/modules/character";
 import { cenaDaPartida } from "./cena";
 import { Palco, opacidadeDaPista, type EstadoDoPalco, type QualidadeDoPalco } from "@/modules/stage";
@@ -424,7 +424,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     };
     window.addEventListener("keydown", aoApertar);
     window.addEventListener("keyup", aoSoltar);
-    const aoPerderFoco = () => inicioEmRede === undefined && pausar();
+    // Soltar o Alt sozinho (volume) pode tirar o foco no Windows: isso não é sair do jogo.
+    const aoPerderFoco = () => inicioEmRede === undefined && !focoSaiuPeloAlt() && pausar();
     window.addEventListener("blur", aoPerderFoco);
 
     const contadorDeFps = criarContadorDeFps();
