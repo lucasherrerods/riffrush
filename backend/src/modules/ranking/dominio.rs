@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+use crate::modules::catalogo::DadosDaMusica;
 use crate::modules::progresso::{Dificuldade, Instrumento};
 
 /// Como no osu!: o top da música, sem rolar uma lista infinita.
@@ -112,6 +113,55 @@ pub fn montar_ranking<L: Posicionada>(linhas: Vec<L>, conta: Option<Uuid>) -> Ra
     Ranking { top, jogadores, meu }
 }
 
+fn normalizar(texto: &str) -> String {
+    texto.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase()
+}
+
+/// Mesmo título e a mesma banda, aceitando que uma contenha a outra:
+/// o Encore diz "Tom Rothrock with Jim Wise" onde o nome do arquivo dizia "Jim Wise".
+fn mesma_musica(a: &DadosDaMusica, b: &DadosDaMusica) -> bool {
+    let (Some(titulo_a), Some(titulo_b)) = (&a.titulo, &b.titulo) else {
+        return false;
+    };
+    if normalizar(titulo_a) != normalizar(titulo_b) {
+        return false;
+    }
+    match (&a.artista, &b.artista) {
+        (Some(x), Some(y)) => {
+            let (x, y) = (normalizar(x), normalizar(y));
+            x.contains(&y) || y.contains(&x)
+        }
+        _ => true,
+    }
+}
+
+/// Junta as linhas da mesma música com ids diferentes. Antes do id pelo md5, uma música importada
+/// era registrada pelo nome do arquivo, e as partidas dela ficavam divididas entre os dois ids.
+/// Soma as partidas; os jogadores ficam no maior dos dois, porque a mesma pessoa pode estar nos dois.
+pub fn juntar_mesmas_musicas(musicas: Vec<(MusicaPopular, DadosDaMusica)>, tamanho: usize) -> Vec<(MusicaPopular, DadosDaMusica)> {
+    let mut juntas: Vec<(MusicaPopular, DadosDaMusica)> = Vec::new();
+    for (musica, dados) in musicas {
+        match juntas.iter_mut().find(|(_, d)| mesma_musica(d, &dados)) {
+            Some((junta, dados_da_junta)) => {
+                junta.partidas += musica.partidas;
+                junta.jogadores = junta.jogadores.max(musica.jogadores);
+                // Fica o id e os dados de quem tem capa (o do Encore).
+                if dados_da_junta.capa.is_none() && dados.capa.is_some() {
+                    junta.musica_id = musica.musica_id;
+                    *dados_da_junta = dados;
+                }
+            }
+            None => juntas.push((musica, dados)),
+        }
+    }
+    juntas.sort_by(|(a, _), (b, _)| b.partidas.cmp(&a.partidas).then(b.jogadores.cmp(&a.jogadores)));
+    juntas.truncate(tamanho);
+    for (posicao, (musica, _)) in juntas.iter_mut().enumerate() {
+        musica.posicao = u32::try_from(posicao + 1).unwrap_or(u32::MAX);
+    }
+    juntas
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,5 +227,68 @@ mod tests {
     #[test]
     fn sem_sessao_nao_tem_meu() {
         assert_eq!(montar_ranking(vec![linha(1, 1)], None).meu, None);
+    }
+
+    fn popular(musica_id: &str, partidas: u32, jogadores: u32) -> MusicaPopular {
+        MusicaPopular {
+            posicao: 0,
+            musica_id: musica_id.into(),
+            partidas,
+            jogadores,
+        }
+    }
+
+    fn dados(titulo: &str, artista: &str, capa: Option<&str>) -> DadosDaMusica {
+        DadosDaMusica {
+            titulo: Some(titulo.into()),
+            artista: Some(artista.into()),
+            capa: capa.map(Into::into),
+        }
+    }
+
+    #[test]
+    fn junta_o_arquivo_antigo_com_o_encore_da_mesma_musica() {
+        let musicas = vec![
+            (popular("spektrem-shine", 16, 6), DadosDaMusica::default()),
+            (
+                popular("arquivo:Jim Wise - Goofy Goober Rock.sng:1", 3, 3),
+                dados("Goofy Goober Rock", "Jim Wise", None),
+            ),
+            (
+                popular("encore:fb00", 3, 1),
+                dados("goofy  goober rock", "Tom Rothrock with Jim Wise", Some("capa.jpg")),
+            ),
+            (popular("arquivo:Rush - Tom Sawyer.sng:1", 2, 2), dados("Tom Sawyer", "Rush", None)),
+        ];
+
+        let juntas = juntar_mesmas_musicas(musicas, 50);
+
+        let resumo: Vec<_> = juntas.iter().map(|(m, _)| (m.posicao, m.musica_id.as_str(), m.partidas, m.jogadores)).collect();
+        assert_eq!(
+            resumo,
+            [
+                (1, "spektrem-shine", 16, 6),
+                (2, "encore:fb00", 6, 3),
+                (3, "arquivo:Rush - Tom Sawyer.sng:1", 2, 2)
+            ]
+        );
+        assert_eq!(juntas[1].1.capa.as_deref(), Some("capa.jpg"));
+    }
+
+    #[test]
+    fn mesmo_titulo_de_bandas_diferentes_e_sem_nome_ficam_separados() {
+        let musicas = vec![
+            (popular("a", 2, 2), dados("Crazy", "Aerosmith", None)),
+            (popular("b", 1, 1), dados("Crazy", "Gnarls Barkley", None)),
+            (popular("c", 1, 1), DadosDaMusica::default()),
+            (popular("d", 1, 1), DadosDaMusica::default()),
+        ];
+        assert_eq!(juntar_mesmas_musicas(musicas, 50).len(), 4);
+    }
+
+    #[test]
+    fn corta_no_tamanho_depois_de_juntar() {
+        let musicas = (0..5).map(|i| (popular(&format!("m{i}"), 5 - i, 1), DadosDaMusica::default())).collect();
+        assert_eq!(juntar_mesmas_musicas(musicas, 2).len(), 2);
     }
 }

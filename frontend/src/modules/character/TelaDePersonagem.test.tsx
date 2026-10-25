@@ -81,4 +81,12 @@ describe("TelaDePersonagem", () => {
     await usuario.keyboard("{Escape}");
     expect(aoVoltar).toHaveBeenCalled();
   });
+
+  it("com a conta conectada, mostra o nome do Google sem deixar trocar", () => {
+    render(<TelaDePersonagem personagem={PERSONAGEM_PADRAO} nomeDaConta="Lucas Herrero" aoSalvar={vi.fn()} aoVoltar={vi.fn()} />);
+    const campo = screen.getByLabelText("Nome");
+    expect(campo).toHaveValue("Lucas Herrero");
+    expect(campo).toBeDisabled();
+    expect(screen.getByText("Lucas Herrero")).toBeInTheDocument();
+  });
 });

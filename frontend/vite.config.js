@@ -23,5 +23,7 @@ export default defineConfig({
         globals: true,
         setupFiles: ["./src/test/configuracao.ts"],
         css: false,
+        // Os testes não usam o .env da máquina: sem isso, quem tem a API configurada roda os testes contra a API real.
+        env: { VITE_URL_DA_API: "", VITE_URL_DO_RELAY: "", VITE_GOOGLE_CLIENT_ID: "", VITE_GOOGLE_CLIENT_ID_DESKTOP: "" },
     },
 });

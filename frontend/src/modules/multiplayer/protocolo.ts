@@ -22,9 +22,19 @@ export type MusicaNaRede =
   | { tipo: "importada"; id: string; titulo: string; artista: string; nomeDoArquivo: string }
   | { tipo: "encore"; id: string; titulo: string; artista: string; nomeDoArquivo: string; url: string };
 
+/** O personagem como viaja na sala: com o nível da conta, quando o jogador está logado. */
+export type PersonagemNaSala = Personagem & { nivel?: number };
+
 export interface Jogador {
   id: number;
-  personagem: Personagem;
+  personagem: PersonagemNaSala;
+}
+
+/** O nível vem do cliente de cada um: só um número de verdade aparece no lobby. */
+const NIVEL_MAXIMO = 9999;
+function limparNivel(personagem: PersonagemNaSala): PersonagemNaSala {
+  const { nivel, ...resto } = personagem;
+  return Number.isInteger(nivel) && nivel! >= 1 && nivel! <= NIVEL_MAXIMO ? { ...resto, nivel } : resto;
 }
 
 export type Mensagem =
@@ -32,7 +42,9 @@ export type Mensagem =
   | { tipo: "cheia" }
   | { tipo: "semSala" }
   | { tipo: "saiu" }
-  | { tipo: "oi"; personagem: Personagem }
+  | { tipo: "oi"; personagem: PersonagemNaSala }
+  /** O host tirou o jogador `id` da sala. */
+  | { tipo: "expulsar"; id: number }
   /** Sem `instrumento` (versão antiga do jogo), a sala toca na guitarra. */
   | { tipo: "sala"; jogadores: Jogador[]; musica: MusicaNaRede; dificuldade: Dificuldade; instrumento?: Instrumento; prontos: number[] }
   /** O convidado já tem a música `musicaId` e está (ou deixou de estar) pronto para começar. */
@@ -45,8 +57,10 @@ export interface EstadoDaSala {
   souHost: boolean;
   meuId: number;
   hostId: number;
-  personagem: Personagem;
+  personagem: PersonagemNaSala;
   jogadores: Jogador[];
+  /** Só no host: quem foi expulso não entra de novo nesta sala. */
+  expulsos: number[];
   musica: MusicaNaRede;
   dificuldade: Dificuldade;
   /** O host escolhe e todos tocam no mesmo instrumento, para a pontuação ser comparável. */
@@ -67,7 +81,7 @@ export interface Reacao {
   sair?: string;
 }
 
-export function estadoInicial(personagem: Personagem, souHost: boolean): EstadoDaSala {
+export function estadoInicial(personagem: PersonagemNaSala, souHost: boolean): EstadoDaSala {
   return {
     status: "conectando",
     souHost,
@@ -75,6 +89,7 @@ export function estadoInicial(personagem: Personagem, souHost: boolean): EstadoD
     hostId: 0,
     personagem,
     jogadores: [],
+    expulsos: [],
     musica: { tipo: "embutida", id: MUSICAS_EMBUTIDAS[0].id },
     dificuldade: "medio",
     instrumento: "guitarra",
@@ -108,8 +123,8 @@ export function reduzir(estado: EstadoDaSala, de: number, mensagem: Mensagem, ag
     case "semSala":
       return { ...nada, sair: "Sala não encontrada. Confira o código ou peça um novo ao host." };
     case "oi": {
-      if (!estado.souHost) return nada;
-      const jogadores = [...estado.jogadores.filter((j) => j.id !== de), { id: de, personagem: mensagem.personagem }].sort((a, b) => a.id - b.id);
+      if (!estado.souHost || estado.expulsos.includes(de)) return nada;
+      const jogadores = [...estado.jogadores.filter((j) => j.id !== de), { id: de, personagem: limparNivel(mensagem.personagem) }].sort((a, b) => a.id - b.id);
       const novo = { ...estado, jogadores };
       return { estado: novo, enviar: [mensagemDaSala(novo)] };
     }
@@ -153,6 +168,9 @@ export function reduzir(estado: EstadoDaSala, de: number, mensagem: Mensagem, ag
         },
         enviar: [],
       };
+    case "expulsar":
+      if (estado.souHost || de !== estado.hostId || mensagem.id !== estado.meuId) return nada;
+      return { ...nada, sair: "O host tirou você da sala." };
     case "estado": {
       if (de === estado.meuId || de === SERVIDOR) return nada;
       const { tipo: _, ...jogada } = mensagem;
@@ -167,6 +185,18 @@ export function escolherMusica(estado: EstadoDaSala, musica: MusicaNaRede, dific
   const prontos = musica.id === estado.musica.id ? estado.prontos : [];
   const novo = { ...estado, musica, dificuldade, instrumento, prontos };
   return { estado: novo, enviar: [mensagemDaSala(novo)] };
+}
+
+/** Só o host: tira um convidado da sala. Ele recebe o aviso e sai; se insistir, o host o ignora. */
+export function expulsarJogador(estado: EstadoDaSala, id: number): Reacao {
+  if (!estado.souHost || id === estado.hostId || !estado.jogadores.some((j) => j.id === id)) return { estado, enviar: [] };
+  const novo = {
+    ...estado,
+    jogadores: estado.jogadores.filter((j) => j.id !== id),
+    prontos: estado.prontos.filter((p) => p !== id),
+    expulsos: [...estado.expulsos, id],
+  };
+  return { estado: novo, enviar: [{ tipo: "expulsar", id }, mensagemDaSala(novo)] };
 }
 
 /** Todos os convidados já têm a música e deram pronto. O host não precisa: ele dá a largada. */

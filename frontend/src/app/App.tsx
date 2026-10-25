@@ -10,7 +10,7 @@ import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, se
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/player";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
-import { Adversarios, Placar, TelaDeMultijogador, ehClienteWebDaSala, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
+import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { TelaDeEspectador, TelaOnline, presenca, presencaDisponivel, transmitirPartida, usePresenca, type PessoaOnline } from "@/modules/presenca";
 import { TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
@@ -55,6 +55,11 @@ export function App() {
   const [voltarDaBuscaPara, setVoltarDaBuscaPara] = useState<Tela>("menu");
   const [espectando, setEspectando] = useState<PessoaOnline | null>(null);
   const { conta } = useConta();
+  /** Com a conta conectada, o nome é o do Google em todo lugar, e o nível vai junto para o lobby. */
+  const personagemEmJogo = useMemo<PersonagemNaSala>(
+    () => (conta ? { ...personagem, nome: conta.nome.trim().slice(0, 16) || personagem.nome, nivel: conta.nivel.nivel } : personagem),
+    [personagem, conta],
+  );
   const estadoDaPresenca = usePresenca();
   const conexao = useConexao();
   const estreita = useTelaEstreita();
@@ -379,7 +384,7 @@ export function App() {
                 indice={indice}
                 dificuldade={dificuldadeDaSelecao}
                 instrumento={instrumentoDaSelecao}
-                personagem={personagem}
+                personagem={personagemEmJogo}
                 volumeDosEfeitos={configuracoes.volumeDosEfeitos}
                 aoSelecionar={setIndice}
                 aoDificuldade={setDificuldade}
@@ -441,7 +446,7 @@ export function App() {
                 pessoa={espectando}
                 musicas={musicas}
                 opcoes={opcoes}
-                personagem={personagem}
+                personagem={personagemEmJogo}
                 aoSair={() => setTela("online")}
                 aoBuscarMusicas={() => {
                   setVoltarDaBuscaPara("online");
@@ -460,6 +465,7 @@ export function App() {
             {tela === "personagem" && (
               <TelaDePersonagem
                 personagem={personagem}
+                nomeDaConta={conta?.nome.trim().slice(0, 16) || undefined}
                 aoVoltar={() => setTela(voltarDoPersonagemPara)}
                 aoSalvar={(novo) => {
                   setPersonagem(novo);
@@ -471,7 +477,7 @@ export function App() {
             )}
             {tela === "multijogador" && (
               <TelaDeMultijogador
-                personagem={personagem}
+                personagem={personagemEmJogo}
                 musicas={musicas}
                 volumeDosEfeitos={configuracoes.volumeDosEfeitos}
                 aoVoltar={() => setTela("menu")}
@@ -491,7 +497,7 @@ export function App() {
                 dificuldade={dificuldadeDaPartida}
                 instrumento={instrumentoDaPartida}
                 opcoes={opcoes}
-                personagem={personagem}
+                personagem={personagemEmJogo}
                 recorde={assistindo ? undefined : recordeDe(carregarRecordes(), musica.id, dificuldadeDaPartida, instrumentoDaPartida)?.pontos}
                 replay={assistindo?.replay}
                 rede={
