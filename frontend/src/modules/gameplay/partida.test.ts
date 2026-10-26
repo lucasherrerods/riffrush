@@ -1,5 +1,5 @@
 import { PISTA_ABERTA, type Nota } from "@/modules/songs";
-import { JANELA_DE_ACERTO, ativarEstrela, avancar, criarPartida, multiplicador, precisao, retirarEventos, soltar, tocar } from "./partida";
+import { JANELA_DE_ACERTO, ativarEstrela, avancar, criarPartida, julgar, multiplicador, precisao, retirarEventos, soltar, tocar } from "./partida";
 
 const nota = (tempo: number, pista = 0, extra: Partial<Nota> = {}): Nota => ({ tempo, pista, frase: -1, duracao: 0, ...extra });
 
@@ -249,19 +249,48 @@ describe("pontuação", () => {
   });
 });
 
+describe("julgar", () => {
+  it("dá o julgamento pela distância até a batida", () => {
+    expect(julgar(0)).toBe("perfeito");
+    expect(julgar(0.035)).toBe("perfeito");
+    expect(julgar(-0.036)).toBe("otimo");
+    expect(julgar(0.07)).toBe("otimo");
+    expect(julgar(0.071)).toBe("bom");
+    expect(julgar(-0.11)).toBe("bom");
+  });
+
+  it("a janela de acerto acaba onde acaba o bom", () => {
+    expect(JANELA_DE_ACERTO).toBe(0.11);
+  });
+});
+
 describe("precisao", () => {
   it("é 100% antes de qualquer nota", () => {
     expect(precisao(criarPartida([nota(1)]))).toBe(1);
   });
 
-  it("divide os acertos por todas as notas que já passaram", () => {
+  it("conta os julgamentos de cada acerto", () => {
+    const partida = criarPartida([nota(1), nota(2), nota(3)]);
+    tocar(partida, 0, 1.01);
+    tocar(partida, 0, 2.05);
+    tocar(partida, 0, 2.91);
+    expect(partida.julgamentos).toEqual({ perfeito: 1, otimo: 1, bom: 1 });
+  });
+
+  it("soma o valor de cada nota sobre o máximo das que já passaram, e a nota perdida vale zero", () => {
     const partida = criarPartida([nota(1), nota(2), nota(3), nota(4)]);
     tocar(partida, 0, 1);
-    tocar(partida, 0, 2);
-    tocar(partida, 0, 3);
+    tocar(partida, 0, 2.05);
+    tocar(partida, 0, 3.1);
     avancar(partida, 5);
     expect(partida.erros).toBe(1);
-    expect(precisao(partida)).toBeCloseTo(0.75);
+    expect(precisao(partida)).toBeCloseTo((300 + 100 + 50 + 0) / (4 * 300));
+  });
+
+  it("avisa o julgamento junto do acerto", () => {
+    const partida = criarPartida([nota(1)]);
+    tocar(partida, 0, 1.05);
+    expect(retirarEventos(partida)).toContainEqual(expect.objectContaining({ tipo: "acerto", julgamento: "otimo" }));
   });
 });
 
