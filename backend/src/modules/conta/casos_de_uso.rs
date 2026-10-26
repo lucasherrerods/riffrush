@@ -4,8 +4,10 @@ use uuid::Uuid;
 
 use super::dominio::{hash_do_token, pode_registrar, Conta, DURACAO_DA_SESSAO, TAMANHO_MAXIMO_DO_ID_DA_MUSICA};
 use super::portas::{
-    ErroDeLogin, FalhaExterna, Gerador, PartidaRegistrada, PedidoDeLogin, ProvedorDeLogin, Relogio, RepositorioDeContas, RepositorioDeSessoes,
+    ErroDeLogin, FalhaExterna, FilaDePartidas, Gerador, PartidaNaFila, PartidaRegistrada, PedidoDeLogin, ProvedorDeLogin, Relogio, RepositorioDeContas,
+    RepositorioDeSessoes,
 };
+use crate::modules::catalogo::{origem_do_id, Origem};
 use crate::modules::progresso::{nivel_do_xp, validar_replay, xp_da_partida, Instrumento, Nivel, PartidaInvalida, ResumoDaPartida};
 
 /// As portas que os casos de uso da conta usam. O main liga os adaptadores reais; os testes, fakes.
@@ -16,6 +18,8 @@ pub struct ServicosDaConta {
     pub login: Arc<dyn ProvedorDeLogin>,
     pub relogio: Arc<dyn Relogio>,
     pub gerador: Arc<dyn Gerador>,
+    /// Onde esperam as partidas do Encore até o servidor rejulgar o replay.
+    pub fila: Arc<dyn FilaDePartidas>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -30,6 +34,8 @@ pub enum ErroDaConta {
     MusicaInvalida,
     #[error("partidas rápidas demais")]
     RapidoDemais,
+    #[error("partida de música do Encore precisa do replay")]
+    ReplayObrigatorio,
     #[error(transparent)]
     Falha(#[from] FalhaExterna),
 }
@@ -55,6 +61,27 @@ pub struct PartidaEnviada {
     pub resumo: ResumoDaPartida,
     /// As entradas da partida, comprimidas pelo app.
     pub replay: Option<Vec<u8>>,
+}
+
+/// O que acontece com a partida enviada.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Registro {
+    /// O XP já está na conta.
+    Registrada(XpDaPartida),
+    /// Música do Encore: o XP entra quando o servidor terminar de rejulgar o replay.
+    NaFila { id: Uuid },
+}
+
+/// Uma partida que o servidor rejulgou: os números vêm do replay, não do app.
+pub struct PartidaRejulgada {
+    pub id: Uuid,
+    pub conta_id: Uuid,
+    pub musica_id: String,
+    pub instrumento: Instrumento,
+    pub pontos: u64,
+    pub resumo: ResumoDaPartida,
+    pub jogada_em: chrono::DateTime<chrono::Utc>,
+    pub replay: Vec<u8>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -83,7 +110,7 @@ impl ServicosDaConta {
         Ok(self.sessoes.apagar(&hash_do_token(token)).await?)
     }
 
-    pub async fn registrar_partida(&self, token: &str, partida: PartidaEnviada) -> Result<XpDaPartida, ErroDaConta> {
+    pub async fn registrar_partida(&self, token: &str, partida: PartidaEnviada) -> Result<Registro, ErroDaConta> {
         let conta = self.conta_da_sessao(token).await?;
         let resumo = partida.resumo.validar()?;
         if partida.musica_id.is_empty() || partida.musica_id.len() > TAMANHO_MAXIMO_DO_ID_DA_MUSICA {
@@ -92,6 +119,29 @@ impl ServicosDaConta {
         let agora = self.relogio.agora();
         if !pode_registrar(self.contas.ultima_partida(conta.id).await?, agora) {
             return Err(ErroDaConta::RapidoDemais);
+        }
+        if let Origem::Encore(md5) = origem_do_id(&partida.musica_id) {
+            match partida.replay {
+                Some(replay) => {
+                    validar_replay(&replay)?;
+                    let id = self.gerador.id();
+                    self.fila
+                        .enfileirar(PartidaNaFila {
+                            id,
+                            conta_id: conta.id,
+                            md5,
+                            dificuldade: resumo.dificuldade,
+                            instrumento: partida.instrumento,
+                            replay,
+                            enviada_em: agora,
+                        })
+                        .await?;
+                    return Ok(Registro::NaFila { id });
+                }
+                // O app só deixa de mandar o replay quando o jogador desiste no meio: vale o pouco XP da derrota.
+                None if !resumo.derrota => return Err(ErroDaConta::ReplayObrigatorio),
+                None => {}
+            }
         }
         // Derrota e fantasma não entram no ranking: o replay delas não teria quem assistir.
         let replay = match partida.replay {
@@ -105,6 +155,7 @@ impl ServicosDaConta {
         let atualizada = self
             .contas
             .registrar_partida(&PartidaRegistrada {
+                id: self.gerador.id(),
                 conta_id: conta.id,
                 musica_id: partida.musica_id,
                 instrumento: partida.instrumento,
@@ -115,11 +166,31 @@ impl ServicosDaConta {
                 replay,
             })
             .await?;
-        Ok(XpDaPartida {
+        Ok(Registro::Registrada(XpDaPartida {
             xp_ganho,
             antes: conta.nivel(),
             depois: nivel_do_xp(atualizada.xp_total),
-        })
+        }))
+    }
+
+    /// Registra a partida que saiu da fila, com o XP calculado sobre o rejulgamento.
+    pub async fn registrar_partida_rejulgada(&self, partida: PartidaRejulgada) -> Result<(), ErroDaConta> {
+        let resumo = partida.resumo.validar()?;
+        let vale_para_o_ranking = !resumo.derrota && !resumo.fantasma;
+        self.contas
+            .registrar_partida(&PartidaRegistrada {
+                id: partida.id,
+                conta_id: partida.conta_id,
+                musica_id: partida.musica_id,
+                instrumento: partida.instrumento,
+                pontos: partida.pontos,
+                resumo,
+                xp_ganho: xp_da_partida(resumo),
+                jogada_em: partida.jogada_em,
+                replay: vale_para_o_ranking.then_some(partida.replay),
+            })
+            .await?;
+        Ok(())
     }
 
     /// A pessoa pede para apagar tudo o que a API guarda dela (LGPD).
@@ -156,6 +227,19 @@ pub mod fakes {
         pub partidas: Mutex<Vec<(Uuid, DateTime<Utc>, u64)>>,
         /// O replay da última partida registrada.
         pub ultimo_replay: Mutex<Option<Vec<u8>>>,
+        pub ids_das_partidas: Mutex<Vec<Uuid>>,
+    }
+
+    /// Guarda o que entrou na fila, para o teste conferir.
+    #[derive(Default)]
+    pub struct FilaEmMemoria(pub Mutex<Vec<PartidaNaFila>>);
+
+    #[async_trait]
+    impl FilaDePartidas for FilaEmMemoria {
+        async fn enfileirar(&self, partida: PartidaNaFila) -> Result<(), FalhaExterna> {
+            self.0.lock().unwrap().push(partida);
+            Ok(())
+        }
     }
 
     #[async_trait]
@@ -199,6 +283,10 @@ pub mod fakes {
                 .max())
         }
         async fn registrar_partida(&self, partida: &PartidaRegistrada) -> Result<Conta, FalhaExterna> {
+            if self.ids_das_partidas.lock().unwrap().contains(&partida.id) {
+                return self.buscar(partida.conta_id).await?.ok_or_else(|| FalhaExterna("sem conta".into()));
+            }
+            self.ids_das_partidas.lock().unwrap().push(partida.id);
             self.partidas.lock().unwrap().push((partida.conta_id, partida.jogada_em, partida.xp_ganho));
             *self.ultimo_replay.lock().unwrap() = partida.replay.clone();
             let mut contas = self.contas.lock().unwrap();
@@ -285,7 +373,13 @@ pub mod fakes {
     }
 
     pub fn servicos() -> (ServicosDaConta, Arc<Banco>, Arc<RelogioFalso>) {
+        let (servicos, banco, relogio, _) = servicos_com_fila();
+        (servicos, banco, relogio)
+    }
+
+    pub fn servicos_com_fila() -> (ServicosDaConta, Arc<Banco>, Arc<RelogioFalso>, Arc<FilaEmMemoria>) {
         let banco = Arc::new(Banco::default());
+        let fila = Arc::new(FilaEmMemoria::default());
         let relogio = Arc::new(RelogioFalso::novo());
         let servicos = ServicosDaConta {
             contas: banco.clone(),
@@ -293,8 +387,9 @@ pub mod fakes {
             login: Arc::new(GoogleFalso),
             relogio: relogio.clone(),
             gerador: Arc::new(GeradorEmSequencia::default()),
+            fila: fila.clone(),
         };
-        (servicos, banco, relogio)
+        (servicos, banco, relogio, fila)
     }
 
     pub fn pedido(codigo: &str) -> PedidoDeLogin {
@@ -376,7 +471,9 @@ mod tests {
         // Um expert perfeito de tamanho comum passa dos 100 XP do nível 1.
         let mut expert = partida(400, 400);
         expert.resumo.dificuldade = Dificuldade::Expert;
-        let xp = servicos.registrar_partida(&entrada.token, expert).await.unwrap();
+        let Registro::Registrada(xp) = servicos.registrar_partida(&entrada.token, expert).await.unwrap() else {
+            panic!("a partida devia ser registrada na hora");
+        };
         assert_eq!(xp.xp_ganho, 108);
         assert_eq!((xp.antes.nivel, xp.depois.nivel), (1, 2));
         assert_eq!(servicos.conta_da_sessao(&entrada.token).await.unwrap().xp_total, 108);
@@ -479,5 +576,67 @@ mod tests {
             servicos.registrar_partida(&entrada.token, estranho).await,
             Err(ErroDaConta::PartidaInvalida(PartidaInvalida::ReplayInvalido))
         ));
+    }
+
+    const MD5: &str = "fb0079d4c2e025d5b8dd70724750a923";
+
+    #[tokio::test]
+    async fn partida_do_encore_vai_para_a_fila_sem_xp_na_hora() {
+        let (servicos, banco, _, fila) = super::fakes::servicos_com_fila();
+        let entrada = servicos.entrar_com_google(&pedido("bom")).await.unwrap();
+        let do_encore = PartidaEnviada {
+            musica_id: format!("encore:{}", MD5.to_uppercase()),
+            replay: Some(vec![2, 0]),
+            ..partida(10, 10)
+        };
+        let registro = servicos.registrar_partida(&entrada.token, do_encore).await.unwrap();
+        let na_fila = fila.0.lock().unwrap();
+        assert_eq!(registro, Registro::NaFila { id: na_fila[0].id });
+        assert_eq!((na_fila[0].md5.as_str(), na_fila[0].replay.as_slice()), (MD5, [2, 0].as_slice()));
+        assert!(banco.partidas.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn partida_do_encore_sem_replay_so_vale_como_desistencia() {
+        let (servicos, _, relogio) = servicos();
+        let entrada = servicos.entrar_com_google(&pedido("bom")).await.unwrap();
+        let sem_replay = PartidaEnviada {
+            musica_id: format!("encore:{MD5}"),
+            ..partida(10, 10)
+        };
+        assert!(matches!(
+            servicos.registrar_partida(&entrada.token, sem_replay).await,
+            Err(ErroDaConta::ReplayObrigatorio)
+        ));
+        relogio.andar(Duration::minutes(1));
+        let mut desistiu = PartidaEnviada {
+            musica_id: format!("encore:{MD5}"),
+            ..partida(3, 10)
+        };
+        desistiu.resumo.derrota = true;
+        assert!(matches!(
+            servicos.registrar_partida(&entrada.token, desistiu).await,
+            Ok(Registro::Registrada(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn partida_rejulgada_registra_uma_vez_so_mesmo_entregue_duas() {
+        let (servicos, banco, relogio) = servicos();
+        let entrada = servicos.entrar_com_google(&pedido("bom")).await.unwrap();
+        let rejulgada = || PartidaRejulgada {
+            id: Uuid::from_u128(77),
+            conta_id: entrada.conta.id,
+            musica_id: format!("encore:{MD5}"),
+            instrumento: Instrumento::Guitarra,
+            pontos: 500,
+            resumo: partida(10, 10).resumo,
+            jogada_em: relogio.agora(),
+            replay: vec![2, 0],
+        };
+        servicos.registrar_partida_rejulgada(rejulgada()).await.unwrap();
+        servicos.registrar_partida_rejulgada(rejulgada()).await.unwrap();
+        assert_eq!(banco.partidas.lock().unwrap().len(), 1);
+        assert_eq!(*banco.ultimo_replay.lock().unwrap(), Some(vec![2, 0]));
     }
 }

@@ -605,20 +605,45 @@ impl ChartLido {
     }
 }
 
-/// As notas que o app toca num .sng: o chart da trilha, já descontado o "delay" do song.ini.
-pub fn notas_do_sng(bytes: &[u8], instrumento: Instrumento, dificuldade: Dificuldade) -> Result<Vec<Nota>, ErroDoChart> {
-    let pacote = ler_sng(bytes)?;
-    let chart = match (pacote.arquivos.get("notes.chart"), pacote.arquivos.get("notes.mid")) {
-        (Some(texto), _) => ler_chart(&String::from_utf8_lossy(texto)),
-        (None, Some(midi)) => ler_midi(midi)?,
+/// O que importa de um .sng para julgar: o arquivo do chart e o "delay" do song.ini. Sem o áudio, cabe em poucos KB.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChartGuardado {
+    pub arquivo: Vec<u8>,
+    /// `notes.mid` em vez de `notes.chart`.
+    pub midi: bool,
+    /// Quanto o áudio atrasa em relação ao chart, em milissegundos.
+    pub atraso_ms: f64,
+}
+
+pub fn extrair_chart(sng: &[u8]) -> Result<ChartGuardado, ErroDoChart> {
+    let mut pacote = ler_sng(sng)?;
+    let atraso_ms = pacote.metadados.get("delay").map_or(0.0, |d| numero_ou(d, 0.0));
+    // O app prefere o .chart quando o pacote tem os dois.
+    let (arquivo, midi) = match (pacote.arquivos.remove("notes.chart"), pacote.arquivos.remove("notes.mid")) {
+        (Some(texto), _) => (texto, false),
+        (None, Some(midi)) => (midi, true),
         (None, None) => return Err(ErroDoChart::SemChart),
     };
-    let atraso = pacote.metadados.get("delay").map_or(0.0, |d| numero_ou(d, 0.0)) / 1000.0;
-    Ok(chart
+    Ok(ChartGuardado { arquivo, midi, atraso_ms })
+}
+
+/// As notas que o app toca: o chart da trilha, já descontado o atraso.
+pub fn notas_do_chart(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Dificuldade) -> Result<Vec<Nota>, ErroDoChart> {
+    let lido = if chart.midi {
+        ler_midi(&chart.arquivo)?
+    } else {
+        ler_chart(&String::from_utf8_lossy(&chart.arquivo))
+    };
+    let atraso = chart.atraso_ms / 1000.0;
+    Ok(lido
         .trilha(instrumento, dificuldade)
         .into_iter()
         .map(|n| Nota { tempo: n.tempo - atraso, ..n })
         .collect())
+}
+
+pub fn notas_do_sng(sng: &[u8], instrumento: Instrumento, dificuldade: Dificuldade) -> Result<Vec<Nota>, ErroDoChart> {
+    notas_do_chart(&extrair_chart(sng)?, instrumento, dificuldade)
 }
 
 /// O número como o JavaScript escreve: os tempos da grade nunca precisam de expoente, e o -0 vira 0.

@@ -1,7 +1,7 @@
 import type { Resultado } from "@/modules/gameplay";
 import { invoke } from "@tauri-apps/api/core";
 import { URL_DA_API } from "@/shared/lib/api";
-import { ErroDaApi, criarApi, type ApiDaConta, type ClienteDoGoogle, type ContaDaApi, type XpDaPartida } from "./api";
+import { ErroDaApi, criarApi, type ApiDaConta, type ClienteDoGoogle, type ContaDaApi, type RegistroDaPartida } from "./api";
 import { desafioDoVerificador, gerarVerificador, lerRetornoDoGoogle, urlDoLoginDoGoogle } from "./pkce";
 
 export interface EstadoDaConta {
@@ -127,8 +127,8 @@ export class SessaoDaConta {
     return token ? this.ambiente.api.recordes(token) : [];
   }
 
-  /** Manda a partida para a API e devolve o XP ganho. Sem conta, não manda nada. */
-  async registrarPartida(resultado: Resultado, replay?: Uint8Array): Promise<XpDaPartida | null> {
+  /** Manda a partida para a API e devolve o XP ganho, ou a vaga na fila de validação. Sem conta, não manda nada. */
+  async registrarPartida(resultado: Resultado, replay?: Uint8Array): Promise<RegistroDaPartida | null> {
     const token = this.ambiente.local.getItem(CHAVE_DO_TOKEN);
     if (!token || !this.estadoAtual.conta) return null;
     const xp = await this.ambiente.api.registrarPartida(token, {
@@ -143,6 +143,7 @@ export class SessaoDaConta {
       maior_sequencia: resultado.maiorSequencia,
       ...(replay && { replay: emBase64(replay) }),
     });
+    if ("pendente" in xp) return xp;
     const conta = this.estadoAtual.conta;
     this.mudar({ conta: { ...conta, xp_total: conta.xp_total + xp.xp_ganho, nivel: xp.depois } });
     return xp;

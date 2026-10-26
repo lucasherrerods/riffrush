@@ -21,6 +21,7 @@ use shared::estado::EstadoDoApp;
         modules::conta::NivelDaConta,
         modules::conta::CorpoDaPartida,
         modules::conta::RespostaDaPartida,
+        modules::conta::RespostaDaPartidaNaFila,
         modules::ranking::RespostaDoRanking,
         modules::ranking::PosicaoNoRanking,
         modules::ranking::RespostaDoGeral,

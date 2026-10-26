@@ -24,6 +24,14 @@ export interface XpDaPartida {
   depois: NivelDaConta;
 }
 
+/** Partida de música do Encore: o XP entra na conta quando o servidor terminar de conferir o replay. */
+export interface PartidaNaFila {
+  pendente: true;
+  id: string;
+}
+
+export type RegistroDaPartida = XpDaPartida | PartidaNaFila;
+
 export interface PartidaParaAApi {
   musica_id: string;
   dificuldade: string;
@@ -122,7 +130,7 @@ export function criarApi(base: string, buscar?: typeof fetch) {
     recordes: (token: string) => chamar<RecordeDaConta[]>("GET", "/eu/recordes", { token }),
     sair: (token: string) => chamar<void>("POST", "/auth/sair", { token }),
     excluirConta: (token: string) => chamar<void>("DELETE", "/eu", { token }),
-    registrarPartida: (token: string, partida: PartidaParaAApi) => chamar<XpDaPartida>("POST", "/partidas", { token, corpo: partida }),
+    registrarPartida: (token: string, partida: PartidaParaAApi) => chamar<RegistroDaPartida>("POST", "/partidas", { token, corpo: partida }),
   };
 }
 

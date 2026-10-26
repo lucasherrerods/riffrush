@@ -1,10 +1,20 @@
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import { Hourglass, Sparkles } from "lucide-react";
 import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
-import type { XpDaPartida } from "./api";
+import type { RegistroDaPartida } from "./api";
 
 /** No resultado: quanto XP a partida deu e se a conta subiu de nível. */
-export function GanhoDeXp({ xp }: { xp: XpDaPartida }) {
+export function GanhoDeXp({ xp }: { xp: RegistroDaPartida }) {
+  if ("pendente" in xp) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="chapa flex w-full max-w-2xl items-center gap-2 bg-superficie p-4">
+        <Hourglass className="size-4 text-texto-suave opacity-70" />
+        <span className="font-titulo text-xl tracking-wide">XP em validação</span>
+        <span className="flex-1" />
+        <span className="text-base text-texto-suave">Entra na conta assim que o servidor conferir a partida.</span>
+      </motion.div>
+    );
+  }
   const { depois } = xp;
   const subiu = depois.nivel > xp.antes.nivel;
   return (

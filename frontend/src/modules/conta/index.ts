@@ -1,4 +1,4 @@
-export type { XpDaPartida } from "./api";
+export type { RegistroDaPartida, XpDaPartida } from "./api";
 export { CartaoDaConta } from "./CartaoDaConta";
 export { ExcluirConta } from "./ExcluirConta";
 export { GanhoDeXp } from "./GanhoDeXp";

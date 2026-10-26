@@ -3,11 +3,14 @@
 
 use chrono::{Duration, Utc};
 use riffrush_api::modules::catalogo::{CatalogoPostgres, DadosDaMusica, RepositorioDoCatalogo};
-use riffrush_api::modules::conta::{ContasPostgres, PartidaRegistrada, PerfilDoGoogle, RepositorioDeContas, RepositorioDeSessoes};
+use riffrush_api::modules::conta::{
+    ContasPostgres, FilaDePartidas, PartidaNaFila, PartidaRegistrada, PerfilDoGoogle, RepositorioDeContas, RepositorioDeSessoes,
+};
 use riffrush_api::modules::moderacao::{Denuncia, ModeracaoPostgres, RepositorioDeModeracao, Situacao};
 use riffrush_api::modules::perfil::{PerfilPostgres, RepositorioDoPerfil};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento, ResumoDaPartida};
 use riffrush_api::modules::ranking::{RankingPostgres, RepositorioDoRanking};
+use riffrush_api::modules::rejulgamento::{CacheDeCharts, ChartGuardado, FilaDoRejulgamento, RejulgamentoPostgres};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -71,6 +74,7 @@ async fn partida_soma_xp_e_marca_a_ultima() {
     assert_eq!(banco.ultima_partida(conta.id).await.unwrap(), None);
     let jogada_em = Utc::now();
     let partida = PartidaRegistrada {
+        id: Uuid::new_v4(),
         conta_id: conta.id,
         musica_id: "embutida:neon".into(),
         instrumento: Instrumento::Guitarra,
@@ -88,7 +92,10 @@ async fn partida_soma_xp_e_marca_a_ultima() {
         replay: None,
     };
     assert_eq!(banco.registrar_partida(&partida).await.unwrap().xp_total, 120);
-    assert_eq!(banco.registrar_partida(&partida).await.unwrap().xp_total, 240);
+    // A fila pode entregar a mesma partida duas vezes: o mesmo id não soma de novo.
+    assert_eq!(banco.registrar_partida(&partida).await.unwrap().xp_total, 120);
+    let outra = PartidaRegistrada { id: Uuid::new_v4(), ..partida };
+    assert_eq!(banco.registrar_partida(&outra).await.unwrap().xp_total, 240);
     let ultima = banco.ultima_partida(conta.id).await.unwrap().unwrap();
     assert!((ultima - jogada_em).num_milliseconds().abs() < 1);
 }
@@ -101,6 +108,7 @@ async fn excluir_apaga_a_conta_com_sessoes_e_partidas() {
     let agora = Utc::now();
     banco.criar(&hash, conta.id, agora + Duration::days(1)).await.unwrap();
     let partida = PartidaRegistrada {
+        id: Uuid::new_v4(),
         conta_id: conta.id,
         musica_id: "embutida:neon".into(),
         instrumento: Instrumento::Guitarra,
@@ -134,6 +142,7 @@ async fn ranking_pega_a_melhor_partida_terminada_de_cada_jogador() {
     let musica = format!("teste:{}", Uuid::new_v4());
     let agora = Utc::now();
     let jogar = |conta_id: Uuid, pontos: u64, derrota: bool, segundos: i64| PartidaRegistrada {
+        id: Uuid::new_v4(),
         conta_id,
         musica_id: musica.clone(),
         instrumento: Instrumento::Guitarra,
@@ -162,6 +171,7 @@ async fn ranking_pega_a_melhor_partida_terminada_de_cada_jogador() {
         jogar(caio.id, 100, false, 4),
         // No baixo é outro ranking: não entra no da guitarra.
         PartidaRegistrada {
+            id: Uuid::new_v4(),
             instrumento: Instrumento::Baixo,
             ..jogar(caio.id, 9999, false, 5)
         },
@@ -192,6 +202,7 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
     let conta = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let agora = Utc::now();
     let jogar = |musica: &str, dificuldade: Dificuldade, pontos: u64, derrota: bool, segundos: i64| PartidaRegistrada {
+        id: Uuid::new_v4(),
         conta_id: conta.id,
         musica_id: musica.into(),
         instrumento: Instrumento::Guitarra,
@@ -242,6 +253,7 @@ async fn ranking_geral_ordena_por_xp_e_ignora_quem_nao_jogou() {
     let jogador = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     banco
         .registrar_partida(&PartidaRegistrada {
+            id: Uuid::new_v4(),
             conta_id: jogador.id,
             musica_id: "teste:geral".into(),
             instrumento: Instrumento::Guitarra,
@@ -279,6 +291,7 @@ async fn musicas_mais_jogadas_contam_partidas_e_jogadores_diferentes() {
     for (i, conta) in [ana.id, ana.id, bia.id].into_iter().cycle().take(300).enumerate() {
         banco
             .registrar_partida(&PartidaRegistrada {
+                id: Uuid::new_v4(),
                 conta_id: conta,
                 musica_id: musica.clone(),
                 instrumento: Instrumento::Guitarra,
@@ -313,6 +326,7 @@ async fn ranking_geral_da_a_posicao_certa_fora_do_top_e_no_empate() {
     let Some(banco) = banco().await else { return };
     let ranking = RankingPostgres(banco.0.clone());
     let partida = |conta_id, xp_ganho| PartidaRegistrada {
+        id: Uuid::new_v4(),
         conta_id,
         musica_id: "teste:geral".into(),
         instrumento: Instrumento::Guitarra,
@@ -360,6 +374,7 @@ async fn a_linha_do_ranking_abre_a_partida_com_a_maior_sequencia() {
     let jogador = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     banco
         .registrar_partida(&PartidaRegistrada {
+            id: Uuid::new_v4(),
             conta_id: jogador.id,
             musica_id: musica.clone(),
             instrumento: Instrumento::Baixo,
@@ -403,6 +418,7 @@ async fn so_o_recorde_guarda_o_replay() {
     let jogador = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let agora = Utc::now();
     let partida = |pontos, replay: u8, segundos| PartidaRegistrada {
+        id: Uuid::new_v4(),
         conta_id: jogador.id,
         musica_id: musica.clone(),
         instrumento: Instrumento::Guitarra,
@@ -513,6 +529,7 @@ async fn recordes_pegam_a_melhor_partida_terminada_de_cada_musica() {
     let repositorio = PerfilPostgres(banco.0.clone());
     let conta = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let jogar = |instrumento: Instrumento, pontos: u64, derrota: bool, fantasma: bool| PartidaRegistrada {
+        id: Uuid::new_v4(),
         conta_id: conta.id,
         musica_id: "a".into(),
         instrumento,
@@ -551,4 +568,70 @@ async fn recordes_pegam_a_melhor_partida_terminada_de_cada_musica() {
 
     assert_eq!(recordes, [(Instrumento::Baixo, 300, 10, 10), (Instrumento::Guitarra, 900, 10, 10)]);
     assert!(repositorio.recordes(Uuid::new_v4()).await.unwrap().is_empty());
+}
+
+fn na_fila(conta_id: Uuid, md5: &str, enviada_em: chrono::DateTime<Utc>) -> PartidaNaFila {
+    PartidaNaFila {
+        id: Uuid::new_v4(),
+        conta_id,
+        md5: md5.into(),
+        dificuldade: Dificuldade::Expert,
+        instrumento: Instrumento::Baixo,
+        replay: vec![2, 1, 2],
+        enviada_em,
+    }
+}
+
+#[tokio::test]
+async fn a_fila_reserva_reagenda_desiste_e_conclui() {
+    let Some(banco) = banco().await else { return };
+    let fila = RejulgamentoPostgres(banco.0.clone());
+    let conta = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    // Um md5 por teste: a fila é a mesma para os testes que rodam juntos.
+    let md5 = Uuid::new_v4().simple().to_string();
+    let agora = Utc::now();
+    let primeira = na_fila(conta.id, &md5, agora - Duration::seconds(2));
+    let segunda = na_fila(conta.id, &md5, agora - Duration::seconds(1));
+    let ids = (primeira.id, segunda.id);
+    fila.enfileirar(primeira).await.unwrap();
+    fila.enfileirar(segunda).await.unwrap();
+
+    // A partida esperando na fila conta para o intervalo entre partidas.
+    let ultima = banco.ultima_partida(conta.id).await.unwrap().unwrap();
+    assert!((ultima - (agora - Duration::seconds(1))).num_milliseconds().abs() < 1);
+
+    let minhas = |lote: Vec<riffrush_api::modules::rejulgamento::PartidaPendente>| lote.into_iter().filter(|p| p.md5 == md5).collect::<Vec<_>>();
+    let pegas = minhas(fila.pegar(1000, agora).await.unwrap());
+    assert_eq!(pegas.iter().map(|p| p.id).collect::<Vec<_>>(), [ids.0, ids.1]);
+    assert_eq!(
+        (pegas[0].tentativas, pegas[0].instrumento, pegas[0].replay.as_slice()),
+        (1, Instrumento::Baixo, [2, 1, 2].as_slice())
+    );
+    // Reservadas, não saem de novo.
+    assert!(minhas(fila.pegar(1000, agora).await.unwrap()).is_empty());
+
+    fila.reagendar(ids.0, agora).await.unwrap();
+    fila.desistir(ids.1, "o replay é de outro chart").await.unwrap();
+    let de_novo = minhas(fila.pegar(1000, agora).await.unwrap());
+    assert_eq!(de_novo.iter().map(|p| (p.id, p.tentativas)).collect::<Vec<_>>(), [(ids.0, 2)]);
+
+    fila.concluir(ids.0).await.unwrap();
+    fila.reagendar(ids.0, agora).await.unwrap();
+    assert!(minhas(fila.pegar(1000, agora + Duration::hours(1)).await.unwrap()).is_empty());
+}
+
+#[tokio::test]
+async fn o_cache_guarda_o_chart_uma_vez() {
+    let Some(banco) = banco().await else { return };
+    let cache = RejulgamentoPostgres(banco.0.clone());
+    let md5 = Uuid::new_v4().simple().to_string();
+    assert_eq!(cache.buscar(&md5).await.unwrap(), None);
+    let chart = ChartGuardado {
+        arquivo: b"[Song]".to_vec(),
+        midi: false,
+        atraso_ms: -12.5,
+    };
+    cache.guardar(&md5, &chart).await.unwrap();
+    cache.guardar(&md5, &ChartGuardado { midi: true, ..chart.clone() }).await.unwrap();
+    assert_eq!(cache.buscar(&md5).await.unwrap(), Some(chart));
 }

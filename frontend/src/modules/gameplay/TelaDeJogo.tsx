@@ -90,7 +90,7 @@ interface Props {
     adversarios?: ReactNode;
   };
   aoSair: () => void;
-  /** `gerarReplay` só vem quando a partida vale para o ranking: sem bot, sem derrota e sem ser um replay. */
+  /** `gerarReplay` só vem quando o jogador tocou de verdade: sem bot, sem derrota e sem ser um replay. A API decide o que vale para o ranking. */
   aoTerminar: (resultado: Resultado, gerarReplay?: () => Promise<Uint8Array>) => void;
   /** Assiste a uma partida gravada: as entradas vêm do replay e o teclado só pausa. */
   replay?: Replay;
@@ -318,7 +318,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         setDerrota(true);
       } else {
         const resultado = resultadoDaPartida(partida, musica.id, dificuldade, instrumento);
-        const valeParaORanking = !bot && !replay && !partida.fantasma;
+        // Fantasma também manda: a API rejulga o replay das músicas do Encore para dar o XP, e deixa o fantasma fora do ranking.
+        const tocouDeVerdade = !bot && !replay;
         const gerarReplay = async () =>
           empacotarReplay({
             semFalha: opcoes.semFalha,
@@ -326,7 +327,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
             hashDoChart: await hashDoChart(carregada.notas),
             entradas: gravador.entradas,
           });
-        aoTerminar(resultado, valeParaORanking ? gerarReplay : undefined);
+        aoTerminar(resultado, tocouDeVerdade ? gerarReplay : undefined);
       }
     };
 
