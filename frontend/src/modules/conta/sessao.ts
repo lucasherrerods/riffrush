@@ -121,6 +121,12 @@ export class SessaoDaConta {
     return this.ambiente.api.perfil(token, sinal);
   }
 
+  /** Os recordes de quem está logado. Sem conta, nenhum. */
+  async recordes() {
+    const token = this.token();
+    return token ? this.ambiente.api.recordes(token) : [];
+  }
+
   /** Manda a partida para a API e devolve o XP ganho. Sem conta, não manda nada. */
   async registrarPartida(resultado: Resultado, replay?: Uint8Array): Promise<XpDaPartida | null> {
     const token = this.ambiente.local.getItem(CHAVE_DO_TOKEN);

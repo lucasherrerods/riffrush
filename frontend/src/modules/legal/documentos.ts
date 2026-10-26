@@ -37,7 +37,7 @@ export const DOCUMENTOS: Record<Documento, ConteudoDoDocumento> = {
       {
         titulo: "O que fica só no seu aparelho",
         paragrafos: [
-          "Configurações, personagem, recordes e as músicas que você importa ficam salvos no próprio navegador ou no app, e não são enviados para nós.",
+          "Configurações, personagem e as músicas que você importa ficam salvos no próprio navegador ou no app, e não são enviados para nós. Os recordes saem das partidas guardadas na sua conta.",
           "No multijogador, o seu apelido, o personagem, a pontuação e as mensagens do chat da sala passam pelo servidor da sala só enquanto ela está aberta. Nada disso é guardado.",
           "A lista de pessoas que você silenciou no chat global fica só no seu aparelho.",
         ],

@@ -650,9 +650,9 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
               <span
                 role="status"
                 aria-label={`${espectadores} ${espectadores === 1 ? "pessoa assistindo" : "pessoas assistindo"}`}
-                className="flex shrink-0 items-center gap-2 rounded-md bg-superficie px-2 py-1 font-mono text-base font-bold tabular-nums"
+                className="flex shrink-0 items-center gap-2 rounded-md border border-primaria/50 bg-primaria/15 px-2 py-1 font-mono text-base font-bold text-primaria tabular-nums"
               >
-                <Eye className="size-4 opacity-70" aria-hidden />
+                <Eye className="size-4" aria-hidden />
                 {espectadores}
               </span>
             )}

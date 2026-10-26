@@ -506,3 +506,49 @@ async fn moderacao_guarda_moderadores_banidos_e_denuncias_e_limpa_com_a_conta() 
 fn rand_n() -> u32 {
     (Uuid::new_v4().as_u128() % 1_000_000_000) as u32 + 1_000_000
 }
+
+#[tokio::test]
+async fn recordes_pegam_a_melhor_partida_terminada_de_cada_musica() {
+    let Some(banco) = banco().await else { return };
+    let repositorio = PerfilPostgres(banco.0.clone());
+    let conta = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let jogar = |instrumento: Instrumento, pontos: u64, derrota: bool, fantasma: bool| PartidaRegistrada {
+        conta_id: conta.id,
+        musica_id: "a".into(),
+        instrumento,
+        pontos,
+        resumo: ResumoDaPartida {
+            dificuldade: Dificuldade::Expert,
+            acertos: 10,
+            total: 10,
+            derrota,
+            fantasma,
+            maior_sequencia: None,
+        },
+        xp_ganho: 0,
+        jogada_em: Utc::now(),
+        replay: None,
+    };
+    for partida in [
+        jogar(Instrumento::Guitarra, 500, false, false),
+        jogar(Instrumento::Guitarra, 900, false, false),
+        // Vaiada e fantasma não viram recorde.
+        jogar(Instrumento::Guitarra, 5000, true, false),
+        jogar(Instrumento::Guitarra, 6000, false, true),
+        jogar(Instrumento::Baixo, 300, false, false),
+    ] {
+        banco.registrar_partida(&partida).await.unwrap();
+    }
+
+    let mut recordes: Vec<_> = repositorio
+        .recordes(conta.id)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|r| (r.instrumento, r.pontos, r.acertos, r.total))
+        .collect();
+    recordes.sort_by_key(|r| r.1);
+
+    assert_eq!(recordes, [(Instrumento::Baixo, 300, 10, 10), (Instrumento::Guitarra, 900, 10, 10)]);
+    assert!(repositorio.recordes(Uuid::new_v4()).await.unwrap().is_empty());
+}

@@ -4,8 +4,8 @@ import { ArrowLeft, Ellipsis, FileAudio, Flame, Heart, Info, ListOrdered, Play, 
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
-import { carregarRecordes, recordeDe } from "@/modules/results";
-import { DIFICULDADES, dificuldadesDaMusica, instrumentoDaMusica, instrumentosDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
+import { recordeDe, useRecordes } from "@/modules/results";
+import { DIFICULDADES, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, instrumentosDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu";
@@ -43,12 +43,12 @@ const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 export function TelaDeSelecao(props: Props) {
   const { musicas, indice, dificuldade, personagem, volumeDosEfeitos, aoSelecionar, aoDificuldade, aoInstrumento, aoJogar, aoVoltar, aoImportar, aoRemover, ranking } = props;
-  const recordes = carregarRecordes();
+  const recordes = useRecordes();
   const musica = musicas[indice];
   const instrumentos = instrumentosDaMusica(musica);
   const instrumento = instrumentoDaMusica(musica, props.instrumento);
   const dificuldades = dificuldadesDaMusica(musica, instrumento);
-  const recordeAtual = recordeDe(recordes, musica.id, dificuldade, instrumento);
+  const recordeAtual = recordeDe(recordes, idDoRanking(musica), dificuldade, instrumento);
   const rotuloDaDificuldade = DIFICULDADES.find((d) => d.id === dificuldade)?.rotulo;
   const efeito = (nome: "mover" | "selecionar" | "voltar") => tocarEfeito(nome, volumeDosEfeitos);
   const dispositivo = useDispositivo();

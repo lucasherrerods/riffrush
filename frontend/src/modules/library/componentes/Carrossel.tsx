@@ -2,7 +2,7 @@ import { useRef, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Heart, Star } from "lucide-react";
 import { recordeDe, type Recordes } from "@/modules/results";
-import type { Dificuldade, Instrumento, Musica } from "@/modules/songs";
+import { idDoRanking, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { cn } from "@/shared/lib/utils";
 import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, centroDoGrupoAberto, passosDaRoda, posicoesNoCarrossel, recuoNaCurva } from "../carrossel";
 import { Capa } from "./Capa";
@@ -62,7 +62,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
         const posicao = posicoes[i];
         if (Math.abs(posicao) > ALCANCE) return null;
         const selecionada = i === indice;
-        const recorde = recordeDe(recordes, m.id, dificuldade, instrumento);
+        const recorde = recordeDe(recordes, idDoRanking(m), dificuldade, instrumento);
         const x = selecionada ? -AVANCO_DA_SELECIONADA : recuoNaCurva(posicao + ALTURA_DA_MUSICA / 2 - centro);
         return (
           <motion.li
@@ -107,7 +107,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
               <div role="radiogroup" aria-label="Dificuldade" className="mt-2 flex flex-col gap-2 pl-12">
                 {dificuldades.map((d) => {
                   const escolhida = d.id === dificuldade;
-                  const recordeDaDificuldade = recordeDe(recordes, m.id, d.id, instrumento);
+                  const recordeDaDificuldade = recordeDe(recordes, idDoRanking(m), d.id, instrumento);
                   return (
                     <motion.button
                       key={d.id}

@@ -51,6 +51,17 @@ pub struct PartidaRecente {
     pub jogada_em: DateTime<Utc>,
 }
 
+/// A melhor partida terminada da conta numa música, dificuldade e instrumento: vaiada e fantasma não contam.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Recorde {
+    pub musica_id: String,
+    pub dificuldade: Dificuldade,
+    pub instrumento: Instrumento,
+    pub pontos: u64,
+    pub acertos: u32,
+    pub total: u32,
+}
+
 /// O que o repositório devolve sobre uma conta.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DadosDoPerfil {

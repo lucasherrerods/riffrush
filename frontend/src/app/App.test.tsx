@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { definirTelaCheia } from "@/modules/platform";
-import { carregarRecordes, salvarRecorde } from "@/modules/results";
+import { anotarRecorde, definirRecordes, recordesAtuais } from "@/modules/results";
 import { escolherNaSala, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { AudioContextFalso } from "@/test/audioFalso";
@@ -69,7 +69,7 @@ vi.mock("@/modules/multiplayer", async (original) => ({
 
 vi.mock("@/modules/conta", async (original) => ({
   ...(await original<typeof import("@/modules/conta")>()),
-  sessaoDaConta: { iniciar: vi.fn(async () => {}), registrarPartida: vi.fn(async () => null), token: vi.fn(() => null) },
+  sessaoDaConta: { iniciar: vi.fn(async () => {}), registrarPartida: vi.fn(async () => null), token: vi.fn(() => null), recordes: vi.fn(async () => []) },
 }));
 
 // Sem isso o player sintetizaria a primeira música a cada teste.
@@ -89,6 +89,8 @@ function abrir() {
 
 beforeEach(() => {
   localStorage.clear();
+  definirRecordes([]);
+  vi.mocked(sessaoDaConta.token).mockReturnValue(null);
   biblioteca.salvas = [];
   biblioteca.guardar.mockClear();
   // Os avisos do sonner ficam num estado global e passariam de um teste para o outro.
@@ -150,17 +152,18 @@ describe("App", () => {
     expect(biblioteca.guardar).toHaveBeenCalledWith([expect.objectContaining({ titulo: "Do Encore", md5DoEncore: md5, urlDoEncore: `https://files.enchor.us/${md5}.sng` })]);
   });
 
-  it("toca a música escolhida e mostra o resultado, salvando o recorde", async () => {
+  it("toca a música escolhida e mostra o resultado, anotando o recorde da conta", async () => {
+    vi.mocked(sessaoDaConta.token).mockReturnValue("tok");
     const usuario = abrir();
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
     await usuario.click(await screen.findByRole("button", { name: "terminar" }));
     expect(await screen.findByLabelText("777 pontos")).toBeInTheDocument();
-    expect(carregarRecordes()["spektrem-shine:medio"].pontos).toBe(777);
+    expect(recordesAtuais()["spektrem-shine:medio"].pontos).toBe(777);
   });
 
   it("a partida recebe o recorde da música para marcar na barra de estrelas", async () => {
-    salvarRecorde({ musicaId: MUSICAS_EMBUTIDAS[0].id, dificuldade: "medio", pontos: 4321, acertos: 10, total: 10, maiorSequencia: 10, derrota: false });
+    anotarRecorde({ musicaId: MUSICAS_EMBUTIDAS[0].id, dificuldade: "medio", pontos: 4321, acertos: 10, total: 10, maiorSequencia: 10, derrota: false });
     const usuario = abrir();
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
@@ -174,7 +177,7 @@ describe("App", () => {
     await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
     await usuario.click(await screen.findByRole("button", { name: "terminar" }));
     await screen.findByLabelText("777 pontos");
-    expect(carregarRecordes()).toEqual({});
+    expect(recordesAtuais()).toEqual({});
   });
 
   it("com conta, mostra o XP que a partida deu; com o bot, nem manda", async () => {
