@@ -1,0 +1,183 @@
+/* Identidade visual do Riff Rush, compartilhada pelo jogo e pela landing (landing/). */
+/* As fontes ficam de fora: cada projeto importa as suas, das próprias dependências. */
+
+:root {
+  /* Ruído que desgasta as formas, imitando a tinta gasta da logo. Opaco com falhas espalhadas. */
+  --textura-gasta: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -9 6.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23r)'/%3E%3C/svg%3E");
+  /* O inverso: só as falhas, para pintar por cima de áreas cheias. */
+  --textura-falhas: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 9 -6.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23r)'/%3E%3C/svg%3E");
+  /* Manchas de graxa e poeira na cor do fundo, para painéis com cara de muito uso. */
+  --textura-sujeira: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035 0.06' numOctaves='4' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 0.07 0 0 0 0 0.067 0 0 0 0 0.09 0 0 0 -4 2.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E");
+  /* Metal escovado: riscos horizontais claros e finos, usados com pouca opacidade sobre as placas. */
+  --textura-metal: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.003 0.8' numOctaves='2' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 2.4 -1.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E");
+}
+
+@theme inline {
+  --font-sans: "Geist Variable", sans-serif;
+  --font-titulo: "Bebas Neue", "Geist Variable", sans-serif;
+  --font-letreiro: "Rubik Dirt", "Bebas Neue", sans-serif;
+
+  --color-fundo: var(--cor-fundo);
+  --color-superficie: var(--cor-superficie);
+  --color-superficie-elevada: var(--cor-superficie-elevada);
+  --color-borda: var(--cor-borda);
+  --color-texto: var(--cor-texto);
+  --color-texto-suave: var(--cor-texto-suave);
+  --color-primaria: var(--cor-primaria);
+  --color-sucesso: var(--cor-sucesso);
+  --color-perigo: var(--cor-perigo);
+  --color-destaque: var(--cor-destaque);
+  --color-ouro: var(--cor-ouro);
+  --color-estrela: var(--cor-estrela);
+}
+
+body {
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+}
+
+/* Títulos na fonte condensada, em caixa alta, como letreiro de show. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-titulo);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* O título de cada tela é um letreiro de show: fonte suja e agressiva, inclinada para frente. */
+h1 {
+  font-family: var(--font-letreiro);
+  transform: skewX(-6deg);
+}
+
+/* Quina cortada na diagonal, o desenho de ponta da guitarra da logo. */
+.corte {
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+}
+
+/* Tinta gasta: falhas da cor do fundo sobre a área pintada. */
+.gasto {
+  position: relative;
+  isolation: isolate;
+}
+
+.gasto::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--cor-fundo);
+  opacity: 0.6;
+  mask-image: var(--textura-falhas);
+  mask-mode: alpha;
+  mask-size: 240px;
+}
+
+.desgastado {
+  mask-image: var(--textura-gasta);
+  mask-size: 240px;
+}
+
+.titulo-do-jogo {
+  color: var(--cor-texto);
+  mask-image: var(--textura-gasta);
+  mask-size: 240px;
+}
+
+/* ---------- Kit de palco ---------- */
+
+/* Em @layer components para as classes utilitárias (borda, fundo) poderem sobrescrever a placa. */
+@layer components {
+  /*
+   * Placa de metal: painel principal das telas. Quinas cortadas, metal escovado,
+   * quatro rebites e sujeira nas bordas. A profundidade continua vindo só do brilho (sem sombras).
+   */
+  .placa,
+  .chapa {
+    position: relative;
+    isolation: isolate;
+    border: 1px solid var(--cor-borda);
+    background-color: var(--cor-superficie);
+  }
+
+  .placa {
+    clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+  }
+
+  .chapa {
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  }
+
+  .placa::before,
+  .chapa::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: var(--textura-metal);
+    background-size: 300px;
+    opacity: 0.05;
+  }
+
+  /* Sujeira por cima do metal: manchas grandes e o escovado, bem mais visíveis. */
+  .placa.sujeira::before,
+  .chapa.sujeira::before {
+    background-image: var(--textura-sujeira), var(--textura-metal);
+    background-size: 220px, 300px;
+    opacity: 0.45;
+  }
+
+  /* Rebites nos quatro cantos, logo depois do corte da quina. */
+  .placa::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    --rebite: radial-gradient(circle, var(--cor-borda) 0 3px, transparent 3.5px);
+    background:
+      var(--rebite) 22px 10px / 8px 8px no-repeat,
+      var(--rebite) calc(100% - 10px) 10px / 8px 8px no-repeat,
+      var(--rebite) 10px calc(100% - 10px) / 8px 8px no-repeat,
+      var(--rebite) calc(100% - 22px) calc(100% - 10px) / 8px 8px no-repeat;
+  }
+}
+
+/* ---------- Holofotes ---------- */
+
+/* Feixe de luz em cone, preso no alto e balançando como luz de show. Só no fundo, nunca nos componentes. */
+.holofote {
+  position: absolute;
+  top: -12%;
+  width: 34vw;
+  height: 130vh;
+  transform-origin: 50% 0;
+  clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
+  mix-blend-mode: screen;
+  filter: blur(8px);
+  animation: holofote-varre ease-in-out infinite alternate;
+}
+
+.holofote-parado {
+  animation-play-state: paused;
+}
+
+@keyframes holofote-varre {
+  from {
+    transform: translateX(-50%) rotate(var(--de, -18deg));
+  }
+  to {
+    transform: translateX(-50%) rotate(var(--ate, 18deg));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .holofote {
+    animation: none;
+  }
+}
+
