@@ -805,9 +805,16 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
         className={cn("absolute", estreita ? "top-20 left-4" : "bottom-10 -translate-x-full")}
         style={estreita ? undefined : { left: Math.max(layout.centro - layout.largura / 2 - 24, LARGURA_DO_PAINEL + MARGEM_DO_HUD) }}
       >
-        <PainelDePontos pontos={hud.pontos} sequencia={hud.sequencia} multiplicador={hud.multiplicador} precisao={hud.precisao} estrelaAtiva={hud.estrelaAtiva} compacto={estreita} />
-        {/* Ao lado da pista e não em cima dela: o aviso não tapa as notas que vêm chegando. */}
-        <AvisoDeAcerto julgamento={hud.julgamento} className={cn("absolute", estreita ? "top-full left-0 mt-2" : "bottom-full left-1/2 mb-4 -translate-x-1/2")} />
+        {/* O aviso fica no painel, acima da precisão, e não em cima da pista: não tapa as notas que vêm chegando. */}
+        <PainelDePontos
+          pontos={hud.pontos}
+          sequencia={hud.sequencia}
+          multiplicador={hud.multiplicador}
+          precisao={hud.precisao}
+          estrelaAtiva={hud.estrelaAtiva}
+          compacto={estreita}
+          aviso={<AvisoDeAcerto julgamento={hud.julgamento} />}
+        />
       </div>
 
       {estreita ? (

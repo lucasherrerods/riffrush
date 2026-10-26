@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/shared/lib/utils";
 import { CORES_DO_MULTIPLICADOR, COR_DA_ESTRELA } from "../cores";
@@ -13,6 +14,8 @@ interface Props {
   estrelaAtiva: boolean;
   /** Celular: uma linha só, no topo. */
   compacto?: boolean;
+  /** O PERFEITO / ÓTIMO / BOM do último acerto, logo acima da precisão. */
+  aviso?: ReactNode;
 }
 
 const RAIO_DO_ANEL = 44;
@@ -27,7 +30,7 @@ const DIGITOS_DO_VISOR = 6;
  * Números da partida feitos para ler de relance, num painel de amplificador como no Guitar Hero:
  * o visor digital com os pontos, o anel do multiplicador mostrando quanto falta para o próximo e o combo.
  */
-export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, estrelaAtiva, compacto = false }: Props) {
+export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, estrelaAtiva, compacto = false, aviso }: Props) {
   const cor = estrelaAtiva ? COR_DA_ESTRELA : CORES_DO_MULTIPLICADOR[Math.min(3, Math.max(0, multiplicador - 1))];
   const progresso = progressoDoMultiplicador(sequencia);
   const porcentagem = `${Math.round(precisao * 100)}%`;
@@ -78,12 +81,16 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
   );
 
   const acerto = (
-    <p className="text-base font-bold tracking-[0.1em] text-texto-suave">
-      PRECISÃO{" "}
-      <span aria-label="Precisão" className={cn("font-titulo text-2xl tracking-normal tabular-nums", corDaPrecisao(precisao))}>
-        {porcentagem}
-      </span>
-    </p>
+    <div className="flex flex-col items-start">
+      {/* Altura reservada: a linha não pula quando o aviso aparece e some. */}
+      <div className="h-7 text-2xl">{aviso}</div>
+      <p className="text-base font-bold tracking-[0.1em] text-texto-suave">
+        PRECISÃO{" "}
+        <span aria-label="Precisão" className={cn("font-titulo text-2xl tracking-normal tabular-nums", corDaPrecisao(precisao))}>
+          {porcentagem}
+        </span>
+      </p>
+    </div>
   );
 
   if (compacto) {
