@@ -42,6 +42,8 @@ export interface PartidaParaAApi {
   derrota: boolean;
   fantasma: boolean;
   maior_sequencia: number;
+  /** Soma do valor de cada acerto pelo julgamento (300, 100 ou 50), para o perfil ter a precisão do jogo. */
+  valor_dos_acertos?: number;
   /** As entradas da partida comprimidas, em base64. */
   replay?: string;
 }
@@ -61,6 +63,8 @@ export interface PartidaDoPerfil {
   pontos: number;
   acertos: number;
   total: number;
+  /** De 0 a 1, a mesma do jogo. */
+  precisao: number;
   derrota: boolean;
   jogada_em: string;
   /** Do catálogo da API. Sem eles, vale o nome da biblioteca. */

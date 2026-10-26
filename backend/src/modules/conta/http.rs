@@ -168,6 +168,9 @@ pub struct CorpoDaPartida {
     /// Apps antigos não mandam.
     #[serde(default)]
     maior_sequencia: Option<u32>,
+    /// Soma do valor de cada acerto pelo julgamento (300, 100 ou 50). Apps antigos não mandam.
+    #[serde(default)]
+    valor_dos_acertos: Option<u32>,
     /// As entradas da partida comprimidas, em base64. Só em partida que vale para o ranking.
     #[serde(default)]
     replay: Option<String>,
@@ -221,6 +224,7 @@ pub async fn registrar_partida(
             derrota: corpo.derrota,
             fantasma: corpo.fantasma,
             maior_sequencia: corpo.maior_sequencia,
+            valor_dos_acertos: corpo.valor_dos_acertos,
         },
         replay,
     };

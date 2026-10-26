@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
-use super::dominio::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, PartidaPublica};
+use super::dominio::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, Ordem, PartidaPublica, RecordeDaMusica};
 use super::portas::RepositorioDoRanking;
 use crate::modules::conta::FalhaExterna;
 use crate::modules::progresso::{Dificuldade, Instrumento};
@@ -51,6 +51,27 @@ const CONSULTA: &str = "
     FROM recordes_do_ranking r
     JOIN contas c ON c.id = r.conta_id
     WHERE r.musica_id = $1 AND r.dificuldade = $2 AND r.instrumento = $3 AND (r.posicao <= $4 OR r.conta_id = $5)
+    ORDER BY r.posicao";
+
+/// O melhor de cada jogador pela precisão, só das partidas que o servidor conferiu, como no ranking pelos pontos.
+/// No empate, a maior sequência e depois quem chegou primeiro.
+const CONSULTA_POR_PRECISAO: &str = "
+    WITH melhores AS (
+        SELECT DISTINCT ON (conta_id) id AS partida_id, conta_id, pontos, acertos, total, precisao, maior_sequencia, jogada_em
+        FROM partidas
+        WHERE musica_id = $1 AND dificuldade = $2 AND instrumento = $3 AND precisao IS NOT NULL AND NOT derrota AND NOT fantasma
+        ORDER BY conta_id, precisao DESC, maior_sequencia DESC NULLS LAST, jogada_em ASC
+    ),
+    numeradas AS (
+        SELECT melhores.*,
+               ROW_NUMBER() OVER (ORDER BY precisao DESC, maior_sequencia DESC NULLS LAST, jogada_em ASC) AS posicao,
+               COUNT(*) OVER () AS jogadores
+        FROM melhores
+    )
+    SELECT r.posicao, r.jogadores, r.conta_id, r.partida_id, c.nome, c.avatar, r.pontos, r.acertos, r.total, r.precisao, r.maior_sequencia, r.jogada_em
+    FROM numeradas r
+    JOIN contas c ON c.id = r.conta_id
+    WHERE r.posicao <= $4 OR r.conta_id = $5
     ORDER BY r.posicao";
 
 #[derive(FromRow)]
@@ -108,16 +129,35 @@ struct LinhaDaMusica {
     musica_id: String,
     partidas: i64,
     jogadores: i64,
+    recordista: Option<String>,
+    pontos_do_recorde: Option<i64>,
+    precisao_do_recorde: Option<f64>,
+    dificuldade_do_recorde: Option<String>,
 }
 
 /// No empate, a que tem mais jogadores diferentes fica na frente.
+/// O recorde é o primeiro lugar pelos pontos na dificuldade mais alta, em qualquer instrumento.
 const CONSULTA_DAS_MUSICAS: &str = "
-    SELECT ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC, COUNT(DISTINCT conta_id) DESC, musica_id) AS posicao,
-           musica_id, COUNT(*) AS partidas, COUNT(DISTINCT conta_id) AS jogadores
-    FROM partidas
-    GROUP BY musica_id
-    ORDER BY posicao
-    LIMIT $1";
+    WITH populares AS (
+        SELECT ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC, COUNT(DISTINCT conta_id) DESC, musica_id) AS posicao,
+               musica_id, COUNT(*) AS partidas, COUNT(DISTINCT conta_id) AS jogadores
+        FROM partidas
+        GROUP BY musica_id
+        ORDER BY posicao
+        LIMIT $1
+    )
+    SELECT p.posicao, p.musica_id, p.partidas, p.jogadores,
+           recorde.nome AS recordista, recorde.pontos AS pontos_do_recorde, recorde.precisao AS precisao_do_recorde, recorde.dificuldade AS dificuldade_do_recorde
+    FROM populares p
+    LEFT JOIN LATERAL (
+        SELECT c.nome, r.pontos, r.precisao, r.dificuldade
+        FROM recordes_do_ranking r
+        JOIN contas c ON c.id = r.conta_id
+        WHERE r.musica_id = p.musica_id AND r.posicao = 1
+        ORDER BY CASE r.dificuldade WHEN 'expert' THEN 4 WHEN 'dificil' THEN 3 WHEN 'medio' THEN 2 ELSE 1 END DESC, r.pontos DESC
+        LIMIT 1
+    ) recorde ON true
+    ORDER BY p.posicao";
 
 #[derive(FromRow)]
 struct LinhaDaPartida {
@@ -168,10 +208,15 @@ impl RepositorioDoRanking for RankingPostgres {
         musica_id: &str,
         dificuldade: Dificuldade,
         instrumento: Instrumento,
+        ordem: Ordem,
         ate: u32,
         conta: Option<Uuid>,
     ) -> Result<Vec<LinhaDoRanking>, FalhaExterna> {
-        sqlx::query_as::<_, Linha>(CONSULTA)
+        let consulta = match ordem {
+            Ordem::Pontos => CONSULTA,
+            Ordem::Precisao => CONSULTA_POR_PRECISAO,
+        };
+        sqlx::query_as::<_, Linha>(consulta)
             .bind(musica_id)
             .bind(dificuldade.como_texto())
             .bind(instrumento.como_texto())
@@ -204,9 +249,23 @@ impl RepositorioDoRanking for RankingPostgres {
                     .into_iter()
                     .map(|l| MusicaPopular {
                         posicao: contagem(l.posicao),
-                        musica_id: l.musica_id,
                         partidas: contagem(l.partidas),
                         jogadores: contagem(l.jogadores),
+                        recorde: match (
+                            l.recordista,
+                            l.pontos_do_recorde,
+                            l.precisao_do_recorde,
+                            l.dificuldade_do_recorde.as_deref().and_then(Dificuldade::do_texto),
+                        ) {
+                            (Some(nome), Some(pontos), Some(precisao), Some(dificuldade)) => Some(RecordeDaMusica {
+                                nome,
+                                pontos: pontos.max(0) as u64,
+                                precisao,
+                                dificuldade,
+                            }),
+                            _ => None,
+                        },
+                        musica_id: l.musica_id,
                     })
                     .collect()
             })

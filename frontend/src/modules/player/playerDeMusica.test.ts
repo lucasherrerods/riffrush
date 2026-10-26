@@ -34,6 +34,19 @@ describe("PlayerDeMusica", () => {
     expect(carregar).toHaveBeenCalledTimes(1);
   });
 
+  it("ouvir a música que já está pausada continua de onde parou; outra música começa do início", async () => {
+    const { player, carregar } = montar();
+    player.seguir(fila[0]);
+    await esperar();
+    player.alternar();
+    player.ouvir(fila[0]);
+    expect(player.estado()).toMatchObject({ musica: fila[0], tocando: true });
+    expect(carregar).toHaveBeenCalledTimes(1);
+    player.ouvir(fila[1]);
+    await esperar();
+    expect(player.estado()).toMatchObject({ musica: fila[1], tocando: true });
+  });
+
   it("descarta a música que terminou de carregar depois de outro pedido", async () => {
     let soltarA!: (b: AudioBuffer) => void;
     const { player } = montar((m) => (m.id === "a" ? new Promise<AudioBuffer>((r) => (soltarA = r)) : Promise.resolve(buffer(50))));

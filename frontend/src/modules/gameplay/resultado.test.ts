@@ -1,6 +1,6 @@
 import type { Nota } from "@/modules/songs";
 import { avancar, criarPartida, tocar } from "./partida";
-import { resultadoDaPartida } from "./resultado";
+import { resultadoDaPartida, valorDosAcertos } from "./resultado";
 
 const nota = (tempo: number): Nota => ({ tempo, pista: 0, frase: -1, duracao: 0 });
 
@@ -35,5 +35,11 @@ describe("resultadoDaPartida", () => {
     const partida = criarPartida([nota(1)]);
     expect(resultadoDaPartida(partida, "m", "facil", "baixo").instrumento).toBe("baixo");
     expect(resultadoDaPartida(partida, "m", "facil").instrumento).toBe("guitarra");
+  });
+});
+
+describe("valorDosAcertos", () => {
+  it("soma o valor de cada acerto pelo julgamento, como a precisão do jogo", () => {
+    expect(valorDosAcertos({ perfeito: 2, otimo: 1, bom: 1 })).toBe(2 * 300 + 100 + 50);
   });
 });

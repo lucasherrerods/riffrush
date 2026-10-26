@@ -106,6 +106,8 @@ pub struct PartidaDoPerfil {
     pontos: u64,
     acertos: u32,
     total: u32,
+    /// De 0 a 1, a mesma do jogo: cada nota pesa pelo julgamento.
+    precisao: f64,
     derrota: bool,
     jogada_em: DateTime<Utc>,
     #[serde(flatten)]
@@ -115,6 +117,7 @@ pub struct PartidaDoPerfil {
 impl From<(PartidaRecente, Option<DadosDaMusica>)> for PartidaDoPerfil {
     fn from((p, dados): (PartidaRecente, Option<DadosDaMusica>)) -> Self {
         Self {
+            precisao: p.precisao(),
             dados: dados.into(),
             musica_id: p.musica_id,
             dificuldade: p.dificuldade,

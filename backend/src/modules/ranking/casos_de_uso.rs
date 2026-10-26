@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use super::dominio::{juntar_mesmas_musicas, montar_ranking, LinhaDoGeral, MusicaPopular, PartidaPublica, Ranking, TAMANHO_DO_TOP, TAMANHO_DO_TOP_DA_MUSICA};
+use super::dominio::{
+    juntar_mesmas_musicas, montar_ranking, LinhaDoGeral, MusicaPopular, Ordem, PartidaPublica, Ranking, TAMANHO_DO_TOP, TAMANHO_DO_TOP_DA_MUSICA,
+};
 use super::portas::RepositorioDoRanking;
 use crate::modules::catalogo::{DadosDaMusica, ServicosDoCatalogo};
 use crate::modules::conta::{FalhaExterna, ServicosDaConta, TAMANHO_MAXIMO_DO_ID_DA_MUSICA};
@@ -26,14 +28,21 @@ pub enum ErroDoRanking {
 }
 
 impl ServicosDoRanking {
-    pub async fn ranking(&self, musica_id: &str, dificuldade: Dificuldade, instrumento: Instrumento, token: Option<&str>) -> Result<Ranking, ErroDoRanking> {
+    pub async fn ranking(
+        &self,
+        musica_id: &str,
+        dificuldade: Dificuldade,
+        instrumento: Instrumento,
+        ordem: Ordem,
+        token: Option<&str>,
+    ) -> Result<Ranking, ErroDoRanking> {
         if musica_id.is_empty() || musica_id.len() > TAMANHO_MAXIMO_DO_ID_DA_MUSICA {
             return Err(ErroDoRanking::MusicaInvalida);
         }
         let conta = self.conta_de(token).await;
         let linhas = self
             .repositorio
-            .linhas(musica_id, dificuldade, instrumento, TAMANHO_DO_TOP_DA_MUSICA, conta)
+            .linhas(musica_id, dificuldade, instrumento, ordem, TAMANHO_DO_TOP_DA_MUSICA, conta)
             .await?;
         Ok(montar_ranking(linhas, conta, TAMANHO_DO_TOP_DA_MUSICA))
     }
@@ -95,6 +104,8 @@ pub mod fakes {
     #[derive(Default)]
     pub struct RankingEmMemoria {
         pub linhas: Mutex<Vec<(String, Dificuldade, Instrumento, LinhaDoRanking)>>,
+        /// A ordem do último pedido do ranking de uma música.
+        pub ultima_ordem: Mutex<Option<Ordem>>,
         pub geral: Mutex<Vec<LinhaDoGeral>>,
         pub musicas: Mutex<Vec<MusicaPopular>>,
         pub partidas: Mutex<Vec<PartidaPublica>>,
@@ -121,10 +132,12 @@ pub mod fakes {
             musica_id: &str,
             dificuldade: Dificuldade,
             instrumento: Instrumento,
+            ordem: Ordem,
             ate: u32,
             conta: Option<Uuid>,
         ) -> Result<Vec<LinhaDoRanking>, FalhaExterna> {
             *self.ultimo_limite.lock().unwrap() = Some(ate);
+            *self.ultima_ordem.lock().unwrap() = Some(ordem);
             Ok(self
                 .linhas
                 .lock()
@@ -201,10 +214,23 @@ mod tests {
     #[tokio::test]
     async fn sem_login_mostra_so_o_top() {
         let (servicos, repositorio) = ranking_com(servicos().0, vec![linha(1, Uuid::from_u128(1))]);
-        let ranking = servicos.ranking("encore:abc", Dificuldade::Expert, Instrumento::Guitarra, None).await.unwrap();
+        let ranking = servicos
+            .ranking("encore:abc", Dificuldade::Expert, Instrumento::Guitarra, Ordem::Precisao, None)
+            .await
+            .unwrap();
         assert_eq!(ranking.top.len(), 1);
         assert_eq!(ranking.meu, None);
         assert_eq!(*repositorio.ultimo_limite.lock().unwrap(), Some(TAMANHO_DO_TOP_DA_MUSICA));
+    }
+
+    #[tokio::test]
+    async fn a_ordem_pedida_chega_ao_repositorio() {
+        let (servicos, repositorio) = ranking_com(servicos().0, vec![]);
+        servicos
+            .ranking("encore:abc", Dificuldade::Expert, Instrumento::Guitarra, Ordem::Precisao, None)
+            .await
+            .unwrap();
+        assert_eq!(*repositorio.ultima_ordem.lock().unwrap(), Some(Ordem::Precisao));
     }
 
     #[tokio::test]
@@ -213,7 +239,7 @@ mod tests {
         let entrada = conta.entrar_com_google(&pedido("bom")).await.unwrap();
         let (servicos, _) = ranking_com(conta, vec![linha(1, Uuid::from_u128(77)), linha(578, entrada.conta.id)]);
         let ranking = servicos
-            .ranking("encore:abc", Dificuldade::Expert, Instrumento::Guitarra, Some(&entrada.token))
+            .ranking("encore:abc", Dificuldade::Expert, Instrumento::Guitarra, Ordem::Precisao, Some(&entrada.token))
             .await
             .unwrap();
         assert_eq!(ranking.top.len(), 1);
@@ -224,7 +250,7 @@ mod tests {
     async fn sessao_invalida_nao_derruba_o_ranking() {
         let (servicos, _) = ranking_com(servicos().0, vec![linha(1, Uuid::from_u128(1))]);
         let ranking = servicos
-            .ranking("encore:abc", Dificuldade::Expert, Instrumento::Guitarra, Some("inventado"))
+            .ranking("encore:abc", Dificuldade::Expert, Instrumento::Guitarra, Ordem::Precisao, Some("inventado"))
             .await
             .unwrap();
         assert_eq!((ranking.top.len(), ranking.meu), (1, None));
@@ -234,12 +260,14 @@ mod tests {
     async fn id_de_musica_vazio_ou_grande_demais_e_recusado() {
         let (servicos, _) = ranking_com(servicos().0, vec![]);
         assert!(matches!(
-            servicos.ranking("", Dificuldade::Medio, Instrumento::Guitarra, None).await,
+            servicos.ranking("", Dificuldade::Medio, Instrumento::Guitarra, Ordem::Precisao, None).await,
             Err(ErroDoRanking::MusicaInvalida)
         ));
         let enorme = "x".repeat(TAMANHO_MAXIMO_DO_ID_DA_MUSICA + 1);
         assert!(matches!(
-            servicos.ranking(&enorme, Dificuldade::Medio, Instrumento::Guitarra, None).await,
+            servicos
+                .ranking(&enorme, Dificuldade::Medio, Instrumento::Guitarra, Ordem::Precisao, None)
+                .await,
             Err(ErroDoRanking::MusicaInvalida)
         ));
     }
@@ -275,6 +303,7 @@ mod tests {
             musica_id: "encore:abc".into(),
             partidas: 30,
             jogadores: 4,
+            recorde: None,
         }];
         let musicas = servicos.musicas().await.unwrap();
         assert_eq!(musicas.len(), 1);

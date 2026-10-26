@@ -133,9 +133,17 @@ describe("MenuPrincipal na tela estreita", () => {
 
   it("o rodapé abre a privacidade e os termos dentro do jogo", async () => {
     const { aoAbrirDocumento, usuario } = abrir();
-    await usuario.click(screen.getByRole("link", { name: "Privacidade" }));
-    await usuario.click(screen.getByRole("link", { name: "Termos" }));
+    await usuario.click(screen.getByRole("link", { name: "Política de Privacidade" }));
+    await usuario.click(screen.getByRole("link", { name: "Termos de Uso" }));
     expect(aoAbrirDocumento.mock.calls).toEqual([["privacidade"], ["termos"]]);
+  });
+
+  it("o rodapé leva para a página Sobre, a landing do jogo", async () => {
+    const { usuario } = abrir();
+    const link = screen.getByRole("link", { name: "Sobre" });
+    expect(link).toHaveAttribute("href", "https://playriffrush.vercel.app");
+    await usuario.click(link);
+    expect(abrirLink).toHaveBeenCalledWith("https://playriffrush.vercel.app");
   });
 
   it("mostra o chat no canto de baixo, à esquerda", () => {

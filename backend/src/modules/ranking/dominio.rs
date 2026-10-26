@@ -64,14 +64,43 @@ pub struct PartidaPublica {
     pub tem_replay: bool,
 }
 
+/// O que ordena o ranking de uma música.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Ordem {
+    /// O padrão: os pontos, e no empate quem chegou primeiro.
+    #[default]
+    Pontos,
+    /// A precisão, depois a maior sequência.
+    Precisao,
+}
+
+/// O primeiro lugar de uma música pelos pontos, na dificuldade mais alta em que alguém terminou.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecordeDaMusica {
+    pub nome: String,
+    pub pontos: u64,
+    pub precisao: f64,
+    pub dificuldade: Dificuldade,
+}
+
+impl RecordeDaMusica {
+    /// Vale mais o da dificuldade mais alta; na mesma, o de mais pontos.
+    fn supera(&self, outro: &Self) -> bool {
+        (self.dificuldade, self.pontos) > (outro.dificuldade, outro.pontos)
+    }
+}
+
 /// Uma música no ranking das mais jogadas, contando as partidas de todo mundo.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MusicaPopular {
     pub posicao: u32,
     pub musica_id: String,
     pub partidas: u32,
     /// Quantas contas diferentes jogaram.
     pub jogadores: u32,
+    /// Sem ele, ninguém terminou a música com a precisão conferida pelo servidor.
+    pub recorde: Option<RecordeDaMusica>,
 }
 
 /// O que o ranking da música e o geral têm em comum para separar o top da linha de quem pediu.
@@ -153,6 +182,11 @@ pub fn juntar_mesmas_musicas(musicas: Vec<(MusicaPopular, DadosDaMusica)>, taman
             Some((junta, dados_da_junta)) => {
                 junta.partidas += musica.partidas;
                 junta.jogadores = junta.jogadores.max(musica.jogadores);
+                if let Some(recorde) = &musica.recorde {
+                    if junta.recorde.as_ref().is_none_or(|atual| recorde.supera(atual)) {
+                        junta.recorde = Some(recorde.clone());
+                    }
+                }
                 // Fica o id e os dados de quem tem capa (o do Encore).
                 if dados_da_junta.capa.is_none() && dados.capa.is_some() {
                     junta.musica_id = musica.musica_id;
@@ -245,7 +279,58 @@ mod tests {
             musica_id: musica_id.into(),
             partidas,
             jogadores,
+            recorde: None,
         }
+    }
+
+    fn recorde(nome: &str, pontos: u64, dificuldade: Dificuldade) -> Option<RecordeDaMusica> {
+        Some(RecordeDaMusica {
+            nome: nome.into(),
+            pontos,
+            precisao: 0.9,
+            dificuldade,
+        })
+    }
+
+    #[test]
+    fn ao_juntar_fica_o_recorde_da_dificuldade_mais_alta() {
+        let musicas = vec![
+            (
+                MusicaPopular {
+                    recorde: recorde("ana", 990_000, Dificuldade::Dificil),
+                    ..popular("arquivo:x", 2, 2)
+                },
+                dados("Crazy", "Aerosmith", None),
+            ),
+            (
+                MusicaPopular {
+                    recorde: recorde("bia", 700_000, Dificuldade::Expert),
+                    ..popular("encore:x", 1, 1)
+                },
+                dados("Crazy", "Aerosmith", Some("capa.jpg")),
+            ),
+            (popular("arquivo:y", 1, 1), dados("Crazy", "Gnarls Barkley", None)),
+            (
+                MusicaPopular {
+                    recorde: recorde("caio", 800_000, Dificuldade::Facil),
+                    ..popular("encore:y", 1, 1)
+                },
+                dados("Crazy", "Gnarls Barkley", Some("capa.jpg")),
+            ),
+        ];
+
+        let juntas = juntar_mesmas_musicas(musicas, 50);
+
+        let recordes: Vec<_> = juntas.iter().map(|(m, _)| m.recorde.as_ref().map(|r| r.nome.as_str())).collect();
+        assert_eq!(recordes, [Some("bia"), Some("caio")]);
+    }
+
+    #[test]
+    fn na_mesma_dificuldade_o_recorde_e_o_de_mais_pontos() {
+        let a = recorde("a", 900, Dificuldade::Expert).unwrap();
+        let b = recorde("b", 950, Dificuldade::Expert).unwrap();
+        assert!(b.supera(&a));
+        assert!(!a.supera(&b));
     }
 
     fn dados(titulo: &str, artista: &str, capa: Option<&str>) -> DadosDaMusica {

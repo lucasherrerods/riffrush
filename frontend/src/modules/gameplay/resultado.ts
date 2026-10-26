@@ -19,6 +19,11 @@ export interface Resultado {
   fantasma?: boolean;
 }
 
+/** Soma do valor de cada acerto pelo julgamento: a base da precisão do jogo, que a API também guarda. */
+export function valorDosAcertos(julgamentos: Record<Julgamento, number>) {
+  return (Object.keys(julgamentos) as Julgamento[]).reduce((soma, j) => soma + julgamentos[j] * VALOR_DO_JULGAMENTO[j], 0);
+}
+
 export function resultadoDaPartida(partida: Partida, musicaId: string, dificuldade: Dificuldade, instrumento: Instrumento = "guitarra"): Resultado {
   return {
     musicaId,

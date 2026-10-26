@@ -11,7 +11,7 @@ use http_body_util::BodyExt;
 use riffrush_api::modules::conta::fakes::{pedido, servicos};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento};
 use riffrush_api::modules::ranking::fakes::{servicos_do_ranking, RankingEmMemoria};
-use riffrush_api::modules::ranking::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, PartidaPublica};
+use riffrush_api::modules::ranking::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, Ordem, PartidaPublica, RecordeDaMusica};
 use riffrush_api::modules::saude::VerificadorDoBanco;
 use riffrush_api::shared::estado::EstadoDoApp;
 use serde_json::Value;
@@ -136,6 +136,20 @@ async fn cada_instrumento_tem_o_proprio_ranking_e_sem_ele_vale_a_guitarra() {
 }
 
 #[tokio::test]
+async fn a_ordem_vem_do_pedido_e_sem_ela_valem_os_pontos() {
+    let (app, _, repositorio) = app().await;
+    chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert", None).await;
+    assert_eq!(*repositorio.ultima_ordem.lock().unwrap(), Some(Ordem::Pontos));
+    let (status, _) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&ordem=precisao", None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(*repositorio.ultima_ordem.lock().unwrap(), Some(Ordem::Precisao));
+    assert_eq!(
+        chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&ordem=sorte", None).await.0,
+        StatusCode::BAD_REQUEST
+    );
+}
+
+#[tokio::test]
 async fn pedido_invalido_e_recusado() {
     let (app, _, _) = app().await;
     assert_eq!(
@@ -196,6 +210,12 @@ async fn as_musicas_mais_jogadas_vem_com_partidas_e_jogadores() {
         musica_id: "arquivo:Rush - Tom Sawyer.sng:19724630".into(),
         partidas: 30,
         jogadores: 4,
+        recorde: Some(RecordeDaMusica {
+            nome: "Ana".into(),
+            pontos: 1_200_000,
+            precisao: 0.98,
+            dificuldade: Dificuldade::Expert,
+        }),
     }];
 
     let (status, corpo) = chamar(&app, "/ranking/musicas", None).await;
@@ -207,6 +227,10 @@ async fn as_musicas_mais_jogadas_vem_com_partidas_e_jogadores() {
     assert!(corpo[0]["capa"].is_null());
     assert_eq!(corpo[0]["partidas"], 30);
     assert_eq!(corpo[0]["jogadores"], 4);
+    assert_eq!(corpo[0]["recorde"]["nome"], "Ana");
+    assert_eq!(corpo[0]["recorde"]["pontos"], 1_200_000);
+    assert_eq!(corpo[0]["recorde"]["precisao"], 0.98);
+    assert_eq!(corpo[0]["recorde"]["dificuldade"], "expert");
     assert!(chamar(&app, "/openapi.json", None).await.1["paths"]["/ranking/musicas"]["get"].is_object());
 }
 

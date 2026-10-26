@@ -9,7 +9,7 @@ use riffrush_api::modules::conta::{
 use riffrush_api::modules::moderacao::{Denuncia, ModeracaoPostgres, RepositorioDeModeracao, Situacao};
 use riffrush_api::modules::perfil::{PerfilPostgres, RepositorioDoPerfil};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento, ResumoDaPartida};
-use riffrush_api::modules::ranking::{RankingPostgres, RepositorioDoRanking};
+use riffrush_api::modules::ranking::{Ordem, RankingPostgres, RepositorioDoRanking};
 use riffrush_api::modules::rejulgamento::{CacheDeCharts, ChartGuardado, FilaDoRejulgamento, LimiteDePedidos, RejulgamentoPostgres, PEDIDOS_AO_ENCORE};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -86,6 +86,7 @@ async fn partida_soma_xp_e_marca_a_ultima() {
             derrota: false,
             fantasma: false,
             maior_sequencia: None,
+            valor_dos_acertos: None,
         },
         xp_ganho: 120,
         jogada_em,
@@ -121,6 +122,7 @@ async fn excluir_apaga_a_conta_com_sessoes_e_partidas() {
             derrota: false,
             fantasma: false,
             maior_sequencia: None,
+            valor_dos_acertos: None,
         },
         xp_ganho: 10,
         jogada_em: agora,
@@ -156,6 +158,7 @@ async fn ranking_pega_o_recorde_de_cada_jogador_pelos_pontos() {
             derrota,
             fantasma: false,
             maior_sequencia: Some(5),
+            valor_dos_acertos: None,
         },
         xp_ganho: 0,
         jogada_em: agora + Duration::seconds(segundos),
@@ -190,19 +193,71 @@ async fn ranking_pega_o_recorde_de_cada_jogador_pelos_pontos() {
     }
 
     let linhas = ranking
-        .linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, 2, Some(caio.id))
+        .linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, Ordem::Pontos, 2, Some(caio.id))
         .await
         .unwrap();
 
     let resumo: Vec<_> = linhas.iter().map(|l| (l.posicao, l.conta_id, l.pontos, l.jogadores)).collect();
     assert_eq!(resumo, [(1, bia.id, 950, 4), (2, ana.id, 900, 4), (4, caio.id, 100, 4)]);
     assert!(ranking
-        .linhas(&musica, Dificuldade::Facil, Instrumento::Guitarra, 50, None)
+        .linhas(&musica, Dificuldade::Facil, Instrumento::Guitarra, Ordem::Pontos, 50, None)
         .await
         .unwrap()
         .is_empty());
-    let baixo = ranking.linhas(&musica, Dificuldade::Expert, Instrumento::Baixo, 50, None).await.unwrap();
+    let baixo = ranking
+        .linhas(&musica, Dificuldade::Expert, Instrumento::Baixo, Ordem::Pontos, 50, None)
+        .await
+        .unwrap();
     assert_eq!(baixo.iter().map(|l| (l.conta_id, l.pontos)).collect::<Vec<_>>(), [(caio.id, 9999)]);
+}
+
+#[tokio::test]
+async fn ranking_por_precisao_pega_a_partida_de_mais_precisao_de_cada_jogador() {
+    let Some(banco) = banco().await else { return };
+    let ranking = RankingPostgres(banco.0.clone());
+    let musica = format!("teste:{}", Uuid::new_v4());
+    let agora = Utc::now();
+    let jogar = |conta_id: Uuid, pontos: u64, precisao: Option<f64>, segundos: i64| PartidaRegistrada {
+        id: Uuid::new_v4(),
+        conta_id,
+        musica_id: musica.clone(),
+        instrumento: Instrumento::Guitarra,
+        pontos,
+        resumo: ResumoDaPartida {
+            dificuldade: Dificuldade::Expert,
+            acertos: 9,
+            total: 10,
+            derrota: false,
+            fantasma: false,
+            maior_sequencia: Some(5),
+            valor_dos_acertos: None,
+        },
+        xp_ganho: 0,
+        jogada_em: agora + Duration::seconds(segundos),
+        replay: None,
+        precisao,
+    };
+    let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let caio = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    for partida in [
+        // A de mais pontos da Ana teve menos precisão.
+        jogar(ana.id, 500, Some(0.99), 0),
+        jogar(ana.id, 900, Some(0.8), 1),
+        jogar(bia.id, 700, Some(0.95), 2),
+        // Sem precisão (o servidor não conferiu): fica fora.
+        jogar(caio.id, 5000, None, 3),
+    ] {
+        banco.registrar_partida(&partida).await.unwrap();
+    }
+
+    let linhas = ranking
+        .linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, Ordem::Precisao, 10, None)
+        .await
+        .unwrap();
+
+    let resumo: Vec<_> = linhas.iter().map(|l| (l.posicao, l.conta_id, l.pontos, l.jogadores)).collect();
+    assert_eq!(resumo, [(1, ana.id, 500, 2), (2, bia.id, 700, 2)]);
 }
 
 #[tokio::test]
@@ -224,6 +279,7 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
             derrota,
             fantasma: false,
             maior_sequencia: None,
+            valor_dos_acertos: None,
         },
         xp_ganho: 0,
         jogada_em: agora + Duration::seconds(segundos),
@@ -234,7 +290,14 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
         jogar("a", Dificuldade::Expert, 900, false, 0),
         // Vaiada conta como partida, mas não como melhor pontuação.
         jogar("a", Dificuldade::Expert, 5000, true, 1),
-        jogar("b", Dificuldade::Facil, 300, false, 2),
+        // App novo manda o valor dos acertos: 8 ÓTIMOS.
+        PartidaRegistrada {
+            resumo: ResumoDaPartida {
+                valor_dos_acertos: Some(8 * 100),
+                ..jogar("b", Dificuldade::Facil, 300, false, 2).resumo
+            },
+            ..jogar("b", Dificuldade::Facil, 300, false, 2)
+        },
     ] {
         banco.registrar_partida(&partida).await.unwrap();
     }
@@ -244,9 +307,19 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
     assert_eq!(dados.musicas_distintas, 2);
     let expert = dados.por_dificuldade.iter().find(|e| e.dificuldade == Dificuldade::Expert).unwrap();
     assert_eq!(
-        (expert.partidas, expert.derrotas, expert.acertos, expert.notas, expert.melhor_pontuacao),
-        (2, 1, 16, 20, 900)
+        (
+            expert.partidas,
+            expert.derrotas,
+            expert.valor_dos_acertos,
+            expert.notas,
+            expert.melhor_pontuacao
+        ),
+        // Sem o valor, cada acerto das partidas antigas conta como perfeito.
+        (2, 1, 16 * 300, 20, 900)
     );
+    let facil = dados.por_dificuldade.iter().find(|e| e.dificuldade == Dificuldade::Facil).unwrap();
+    assert_eq!(facil.valor_dos_acertos, 8 * 100);
+    assert_eq!(dados.recentes[0].valor_dos_acertos, 8 * 100);
     let recentes: Vec<_> = dados.recentes.iter().map(|p| p.musica_id.as_str()).collect();
     assert_eq!(recentes, ["b", "a"]);
     let instrumentos: Vec<_> = dados.por_instrumento.iter().map(|i| (i.instrumento, i.partidas)).collect();
@@ -276,6 +349,7 @@ async fn ranking_geral_ordena_por_xp_e_ignora_quem_nao_jogou() {
                 derrota: false,
                 fantasma: false,
                 maior_sequencia: None,
+                valor_dos_acertos: None,
             },
             xp_ganho: 1_000_000_000,
             jogada_em: Utc::now(),
@@ -315,6 +389,7 @@ async fn musicas_mais_jogadas_contam_partidas_e_jogadores_diferentes() {
                     derrota: false,
                     fantasma: false,
                     maior_sequencia: None,
+                    valor_dos_acertos: None,
                 },
                 xp_ganho: 0,
                 jogada_em: agora + Duration::seconds(i as i64),
@@ -351,6 +426,7 @@ async fn ranking_geral_da_a_posicao_certa_fora_do_top_e_no_empate() {
             derrota: false,
             fantasma: false,
             maior_sequencia: None,
+            valor_dos_acertos: None,
         },
         xp_ganho,
         jogada_em: Utc::now(),
@@ -400,6 +476,7 @@ async fn a_linha_do_ranking_abre_a_partida_com_a_maior_sequencia() {
                 derrota: false,
                 fantasma: false,
                 maior_sequencia: Some(6),
+                valor_dos_acertos: None,
             },
             xp_ganho: 0,
             jogada_em: Utc::now(),
@@ -409,7 +486,10 @@ async fn a_linha_do_ranking_abre_a_partida_com_a_maior_sequencia() {
         .await
         .unwrap();
 
-    let linhas = ranking.linhas(&musica, Dificuldade::Dificil, Instrumento::Baixo, 10, None).await.unwrap();
+    let linhas = ranking
+        .linhas(&musica, Dificuldade::Dificil, Instrumento::Baixo, Ordem::Pontos, 10, None)
+        .await
+        .unwrap();
     let partida = ranking.partida(linhas[0].partida_id).await.unwrap().unwrap();
 
     assert_eq!(
@@ -444,6 +524,7 @@ async fn so_o_top_10_guarda_replay_e_quem_cai_perde_o_dele() {
             derrota: false,
             fantasma: false,
             maior_sequencia: None,
+            valor_dos_acertos: None,
         },
         xp_ganho: 0,
         jogada_em: agora + Duration::seconds(segundos),
@@ -463,7 +544,10 @@ async fn so_o_top_10_guarda_replay_e_quem_cai_perde_o_dele() {
     banco.registrar_partida(&partida(jogador.id, 700, 7, 2)).await.unwrap();
 
     // Do mesmo jogador, só o recorde guarda o replay.
-    let linhas = ranking.linhas(&musica, Dificuldade::Facil, Instrumento::Guitarra, 10, None).await.unwrap();
+    let linhas = ranking
+        .linhas(&musica, Dificuldade::Facil, Instrumento::Guitarra, Ordem::Pontos, 10, None)
+        .await
+        .unwrap();
     let recorde = linhas[0].partida_id;
     assert_eq!(ranking.replay(recorde).await.unwrap(), Some(vec![1, 9]));
     assert!(ranking.partida(recorde).await.unwrap().unwrap().tem_replay);
@@ -571,6 +655,7 @@ async fn recordes_pegam_a_melhor_partida_terminada_de_cada_musica() {
             derrota,
             fantasma,
             maior_sequencia: None,
+            valor_dos_acertos: None,
         },
         xp_ganho: 0,
         jogada_em: Utc::now(),

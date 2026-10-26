@@ -41,7 +41,7 @@ async fn app() -> (Router, String) {
                 dificuldade: Dificuldade::Expert,
                 partidas: 2,
                 derrotas: 1,
-                acertos: 15,
+                valor_dos_acertos: 15 * 300,
                 notas: 20,
                 melhor_pontuacao: 900,
             }],
@@ -65,6 +65,7 @@ async fn app() -> (Router, String) {
                 pontos: 900,
                 acertos: 8,
                 total: 10,
+                valor_dos_acertos: 8 * 100,
                 derrota: false,
                 jogada_em: DateTime::UNIX_EPOCH,
             }],
@@ -112,6 +113,8 @@ async fn devolve_as_estatisticas_de_quem_esta_logado() {
     assert_eq!(corpo["por_dificuldade"].as_array().unwrap().len(), 4);
     assert_eq!(corpo["por_dificuldade"][3]["dificuldade"], "expert");
     assert_eq!(corpo["recentes"][0]["musica_id"], "encore:abc");
+    // 8 ÓTIMOS em 10 notas: 800 de 3000, como no jogo.
+    assert!((corpo["recentes"][0]["precisao"].as_f64().unwrap() - 800.0 / 3000.0).abs() < 1e-9);
     assert_eq!(corpo["nivel"]["nivel"], 1);
     assert_eq!(corpo["email"], "lucas@exemplo.com");
     assert_eq!(corpo["por_instrumento"][0]["instrumento"], "baixo");
