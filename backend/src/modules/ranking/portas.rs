@@ -1,18 +1,19 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use super::dominio::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, PartidaPublica};
+use super::dominio::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, Ordem, PartidaPublica};
 use crate::modules::conta::FalhaExterna;
 use crate::modules::progresso::{Dificuldade, Instrumento};
 
 #[async_trait]
 pub trait RepositorioDoRanking: Send + Sync {
-    /// As linhas até a posição `ate` e, se `conta` tiver recorde, a linha dela, já numeradas.
+    /// As linhas até a posição `ate` e, se `conta` tiver recorde, a linha dela, já numeradas pela `ordem`.
     async fn linhas(
         &self,
         musica_id: &str,
         dificuldade: Dificuldade,
         instrumento: Instrumento,
+        ordem: Ordem,
         ate: u32,
         conta: Option<Uuid>,
     ) -> Result<Vec<LinhaDoRanking>, FalhaExterna>;
@@ -20,7 +21,7 @@ pub trait RepositorioDoRanking: Send + Sync {
     /// As contas com XP até a posição `ate` e, se `conta` tiver XP, a linha dela, já numeradas.
     async fn geral(&self, ate: u32, conta: Option<Uuid>) -> Result<Vec<LinhaDoGeral>, FalhaExterna>;
 
-    /// As `ate` músicas com mais partidas, já numeradas.
+    /// As `ate` músicas com mais partidas, já numeradas e com o recorde de cada uma.
     async fn musicas(&self, ate: u32) -> Result<Vec<MusicaPopular>, FalhaExterna>;
 
     /// Uma partida com o nome e o avatar de quem jogou.
