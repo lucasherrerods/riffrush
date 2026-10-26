@@ -280,6 +280,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     const explosoes: Cena["explosoes"] = [];
     const trovoes: Cena["trovoes"] = [];
     let estrelaDesde: number | null = null;
+    let julgamento: Cena["julgamento"] = null;
     let reacao: Reacao | null = null;
     const reagir = (tipo: Reacao["tipo"]) => (reacao = novaReacao(reacao, tipo));
     let ultimoTrovao = -Infinity;
@@ -335,6 +336,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       for (const evento of retirarEventos(partida)) {
         if (evento.tipo === "acerto") {
           explosoes.push({ pista: evento.nota.pista, tempo });
+          julgamento = { julgamento: evento.julgamento, tempo };
           if (explosoes.length > MAXIMO_DE_EXPLOSOES) explosoes.shift();
           const forca = forcaDoTrovao(partida.sequencia);
           if (forca) {
@@ -534,6 +536,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
             frasesFalhas: partida.frasesFalhas,
             trovoes,
             estrelaDesde,
+            julgamento,
           },
           opcoes.efeitos,
           sprites,
