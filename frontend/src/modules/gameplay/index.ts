@@ -6,6 +6,7 @@ export {
   avancar,
   criarPartida,
   iniciarMotor,
+  velocidadesDaMusica,
   multiplicador,
   retirarEventos,
   soltar,
@@ -25,3 +26,4 @@ export { MedidorDeVida } from "./componentes/MedidorDeVida";
 export { corDaPrecisao } from "./componentes/PainelDePontos";
 export { estrelasPorPontos, progressoDasEstrelas } from "./estrelas";
 export { criarSprites } from "./pista/sprites";
+export { rotuloDaVelocidade } from "./velocidade";

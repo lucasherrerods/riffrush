@@ -29,6 +29,8 @@ pub enum Recusa {
     ChartInvalido,
     #[error("a trilha não tem notas")]
     TrilhaVazia,
+    #[error("velocidade da música que o jogo não oferece")]
+    VelocidadeInvalida,
 }
 
 fn no_motor(instrumento: Instrumento) -> motor::Instrumento {
@@ -57,6 +59,9 @@ pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Di
     if notas.is_empty() {
         return Err(Recusa::TrilhaVazia);
     }
+    if !motor::VELOCIDADES.contains(&replay.velocidade) {
+        return Err(Recusa::VelocidadeInvalida);
+    }
     if motor::hash_do_chart(&notas) != replay.hash_do_chart {
         return Err(Recusa::ChartDiferente);
     }
@@ -65,6 +70,7 @@ pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Di
         motor::OpcoesDaPartida {
             sem_falha: replay.sem_falha,
             fantasma: replay.fantasma,
+            velocidade: replay.velocidade,
         },
     );
     motor::aplicar_entradas(&mut partida, &replay.entradas);
@@ -137,17 +143,22 @@ pub mod testes {
     }
 
     pub fn replay_com(chart: &ChartGuardado, toques: &[(usize, f64)], sem_falha: bool) -> Vec<u8> {
+        replay_na_velocidade(chart, toques, sem_falha, 1.0)
+    }
+
+    /// Toca na velocidade dada: o toque cai no tempo real da nota, que é o da música dividido pela velocidade.
+    pub fn replay_na_velocidade(chart: &ChartGuardado, toques: &[(usize, f64)], sem_falha: bool, velocidade: f64) -> Vec<u8> {
         let notas = motor::notas_do_chart(chart, motor::Instrumento::Guitarra, motor::Dificuldade::Expert).unwrap();
         let mut entradas = Vec::new();
         for &(indice, atraso) in toques {
             let nota = notas[indice];
             entradas.push(motor::Entrada {
-                tempo: nota.tempo + atraso,
+                tempo: nota.tempo / velocidade + atraso,
                 tipo: motor::TipoDaEntrada::Tocar,
                 pista: nota.pista,
             });
             entradas.push(motor::Entrada {
-                tempo: nota.tempo + atraso + 0.05,
+                tempo: nota.tempo / velocidade + atraso + 0.05,
                 tipo: motor::TipoDaEntrada::Soltar,
                 pista: nota.pista,
             });
@@ -155,6 +166,7 @@ pub mod testes {
         motor::empacotar_replay(&motor::Replay {
             sem_falha,
             fantasma: false,
+            velocidade,
             hash_do_chart: motor::hash_do_chart(&notas),
             entradas,
         })
@@ -165,7 +177,7 @@ pub mod testes {
 mod tests {
     use chrono::TimeZone;
 
-    use super::testes::{chart, replay, replay_com};
+    use super::testes::{chart, replay, replay_com, replay_na_velocidade};
     use super::*;
 
     #[test]
@@ -192,6 +204,38 @@ mod tests {
         let sem_falha = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &replay_com(&chart, &[(0, 0.0)], true)).unwrap();
         assert!(!normal.sem_falha);
         assert!(sem_falha.sem_falha);
+    }
+
+    #[test]
+    fn rejulga_na_velocidade_do_replay_e_recusa_velocidade_que_o_jogo_nao_tem() {
+        let chart = chart();
+        let todas = [(0, 0.0), (1, 0.0), (2, 0.0), (3, 0.0)];
+        let normal = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &replay(&chart, &todas)).unwrap();
+        let lenta = rejulgar(
+            &chart,
+            Instrumento::Guitarra,
+            Dificuldade::Expert,
+            &replay_na_velocidade(&chart, &todas, false, 0.5),
+        )
+        .unwrap();
+        let rapida = rejulgar(
+            &chart,
+            Instrumento::Guitarra,
+            Dificuldade::Expert,
+            &replay_na_velocidade(&chart, &todas, false, 1.5),
+        )
+        .unwrap();
+        assert_eq!((normal.resumo.acertos, lenta.resumo.acertos, rapida.resumo.acertos), (4, 4, 4));
+        assert_eq!((normal.pontos, lenta.pontos, rapida.pontos), (200, 100, 300));
+        assert_eq!(
+            rejulgar(
+                &chart,
+                Instrumento::Guitarra,
+                Dificuldade::Expert,
+                &replay_na_velocidade(&chart, &todas, false, 2.0)
+            ),
+            Err(Recusa::VelocidadeInvalida)
+        );
     }
 
     #[test]

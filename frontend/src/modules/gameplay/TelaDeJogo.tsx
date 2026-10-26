@@ -27,6 +27,7 @@ import { layoutDaPista } from "./pista/geometria";
 import { criarSprites } from "./pista/sprites";
 import type { EstadoDoJogador } from "./rede";
 import { resultadoDaPartida, type Resultado } from "./resultado";
+import { noTempoReal, rotuloDaVelocidade } from "./velocidade";
 
 /** O que a partida precisa saber das configurações do jogador. */
 export interface OpcoesDaPartida {
@@ -41,6 +42,8 @@ export interface OpcoesDaPartida {
   volumeDosEfeitos: number;
   atrasoMs: number;
   semFalha: boolean;
+  /** Velocidade da música (1 é a normal). */
+  velocidadeDaMusica: number;
   bot: boolean;
   efeitos: boolean;
   /** Mostra o personagem 3D no palco e no HUD. */
@@ -62,6 +65,7 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   volumeDosEfeitos: 0.5,
   atrasoMs: 0,
   semFalha: false,
+  velocidadeDaMusica: 1,
   bot: false,
   efeitos: true,
   personagem: true,
@@ -137,6 +141,8 @@ const LARGURA_DO_HUD_LATERAL = 240;
 const MARGEM_DO_HUD = 16;
 
 export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar, replay, transmissao, espectadores = 0 }: Props) {
+  // O replay toca na velocidade em que foi gravado, não na das configurações de quem assiste.
+  const velocidade = replay?.velocidade ?? opcoes.velocidadeDaMusica;
   const recordeAtual = useRef(recorde);
   recordeAtual.current = recorde;
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -158,7 +164,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   const estadoDoPalco = useRef<EstadoDoPalco>({
     personagem,
     tocando: false,
-    bpm: musica.bpm || 120,
+    bpm: (musica.bpm || 120) * velocidade,
     pulso: 0,
     triste: false,
     tempo: -ENTRADA,
@@ -228,17 +234,21 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     ganho.connect(saidaDeAudio());
     const fonte = audio.createBufferSource();
     fonte.buffer = carregada.audio;
+    // A partida roda no tempo real: só o áudio (e o vídeo) toca na velocidade escolhida.
+    fonte.playbackRate.value = velocidade;
     fonte.connect(ganho);
     // Em rede a música começa no instante combinado; quem carregou atrasado entra no meio.
     const agora = audio.currentTime;
     const inicio = inicioEmRede === undefined ? agora + ENTRADA : agora + (inicioEmRede - performance.now()) / 1000;
     if (inicio > agora + 0.05) fonte.start(inicio);
-    else fonte.start(agora + 0.05, agora + 0.05 - inicio);
+    else fonte.start(agora + 0.05, (agora + 0.05 - inicio) * velocidade);
+    const duracao = noTempoReal(carregada.duracao, velocidade);
+    const batidas = carregada.batidas.map((b) => ({ ...b, tempo: noTempoReal(b.tempo, velocidade) }));
 
     // Em rede ninguém sai da música: quem zera a vida vira fantasma e segue pontuando.
     const partida = replay
-      ? criarPartida(carregada.notas, { semFalha: replay.semFalha, fantasma: replay.fantasma })
-      : criarPartida(carregada.notas, { semFalha: opcoes.semFalha, fantasma: inicioEmRede !== undefined });
+      ? criarPartida(carregada.notas, { semFalha: replay.semFalha, fantasma: replay.fantasma, velocidade })
+      : criarPartida(carregada.notas, { semFalha: opcoes.semFalha, fantasma: inicioEmRede !== undefined, velocidade });
     const bot = opcoes.bot && !replay ? criarBot() : null;
     const gravador = criarGravador(partida);
     let proximaEntrada = 0;
@@ -261,7 +271,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       void hashDoChart(carregada.notas).then((hash) => {
         if (transmissaoAcabou) return;
         transmitindo = true;
-        transmitir({ tipo: "inicio", hashDoChart: hash, semFalha: opcoes.semFalha });
+        transmitir({ tipo: "inicio", hashDoChart: hash, semFalha: opcoes.semFalha, velocidade });
       });
     }
     const sprites = criarSprites();
@@ -325,6 +335,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
           empacotarReplay({
             semFalha: opcoes.semFalha,
             fantasma: inicioEmRede !== undefined,
+            velocidade,
             hashDoChart: await hashDoChart(carregada.notas),
             entradas: gravador.entradas,
           });
@@ -481,7 +492,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
           entradasEnviadas = gravador.entradas.length;
         }
         tratarEventos(tempo);
-        if (!terminou && tempo >= carregada.duracao) terminar();
+        if (!terminou && tempo >= duracao) terminar();
         if (!terminou && performance.now() - ultimoEnvio > INTERVALO_DO_ENVIO_MS) {
           ultimoEnvio = performance.now();
           publicar(false);
@@ -491,14 +502,15 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       const clipe = video.current;
       if (clipe && !terminou && !pausadoAgora && tempo >= 0 && performance.now() - ultimaSincroniaDoVideo > 500) {
         ultimaSincroniaDoVideo = performance.now();
+        clipe.playbackRate = velocidade;
         if (clipe.paused) void clipe.play().catch(nada);
-        if (Math.abs(clipe.currentTime - tempo) > SINCRONIA_DO_VIDEO) clipe.currentTime = tempo;
+        if (Math.abs(clipe.currentTime - tempo * velocidade) > SINCRONIA_DO_VIDEO) clipe.currentTime = tempo * velocidade;
       }
 
       estadoDoPalco.current = {
         personagem,
         tocando: tempo >= 0 && !partida.derrota,
-        bpm: musica.bpm || 120,
+        bpm: (musica.bpm || 120) * velocidade,
         pulso: partida.acertos,
         triste: partida.vida < 0.25,
         tempo,
@@ -528,7 +540,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
           {
             notas: partida.notas,
             primeira: partida.primeira,
-            batidas: carregada.batidas,
+            batidas,
             apertados,
             explosoes,
             estrelaAtiva: partida.estrelaAtiva,
@@ -557,7 +569,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         vida: Math.round(partida.vida * 100) / 100,
         estrela: Math.round(partida.estrela * 100) / 100,
         estrelaAtiva: partida.estrelaAtiva,
-        progresso: Math.round(Math.max(0, Math.min(1, tempo / carregada.duracao)) * 500) / 500,
+        progresso: Math.round(Math.max(0, Math.min(1, tempo / duracao)) * 500) / 500,
         precisao: Math.round(precisao(partida) * 1000) / 1000,
         contagem: tempo < 0 ? Math.ceil(-tempo) : 0,
         pulso: partida.acertos,
@@ -645,6 +657,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
               <p className="truncate text-base text-texto-suave">
                 {musica.artista} · {rotuloDaDificuldade}
                 {opcoes.bot && !replay && <span className="ml-2 rounded bg-estrela px-2 font-black text-fundo">BOT</span>}
+                {velocidade !== 1 && <span className="ml-2 rounded bg-superficie-elevada px-2 font-black">{rotuloDaVelocidade(velocidade)}</span>}
                 {replay && <span className="ml-2 rounded bg-primaria px-2 font-black">{replay.ateAgora === undefined ? "REPLAY" : "AO VIVO"}</span>}
                 {opcoes.mostrarFps && <span className="ml-2 font-mono tabular-nums">{fps ?? "–"} FPS</span>}
               </p>
@@ -727,7 +740,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
             {placar && !estreita && <PlacarDaPartida loja={loja} placar={placar} />}
           </div>
 
-          <HudDaPartida loja={loja} layout={layout} estreita={estreita} comPalco={comPalco} pausado={pausado} derrota={derrota} personagem={cena.personagem ? personagem : null} bpm={musica.bpm || 120} aoEstrela={() => controles.current.estrela()} />
+          <HudDaPartida loja={loja} layout={layout} estreita={estreita} comPalco={comPalco} pausado={pausado} derrota={derrota} personagem={cena.personagem ? personagem : null} bpm={(musica.bpm || 120) * velocidade} aoEstrela={() => controles.current.estrela()} />
 
           <AnimatePresence>
             {aviso && (

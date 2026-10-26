@@ -92,8 +92,8 @@ pub enum PartidaInvalida {
 }
 
 /// O app manda a versão do formato no primeiro byte, fora da compressão.
-/// A 2 trouxe a nota aberta; os replays da 1 continuam guardados e valendo.
-pub const VERSOES_DO_REPLAY: [u8; 2] = [1, 2];
+/// A 2 trouxe a nota aberta e a 3, a velocidade da música; os replays antigos continuam guardados e valendo.
+pub const VERSOES_DO_REPLAY: [u8; 3] = [1, 2, 3];
 /// Uma música inteira fica com menos de 10 KB; o limite deixa folga sem abrir espaço para abuso.
 pub const TAMANHO_MAXIMO_DO_REPLAY: usize = 64 * 1024;
 
@@ -355,7 +355,8 @@ mod tests {
     fn replay_precisa_da_versao_certa_e_caber_no_limite() {
         assert!(validar_replay(&[1, 0, 1]).is_ok());
         assert!(validar_replay(&[2, 0, 1]).is_ok());
-        assert_eq!(validar_replay(&[3, 0, 1]), Err(PartidaInvalida::ReplayInvalido));
+        assert!(validar_replay(&[3, 0, 1]).is_ok());
+        assert_eq!(validar_replay(&[4, 0, 1]), Err(PartidaInvalida::ReplayInvalido));
         assert_eq!(validar_replay(&[2]), Err(PartidaInvalida::ReplayInvalido));
         assert_eq!(validar_replay(&[9, 0, 1]), Err(PartidaInvalida::ReplayInvalido));
         let grande = vec![2; TAMANHO_MAXIMO_DO_REPLAY + 1];

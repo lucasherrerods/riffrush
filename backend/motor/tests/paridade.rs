@@ -70,6 +70,7 @@ fn o_replay_da_o_mesmo_resultado_que_no_app() {
             OpcoesDaPartida {
                 sem_falha: replay.sem_falha,
                 fantasma: replay.fantasma,
+                velocidade: replay.velocidade,
             },
         );
         aplicar_entradas(&mut partida, &replay.entradas);

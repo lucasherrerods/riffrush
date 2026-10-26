@@ -1,5 +1,5 @@
 import type { Nota } from "@/modules/songs";
-import iniciarWasm, { initSync, janela_de_acerto, julgar as julgarNoMotor, MotorDaPartida, quantizar as quantizarNoMotor } from "./wasm/motor";
+import iniciarWasm, { initSync, janela_de_acerto, julgar as julgarNoMotor, MotorDaPartida, quantizar as quantizarNoMotor, velocidades } from "./wasm/motor";
 import urlDoWasm from "./wasm/motor_bg.wasm?url";
 
 /*
@@ -89,7 +89,11 @@ const SEGURANDO = 4;
 const SOLTA = 8;
 const EVENTOS_SEM_VALOR: Evento["tipo"][] = ["acerto", "erro", "sequencia", "fraseCompleta", "estrelaPronta", "estrelaAtivada", "derrota", "virouFantasma"];
 
-export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false } = {}): Partida {
+/** As velocidades da música que o jogo oferece. Vêm do motor, que recusa qualquer outra. */
+export const velocidadesDaMusica = () => [...velocidades()];
+
+/** `velocidade` é a da música: as notas chegam no tempo da música e a partida roda no tempo real. */
+export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false, velocidade = 1 } = {}): Partida {
   const motor = new MotorDaPartida(
     Float64Array.from(notas, (n) => n.tempo),
     Uint8Array.from(notas, (n) => n.pista),
@@ -97,6 +101,7 @@ export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false
     Float64Array.from(notas, (n) => n.duracao),
     semFalha,
     fantasma,
+    velocidade,
   );
   const grade = motor.grade_das_notas();
   const partida: Partida = {

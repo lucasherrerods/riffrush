@@ -24,6 +24,8 @@ export interface PartidaTransmitida {
   instrumento: Instrumento;
   hashDoChart: string;
   semFalha: boolean;
+  /** Velocidade da música: o replay de quem assiste toca na mesma. Relay antigo não manda. */
+  velocidade?: number;
   /** O .sng no Encore, para quem assiste baixar com um clique. Só confiável depois de `linkDoChartConfere`. */
   urlDoEncore?: string;
 }

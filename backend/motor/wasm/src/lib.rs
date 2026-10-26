@@ -34,7 +34,7 @@ pub struct MotorDaPartida {
 impl MotorDaPartida {
     /// As notas vêm em quatro listas paralelas, que passam para o WASM sem um objeto por nota.
     #[wasm_bindgen(constructor)]
-    pub fn new(tempos: &[f64], pistas: &[u8], frases: &[i32], duracoes: &[f64], sem_falha: bool, fantasma: bool) -> MotorDaPartida {
+    pub fn new(tempos: &[f64], pistas: &[u8], frases: &[i32], duracoes: &[f64], sem_falha: bool, fantasma: bool, velocidade: f64) -> MotorDaPartida {
         let notas: Vec<motor::Nota> = tempos
             .iter()
             .zip(pistas)
@@ -42,7 +42,14 @@ impl MotorDaPartida {
             .zip(duracoes)
             .map(|(((&tempo, &pista), &frase), &duracao)| motor::Nota { tempo, pista, frase, duracao })
             .collect();
-        let partida = motor::criar_partida(&notas, motor::OpcoesDaPartida { sem_falha, fantasma });
+        let partida = motor::criar_partida(
+            &notas,
+            motor::OpcoesDaPartida {
+                sem_falha,
+                fantasma,
+                velocidade,
+            },
+        );
         let enviadas = partida.notas.iter().map(|n| (bandeiras(n), n.segurou_ate)).collect();
         MotorDaPartida {
             partida,
@@ -51,7 +58,8 @@ impl MotorDaPartida {
         }
     }
 
-    /// Tempo e duração de cada nota já na grade da partida, para o espelho começar igual.
+    /// Tempo e duração de cada nota já no tempo real (dividido pela velocidade) e na grade da partida,
+    /// para o espelho começar igual.
     pub fn grade_das_notas(&self) -> Vec<f64> {
         self.partida.notas.iter().flat_map(|n| [n.tempo, n.duracao]).collect()
     }
@@ -172,4 +180,10 @@ pub fn julgar(distancia: f64) -> f64 {
 #[wasm_bindgen]
 pub fn janela_de_acerto() -> f64 {
     motor::JANELA_DE_ACERTO
+}
+
+/// As velocidades da música que o jogo oferece.
+#[wasm_bindgen]
+pub fn velocidades() -> Vec<f64> {
+    motor::VELOCIDADES.to_vec()
 }
