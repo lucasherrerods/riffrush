@@ -189,14 +189,14 @@ describe("App", () => {
     expect(recordesAtuais()).toEqual({});
   });
 
-  it("com conta, mostra o XP que a partida deu; com o bot, nem manda", async () => {
+  it("com conta, manda a partida; música que vem com o jogo avisa que não vale XP", async () => {
     const nivel = { nivel: 2, xp_no_nivel: 50, xp_para_o_proximo: 283 };
     vi.mocked(sessaoDaConta.registrarPartida).mockResolvedValueOnce({ xp_ganho: 150, antes: { ...nivel, nivel: 1 }, depois: nivel });
     const usuario = abrir();
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
     await usuario.click(await screen.findByRole("button", { name: "terminar" }));
-    expect(await screen.findByText("+150 XP")).toBeInTheDocument();
+    expect(await screen.findByText("Esta música não vale XP")).toBeInTheDocument();
     expect(sessaoDaConta.registrarPartida).toHaveBeenCalledWith(expect.objectContaining({ pontos: 777, acertos: 9, total: 10 }), undefined);
   });
 
