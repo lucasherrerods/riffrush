@@ -67,6 +67,12 @@ export class PlayerDeMusica {
     void this.abrir(musica);
   }
 
+  /** Como `seguir`, mas tira do pause quando é a mesma música: é o botão de ouvir a prévia. */
+  ouvir(musica: Musica) {
+    if (musica.id !== this.estadoAtual.musica?.id) return this.seguir(musica);
+    if (!this.estadoAtual.tocando && !this.estadoAtual.carregando) this.continuar();
+  }
+
   alternar() {
     if (this.estadoAtual.tocando) this.pausar();
     else this.continuar();

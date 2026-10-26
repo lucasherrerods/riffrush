@@ -30,6 +30,8 @@ export interface Ambiente {
   irPara: (url: string) => void;
   busca: () => string;
   limparBusca: () => void;
+  /** Só no `npm run dev`: abre logado com esta conta, para ver as telas de quem tem conta sem passar pelo Google. */
+  contaFalsa?: ContaDaApi;
 }
 
 const CHAVE_DO_TOKEN = "riffrush:token";
@@ -59,6 +61,7 @@ export class SessaoDaConta {
 
   /** Na abertura: termina um login que voltou do Google ou retoma a sessão guardada. */
   async iniciar() {
+    if (this.ambiente.contaFalsa) return this.mudar({ conta: this.ambiente.contaFalsa });
     const { temporario, local } = this.ambiente;
     const retorno = lerRetornoDoGoogle(this.ambiente.busca(), temporario.getItem(CHAVE_DO_ESTADO));
     if (retorno.tipo !== "nada") {
@@ -171,8 +174,14 @@ export class SessaoDaConta {
 const noDesktop = "__TAURI_INTERNALS__" in window;
 const CLIENT_ID = (noDesktop ? import.meta.env.VITE_GOOGLE_CLIENT_ID_DESKTOP : import.meta.env.VITE_GOOGLE_CLIENT_ID) ?? "";
 
-/** Sem API ou sem client id configurados, o app segue sem contas. */
-export const contasLigadas = !!URL_DA_API && !!CLIENT_ID;
+// O build de produção nunca liga a conta falsa, mesmo com a variável no .env.
+const CONTA_FALSA: ContaDaApi | undefined =
+  import.meta.env.DEV && import.meta.env.VITE_CONTA_FALSA === "1"
+    ? { id: "conta-falsa", nome: "Jogador de teste", avatar: null, email: null, xp_total: 1234, nivel: { nivel: 5, xp_no_nivel: 34, xp_para_o_proximo: 300 } }
+    : undefined;
+
+/** Sem API ou sem client id configurados, o app segue sem contas. A conta falsa só precisa da API. */
+export const contasLigadas = !!URL_DA_API && (!!CLIENT_ID || !!CONTA_FALSA);
 
 export const sessaoDaConta = new SessaoDaConta({
   api: criarApi(URL_DA_API),
@@ -184,6 +193,7 @@ export const sessaoDaConta = new SessaoDaConta({
   busca: () => location.search,
   limparBusca: () => history.replaceState(null, "", location.pathname),
   loginPeloNavegador: noDesktop ? (url) => invoke("login_pelo_navegador", { url }) : undefined,
+  contaFalsa: CONTA_FALSA,
 });
 
 function emBase64(bytes: Uint8Array) {

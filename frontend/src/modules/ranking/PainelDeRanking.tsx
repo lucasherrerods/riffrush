@@ -3,6 +3,7 @@ import type { Dificuldade, Instrumento } from "@/modules/songs";
 import type { PosicaoNoRanking } from "./api";
 import { haQuantoTempo, porcentagem } from "@/shared/lib/formatar";
 import { LinhaComPosicao } from "./LinhaComPosicao";
+import { SeloDaNota } from "./SeloDaNota";
 import { useRanking, type OpcoesDoRanking } from "./useRanking";
 
 interface Props extends OpcoesDoRanking {
@@ -69,6 +70,7 @@ function LinhaDoRanking({ linha, minha, aoAbrir }: { linha: PosicaoNoRanking; mi
       nome={linha.nome}
       avatar={linha.avatar}
       minha={minha}
+      selo={<SeloDaNota precisao={linha.precisao} />}
       detalhe={`${porcentagem(linha.precisao)} · ${haQuantoTempo(linha.jogada_em)}`}
       valor={formatar(linha.pontos)}
       aoClicar={aoAbrir && (() => aoAbrir(linha.partida_id))}

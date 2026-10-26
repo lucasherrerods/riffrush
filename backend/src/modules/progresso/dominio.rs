@@ -2,7 +2,8 @@
 
 use riffrush_motor::Julgamento;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+/// Em ordem: a comparação diz qual é a mais difícil.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Dificuldade {
     Facil,

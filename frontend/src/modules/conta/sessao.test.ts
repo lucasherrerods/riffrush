@@ -27,6 +27,17 @@ function montar(api: Partial<ApiDaConta> = {}, busca = "") {
 
 const resultado: Resultado = { musicaId: "m", dificuldade: "medio", pontos: 10, acertos: 4, total: 4, maiorSequencia: 4, derrota: false };
 
+describe("SessaoDaConta: conta falsa do desenvolvimento", () => {
+  it("abre logado com a conta falsa, sem perguntar à API nem guardar token", async () => {
+    const { ambiente } = montar();
+    const sessao = new SessaoDaConta({ ...ambiente, contaFalsa: conta });
+    await sessao.iniciar();
+    expect(sessao.estado()).toEqual({ conta, carregando: false });
+    expect(ambiente.api.eu).not.toHaveBeenCalled();
+    expect(sessao.token()).toBeNull();
+  });
+});
+
 describe("SessaoDaConta", () => {
   it("entrar guarda o verificador e manda para o Google com o desafio", async () => {
     const { sessao, ambiente } = montar();

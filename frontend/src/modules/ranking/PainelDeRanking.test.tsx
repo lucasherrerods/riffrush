@@ -51,6 +51,13 @@ describe("PainelDeRanking", () => {
     expect(linhas[0]).toHaveTextContent("1.099.340");
   });
 
+  it("cada linha mostra a nota da precisão, como no osu!mania", async () => {
+    abrir(apiCom({ jogadores: 2, top: [{ ...posicao(1, "Srr 4", 10), precisao: 1 }, posicao(2, "Cohue", 9)], meu: null }));
+    const linhas = within(await screen.findByRole("list", { name: "Ranking" })).getAllByRole("listitem");
+    expect(within(linhas[0]).getByLabelText("Nota SS")).toBeInTheDocument();
+    expect(within(linhas[1]).getByLabelText("Nota S")).toBeInTheDocument();
+  });
+
   it("mostra o recorde pessoal com a posição entre todos, mesmo fora do top", async () => {
     abrir(apiCom({ jogadores: 928, top: [posicao(1, "Srr 4", 1_099_340)], meu: posicao(578, "Lucas", 380_146) }), { token: "tok" });
     const meu = await screen.findByRole("region", { name: "Recorde pessoal" });
@@ -63,6 +70,15 @@ describe("PainelDeRanking", () => {
     abrir(api, { token: "tok" });
     await screen.findByText(/Ninguém terminou/);
     expect(api.buscar).toHaveBeenCalledWith("encore:abc", "expert", expect.objectContaining({ token: "tok" }));
+  });
+
+  it("pede pelos pontos e, com a ordem por precisão, pede por precisão", async () => {
+    const api = apiCom({ jogadores: 0, top: [], meu: null });
+    const { rerender } = abrir(api);
+    await screen.findByText(/Ninguém terminou/);
+    expect(api.buscar).toHaveBeenLastCalledWith("encore:abc", "expert", expect.objectContaining({ ordem: "pontos" }));
+    rerender(<PainelDeRanking musicaId="encore:abc" dificuldade="expert" api={api} atrasoMs={0} lerToken={() => null} ordem="precisao" />);
+    await vi.waitFor(() => expect(api.buscar).toHaveBeenLastCalledWith("encore:abc", "expert", expect.objectContaining({ ordem: "precisao" })));
   });
 
   it("sem ninguém no ranking, convida a ser o primeiro", async () => {

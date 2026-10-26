@@ -16,7 +16,7 @@ import { JanelaDoChart, TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarU
 import { TelaDeResultado, anotarRecorde, definirRecordes, recordeDe, useRecordes } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
-import { PainelDeRanking, PlacarAoVivo, TelaDeLeaderboard, TelaDePartidaDoRanking } from "@/modules/ranking";
+import { PainelDeRanking, PlacarAoVivo, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -35,6 +35,8 @@ export function App() {
   const [tela, setTela] = useState<Tela>(() => documentoDoEndereco(location.pathname) ?? "menu");
   /** md5 do chart do Encore aberto na janela de baixar do leaderboard. */
   const [chartDoLeaderboard, setChartDoLeaderboard] = useState<string | null>(null);
+  // Lembrada aqui para o leaderboard voltar nela depois de abrir uma partida.
+  const [musicaDoLeaderboard, setMusicaDoLeaderboard] = useState<MusicaNoRanking | null>(null);
   const [configuracoes, setConfiguracoes] = useState<Configuracoes>(() => {
     const salvas = carregarConfiguracoes();
     // O volume geral vive no módulo de áudio; ao abrir, ele começa no que estava salvo.
@@ -46,7 +48,8 @@ export function App() {
   const [indice, setIndice] = useState(0);
   const [dificuldade, setDificuldade] = useState<Dificuldade>("medio");
   const [instrumento, setInstrumento] = useState<Instrumento>("guitarra");
-  const [partidaAberta, setPartidaAberta] = useState<string | null>(null);
+  // A partida do ranking aberta, com a música dela e a tela de onde veio.
+  const [partidaAberta, setPartidaAberta] = useState<{ id: string; titulo: string; artista: string; voltarPara: Tela } | null>(null);
   const [assistindo, setAssistindo] = useState<{ replay: Replay; dificuldade: Dificuldade; instrumento: Instrumento } | null>(null);
   const [resultado, setResultado] = useState<{ resultado: Resultado; recordeNovo: boolean } | null>(null);
   const [xpDaPartida, setXpDaPartida] = useState<RegistroDaPartida | null>(null);
@@ -274,11 +277,11 @@ export function App() {
     setTela("jogo");
   };
 
-  const assistirReplay = async (bytes: Uint8Array, dificuldadeDoReplay: Dificuldade, instrumentoDoReplay: Instrumento) => {
+  const assistirReplay = async (bytes: Uint8Array, dificuldadeDoReplay: Dificuldade, instrumentoDoReplay: Instrumento, musicaDoReplay = musicas[indice]) => {
     const replay = await desempacotarReplay(bytes).catch(() => null);
     if (!replay) return avisar.error("Este replay é de uma versão do jogo que este app não abre.");
-    const pronta = await biblioteca.prepararParaTocar(musicas[indice]);
-    if (pronta !== musicas[indice]) setMusicas((atuais) => juntarMusicas(atuais, [pronta]));
+    const pronta = await biblioteca.prepararParaTocar(musicaDoReplay);
+    if (pronta !== musicaDoReplay) setMusicas((atuais) => juntarMusicas(atuais, [pronta]));
     setEmRede(null);
     setAssistindo({ replay, dificuldade: dificuldadeDoReplay, instrumento: instrumentoDoReplay });
     setPartida((p) => p + 1);
@@ -459,20 +462,26 @@ export function App() {
                       dificuldade={dificuldadeDaSelecao}
                       instrumento={instrumentoDaSelecao}
                       aoAbrirPartida={(id) => {
-                        setPartidaAberta(id);
+                        setPartidaAberta({ id, titulo: escolhida.titulo, artista: escolhida.artista, voltarPara: "selecao" });
                         setTela("partidaDoRanking");
                       }}
                     />
                   ) : undefined}
               />
             )}
-            {tela === "partidaDoRanking" && escolhida && partidaAberta && (
+            {tela === "partidaDoRanking" && partidaAberta && (
               <TelaDePartidaDoRanking
-                partidaId={partidaAberta}
-                titulo={escolhida.titulo}
-                artista={escolhida.artista}
-                aoVoltar={() => setTela("selecao")}
-                aoAssistir={(bytes, partidaDoReplay) => void assistirReplay(bytes, partidaDoReplay.dificuldade, partidaDoReplay.instrumento)}
+                partidaId={partidaAberta.id}
+                titulo={partidaAberta.titulo}
+                artista={partidaAberta.artista}
+                aoVoltar={() => setTela(partidaAberta.voltarPara)}
+                aoAssistir={(bytes, partidaDoReplay) => {
+                  // Do leaderboard, a música do replay pode não ser a escolhida na seleção, ou nem estar na biblioteca.
+                  const posicao = musicas.findIndex((m) => idDoRanking(m) === partidaDoReplay.musica_id && !semAudio(m));
+                  if (posicao < 0) return avisar.error("Baixe esta música para assistir ao replay.");
+                  setIndice(posicao);
+                  void assistirReplay(bytes, partidaDoReplay.dificuldade, partidaDoReplay.instrumento, musicas[posicao]);
+                }}
               />
             )}
             {tela === "buscaDeMusicas" && (
@@ -508,7 +517,24 @@ export function App() {
               />
             )}
             {tela === "leaderboard" && (
-              <TelaDeLeaderboard aoVoltar={() => setTela("menu")} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} aoAbrirMusicaDoEncore={setChartDoLeaderboard} />
+              <TelaDeLeaderboard
+                aoVoltar={() => {
+                  setMusicaDoLeaderboard(null);
+                  setTela("menu");
+                }}
+                tituloDaMusica={(id) => tituloDaMusica(musicas, id)}
+                aoAbrirMusicaDoEncore={setChartDoLeaderboard}
+                musicaAberta={musicaDoLeaderboard}
+                aoAbrirMusica={setMusicaDoLeaderboard}
+                aoAbrirPartida={(id, { titulo, artista }) => {
+                  setPartidaAberta({ id, titulo, artista, voltarPara: "leaderboard" });
+                  setTela("partidaDoRanking");
+                }}
+                previa={(id) => {
+                  const musica = filaDoPlayer.find((m) => idDoRanking(m) === id);
+                  return musica && (() => playerDeMusica.ouvir(musica));
+                }}
+              />
             )}
             {tela === "leaderboard" && chartDoLeaderboard && (
               <JanelaDoChart
