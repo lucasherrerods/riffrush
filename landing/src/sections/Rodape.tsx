@@ -31,7 +31,7 @@ export function Rodape() {
 
   return (
     <footer ref={ref} className="relative overflow-hidden border-t border-borda">
-      <div className="mx-auto grid max-w-6xl gap-12 px-4 pt-20 md:grid-cols-12 md:px-6">
+      <div className="mx-auto grid max-w-6xl gap-12 px-4 pt-16 md:grid-cols-12 md:pt-20 md:px-6">
         <div className="md:col-span-5">
           <a href="#" className="flex items-center gap-3">
             <img src={logo} alt="" className="size-10" />
@@ -64,10 +64,10 @@ export function Rodape() {
         </a>
       </div>
 
-      <div aria-hidden className="pointer-events-none mt-4 h-[clamp(5rem,17vw,15rem)] select-none">
+      <div aria-hidden className="pointer-events-none mt-4 h-[clamp(2.5rem,15vw,15rem)] select-none">
         <motion.p
           style={parado ? undefined : { y }}
-          className="titulo-do-jogo text-center font-letreiro text-[clamp(7rem,24vw,22rem)] leading-none whitespace-nowrap opacity-20"
+          className="titulo-do-jogo text-center font-letreiro text-[clamp(3.5rem,21vw,22rem)] leading-none whitespace-nowrap opacity-20"
         >
           Riff Rush
         </motion.p>
