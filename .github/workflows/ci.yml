@@ -56,11 +56,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Dependências do Tauri no Linux
-        # O mirror do Ubuntu às vezes trava; sem limite o job ficaria pendurado por horas.
-        timeout-minutes: 5
-        run: |
-          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update
-          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+        # O mirror do Ubuntu é lento e às vezes trava baixando os ~180 pacotes. Com o cache, só a primeira
+        # execução depois de mudar a lista baixa do mirror; as outras restauram os .deb do cache do GitHub.
+        # O limite continua para o job não ficar pendurado por horas se o mirror travar de vez.
+        timeout-minutes: 15
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.3
+        with:
+          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          version: "1"
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
