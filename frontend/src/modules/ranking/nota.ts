@@ -18,5 +18,5 @@ export const COR_DA_NOTA: Record<Nota, string> = {
   A: "text-sucesso",
   B: "text-estrela",
   C: "text-destaque",
-  D: "text-perigo",
+  D: "text-primaria",
 };
