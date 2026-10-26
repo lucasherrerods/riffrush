@@ -10,7 +10,7 @@ use riffrush_api::modules::moderacao::{Denuncia, ModeracaoPostgres, RepositorioD
 use riffrush_api::modules::perfil::{PerfilPostgres, RepositorioDoPerfil};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento, ResumoDaPartida};
 use riffrush_api::modules::ranking::{RankingPostgres, RepositorioDoRanking};
-use riffrush_api::modules::rejulgamento::{CacheDeCharts, ChartGuardado, FilaDoRejulgamento, RejulgamentoPostgres};
+use riffrush_api::modules::rejulgamento::{CacheDeCharts, ChartGuardado, FilaDoRejulgamento, LimiteDePedidos, RejulgamentoPostgres, PEDIDOS_AO_ENCORE};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -662,4 +662,20 @@ async fn o_cache_guarda_o_chart_uma_vez() {
     cache.guardar(&md5, &chart).await.unwrap();
     cache.guardar(&md5, &ChartGuardado { midi: true, ..chart.clone() }).await.unwrap();
     assert_eq!(cache.buscar(&md5).await.unwrap(), Some(chart));
+}
+
+#[tokio::test]
+async fn o_limite_do_encore_e_contado_no_banco_e_libera_quando_a_janela_passa() {
+    let Some(banco) = banco().await else { return };
+    let limite = RejulgamentoPostgres(banco.0.clone());
+    // Um instante no passado, mas depois dos de execuções anteriores deste teste, que já saíram da janela.
+    // Os pedidos que ficam são apagados pelo primeiro pedido de verdade, que vem depois deles.
+    let agora = Utc::now() - Duration::days(3650);
+    for i in 0..PEDIDOS_AO_ENCORE {
+        assert!(limite.pedir(agora + Duration::milliseconds(i64::from(i))).await.unwrap(), "pedido {i}");
+    }
+    assert!(!limite.pedir(agora + Duration::seconds(1)).await.unwrap());
+    // Outra instância, com outra conexão, vê o mesmo limite.
+    assert!(!RejulgamentoPostgres(banco.0.clone()).pedir(agora + Duration::seconds(2)).await.unwrap());
+    assert!(limite.pedir(agora + Duration::seconds(41)).await.unwrap());
 }

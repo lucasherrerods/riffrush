@@ -1,4 +1,4 @@
-import { forcaDoTrovao, pontosDoRaio, progressoDoMultiplicador, tremor } from "./efeitos";
+import { estiloDoJulgamento, forcaDoTrovao, pontosDoRaio, progressoDoMultiplicador, tremor } from "./efeitos";
 
 describe("forcaDoTrovao", () => {
   it("não troveja fora dos marcos de combo", () => {
@@ -52,5 +52,13 @@ describe("progressoDoMultiplicador", () => {
     expect(progressoDoMultiplicador(29)).toBeCloseTo(0.9);
     expect(progressoDoMultiplicador(30)).toBe(1);
     expect(progressoDoMultiplicador(500)).toBe(1);
+  });
+});
+
+describe("estiloDoJulgamento", () => {
+  it("cada julgamento tem o seu texto e uma cor diferente", () => {
+    const estilos = (["perfeito", "otimo", "bom"] as const).map(estiloDoJulgamento);
+    expect(estilos.map((e) => e.texto)).toEqual(["PERFEITO", "ÓTIMO", "BOM"]);
+    expect(new Set(estilos.map((e) => e.cor)).size).toBe(3);
   });
 });

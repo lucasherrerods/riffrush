@@ -1,8 +1,8 @@
 import { PISTA_ABERTA, type Batida, type TipoDaNota } from "@/modules/songs";
 import { cores, comAlfa } from "@/shared/styles/tokens";
 import { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ABERTA, COR_DA_ESTRELA, COR_DA_NOTA_PERDIDA, TRILHO_DA_ESTRELA, corDaPista } from "../cores";
-import type { NotaEmJogo } from "../partida";
-import { pontosDoRaio, tremor } from "./efeitos";
+import type { Julgamento, NotaEmJogo } from "../partida";
+import { DURACAO_DO_JULGAMENTO, estiloDoJulgamento, pontosDoRaio, tremor } from "./efeitos";
 import { cordasDaPista, layoutDaPista, projetar, xDaPista, type LayoutDaPista } from "./geometria";
 
 export interface Cena {
@@ -18,6 +18,8 @@ export interface Cena {
   trovoes: { tempo: number; forca: number; semente: number }[];
   /** Instante em que o star power foi solto, para o tremor da pista. */
   estrelaDesde: number | null;
+  /** O julgamento do último acerto, escrito no meio do braço por um instante. */
+  julgamento: { julgamento: Julgamento; tempo: number } | null;
 }
 
 /** Imagens pré-desenhadas das notas e dos brilhos (ver sprites.ts). */
@@ -326,6 +328,20 @@ export function desenharPista(
   });
   c.fillRect(0, 0, largura, fimDoFade);
   c.globalCompositeOperation = "source-over";
+
+  // O julgamento é informação de jogo, não enfeite: aparece mesmo com os efeitos desligados.
+  const idadeDoJulgamento = cena.julgamento ? tempo - cena.julgamento.tempo : -1;
+  if (cena.julgamento && idadeDoJulgamento >= 0 && idadeDoJulgamento <= DURACAO_DO_JULGAMENTO) {
+    const k = idadeDoJulgamento / DURACAO_DO_JULGAMENTO;
+    const { texto, cor } = estiloDoJulgamento(cena.julgamento.julgamento);
+    c.globalAlpha = 1 - k * k;
+    c.font = `${Math.round(larguraDoTraste * 0.55)}px "Bebas Neue", sans-serif`;
+    c.textAlign = "center";
+    c.fillStyle = cor;
+    // No meio do braço e não em cima da nota: nas pistas da ponta o texto ficaria embaixo do HUD.
+    c.fillText(texto, centro, linhaDeBatida - larguraDoTraste * (1.6 + k * 0.4));
+    c.globalAlpha = 1;
+  }
 
   // Sem efeitos não há tremor, então não há transformação para desfazer.
   if (!efeitos) return;

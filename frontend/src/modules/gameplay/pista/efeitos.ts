@@ -1,5 +1,18 @@
 /** Efeitos de jogo da pista, em funções puras: o desenho fica em desenhar.ts. */
 
+import { cores } from "@/shared/styles/tokens";
+import type { Julgamento } from "../partida";
+
+/** Quanto tempo o julgamento do último acerto fica escrito acima da nota. */
+export const DURACAO_DO_JULGAMENTO = 0.45;
+
+/** Texto e cor de cada julgamento, nas mesmas cores da precisão no HUD: verde, ouro e apagado. */
+export function estiloDoJulgamento(julgamento: Julgamento) {
+  if (julgamento === "perfeito") return { texto: "PERFEITO", cor: cores.sucesso };
+  if (julgamento === "otimo") return { texto: "ÓTIMO", cor: cores.ouro };
+  return { texto: "BOM", cor: cores.textoSuave };
+}
+
 /** Combos que trovejam: 25, 50, 100 e depois a cada 50. Quanto maior, mais raios. */
 export function forcaDoTrovao(sequencia: number) {
   if (sequencia === 25) return 1;
