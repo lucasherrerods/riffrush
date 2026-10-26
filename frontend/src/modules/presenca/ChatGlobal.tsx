@@ -101,6 +101,8 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
   const [silenciados, setSilenciados] = useState(lerSilenciados);
   const [moderando, setModerando] = useState(false);
   const [minimizado, setMinimizado] = useState(lerMinimizado);
+  // Todos os hooks antes do retorno das regras: entrar na conta troca de tela no meio e o React exige os mesmos hooks.
+  const [sobreAberto, setSobreAberto] = useState(false);
   const moderacao = useModeracao(ligado && !!estado.voce?.admin);
 
   useEffect(() => (ligado ? chatGlobal.usar() : undefined), [ligado]);
@@ -149,7 +151,6 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
     return lista;
   };
 
-  const [sobreAberto, setSobreAberto] = useState(false);
   const mensagensDenunciadas = new Set(moderacao.denuncias.map((d) => d.mensagem_n)).size;
 
   return (
