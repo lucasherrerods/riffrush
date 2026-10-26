@@ -23,7 +23,7 @@ pub struct LinhaDoRanking {
     pub pontos: u64,
     pub acertos: u32,
     pub total: u32,
-    /// De 0 a 1, pelo valor de cada nota. É o que ordena o ranking.
+    /// De 0 a 1, pelo valor de cada nota. Aparece na linha; quem ordena são os pontos.
     pub precisao: f64,
     /// O desempate depois da precisão.
     pub maior_sequencia: Option<u32>,
