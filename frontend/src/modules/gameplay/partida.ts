@@ -1,6 +1,11 @@
 import type { Nota } from "@/modules/songs";
 
-export const JANELA_DE_ACERTO = 0.1;
+/** Até onde, em segundos de cada lado da batida, o toque ganha cada julgamento. */
+export const JANELAS = { perfeito: 0.035, otimo: 0.07, bom: 0.11 } as const;
+export type Julgamento = keyof typeof JANELAS;
+/** Quanto cada julgamento vale na precisão, como no osu!. A nota perdida vale zero. */
+export const VALOR_DO_JULGAMENTO: Record<Julgamento, number> = { perfeito: 300, otimo: 100, bom: 50 };
+export const JANELA_DE_ACERTO = JANELAS.bom;
 const VIDA_INICIAL = 0.5;
 const VIDA_POR_ACERTO = 0.02;
 const VIDA_POR_ERRO = 0.03;
@@ -35,7 +40,7 @@ export interface NotaEmJogo extends Nota {
 }
 
 export type Evento =
-  | { tipo: "acerto"; nota: NotaEmJogo }
+  | { tipo: "acerto"; nota: NotaEmJogo; julgamento: Julgamento }
   | { tipo: "erro"; nota: NotaEmJogo }
   | { tipo: "sequencia"; valor: number }
   | { tipo: "fraseCompleta" }
@@ -57,6 +62,9 @@ export interface Partida {
   sequencia: number;
   maiorSequencia: number;
   acertos: number;
+  julgamentos: Record<Julgamento, number>;
+  /** Soma do valor de cada acerto, para a precisão. */
+  valorDosAcertos: number;
   /** Notas que passaram sem ser tocadas. */
   erros: number;
   vida: number;
@@ -95,6 +103,8 @@ export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false
     sequencia: 0,
     maiorSequencia: 0,
     acertos: 0,
+    julgamentos: { perfeito: 0, otimo: 0, bom: 0 },
+    valorDosAcertos: 0,
     erros: 0,
     vida: VIDA_INICIAL,
     estrela: 0,
@@ -121,10 +131,17 @@ export function multiplicador(partida: Partida) {
   return Math.min(4, 1 + Math.floor(partida.sequencia / 10)) * (partida.estrelaAtiva ? 2 : 1);
 }
 
-/** Acertos sobre todas as notas que já passaram (0 a 1). */
+/** O julgamento de um toque a `distancia` segundos da batida, para qualquer lado. Compara em ticks, sem erro de ponto flutuante. */
+export function julgar(distancia: number): Julgamento {
+  const ticks = Math.abs(Math.round(distancia * TICKS_POR_SEGUNDO));
+  if (ticks <= JANELAS.perfeito * TICKS_POR_SEGUNDO) return "perfeito";
+  return ticks <= JANELAS.otimo * TICKS_POR_SEGUNDO ? "otimo" : "bom";
+}
+
+/** Valor dos acertos sobre o máximo das notas que já passaram (0 a 1). No fim da música, vale para o chart inteiro. */
 export function precisao(partida: Partida) {
   const tocadas = partida.acertos + partida.erros;
-  return tocadas ? partida.acertos / tocadas : 1;
+  return tocadas ? partida.valorDosAcertos / (tocadas * VALOR_DO_JULGAMENTO.perfeito) : 1;
 }
 
 function contarFrase(partida: Partida, nota: NotaEmJogo) {
@@ -143,13 +160,16 @@ export function acertar(partida: Partida, nota: NotaEmJogo, tempo: number) {
   nota.acertada = true;
   nota.segurando = nota.duracao > 0;
   nota.segurouAte = Math.max(nota.tempo, tempo);
+  const julgamento = julgar(tempo - nota.tempo);
   partida.acertos++;
+  partida.julgamentos[julgamento]++;
+  partida.valorDosAcertos += VALOR_DO_JULGAMENTO[julgamento];
   partida.sequencia++;
   partida.maiorSequencia = Math.max(partida.maiorSequencia, partida.sequencia);
   partida.pontosDasNotas += PONTOS_POR_NOTA * multiplicador(partida);
   atualizarPontos(partida);
   partida.vida = Math.min(1, partida.vida + VIDA_POR_ACERTO);
-  partida.eventos.push({ tipo: "acerto", nota });
+  partida.eventos.push({ tipo: "acerto", nota, julgamento });
   if (partida.sequencia % AVISO_DE_SEQUENCIA === 0) partida.eventos.push({ tipo: "sequencia", valor: partida.sequencia });
   contarFrase(partida, nota);
 }
@@ -203,7 +223,7 @@ export function tocar(partida: Partida, pista: number, tempo: number) {
 
 function acertarMaisProxima(partida: Partida, pista: number, tempo: number) {
   let melhor: NotaEmJogo | undefined;
-  let menorDistancia = JANELA_DE_ACERTO;
+  let menorDistancia: number = JANELA_DE_ACERTO;
   for (let i = partida.primeira; i < partida.notas.length && partida.notas[i].tempo < tempo + JANELA_DE_ACERTO; i++) {
     const nota = partida.notas[i];
     if (nota.acertada || nota.perdida || nota.pista !== pista) continue;

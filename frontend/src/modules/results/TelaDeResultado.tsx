@@ -35,7 +35,7 @@ export function TelaDeResultado(props: Props) {
   const [pontosNaTela, setPontosNaTela] = useState(0);
   const dispositivo = useDispositivo();
   const estrelas = estrelasDoResultado(resultado);
-  const precisao = resultado.total ? Math.round((resultado.acertos / resultado.total) * 100) : 0;
+  const precisao = resultado.precisao ?? (resultado.total ? resultado.acertos / resultado.total : 0);
   const fullCombo = resultado.total > 0 && resultado.acertos === resultado.total;
 
   useEffect(() => {
@@ -60,6 +60,12 @@ export function TelaDeResultado(props: Props) {
     { rotulo: "Notas acertadas", valor: `${resultado.acertos} / ${resultado.total}` },
     { rotulo: "Maior sequência", valor: resultado.maiorSequencia === null ? "—" : String(resultado.maiorSequencia) },
     { rotulo: "Dificuldade", valor: DIFICULDADES.find((d) => d.id === resultado.dificuldade)?.rotulo ?? "" },
+  ];
+  const julgamentos = resultado.julgamentos && [
+    { rotulo: "Perfeito", valor: resultado.julgamentos.perfeito },
+    { rotulo: "Ótimo", valor: resultado.julgamentos.otimo },
+    { rotulo: "Bom", valor: resultado.julgamentos.bom },
+    { rotulo: "Erro", valor: resultado.total - resultado.acertos },
   ];
 
   return (
@@ -98,8 +104,8 @@ export function TelaDeResultado(props: Props) {
             </p>
             <p className="text-base font-bold tracking-[0.2em] text-texto-suave">
               PRECISÃO{" "}
-              <span aria-label="Precisão" className={cn("font-titulo text-4xl tracking-normal tabular-nums", corDaPrecisao(precisao / 100))}>
-                {precisao}%
+              <span aria-label="Precisão" className={cn("font-titulo text-4xl tracking-normal tabular-nums", corDaPrecisao(precisao))}>
+                {(precisao * 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%
               </span>
             </p>
             {(recordeNovo || fullCombo) && (
@@ -124,6 +130,17 @@ export function TelaDeResultado(props: Props) {
               </div>
             ))}
           </dl>
+
+          {julgamentos && (
+            <dl className="flex gap-8">
+              {julgamentos.map((j) => (
+                <div key={j.rotulo} className="text-center">
+                  <dd className="font-titulo text-3xl tabular-nums">{j.valor}</dd>
+                  <dt className="text-base text-texto-suave">{j.rotulo}</dt>
+                </div>
+              ))}
+            </dl>
+          )}
         </div>
       </div>
 

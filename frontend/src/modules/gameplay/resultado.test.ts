@@ -17,6 +17,8 @@ describe("resultadoDaPartida", () => {
       pontos: 100,
       acertos: 2,
       total: 3,
+      julgamentos: { perfeito: 2, otimo: 0, bom: 0 },
+      precisao: 2 / 3,
       maiorSequencia: 2,
       derrota: false,
       fantasma: false,
