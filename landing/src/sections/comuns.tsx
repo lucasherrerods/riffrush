@@ -18,19 +18,14 @@ export function Surge({ children, atraso = 0, className }: { children: ReactNode
   );
 }
 
-export function Titulo({ selo, children }: { selo: string; children: ReactNode }) {
-  return (
-    <div className="mb-12 max-w-2xl">
-      <p className="mb-3 font-titulo text-xl tracking-widest text-primaria">{selo}</p>
-      <h2 className="text-5xl leading-[0.95] md:text-6xl">{children}</h2>
-    </div>
-  );
+export function Titulo({ children }: { children: ReactNode }) {
+  return <h2 className="mb-12 text-6xl leading-[0.9] md:text-8xl">{children}</h2>;
 }
 
 /** Os dois caminhos para jogar, usados no topo e no fim da página. */
-export function Chamadas() {
+export function Chamadas({ centralizadas = false }: { centralizadas?: boolean }) {
   return (
-    <div className="flex flex-wrap gap-4">
+    <div className={`flex flex-wrap gap-4 ${centralizadas ? "justify-center" : ""}`}>
       <a href={LINKS.jogarNoNavegador} className="corte gasto inline-flex items-center gap-3 bg-primaria px-8 py-4 font-titulo text-2xl text-texto transition-transform hover:-translate-y-0.5">
         <Play className="size-5 fill-current" aria-hidden />
         Jogar no navegador

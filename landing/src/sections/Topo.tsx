@@ -1,16 +1,21 @@
+import { useState } from "react";
+import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 import logo from "@jogo/src-tauri/icons/icon.png";
 import { IconeGithub } from "@jogo/src/shared/ui/IconeGithub";
-import { LINKS } from "@/links";
+import { LINKS, SECOES } from "@/links";
 
-const SECOES = [
-  { id: "recursos", rotulo: "Recursos" },
-  { id: "banda", rotulo: "Banda" },
-  { id: "como-jogar", rotulo: "Como jogar" },
-];
-
+/** Some quando a página desce e volta quando sobe, para não tapar o show. */
 export function Topo() {
+  const { scrollY } = useScroll();
+  const [escondido, setEscondido] = useState(false);
+  useMotionValueEvent(scrollY, "change", (y) => setEscondido(y > 160 && y > (scrollY.getPrevious() ?? 0)));
+
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-borda/60 bg-fundo/80 backdrop-blur-md">
+    <motion.header
+      animate={{ y: escondido ? "-100%" : "0%" }}
+      transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
+      className="fixed inset-x-0 top-0 z-50 border-b border-borda/60 bg-fundo/80 backdrop-blur-md"
+    >
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-4 md:px-6">
         <a href="#" className="flex items-center gap-3">
           <img src={logo} alt="" className="size-9" />
@@ -32,6 +37,6 @@ export function Topo() {
           </a>
         </div>
       </nav>
-    </header>
+    </motion.header>
   );
 }

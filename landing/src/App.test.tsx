@@ -3,7 +3,7 @@ import { App } from "./App";
 import { LINKS } from "./links";
 
 beforeAll(() => {
-  // O jsdom não tem canvas nem IntersectionObserver; a demo e as animações só precisam existir.
+  // O jsdom não tem canvas nem IntersectionObserver; a pista e as animações só precisam existir.
   HTMLCanvasElement.prototype.getContext = vi.fn(() => null) as never;
   globalThis.IntersectionObserver = class {
     observe() {}
@@ -28,10 +28,15 @@ describe("App", () => {
     screen.getAllByRole("link", { name: /github/i }).forEach((link) => expect(link).toHaveAttribute("href", LINKS.github));
   });
 
-  it("tem uma demo jogável com as teclas do jogo", () => {
+  it("mostra os três jeitos de tocar", () => {
     render(<App />);
-    const demo = screen.getByRole("region", { name: /demo/i });
-    ["A", "S", "J", "K", "L"].forEach((tecla) => expect(within(demo).getByRole("button", { name: new RegExp(`tecla ${tecla}`, "i") })).toBeInTheDocument());
+    ["Teclado", "Controle", "Celular"].forEach((instrumento) => expect(screen.getByText(instrumento)).toBeInTheDocument());
+  });
+
+  it("leva do rodapé para as seções da página", () => {
+    render(<App />);
+    const rodape = screen.getByRole("navigation", { name: /rodapé/i });
+    expect(within(rodape).getByRole("link", { name: "Recursos" })).toHaveAttribute("href", "#recursos");
   });
 
   it("mostra os direitos autorais", () => {

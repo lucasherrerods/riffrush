@@ -14,6 +14,8 @@ body {
   font-family: "Geist Variable", sans-serif;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
+  /* As animações de entrada partem de fora da tela; sem isso a página ganha scroll lateral. */
+  overflow-x: clip;
 }
 
 ::selection {
@@ -21,21 +23,8 @@ body {
   color: var(--cor-texto);
 }
 
-.faixa {
-  animation: faixa-corre 30s linear infinite;
-}
-
-@keyframes faixa-corre {
-  to {
-    transform: translateX(-50%);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
-  }
-  .faixa {
-    animation: none;
   }
 }

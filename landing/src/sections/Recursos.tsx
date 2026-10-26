@@ -1,43 +1,52 @@
-import { Gamepad2, Library, Radio, Smartphone, Trophy, Users, Wifi, Zap, type LucideIcon } from "lucide-react";
+import { motion } from "framer-motion";
 import { temaAtivo } from "@jogo/src/shared/styles/tokens";
 import { Surge, Titulo } from "./comuns";
 
-interface Recurso {
-  icone: LucideIcon;
-  titulo: string;
-  texto: string;
-}
-
-const RECURSOS: Recurso[] = [
-  { icone: Users, titulo: "Até 4 na mesma música", texto: "Monte a sala, chame os amigos e disputem nota a nota. Quem errar menos leva a coroa." },
-  { icone: Smartphone, titulo: "O celular vira guitarra", texto: "Leu o QR code, entrou na sala. Sem instalar nada: o celular joga pelo navegador." },
-  { icone: Wifi, titulo: "LAN ou internet", texto: "Na mesma rede, a sala abre no seu PC. Longe, o modo online junta todo mundo." },
-  { icone: Library, titulo: "Suas músicas do Clone Hero", texto: "Importe .chart, .mid e .sng, ou busque direto no Encore. Uma biblioteca sem fim." },
-  { icone: Gamepad2, titulo: "Teclado ou controle", texto: "Funciona no teclado e em controles de Xbox e PlayStation, com as teclas do seu jeito." },
-  { icone: Trophy, titulo: "Ranking e replays", texto: "Seu recorde vai para o ranking com o replay junto. Assista nota por nota como foi feito." },
-  { icone: Radio, titulo: "Partidas ao vivo", texto: "Veja quem está online e assista às partidas dos outros enquanto elas acontecem." },
-  { icone: Zap, titulo: "Notas abertas e HOPO", texto: "Charts lidos como no Clone Hero, com nota aberta, HOPO e tap no lugar certo." },
+const RECURSOS = [
+  { titulo: "Até 4 na mesma música", texto: "Na mesma rede ou pela internet." },
+  { titulo: "Suas músicas do Clone Hero", texto: ".chart, .mid, .sng e o Encore." },
+  { titulo: "Ranking com replay", texto: "Seu recorde, nota por nota." },
+  { titulo: "Partidas ao vivo", texto: "Assista quem está tocando agora." },
 ];
 
+/** Os recursos como o setlist colado no chão do palco: uma faixa por linha. */
 export function Recursos() {
   const trastes = temaAtivo.pista.trastes;
   return (
-    <section id="recursos" className="scroll-mt-20 py-24">
+    <section id="recursos" className="scroll-mt-20 py-32">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <Surge>
-          <Titulo selo="Recursos">Tudo o que um palco precisa</Titulo>
+          <Titulo>Setlist</Titulo>
         </Surge>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ol className="border-t border-borda">
           {RECURSOS.map((recurso, i) => (
-            <Surge key={recurso.titulo} atraso={(i % 4) * 0.08} className="h-full">
-              <article className="chapa group h-full p-6 transition-colors hover:bg-superficie-elevada">
-                <recurso.icone className="mb-5 size-8 opacity-80" style={{ color: trastes[i % trastes.length] }} aria-hidden />
-                <h3 className="mb-2 text-2xl leading-none">{recurso.titulo}</h3>
-                <p className="text-base leading-relaxed text-texto-suave">{recurso.texto}</p>
-              </article>
-            </Surge>
+            <motion.li
+              key={recurso.titulo}
+              initial="fora"
+              whileInView="dentro"
+              whileHover="tocando"
+              viewport={{ once: true, margin: "-60px" }}
+              variants={{ fora: { opacity: 0, x: -24 }, dentro: { opacity: 1, x: 0 } }}
+              transition={{ duration: 0.5, delay: i * 0.06 }}
+              className="relative isolate grid grid-cols-[3rem_1fr] items-baseline gap-x-6 gap-y-2 overflow-hidden border-b border-borda py-6 md:grid-cols-[4rem_1fr_1fr]"
+            >
+              <motion.span
+                aria-hidden
+                className="absolute inset-0 -z-10 origin-left"
+                style={{ background: trastes[i % trastes.length], opacity: 0.14 }}
+                variants={{ fora: { scaleX: 0 }, dentro: { scaleX: 0 }, tocando: { scaleX: 1 } }}
+                transition={{ duration: 0.35, ease: [0.2, 0.8, 0.2, 1] }}
+              />
+              <span className="font-titulo text-2xl" style={{ color: trastes[i % trastes.length] }}>
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <motion.h3 className="text-4xl leading-none md:text-5xl" variants={{ tocando: { x: 12 } }}>
+                {recurso.titulo}
+              </motion.h3>
+              <p className="col-start-2 text-base leading-relaxed text-texto-suave md:col-start-3">{recurso.texto}</p>
+            </motion.li>
           ))}
-        </div>
+        </ol>
       </div>
     </section>
   );

@@ -1,4 +1,4 @@
-import { JANELA_DE_ACERTO, PISTAS, julgarToque, notasDoRiff, notasNaTela } from "./riff";
+import { PISTAS, notasDoRiff, notasNaTela } from "./riff";
 
 describe("notasDoRiff", () => {
   it("gera notas em ordem de tempo, todas em pistas válidas", () => {
@@ -38,26 +38,5 @@ describe("notasNaTela", () => {
 
   it("some com as notas já acertadas", () => {
     expect(notasNaTela(notas, 900, 1500, new Set([0])).map((n) => n.pista)).toEqual([1]);
-  });
-});
-
-describe("julgarToque", () => {
-  const notas = [
-    { tempo: 1000, pista: 0 },
-    { tempo: 1100, pista: 0 },
-    { tempo: 1000, pista: 2 },
-  ];
-
-  it("acerta a nota mais próxima da mesma pista dentro da janela", () => {
-    expect(julgarToque(notas, 0, 1080, new Set())).toBe(1);
-  });
-
-  it("erra quando não há nota da pista dentro da janela", () => {
-    expect(julgarToque(notas, 1, 1000, new Set())).toBeNull();
-    expect(julgarToque(notas, 2, 1000 + JANELA_DE_ACERTO + 1, new Set())).toBeNull();
-  });
-
-  it("não acerta duas vezes a mesma nota", () => {
-    expect(julgarToque(notas, 2, 1000, new Set([2]))).toBeNull();
   });
 });

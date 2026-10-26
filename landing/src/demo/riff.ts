@@ -1,8 +1,4 @@
 export const PISTAS = 5;
-/** Mesma folga do jogo no médio: dá para acertar sem prática. */
-export const JANELA_DE_ACERTO = 120;
-/** Teclas padrão do jogo (A S J K L), na ordem das pistas. */
-export const TECLAS = ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL"];
 
 export interface Nota {
   tempo: number;
@@ -42,19 +38,4 @@ export function notasNaTela(notas: Nota[], agora: number, antecedencia: number, 
     if (posicao >= 0 && posicao <= 1.15) visiveis.push({ ...nota, indice, posicao });
   });
   return visiveis;
-}
-
-/** Índice da nota acertada pelo toque, ou null quando o toque erra. */
-export function julgarToque(notas: Nota[], pista: number, agora: number, acertadas: Set<number>): number | null {
-  let melhor: number | null = null;
-  let menorDistancia = JANELA_DE_ACERTO;
-  notas.forEach((nota, indice) => {
-    if (nota.pista !== pista || acertadas.has(indice)) return;
-    const distancia = Math.abs(nota.tempo - agora);
-    if (distancia <= menorDistancia) {
-      melhor = indice;
-      menorDistancia = distancia;
-    }
-  });
-  return melhor;
 }
