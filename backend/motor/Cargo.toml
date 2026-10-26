@@ -7,6 +7,8 @@ publish = false
 # Sem nada de rede, banco ou sistema: o mesmo crate roda na API e, compilado para WASM, no app.
 [dependencies]
 miniz_oxide = "0.8"
+regex = "1"
+sha2 = "0.10"
 
 [dev-dependencies]
 base64 = "0.22"
