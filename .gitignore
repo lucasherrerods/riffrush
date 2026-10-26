@@ -8,6 +8,8 @@ coverage/
 frontend/src-tauri/target/
 frontend/src-tauri/gen/schemas/
 backend/target/
+backend/motor/target/
+backend/motor/wasm/target/
 
 .vscode/*
 !.vscode/extensions.json

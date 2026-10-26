@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
 import { registrarUso } from "@/modules/gamepad";
-import { salvarRecorde } from "@/modules/results";
+import { anotarRecorde } from "@/modules/results";
 import { type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { TelaDeSelecao } from "./TelaDeSelecao";
@@ -123,7 +123,7 @@ describe("TelaDeSelecao", () => {
   });
 
   it("mostra o recorde da dificuldade escolhida", () => {
-    salvarRecorde({ musicaId: "neon-highway", dificuldade: "medio", pontos: 4321, acertos: 10, total: 10, maiorSequencia: 10, derrota: false });
+    anotarRecorde({ musicaId: "neon-highway", dificuldade: "medio", pontos: 4321, acertos: 10, total: 10, maiorSequencia: 10, derrota: false });
     abrir({ indice: 0, dificuldade: "medio" });
     expect(screen.getByText(/Recorde/)).toHaveTextContent("4.321");
   });

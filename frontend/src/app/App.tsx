@@ -3,19 +3,19 @@ import { AnimatePresence, motion } from "framer-motion";
 import { IndicadorDeVolume, definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/character";
 import { iniciarControle, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
-import { TelaDeJogo, type Resultado, desempacotarReplay, type Replay, type OpcoesDaPartida } from "@/modules/gameplay";
+import { EntradaDaPartida, TelaDeJogo, type Resultado, desempacotarReplay, type Replay, type OpcoesDaPartida } from "@/modules/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
-import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type XpDaPartida } from "@/modules/conta";
+import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/player";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
 import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { ChatGlobal, TelaDeEspectador, TelaOnline, presenca, presencaDisponivel, transmitirPartida, usePresenca, useSouDaModeracao, type PessoaOnline } from "@/modules/presenca";
 import { JanelaDoChart, TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
-import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
+import { TelaDeResultado, anotarRecorde, definirRecordes, recordeDe, useRecordes } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
-import { MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
+import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { PainelDeRanking, PlacarAoVivo, TelaDeLeaderboard, TelaDePartidaDoRanking } from "@/modules/ranking";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
@@ -49,14 +49,33 @@ export function App() {
   const [partidaAberta, setPartidaAberta] = useState<string | null>(null);
   const [assistindo, setAssistindo] = useState<{ replay: Replay; dificuldade: Dificuldade; instrumento: Instrumento } | null>(null);
   const [resultado, setResultado] = useState<{ resultado: Resultado; recordeNovo: boolean } | null>(null);
-  const [xpDaPartida, setXpDaPartida] = useState<XpDaPartida | null>(null);
+  const [xpDaPartida, setXpDaPartida] = useState<RegistroDaPartida | null>(null);
   const [partida, setPartida] = useState(0);
+  /** A entrada com o trovão: `segurando` enquanto a partida ainda não monta por baixo dela. */
+  const [entrada, setEntrada] = useState<{ segurando: boolean } | null>(null);
   const [emRede, setEmRede] = useState<PartidaEmRede | null>(null);
   const [voltarDoPersonagemPara, setVoltarDoPersonagemPara] = useState<Tela>("menu");
   const [voltarDoPerfilPara, setVoltarDoPerfilPara] = useState<Tela>("menu");
   const [voltarDaBuscaPara, setVoltarDaBuscaPara] = useState<Tela>("menu");
   const [espectando, setEspectando] = useState<PessoaOnline | null>(null);
   const { conta } = useConta();
+  const recordes = useRecordes();
+  // Os recordes vêm da conta: trocar de conta (ou sair) troca os recordes da seleção.
+  const contaId = conta?.id;
+  const contaDosRecordes = useRef(contaId);
+  useEffect(() => {
+    if (contaDosRecordes.current !== contaId) definirRecordes([]);
+    contaDosRecordes.current = contaId;
+    if (!contaId) return;
+    let cancelado = false;
+    sessaoDaConta
+      .recordes()
+      .then((lista) => !cancelado && definirRecordes(lista))
+      .catch(() => {});
+    return () => {
+      cancelado = true;
+    };
+  }, [contaId]);
   /** Com a conta conectada, o nome é o do Google em todo lugar, e o nível vai junto para o lobby. */
   const personagemEmJogo = useMemo<PersonagemNaSala>(
     () => (conta ? { ...personagem, nome: conta.nome.trim().slice(0, 16) || personagem.nome, nivel: conta.nivel.nivel } : personagem),
@@ -251,6 +270,7 @@ export function App() {
     setEmRede(null);
     setAssistindo(null);
     setPartida((p) => p + 1);
+    setEntrada({ segurando: true });
     setTela("jogo");
   };
 
@@ -262,6 +282,7 @@ export function App() {
     setEmRede(null);
     setAssistindo({ replay, dificuldade: dificuldadeDoReplay, instrumento: instrumentoDoReplay });
     setPartida((p) => p + 1);
+    setEntrada({ segurando: true });
     setTela("jogo");
   };
 
@@ -272,8 +293,9 @@ export function App() {
 
   const terminar = useCallback(
     (r: Resultado, gerarReplay?: () => Promise<Uint8Array>) => {
-      // Com o bot tocando, o recorde não é do jogador.
-      setResultado({ resultado: r, recordeNovo: !configuracoes.bot && salvarRecorde(r) });
+      // Com o bot tocando, o recorde não é do jogador. Sem conta, não há onde guardar recorde.
+      const comConta = !!sessaoDaConta.token();
+      setResultado({ resultado: r, recordeNovo: !configuracoes.bot && comConta && anotarRecorde({ ...r, musicaId: idDoRanking(musicaDaPartida.current) }) });
       setXpDaPartida(null);
       if (!configuracoes.bot) {
         // Sem o replay a partida ainda vale: só não dá para assistir depois.
@@ -336,6 +358,17 @@ export function App() {
   return (
     <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
       {!(naPista && configuracoes.modoCompetitivo) && <Fundo tocando={naPista} />}
+      {entrada && tela === "jogo" && (
+        <EntradaDaPartida
+          key={partida}
+          titulo={musica.titulo}
+          artista={musica.artista}
+          detalhe={[DIFICULDADES.find((d) => d.id === dificuldadeDaPartida)?.rotulo, INSTRUMENTOS.find((i) => i.id === instrumentoDaPartida)?.rotulo].filter(Boolean).join(" · ")}
+          volumeDosEfeitos={configuracoes.volumeDosEfeitos}
+          aoAbrir={() => setEntrada((atual) => (atual ? { segurando: false } : atual))}
+          aoTerminar={() => setEntrada(null)}
+        />
+      )}
       {!naPista && (
         <CabecalhoDoPlayerDeMusica volume={volumeGeral} aoMudarVolume={definirVolumeGeral}>
           {contasLigadas && (
@@ -524,14 +557,14 @@ export function App() {
                 }}
               />
             )}
-            {tela === "jogo" && (
+            {tela === "jogo" && !entrada?.segurando && (
               <TelaDeJogo
                 musica={musica}
                 dificuldade={dificuldadeDaPartida}
                 instrumento={instrumentoDaPartida}
                 opcoes={opcoes}
                 personagem={personagemEmJogo}
-                recorde={assistindo ? undefined : recordeDe(carregarRecordes(), musica.id, dificuldadeDaPartida, instrumentoDaPartida)?.pontos}
+                recorde={assistindo ? undefined : recordeDe(recordes, idDoRanking(musica), dificuldadeDaPartida, instrumentoDaPartida)?.pontos}
                 replay={assistindo?.replay}
                 rede={
                   emRede && conexao.sala
@@ -563,7 +596,7 @@ export function App() {
                 rotuloDeContinuar={emRede ? "Voltar para a sala" : undefined}
                 extra={
                   <>
-                    {xpDaPartida && <GanhoDeXp xp={xpDaPartida} />}
+                    {xpDaPartida && <GanhoDeXp xp={xpDaPartida} valeXp={!!musica.md5DoEncore} />}
                     {emRede && conexao.sala && (
                       <Placar sala={conexao.sala} meusPontos={resultado.resultado.pontos} minhaDerrota={resultado.resultado.derrota} meuFantasma={resultado.resultado.fantasma} />
                     )}

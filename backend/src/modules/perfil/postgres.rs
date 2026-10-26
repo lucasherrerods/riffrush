@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
-use super::dominio::{DadosDoPerfil, EstatisticasDaDificuldade, MusicaMaisTocada, PartidaRecente, PartidasNoInstrumento, MAIS_TOCADAS};
+use super::dominio::{DadosDoPerfil, EstatisticasDaDificuldade, MusicaMaisTocada, PartidaRecente, PartidasNoInstrumento, Recorde, MAIS_TOCADAS};
 use super::portas::RepositorioDoPerfil;
 use crate::modules::conta::FalhaExterna;
 use crate::modules::progresso::{Dificuldade, Instrumento};
@@ -42,6 +42,22 @@ struct LinhaDaPartida {
     derrota: bool,
     jogada_em: DateTime<Utc>,
 }
+
+#[derive(FromRow)]
+struct LinhaDoRecorde {
+    musica_id: String,
+    dificuldade: String,
+    instrumento: String,
+    pontos: i64,
+    acertos: i32,
+    total: i32,
+}
+
+/// No empate de pontos, fica a partida mais antiga: quem chegou primeiro.
+const RECORDES: &str = "
+    SELECT DISTINCT ON (musica_id, dificuldade, instrumento) musica_id, dificuldade, instrumento, pontos, acertos, total
+    FROM partidas WHERE conta_id = $1 AND NOT derrota AND NOT fantasma
+    ORDER BY musica_id, dificuldade, instrumento, pontos DESC, jogada_em";
 
 const RESUMO: &str = "
     SELECT c.criada_em, (SELECT COUNT(DISTINCT musica_id) FROM partidas WHERE conta_id = c.id) AS musicas_distintas
@@ -165,5 +181,25 @@ impl RepositorioDoPerfil for PerfilPostgres {
             mais_tocadas,
             recentes,
         }))
+    }
+
+    async fn recordes(&self, conta_id: Uuid) -> Result<Vec<Recorde>, FalhaExterna> {
+        Ok(sqlx::query_as::<_, LinhaDoRecorde>(RECORDES)
+            .bind(conta_id)
+            .fetch_all(&self.0)
+            .await
+            .map_err(falha)?
+            .into_iter()
+            .filter_map(|l| {
+                Some(Recorde {
+                    dificuldade: Dificuldade::do_texto(&l.dificuldade)?,
+                    instrumento: Instrumento::do_texto(&l.instrumento)?,
+                    musica_id: l.musica_id,
+                    pontos: positivo(l.pontos),
+                    acertos: l.acertos.max(0) as u32,
+                    total: l.total.max(0) as u32,
+                })
+            })
+            .collect())
     }
 }

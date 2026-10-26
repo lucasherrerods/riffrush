@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import type { ApiDoRanking, PosicaoNoRanking } from "./api";
 import { PlacarAoVivo } from "./PlacarAoVivo";
 
-const posicao = (n: number, nome: string, pontos: number): PosicaoNoRanking => ({ posicao: n, nome, avatar: null, pontos, acertos: 1, total: 1, jogada_em: "", partida_id: `p${n}` });
+const posicao = (n: number, nome: string, pontos: number): PosicaoNoRanking => ({ posicao: n, nome, avatar: null, pontos, acertos: 1, total: 1, precisao: 1, maior_sequencia: null, jogada_em: "", partida_id: `p${n}` });
 
 const api = { buscar: vi.fn(async () => ({ jogadores: 3, top: [posicao(1, "Ana", 9000), posicao(2, "Bia", 5000), posicao(3, "Caio", 1000)], meu: null })) } satisfies Pick<ApiDoRanking, "buscar">;
 

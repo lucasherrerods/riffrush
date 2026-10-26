@@ -109,6 +109,8 @@ pub fn validar_replay(bytes: &[u8]) -> Result<(), PartidaInvalida> {
 pub const MAXIMO_DE_NOTAS: u32 = 10_000;
 /// Uma música de tamanho comum. Mais curta rende menos, mais longa rende um pouco mais.
 const NOTAS_DE_REFERENCIA: f64 = 400.0;
+/// Ajuste geral do ritmo: a fórmula dava XP demais e os níveis subiam rápido. Vale só para as partidas novas.
+const RITMO_DO_XP: f64 = 0.3;
 
 impl ResumoDaPartida {
     pub fn validar(self) -> Result<Self, PartidaInvalida> {
@@ -123,16 +125,41 @@ impl ResumoDaPartida {
         }
         Ok(self)
     }
+}
 
-    fn precisao(self) -> f64 {
-        f64::from(self.acertos) / f64::from(self.total)
+/// Abaixo disso de precisão a partida não rende XP: passar a música sem tocar não conta.
+const PRECISAO_MINIMA: f64 = 0.5;
+/// Chart curto demais para valer XP.
+pub const MINIMO_DE_NOTAS_PARA_XP: u32 = 50;
+
+/// De 0 a 1,5: zero até a precisão mínima, depois cresce mais que linear, para premiar quem joga bem.
+fn curva_da_precisao(precisao: f64) -> f64 {
+    if precisao < PRECISAO_MINIMA {
+        return 0.0;
+    }
+    let acima = (precisao.min(1.0) - PRECISAO_MINIMA) / (1.0 - PRECISAO_MINIMA);
+    1.5 * acima * acima
+}
+
+/// Repetir o mesmo chart várias vezes no dia rende cada vez menos. `repeticoes` é quantas
+/// partidas o jogador já fez nele nas últimas 24 horas, em qualquer dificuldade.
+fn peso_da_repeticao(repeticoes: u32) -> f64 {
+    match repeticoes {
+        0 | 1 => 1.0,
+        2 => 0.7,
+        3 => 0.5,
+        _ => 0.25,
     }
 }
 
-/// XP de uma partida: a dificuldade dá a base, a precisão vale de 50% a 150%
-/// e o tamanho da música de 25% a 150%. Ser vaiado ainda rende um pouco.
-pub fn xp_da_partida(partida: ResumoDaPartida) -> u64 {
-    let tamanho = (f64::from(partida.total) / NOTAS_DE_REFERENCIA).clamp(0.25, 1.5);
+/// XP de uma partida que o servidor rejulgou: a dificuldade dá a base, a precisão (pelo valor de cada nota)
+/// a curva, e a música mais longa rende mais, pela raiz do número de notas. Vaia e fantasma rendem menos,
+/// e o mesmo chart repetido no dia também. Tudo vezes `RITMO_DO_XP`.
+pub fn xp_da_partida(partida: ResumoDaPartida, precisao: f64, repeticoes: u32) -> u64 {
+    if partida.total < MINIMO_DE_NOTAS_PARA_XP {
+        return 0;
+    }
+    let tamanho = (f64::from(partida.total) / NOTAS_DE_REFERENCIA).sqrt().clamp(0.25, 1.5);
     let castigo = if partida.derrota {
         0.25
     } else if partida.fantasma {
@@ -140,7 +167,7 @@ pub fn xp_da_partida(partida: ResumoDaPartida) -> u64 {
     } else {
         1.0
     };
-    (partida.dificuldade.base() * (0.5 + partida.precisao()) * tamanho * castigo).round() as u64
+    (partida.dificuldade.base() * curva_da_precisao(precisao) * tamanho * castigo * peso_da_repeticao(repeticoes) * RITMO_DO_XP).round() as u64
 }
 
 /// XP para sair do nível `nivel` e chegar no seguinte. Cresce a cada nível.
@@ -210,29 +237,41 @@ mod tests {
 
     #[test]
     fn dificuldade_maior_rende_mais() {
-        let facil = xp_da_partida(partida(Dificuldade::Facil, 400, 400));
-        let expert = xp_da_partida(partida(Dificuldade::Expert, 400, 400));
+        let facil = xp_da_partida(partida(Dificuldade::Facil, 400, 400), 1.0, 0);
+        let expert = xp_da_partida(partida(Dificuldade::Expert, 400, 400), 1.0, 0);
         assert!(expert > facil);
     }
 
     #[test]
-    fn precisao_maior_rende_mais() {
-        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 400, 400)), 150);
-        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 200, 400)), 100);
-        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 0, 400)), 50);
+    fn a_precisao_cresce_mais_que_linear_e_abaixo_da_metade_nao_rende() {
+        let medio = partida(Dificuldade::Medio, 400, 400);
+        assert_eq!(xp_da_partida(medio, 1.0, 0), 45);
+        assert_eq!(xp_da_partida(medio, 0.75, 0), 11);
+        assert_eq!(xp_da_partida(medio, 0.5, 0), 0);
+        assert_eq!(xp_da_partida(medio, 0.3, 0), 0);
     }
 
     #[test]
-    fn musica_curta_rende_menos_e_longa_tem_teto() {
-        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 10, 10)), 38);
-        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 5000, 5000)), 225);
+    fn musica_longa_rende_pela_raiz_das_notas_com_teto_e_curta_demais_nao_rende() {
+        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 100, 100), 1.0, 0), 23);
+        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 1600, 1600), 1.0, 0), 68);
+        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 49, 49), 1.0, 0), 0);
+    }
+
+    #[test]
+    fn repetir_o_chart_no_dia_rende_cada_vez_menos() {
+        let medio = partida(Dificuldade::Medio, 400, 400);
+        assert_eq!(xp_da_partida(medio, 1.0, 1), 45);
+        assert_eq!(xp_da_partida(medio, 1.0, 2), 32);
+        assert_eq!(xp_da_partida(medio, 1.0, 3), 23);
+        assert_eq!(xp_da_partida(medio, 1.0, 10), 11);
     }
 
     #[test]
     fn vaia_e_fantasma_rendem_menos() {
         let normal = partida(Dificuldade::Medio, 400, 400);
-        assert_eq!(xp_da_partida(ResumoDaPartida { derrota: true, ..normal }), 38);
-        assert_eq!(xp_da_partida(ResumoDaPartida { fantasma: true, ..normal }), 75);
+        assert_eq!(xp_da_partida(ResumoDaPartida { derrota: true, ..normal }, 1.0, 0), 11);
+        assert_eq!(xp_da_partida(ResumoDaPartida { fantasma: true, ..normal }, 1.0, 0), 23);
     }
 
     #[test]

@@ -1,5 +1,5 @@
 import type { Resultado } from "@/modules/gameplay";
-import { carregarRecordes, estrelasDoResultado, recordeDe, salvarRecorde } from "./recordes";
+import { anotarRecorde, definirRecordes, estrelasDoResultado, recordeDe, recordesAtuais, recordesDaApi } from "./recordes";
 
 const resultado = (extra: Partial<Resultado> = {}): Resultado => ({
   musicaId: "neon",
@@ -12,7 +12,7 @@ const resultado = (extra: Partial<Resultado> = {}): Resultado => ({
   ...extra,
 });
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => definirRecordes([]));
 
 describe("estrelasDoResultado", () => {
   // A barra da partida e o resultado usam a mesma escala: pontos em relação à base da música (50 por nota).
@@ -39,50 +39,51 @@ describe("estrelasDoResultado", () => {
   });
 });
 
-describe("salvarRecorde", () => {
-  it("salva o primeiro resultado como recorde", () => {
-    expect(salvarRecorde(resultado())).toBe(true);
-    expect(recordeDe(carregarRecordes(), "neon", "medio")).toEqual({ pontos: 1000, estrelas: estrelasDoResultado(resultado()), fullCombo: false });
+describe("anotarRecorde", () => {
+  it("anota o primeiro resultado como recorde", () => {
+    expect(anotarRecorde(resultado())).toBe(true);
+    expect(recordeDe(recordesAtuais(), "neon", "medio")).toEqual({ pontos: 1000, estrelas: 1, fullCombo: false });
   });
 
   it("só substitui quando os pontos são maiores", () => {
-    salvarRecorde(resultado({ pontos: 1000 }));
-    expect(salvarRecorde(resultado({ pontos: 900 }))).toBe(false);
-    expect(salvarRecorde(resultado({ pontos: 1100 }))).toBe(true);
-    expect(recordeDe(carregarRecordes(), "neon", "medio")?.pontos).toBe(1100);
+    anotarRecorde(resultado({ pontos: 1000 }));
+    expect(anotarRecorde(resultado({ pontos: 900 }))).toBe(false);
+    expect(anotarRecorde(resultado({ pontos: 1100 }))).toBe(true);
+    expect(recordeDe(recordesAtuais(), "neon", "medio")?.pontos).toBe(1100);
   });
 
-  it("guarda um recorde para cada dificuldade", () => {
-    salvarRecorde(resultado({ dificuldade: "facil", pontos: 10 }));
-    expect(recordeDe(carregarRecordes(), "neon", "medio")).toBeUndefined();
-  });
-
-  it("não salva partida em que virou fantasma no multijogador: a vida zerou no meio", () => {
-    expect(salvarRecorde(resultado({ fantasma: true }))).toBe(false);
-  });
-
-  it("não salva derrotas", () => {
-    expect(salvarRecorde(resultado({ derrota: true }))).toBe(false);
+  it("não anota derrotas nem partida de fantasma", () => {
+    expect(anotarRecorde(resultado({ derrota: true }))).toBe(false);
+    expect(anotarRecorde(resultado({ fantasma: true }))).toBe(false);
+    expect(recordesAtuais()).toEqual({});
   });
 
   it("marca full combo quando acertou todas as notas", () => {
-    salvarRecorde(resultado({ acertos: 100 }));
-    expect(recordeDe(carregarRecordes(), "neon", "medio")?.fullCombo).toBe(true);
+    anotarRecorde(resultado({ acertos: 100, total: 100 }));
+    expect(recordeDe(recordesAtuais(), "neon", "medio")?.fullCombo).toBe(true);
   });
 
-  it("ignora recordes corrompidos", () => {
-    localStorage.setItem("riffrush.recordes", "{quebrado");
-    expect(carregarRecordes()).toEqual({});
+  it("cada instrumento tem o próprio recorde", () => {
+    anotarRecorde(resultado({ pontos: 500 }));
+    anotarRecorde(resultado({ pontos: 800, instrumento: "baixo" }));
+    expect(recordeDe(recordesAtuais(), "neon", "medio")?.pontos).toBe(500);
+    expect(recordeDe(recordesAtuais(), "neon", "medio", "baixo")?.pontos).toBe(800);
   });
 });
 
-describe("recordes por instrumento", () => {
-  it("cada instrumento tem o próprio recorde, e a guitarra mantém os recordes de antes", () => {
-    localStorage.setItem("riffrush.recordes", JSON.stringify({ "neon:medio": { pontos: 500, estrelas: 1, fullCombo: false } }));
-    salvarRecorde(resultado({ instrumento: "baixo", pontos: 300 }));
-    const recordes = carregarRecordes();
-    expect(recordeDe(recordes, "neon", "medio")?.pontos).toBe(500);
-    expect(recordeDe(recordes, "neon", "medio", "guitarra")?.pontos).toBe(500);
-    expect(recordeDe(recordes, "neon", "medio", "baixo")?.pontos).toBe(300);
+describe("recordesDaApi", () => {
+  it("monta os recordes com estrelas e full combo a partir das partidas da API", () => {
+    const recordes = recordesDaApi([
+      { musica_id: "encore:abc", dificuldade: "expert", instrumento: "guitarra", pontos: 10_000, acertos: 100, total: 100 },
+      { musica_id: "encore:abc", dificuldade: "expert", instrumento: "baixo", pontos: 2_500, acertos: 80, total: 100 },
+    ]);
+    expect(recordeDe(recordes, "encore:abc", "expert")).toEqual({ pontos: 10_000, estrelas: 4, fullCombo: true });
+    expect(recordeDe(recordes, "encore:abc", "expert", "baixo")).toEqual({ pontos: 2_500, estrelas: 2, fullCombo: false });
+  });
+
+  it("trocar de conta troca os recordes", () => {
+    definirRecordes([{ musica_id: "a", dificuldade: "facil", instrumento: "guitarra", pontos: 1, acertos: 1, total: 1 }]);
+    definirRecordes([]);
+    expect(recordesAtuais()).toEqual({});
   });
 });

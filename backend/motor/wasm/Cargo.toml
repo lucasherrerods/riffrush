@@ -1,0 +1,17 @@
+[package]
+name = "riffrush-motor-wasm"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Liga o motor ao app: o mesmo código que a API usa para rejulgar, compilado para WASM.
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+riffrush-motor = { path = ".." }
+wasm-bindgen = "=0.2.100"
+
+[profile.release]
+opt-level = "s"
+lto = true

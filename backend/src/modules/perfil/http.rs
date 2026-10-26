@@ -6,7 +6,7 @@ use serde::Serialize;
 use utoipa::ToSchema;
 
 use super::casos_de_uso::ErroDoPerfil;
-use super::dominio::{EstatisticasDaDificuldade, MusicaMaisTocada, PartidaRecente, PartidasNoInstrumento, Perfil};
+use super::dominio::{EstatisticasDaDificuldade, MusicaMaisTocada, PartidaRecente, PartidasNoInstrumento, Perfil, Recorde};
 use crate::modules::catalogo::DadosDaMusica;
 use crate::modules::conta::{NivelDaConta, Token};
 use crate::modules::progresso::{Dificuldade, Instrumento};
@@ -187,6 +187,37 @@ pub async fn perfil(State(estado): State<EstadoDoApp>, Token(token): Token) -> R
     Ok(Json(estado.perfil.perfil(&token).await?.into()))
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct RecordeDaConta {
+    musica_id: String,
+    #[schema(value_type = String, example = "expert")]
+    dificuldade: Dificuldade,
+    #[schema(value_type = String, example = "guitarra")]
+    instrumento: Instrumento,
+    pontos: u64,
+    acertos: u32,
+    total: u32,
+}
+
+impl From<Recorde> for RecordeDaConta {
+    fn from(r: Recorde) -> Self {
+        Self {
+            musica_id: r.musica_id,
+            dificuldade: r.dificuldade,
+            instrumento: r.instrumento,
+            pontos: r.pontos,
+            acertos: r.acertos,
+            total: r.total,
+        }
+    }
+}
+
+/// A melhor partida terminada de cada música, dificuldade e instrumento de quem está logado.
+#[utoipa::path(get, path = "/eu/recordes", responses((status = 200, body = [RecordeDaConta]), (status = 401)), security(("token" = [])))]
+pub async fn recordes(State(estado): State<EstadoDoApp>, Token(token): Token) -> Result<Json<Vec<RecordeDaConta>>, ErroDaApi> {
+    Ok(Json(estado.perfil.recordes(&token).await?.into_iter().map(Into::into).collect()))
+}
+
 pub fn rotas() -> Router<EstadoDoApp> {
-    Router::new().route("/eu/perfil", get(perfil))
+    Router::new().route("/eu/perfil", get(perfil)).route("/eu/recordes", get(recordes))
 }

@@ -24,6 +24,14 @@ export interface XpDaPartida {
   depois: NivelDaConta;
 }
 
+/** Partida de música do Encore: o XP entra na conta quando o servidor terminar de conferir o replay. */
+export interface PartidaNaFila {
+  pendente: true;
+  id: string;
+}
+
+export type RegistroDaPartida = XpDaPartida | PartidaNaFila;
+
 export interface PartidaParaAApi {
   musica_id: string;
   dificuldade: string;
@@ -74,6 +82,16 @@ export interface MusicaDoPerfil {
   capa?: string | null;
 }
 
+/** A melhor partida terminada de uma música, dificuldade e instrumento. */
+export interface RecordeDaConta {
+  musica_id: string;
+  dificuldade: Dificuldade;
+  instrumento: Instrumento;
+  pontos: number;
+  acertos: number;
+  total: number;
+}
+
 export interface PerfilDaApi {
   nome: string;
   avatar: string | null;
@@ -109,9 +127,10 @@ export function criarApi(base: string, buscar?: typeof fetch) {
       chamar<{ token: string; conta: ContaDaApi }>("POST", "/auth/google", { corpo: { codigo, verificador, redirect_uri, cliente } }),
     eu: (token: string) => chamar<ContaDaApi>("GET", "/eu", { token }),
     perfil: (token: string, sinal?: AbortSignal) => chamar<PerfilDaApi>("GET", "/eu/perfil", { token, sinal }),
+    recordes: (token: string) => chamar<RecordeDaConta[]>("GET", "/eu/recordes", { token }),
     sair: (token: string) => chamar<void>("POST", "/auth/sair", { token }),
     excluirConta: (token: string) => chamar<void>("DELETE", "/eu", { token }),
-    registrarPartida: (token: string, partida: PartidaParaAApi) => chamar<XpDaPartida>("POST", "/partidas", { token, corpo: partida }),
+    registrarPartida: (token: string, partida: PartidaParaAApi) => chamar<RegistroDaPartida>("POST", "/partidas", { token, corpo: partida }),
   };
 }
 

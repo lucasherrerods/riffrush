@@ -28,7 +28,7 @@ export const DOCUMENTOS: Record<Documento, ConteudoDoDocumento> = {
         titulo: "O que guardamos no servidor",
         paragrafos: [
           "Só quando você entra com o Google: o identificador da sua conta Google, o seu nome, o seu e-mail e o endereço da sua foto de perfil, como o Google nos informa. O e-mail aparece só para você, no menu da conta e no perfil.",
-          "O seu XP total e o resumo de cada partida: música, instrumento, dificuldade, pontos, acertos, total de notas, se foi vaiado e a data.",
+          "O seu XP total e o resumo de cada partida: música, instrumento, dificuldade, pontos, acertos, total de notas, se foi vaiado e a data. Junto vai o replay (as teclas que você tocou e quando): o servidor o usa para conferir as partidas de músicas do Encore, e guarda o da sua melhor partida em cada música para o ranking.",
           "As sessões de login, guardadas como um código embaralhado (hash) que vale por 30 dias. O código original fica só no seu aparelho.",
           "Se você ligar o chat global: as mensagens que manda, com o seu nome e o identificador da conta, ficam no servidor das salas online (Cloudflare) por até 24 horas, no máximo as 50 últimas do chat.",
           "Quando alguém denuncia uma mensagem, uma cópia dela (autor, texto e hora), com quem denunciou, fica guardada no nosso banco de dados para a moderação analisar até ser resolvida. Se a moderação banir a sua conta do chat, isso também fica no banco, ligado à sua conta.",
@@ -37,7 +37,7 @@ export const DOCUMENTOS: Record<Documento, ConteudoDoDocumento> = {
       {
         titulo: "O que fica só no seu aparelho",
         paragrafos: [
-          "Configurações, personagem, recordes e as músicas que você importa ficam salvos no próprio navegador ou no app, e não são enviados para nós.",
+          "Configurações, personagem e as músicas que você importa ficam salvos no próprio navegador ou no app, e não são enviados para nós. Os recordes saem das partidas guardadas na sua conta.",
           "No multijogador, o seu apelido, o personagem, a pontuação e as mensagens do chat da sala passam pelo servidor da sala só enquanto ela está aberta. Nada disso é guardado.",
           "A lista de pessoas que você silenciou no chat global fica só no seu aparelho.",
         ],

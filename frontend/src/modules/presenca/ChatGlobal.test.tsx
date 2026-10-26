@@ -126,4 +126,12 @@ describe("ChatGlobal", () => {
     await userEvent.click(within(dialogo).getByRole("button", { name: "Desbanir" }));
     await waitFor(() => expect(apiDaPresenca.desbanir).toHaveBeenCalledWith("t", "x"));
   });
+
+  it("entrar na conta sem ter respondido às regras não derruba a tela", () => {
+    vi.mocked(useConta).mockReturnValue({ conta: null, carregando: false });
+    const { rerender } = render(<ChatGlobal aceito={null} aoResponder={vi.fn()} />);
+    logado();
+    rerender(<ChatGlobal aceito={null} aoResponder={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Ligar o chat" })).toBeInTheDocument();
+  });
 });

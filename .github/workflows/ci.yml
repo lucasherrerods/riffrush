@@ -56,11 +56,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Dependências do Tauri no Linux
-        # O mirror do Ubuntu às vezes trava; sem limite o job ficaria pendurado por horas.
-        timeout-minutes: 5
-        run: |
-          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update
-          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+        # O mirror do Ubuntu é lento e às vezes trava baixando os ~180 pacotes. Com o cache, só a primeira
+        # execução depois de mudar a lista baixa do mirror; as outras restauram os .deb do cache do GitHub.
+        # O limite continua para o job não ficar pendurado por horas se o mirror travar de vez.
+        timeout-minutes: 15
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.3
+        with:
+          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          version: "1"
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
@@ -68,6 +71,45 @@ jobs:
       # O Tauri exige que a pasta do frontend exista para compilar, mesmo vazia.
       - run: mkdir -p dist
       - run: cargo test --manifest-path src-tauri/Cargo.toml
+
+  motor:
+    name: Testes do motor da partida
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend/motor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend/motor
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      - run: cargo fmt --check && cargo clippy -- -D warnings
+        working-directory: backend/motor/wasm
+      # O app roda este motor em WASM, com o .wasm commitado em frontend/src/modules/gameplay/wasm (o job web
+      # testa esse). Aqui o motor é recompilado e os testes de jogo do app rodam com o .wasm novo. Os dois
+      # conferem o mesmo tests/paridade.json, então um .wasm commitado que ficou para trás do código falha lá.
+      - run: rustup target add wasm32-unknown-unknown
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.100
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Testes de jogo do app com o motor recompilado
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run motor
+          npx vitest run src/modules/gameplay
 
   backend:
     name: Testes do backend

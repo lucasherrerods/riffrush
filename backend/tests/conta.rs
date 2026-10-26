@@ -112,15 +112,28 @@ async fn eu_pede_token() {
 }
 
 #[tokio::test]
-async fn partida_da_xp_e_sobe_de_nivel() {
+async fn partida_sem_chart_conferivel_entra_no_historico_sem_xp() {
     let app = app();
     let token = entrar(&app).await;
-    let (status, corpo) = chamar(&app, "POST", "/partidas", Some(&token), Some(partida())).await;
+    let mut expert = partida();
+    expert["dificuldade"] = json!("expert");
+    let (status, corpo) = chamar(&app, "POST", "/partidas", Some(&token), Some(expert)).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(corpo["xp_ganho"], 150);
-    assert_eq!((corpo["antes"]["nivel"].as_u64(), corpo["depois"]["nivel"].as_u64()), (Some(1), Some(2)));
+    assert_eq!(corpo["xp_ganho"], 0);
     let (_, eu) = chamar(&app, "GET", "/eu", Some(&token), None).await;
-    assert_eq!(eu["xp_total"], 150);
+    assert_eq!(eu["xp_total"], 0);
+}
+
+#[tokio::test]
+async fn partida_do_encore_vai_para_a_fila_com_202() {
+    let app = app();
+    let token = entrar(&app).await;
+    let mut do_encore = partida();
+    do_encore["musica_id"] = json!("encore:fb0079d4c2e025d5b8dd70724750a923");
+    do_encore["replay"] = json!("AgA=");
+    let (status, corpo) = chamar(&app, "POST", "/partidas", Some(&token), Some(do_encore.clone())).await;
+    assert_eq!(status, StatusCode::ACCEPTED);
+    assert_eq!(corpo["pendente"], true);
 }
 
 #[tokio::test]

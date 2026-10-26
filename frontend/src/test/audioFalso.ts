@@ -63,6 +63,11 @@ export class GanhoFalso {
   disconnect() {}
 }
 
+export class FiltroFalso extends GanhoFalso {
+  type = "lowpass";
+  frequency = new ParametroFalso();
+}
+
 /** AudioContext de mentira: registra o que foi criado para os testes conferirem. */
 export class AudioContextFalso {
   static instancias: AudioContextFalso[] = [];
@@ -97,6 +102,11 @@ export class AudioContextFalso {
   }
 
   fontes: FonteFalsa[] = [];
+  sampleRate = 44100;
+
+  createBiquadFilter() {
+    return new FiltroFalso();
+  }
 
   createBufferSource() {
     const fonte = new FonteFalsa();

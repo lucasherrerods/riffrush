@@ -121,6 +121,24 @@ describe("gravar e reproduzir", () => {
     expect(gravador.entradas).toEqual([{ tempo: 1.2, tipo: "tocar", pista: 0 }]);
   });
 
+  it("o toque que leva à derrota fica gravado no tempo do toque, e o replay dá a mesma derrota", () => {
+    // Vida inicial 0,5 e 0,03 por erro: 17 notas perdidas zeram a vida.
+    const muitas = Array.from({ length: 20 }, (_, i) => nota(1 + i * 0.2, 0));
+    const aoVivo = criarPartida(muitas);
+    const gravador = criarGravador(aoVivo);
+    gravador.tocar(1, 6);
+    expect(aoVivo.derrota).toBe(true);
+    expect(gravador.entradas).toEqual([{ tempo: 6, tipo: "tocar", pista: 1 }]);
+    // Depois da derrota nada mais conta: não grava.
+    gravador.tocar(0, 7);
+    expect(gravador.entradas).toHaveLength(1);
+
+    const reproduzida = criarPartida(muitas);
+    aplicarEntradas(reproduzida, gravador.entradas, 0, Infinity, []);
+    avancar(reproduzida, 10);
+    expect([reproduzida.derrota, reproduzida.erros, reproduzida.acertos]).toEqual([aoVivo.derrota, aoVivo.erros, aoVivo.acertos]);
+  });
+
   it("só grava o star power quando ele ativa de fato", () => {
     const gravador = criarGravador(criarPartida(chart));
     expect(gravador.ativarEstrela()).toBe(false);

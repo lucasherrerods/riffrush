@@ -12,7 +12,7 @@ use shared::estado::EstadoDoApp;
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida, modules::ranking::ranking, modules::ranking::geral, modules::ranking::musicas, modules::ranking::partida, modules::ranking::replay, modules::perfil::perfil, modules::presenca::ficha, modules::moderacao::denunciar, modules::moderacao::denuncias, modules::moderacao::resolver, modules::moderacao::banidos, modules::moderacao::banir, modules::moderacao::desbanir),
+    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida, modules::ranking::ranking, modules::ranking::geral, modules::ranking::musicas, modules::ranking::partida, modules::ranking::replay, modules::perfil::perfil, modules::perfil::recordes, modules::presenca::ficha, modules::moderacao::denunciar, modules::moderacao::denuncias, modules::moderacao::resolver, modules::moderacao::banidos, modules::moderacao::banir, modules::moderacao::desbanir),
     components(schemas(
         modules::saude::RespostaDeSaude,
         modules::conta::CorpoDoLogin,
@@ -21,6 +21,7 @@ use shared::estado::EstadoDoApp;
         modules::conta::NivelDaConta,
         modules::conta::CorpoDaPartida,
         modules::conta::RespostaDaPartida,
+        modules::conta::RespostaDaPartidaNaFila,
         modules::ranking::RespostaDoRanking,
         modules::ranking::PosicaoNoRanking,
         modules::ranking::RespostaDoGeral,
@@ -28,6 +29,7 @@ use shared::estado::EstadoDoApp;
         modules::ranking::MusicaNoRanking,
         modules::ranking::PartidaDoRanking,
         modules::perfil::RespostaDoPerfil,
+        modules::perfil::RecordeDaConta,
         modules::presenca::RespostaDaFicha,
         modules::moderacao::CorpoDaDenuncia,
         modules::moderacao::DenunciaDaModeracao,

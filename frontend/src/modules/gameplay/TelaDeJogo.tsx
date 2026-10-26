@@ -90,7 +90,7 @@ interface Props {
     adversarios?: ReactNode;
   };
   aoSair: () => void;
-  /** `gerarReplay` só vem quando a partida vale para o ranking: sem bot, sem derrota e sem ser um replay. */
+  /** `gerarReplay` só vem quando o jogador tocou de verdade: sem bot, sem derrota e sem ser um replay. A API decide o que vale para o ranking. */
   aoTerminar: (resultado: Resultado, gerarReplay?: () => Promise<Uint8Array>) => void;
   /** Assiste a uma partida gravada: as entradas vêm do replay e o teclado só pausa. */
   replay?: Replay;
@@ -280,6 +280,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     const explosoes: Cena["explosoes"] = [];
     const trovoes: Cena["trovoes"] = [];
     let estrelaDesde: number | null = null;
+    let julgamento: Cena["julgamento"] = null;
     let reacao: Reacao | null = null;
     const reagir = (tipo: Reacao["tipo"]) => (reacao = novaReacao(reacao, tipo));
     let ultimoTrovao = -Infinity;
@@ -318,7 +319,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         setDerrota(true);
       } else {
         const resultado = resultadoDaPartida(partida, musica.id, dificuldade, instrumento);
-        const valeParaORanking = !bot && !replay && !partida.fantasma;
+        // Fantasma também manda: a API rejulga o replay das músicas do Encore para dar o XP, e deixa o fantasma fora do ranking.
+        const tocouDeVerdade = !bot && !replay;
         const gerarReplay = async () =>
           empacotarReplay({
             semFalha: opcoes.semFalha,
@@ -326,7 +328,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
             hashDoChart: await hashDoChart(carregada.notas),
             entradas: gravador.entradas,
           });
-        aoTerminar(resultado, valeParaORanking ? gerarReplay : undefined);
+        aoTerminar(resultado, tocouDeVerdade ? gerarReplay : undefined);
       }
     };
 
@@ -334,6 +336,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       for (const evento of retirarEventos(partida)) {
         if (evento.tipo === "acerto") {
           explosoes.push({ pista: evento.nota.pista, tempo });
+          julgamento = { julgamento: evento.julgamento, tempo };
           if (explosoes.length > MAXIMO_DE_EXPLOSOES) explosoes.shift();
           const forca = forcaDoTrovao(partida.sequencia);
           if (forca) {
@@ -533,6 +536,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
             frasesFalhas: partida.frasesFalhas,
             trovoes,
             estrelaDesde,
+            julgamento,
           },
           opcoes.efeitos,
           sprites,
@@ -650,9 +654,9 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
               <span
                 role="status"
                 aria-label={`${espectadores} ${espectadores === 1 ? "pessoa assistindo" : "pessoas assistindo"}`}
-                className="flex shrink-0 items-center gap-2 rounded-md bg-superficie px-2 py-1 font-mono text-base font-bold tabular-nums"
+                className="flex shrink-0 items-center gap-2 rounded-md border border-primaria/50 bg-primaria/15 px-2 py-1 font-mono text-base font-bold text-primaria tabular-nums"
               >
-                <Eye className="size-4 opacity-70" aria-hidden />
+                <Eye className="size-4" aria-hidden />
                 {espectadores}
               </span>
             )}

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use super::casos_de_uso::{ErroDaConta, PartidaEnviada, XpDaPartida};
+use super::casos_de_uso::{ErroDaConta, PartidaEnviada, Registro, XpDaPartida};
 use super::dominio::Conta;
 use super::portas::{ClienteDoGoogle, PedidoDeLogin};
 use crate::modules::progresso::{Dificuldade, Instrumento, Nivel, ResumoDaPartida};
@@ -19,7 +19,7 @@ impl From<ErroDaConta> for ErroDaApi {
     fn from(erro: ErroDaConta) -> Self {
         match erro {
             ErroDaConta::SessaoInvalida | ErroDaConta::LoginRecusado => Self::NaoAutorizado,
-            ErroDaConta::PartidaInvalida(_) | ErroDaConta::MusicaInvalida => Self::Invalido(erro.to_string()),
+            ErroDaConta::PartidaInvalida(_) | ErroDaConta::MusicaInvalida | ErroDaConta::ReplayObrigatorio => Self::Invalido(erro.to_string()),
             ErroDaConta::RapidoDemais => Self::MuitasRequisicoes,
             ErroDaConta::Falha(falha) => Self::Interno(falha.0),
         }
@@ -180,6 +180,13 @@ pub struct RespostaDaPartida {
     depois: NivelDaConta,
 }
 
+/// Partida de música do Encore: o XP entra na conta quando o servidor terminar de rejulgar o replay.
+#[derive(Serialize, ToSchema)]
+pub struct RespostaDaPartidaNaFila {
+    pendente: bool,
+    id: Uuid,
+}
+
 impl From<XpDaPartida> for RespostaDaPartida {
     fn from(xp: XpDaPartida) -> Self {
         Self {
@@ -190,13 +197,15 @@ impl From<XpDaPartida> for RespostaDaPartida {
     }
 }
 
-/// Registra o resumo de uma partida. O XP é calculado aqui, nunca vem do cliente.
-#[utoipa::path(post, path = "/partidas", request_body = CorpoDaPartida, responses((status = 200, body = RespostaDaPartida), (status = 400), (status = 401), (status = 429)), security(("token" = [])))]
+/// Registra uma partida. O XP é calculado aqui, nunca vem do cliente. Nas músicas do Encore, a partida
+/// entra numa fila e o servidor rejulga o replay antes de dar o XP (202).
+#[utoipa::path(post, path = "/partidas", request_body = CorpoDaPartida, responses((status = 200, body = RespostaDaPartida), (status = 202, body = RespostaDaPartidaNaFila), (status = 400), (status = 401), (status = 429)), security(("token" = [])))]
 pub async fn registrar_partida(
     State(estado): State<EstadoDoApp>,
     Token(token): Token,
     Json(corpo): Json<CorpoDaPartida>,
-) -> Result<Json<RespostaDaPartida>, ErroDaApi> {
+) -> Result<axum::response::Response, ErroDaApi> {
+    use axum::response::IntoResponse;
     let replay = match corpo.replay {
         Some(texto) => Some(BASE64_STANDARD.decode(texto).map_err(|_| ErroDaApi::Invalido("o replay não é base64".into()))?),
         None => None,
@@ -215,7 +224,10 @@ pub async fn registrar_partida(
         },
         replay,
     };
-    Ok(Json(estado.conta.registrar_partida(&token, partida).await?.into()))
+    Ok(match estado.conta.registrar_partida(&token, partida).await? {
+        Registro::Registrada(xp) => Json(RespostaDaPartida::from(xp)).into_response(),
+        Registro::NaFila { id } => (StatusCode::ACCEPTED, Json(RespostaDaPartidaNaFila { pendente: true, id })).into_response(),
+    })
 }
 
 pub fn rotas() -> Router<EstadoDoApp> {

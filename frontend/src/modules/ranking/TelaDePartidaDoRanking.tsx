@@ -64,6 +64,7 @@ function comoResultado(p: PartidaDoRanking) {
     instrumento: p.instrumento,
     pontos: p.pontos,
     acertos: p.acertos,
+    precisao: p.precisao ?? undefined,
     total: p.total,
     maiorSequencia: p.maior_sequencia,
     derrota: p.derrota,

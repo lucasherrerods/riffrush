@@ -57,6 +57,15 @@ describe("TelaDeResultado", () => {
     expect(screen.getByLabelText("12.345 pontos").compareDocumentPosition(precisao) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it("usa a precisão de cada julgamento, com duas casas, e mostra quantos de cada", () => {
+    abrir({ resultado: { ...resultado, precisao: 0.8535, julgamentos: { perfeito: 80, otimo: 7, bom: 3 } } });
+    expect(screen.getByLabelText("Precisão")).toHaveTextContent("85,35%");
+    expect(screen.getByText("Perfeito").previousSibling).toHaveTextContent("80");
+    expect(screen.getByText("Ótimo").previousSibling).toHaveTextContent("7");
+    expect(screen.getByText("Bom").previousSibling).toHaveTextContent("3");
+    expect(screen.getByText("Erro").previousSibling).toHaveTextContent("10");
+  });
+
   it("mostra as estatísticas da partida", () => {
     abrir();
     expect(screen.getByText("90 / 100")).toBeInTheDocument();

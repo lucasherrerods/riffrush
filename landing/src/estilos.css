@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+@import "@fontsource/bebas-neue";
+@import "@fontsource/rubik-dirt";
+@import "../../frontend/src/shared/styles/identidade.css";
+
+@source "../../frontend/src/shared/ui/IconeGithub.tsx";
+
+html {
+  scroll-behavior: smooth;
+  /* Sem isso o celular alarga a página para caber o que as animações jogam para fora. */
+  overflow-x: clip;
+}
+
+body {
+  font-family: "Geist Variable", sans-serif;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--cor-primaria);
+  color: var(--cor-texto);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

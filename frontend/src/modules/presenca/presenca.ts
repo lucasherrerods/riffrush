@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { sessaoDaConta } from "@/modules/conta";
+import { sessaoDaConta, useConta } from "@/modules/conta";
 import { URL_DO_RELAY } from "@/modules/multiplayer";
 import { apiDaPresenca } from "./api";
 import { ConexaoDoChatGlobal } from "./conexaoDoChat";
@@ -28,7 +28,14 @@ export function usePresenca() {
 export const transmitirPartida = (partida: PartidaParaTransmitir, aoContarEspectadores?: (quantos: number) => void) =>
   criarTransmissao(partida, { urlDoRelay: URL_DO_RELAY, pedirFicha, aoContarEspectadores });
 
-/** Se quem está jogando é da moderação do chat; só se sabe com o chat global conectado. */
+/** O último status de moderação visto de cada conta: o chat só fica conectado no menu. */
+const moderacaoConhecida = new Map<string, boolean>();
+
+/** Se quem está jogando é da moderação do chat. Com o chat desconectado (fora do menu), vale o último status visto. */
 export function useSouDaModeracao() {
-  return useSyncExternalStore(chatGlobal.inscrever, () => !!chatGlobal.estado().voce?.admin);
+  const { conta } = useConta();
+  const agora = useSyncExternalStore(chatGlobal.inscrever, () => chatGlobal.estado().voce?.admin);
+  if (!conta) return false;
+  if (agora !== undefined) moderacaoConhecida.set(conta.id, agora);
+  return moderacaoConhecida.get(conta.id) ?? false;
 }

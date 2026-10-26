@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::dominio::{montar_perfil, Perfil, PARTIDAS_RECENTES};
+use super::dominio::{montar_perfil, Perfil, Recorde, PARTIDAS_RECENTES};
 use super::portas::RepositorioDoPerfil;
 use crate::modules::catalogo::ServicosDoCatalogo;
 use crate::modules::conta::{FalhaExterna, ServicosDaConta};
@@ -31,6 +31,12 @@ impl ServicosDoPerfil {
         perfil.musicas = self.catalogo.dados(&perfil.ids_das_musicas()).await;
         Ok(perfil)
     }
+
+    /// Os recordes de quem está logado, para a seleção de músicas mostrar em qualquer aparelho.
+    pub async fn recordes(&self, token: &str) -> Result<Vec<Recorde>, ErroDoPerfil> {
+        let conta = self.conta.conta_da_sessao(token).await.map_err(|_| ErroDoPerfil::SessaoInvalida)?;
+        Ok(self.repositorio.recordes(conta.id).await?)
+    }
 }
 
 /// Fake do repositório, para os testes daqui e os de integração (feature `testes`).
@@ -43,11 +49,12 @@ pub mod fakes {
     use uuid::Uuid;
 
     use super::*;
-    use crate::modules::perfil::dominio::DadosDoPerfil;
+    use crate::modules::perfil::dominio::{DadosDoPerfil, Recorde};
 
     #[derive(Default)]
     pub struct PerfilEmMemoria {
         pub dados: Mutex<HashMap<Uuid, DadosDoPerfil>>,
+        pub recordes: Mutex<HashMap<Uuid, Vec<Recorde>>>,
         /// Quantas recentes o último pedido quis.
         pub ultimo_limite: Mutex<Option<u32>>,
     }
@@ -67,6 +74,10 @@ pub mod fakes {
         async fn dados(&self, conta_id: Uuid, recentes: u32) -> Result<Option<DadosDoPerfil>, FalhaExterna> {
             *self.ultimo_limite.lock().unwrap() = Some(recentes);
             Ok(self.dados.lock().unwrap().get(&conta_id).cloned())
+        }
+
+        async fn recordes(&self, conta_id: Uuid) -> Result<Vec<Recorde>, FalhaExterna> {
+            Ok(self.recordes.lock().unwrap().get(&conta_id).cloned().unwrap_or_default())
         }
     }
 }
@@ -126,5 +137,24 @@ mod tests {
     async fn sem_sessao_valida_e_recusado() {
         let (servicos, _) = servicos_do_perfil(servicos().0);
         assert!(matches!(servicos.perfil("inventado").await, Err(ErroDoPerfil::SessaoInvalida)));
+        assert!(matches!(servicos.recordes("inventado").await, Err(ErroDoPerfil::SessaoInvalida)));
+    }
+
+    #[tokio::test]
+    async fn devolve_os_recordes_de_quem_esta_logado() {
+        let conta = servicos().0;
+        let entrada = conta.entrar_com_google(&pedido("bom")).await.unwrap();
+        let (servicos, repositorio) = servicos_do_perfil(conta);
+        let recorde = Recorde {
+            musica_id: "encore:abc".into(),
+            dificuldade: crate::modules::progresso::Dificuldade::Expert,
+            instrumento: crate::modules::progresso::Instrumento::Guitarra,
+            pontos: 900,
+            acertos: 10,
+            total: 10,
+        };
+        repositorio.recordes.lock().unwrap().insert(entrada.conta.id, vec![recorde.clone()]);
+
+        assert_eq!(servicos.recordes(&entrada.token).await.unwrap(), vec![recorde]);
     }
 }

@@ -13,7 +13,7 @@ class Memoria {
 
 function montar(api: Partial<ApiDaConta> = {}, busca = "") {
   const ambiente: Ambiente = {
-    api: { entrar: vi.fn(async () => ({ token: "tok", conta })), eu: vi.fn(async () => conta), sair: vi.fn(async () => {}), excluirConta: vi.fn(async () => {}), registrarPartida: vi.fn(), perfil: vi.fn(), ...api },
+    api: { entrar: vi.fn(async () => ({ token: "tok", conta })), eu: vi.fn(async () => conta), sair: vi.fn(async () => {}), excluirConta: vi.fn(async () => {}), registrarPartida: vi.fn(), perfil: vi.fn(), recordes: vi.fn(async () => []), ...api },
     clientId: "id",
     local: new Memoria(),
     temporario: new Memoria(),
@@ -110,9 +110,17 @@ describe("SessaoDaConta", () => {
     ambiente.local.setItem("riffrush:token", "tok");
     await sessao.iniciar();
     const xp = await sessao.registrarPartida(resultado);
-    expect(xp?.xp_ganho).toBe(150);
+    expect(xp).toMatchObject({ xp_ganho: 150 });
     expect(vi.mocked(ambiente.api.registrarPartida).mock.calls[0][1]).toMatchObject({ musica_id: "m", instrumento: "guitarra", acertos: 4, fantasma: false, maior_sequencia: 4 });
     expect(sessao.estado().conta).toMatchObject({ xp_total: 150, nivel: depois });
+  });
+
+  it("partida que foi para a fila de validação não mexe no XP da conta", async () => {
+    const { sessao, ambiente } = montar({ registrarPartida: vi.fn(async () => ({ pendente: true as const, id: "p1" })) });
+    ambiente.local.setItem("riffrush:token", "tok");
+    await sessao.iniciar();
+    expect(await sessao.registrarPartida(resultado)).toEqual({ pendente: true, id: "p1" });
+    expect(sessao.estado().conta).toMatchObject({ xp_total: conta.xp_total });
   });
 
   it("sem conta, a partida não vai para a API", async () => {

@@ -1,6 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, configure } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach } from "vitest";
+import { iniciarMotorComBytes } from "@/modules/gameplay/partida";
 
 afterEach(() => cleanup());
 
@@ -13,3 +16,6 @@ globalThis.ResizeObserver ??= class {
   unobserve() {}
   disconnect() {}
 };
+
+// O motor da partida é WASM: no app ele carrega por fetch; aqui, direto do arquivo.
+iniciarMotorComBytes(readFileSync(resolve(process.cwd(), "src/modules/gameplay/wasm/motor_bg.wasm")));

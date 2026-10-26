@@ -6,6 +6,7 @@ use riffrush_api::modules::moderacao::{ModeracaoPostgres, RelayHttp, ServicosDeM
 use riffrush_api::modules::perfil::{PerfilPostgres, ServicosDoPerfil};
 use riffrush_api::modules::presenca::ServicosDePresenca;
 use riffrush_api::modules::ranking::{RankingPostgres, ServicosDoRanking};
+use riffrush_api::modules::rejulgamento::{iniciar_trabalhador, RejulgamentoPostgres, ServicosDoRejulgamento};
 use riffrush_api::modules::saude::BancoPostgres;
 use riffrush_api::shared::config::Config;
 use riffrush_api::shared::estado::EstadoDoApp;
@@ -24,6 +25,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     sqlx::migrate!("./migrations").run(&banco).await?;
 
     let contas = Arc::new(ContasPostgres(banco.clone()));
+    let rejulgamento = Arc::new(RejulgamentoPostgres(banco.clone()));
+    let relogio = Arc::new(RelogioDoSistema);
     let conta = ServicosDaConta {
         contas: contas.clone(),
         sessoes: contas,
@@ -38,12 +41,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .map(|(client_id, client_secret)| CredenciaisDoGoogle { client_id, client_secret }),
             http: reqwest::Client::new(),
         }),
-        relogio: Arc::new(RelogioDoSistema),
+        relogio: relogio.clone(),
         gerador: Arc::new(GeradorAleatorio),
+        fila: rejulgamento.clone(),
     };
+    // Um Encore só: a busca dos nomes e os downloads dos charts dividem o mesmo limite de pedidos.
+    let encore = Arc::new(Encore::novo(reqwest::Client::new(), relogio.clone(), rejulgamento.clone()));
     let catalogo = ServicosDoCatalogo {
         repositorio: Arc::new(CatalogoPostgres(banco.clone())),
-        encore: Arc::new(Encore { http: reqwest::Client::new() }),
+        encore: encore.clone(),
     };
     let ranking = ServicosDoRanking {
         repositorio: Arc::new(RankingPostgres(banco.clone())),
@@ -73,6 +79,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         segredo: segredo_do_relay,
         janelas: Default::default(),
     };
+    iniciar_trabalhador(ServicosDoRejulgamento {
+        fila: rejulgamento.clone(),
+        cache: rejulgamento,
+        fonte: encore,
+        conta: conta.clone(),
+        relogio,
+    });
     let estado = EstadoDoApp {
         banco: Arc::new(BancoPostgres(banco)),
         conta,

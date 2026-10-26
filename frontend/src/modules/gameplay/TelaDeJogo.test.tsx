@@ -439,6 +439,18 @@ describe("TelaDeJogo em rede", () => {
     await waitFor(() => expect(aoAtualizar).toHaveBeenCalledWith(expect.objectContaining({ fantasma: true, derrota: false })));
   });
 
+  it("fantasma também entrega o replay no fim, para a API conferir a partida", async () => {
+    carregarCom(Array.from({ length: 30 }, (_, i) => nota(i * 0.1)), 6);
+    const { aoTerminar } = abrirEmRede(performance.now());
+    await partidaPronta();
+    irPara(5);
+    expect(await screen.findByLabelText("Virou fantasma")).toBeInTheDocument();
+    irPara(7);
+    await waitFor(() => expect(aoTerminar).toHaveBeenCalled());
+    expect(aoTerminar.mock.calls[0][0]).toMatchObject({ fantasma: true });
+    expect(aoTerminar.mock.calls[0][1]).toBeTypeOf("function");
+  });
+
   it("manda o estado do jogador para a sala", async () => {
     carregarCom([nota(5)]);
     const { aoAtualizar } = abrirEmRede(performance.now() + 5000);
