@@ -13,3 +13,13 @@ export function medidaEntre(de: Medida, ate: Medida, progresso: number) {
   const px = arredondar(de.px + (ate.px - de.px) * t);
   return `calc(${porcento}% + ${px}px)`;
 }
+
+/** Largura de uma coluna numa grade de `total` colunas separadas por `espaco` px. */
+export function colunaDaGrade(total: number, espaco: number): Medida {
+  return { porcento: 100 / total, px: -(espaco * (total - 1)) / total };
+}
+
+/** Onde começa a coluna `indice`: as colunas anteriores e os espaços entre elas. */
+export function posicaoNaGrade(indice: number, total: number, espaco: number): Medida {
+  return { porcento: (100 * indice) / total, px: (espaco * indice) / total };
+}

@@ -1,29 +1,30 @@
 import { useRef } from "react";
 import { motion, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue } from "framer-motion";
+import bruno from "@/assets/team/bruno.webp";
 import felipe from "@/assets/team/felipe.webp";
 import lucas from "@/assets/team/lucas.webp";
 import vitor from "@/assets/team/vitor.webp";
-import { medidaEntre, poligonoDoCorte, type Medida } from "@/effects";
+import { colunaDaGrade, medidaEntre, poligonoDoCorte, posicaoNaGrade, type Medida } from "@/effects";
 import { Surge, Titulo } from "./comuns";
 
 const INTEGRANTES = [
   { nome: "Lucas", foto: lucas },
   { nome: "Vitor", foto: vitor },
+  { nome: "Bruno", foto: bruno },
   { nome: "Felipe", foto: felipe },
 ];
 
-/** Espaço entre os cards, em px; as colunas abaixo dependem dele. */
+/** O card que abre ocupando o palco; os outros saem de trás dele. */
+const DESTAQUE = 1;
+
+/** Espaço entre os cards, em px. */
 const GAP = 24;
-const COLUNA: Medida = { porcento: 100 / 3, px: -(GAP * 2) / 3 };
-const POSICOES: Medida[] = [
-  { porcento: 0, px: 0 },
-  { porcento: 100 / 3, px: GAP / 3 },
-  { porcento: 200 / 3, px: (GAP * 2) / 3 },
-];
+const COLUNA = colunaDaGrade(INTEGRANTES.length, GAP);
+const POSICOES = INTEGRANTES.map((_, i) => posicaoNaGrade(i, INTEGRANTES.length, GAP));
 const TELA_CHEIA: Medida = { porcento: 100, px: 0 };
 const INICIO: Medida = { porcento: 0, px: 0 };
 
-/** Fases do scroll: o card do meio encolhe, os dos lados saem de trás dele e por fim os nomes aparecem. */
+/** Fases do scroll: o card em destaque encolhe, os outros saem de trás dele e por fim os nomes aparecem. */
 const ENCOLHE: [number, number] = [0.05, 0.5];
 const ABRE: [number, number] = [0.3, 0.7];
 const NOMES: [number, number] = [0.65, 0.9];
@@ -38,17 +39,17 @@ function Nome({ nome, progresso, indice }: { nome: string; progresso: MotionValu
   const y = useTransform(progresso, [NOMES[0] + atraso, NOMES[1] + atraso], [24, 0]);
   return (
     <motion.figcaption style={{ opacity, y }} className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-fundo/90 to-transparent px-6 pt-16 pb-5">
-      <span className="font-titulo text-5xl leading-none">{nome}</span>
+      <span className="font-titulo text-4xl leading-none lg:text-5xl">{nome}</span>
     </motion.figcaption>
   );
 }
 
-/** O card do meio: começa ocupando o palco inteiro e encolhe até a coluna dele. */
-function CardDoMeio({ progresso }: { progresso: MotionValue<number> }) {
-  const { nome, foto } = INTEGRANTES[1];
+/** O card em destaque: começa ocupando o palco inteiro e encolhe até a coluna dele. */
+function CardEmDestaque({ progresso }: { progresso: MotionValue<number> }) {
+  const { nome, foto } = INTEGRANTES[DESTAQUE];
   const t = useTransform(progresso, ENCOLHE, [0, 1]);
   const width = useTransform(t, (v) => medidaEntre(TELA_CHEIA, COLUNA, v));
-  const left = useTransform(t, (v) => medidaEntre(INICIO, POSICOES[1], v));
+  const left = useTransform(t, (v) => medidaEntre(INICIO, POSICOES[DESTAQUE], v));
   const clipPath = useTransform(t, (v) => poligonoDoCorte(v * 16));
   const zoom = useTransform(t, [0, 1], [1.15, 1]);
   // Começa um pouco mais baixa que a coluna e cresce até ela enquanto estreita.
@@ -59,16 +60,16 @@ function CardDoMeio({ progresso }: { progresso: MotionValue<number> }) {
       <motion.div style={{ scale: zoom }} className="h-full w-full">
         <Foto nome={nome} foto={foto} />
       </motion.div>
-      <Nome nome={nome} progresso={progresso} indice={1} />
+      <Nome nome={nome} progresso={progresso} indice={DESTAQUE} />
     </motion.figure>
   );
 }
 
-/** Os cards dos lados: escondidos atrás do card do meio, deslizam para fora até a coluna deles. */
-function CardDoLado({ indice, progresso }: { indice: 0 | 2; progresso: MotionValue<number> }) {
+/** Os outros cards: escondidos atrás do destaque, deslizam até a coluna deles. */
+function CardQueSai({ indice, progresso }: { indice: number; progresso: MotionValue<number> }) {
   const { nome, foto } = INTEGRANTES[indice];
-  const lado = indice === 0 ? 1 : -1;
-  const x = useTransform(progresso, ABRE, [`${lado * 100}%`, "0%"]);
+  // Distância até o destaque, em larguras do próprio card.
+  const x = useTransform(progresso, ABRE, [`${(DESTAQUE - indice) * 100}%`, "0%"]);
   const opacity = useTransform(progresso, [ABRE[0], ABRE[0] + 0.1], [0, 1]);
   const scale = useTransform(progresso, ABRE, [0.85, 1]);
   return (
@@ -85,12 +86,12 @@ function CardDoLado({ indice, progresso }: { indice: 0 | 2; progresso: MotionVal
 /** Lista simples para celular e para quem prefere menos movimento. */
 function ListaSimples() {
   return (
-    <div className="grid gap-6 sm:grid-cols-3">
+    <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
       {INTEGRANTES.map((integrante) => (
         <Surge key={integrante.nome}>
           <figure className="chapa relative aspect-[4/5] overflow-hidden">
             <Foto {...integrante} />
-            <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-fundo/90 to-transparent px-6 pt-16 pb-5 font-titulo text-5xl leading-none">
+            <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-fundo/90 to-transparent px-4 pt-16 pb-4 font-titulo text-3xl leading-none sm:px-6 sm:pb-5 sm:text-5xl">
               {integrante.nome}
             </figcaption>
           </figure>
@@ -139,9 +140,10 @@ export function Equipe() {
           </motion.div>
           <div className="relative mx-auto mb-12 w-full max-w-6xl flex-1 px-6">
             <div className="relative h-full">
-              <CardDoLado indice={0} progresso={progresso} />
-              <CardDoLado indice={2} progresso={progresso} />
-              <CardDoMeio progresso={progresso} />
+              {INTEGRANTES.map((integrante, indice) =>
+                indice === DESTAQUE ? null : <CardQueSai key={integrante.nome} indice={indice} progresso={progresso} />,
+              )}
+              <CardEmDestaque progresso={progresso} />
             </div>
           </div>
         </div>

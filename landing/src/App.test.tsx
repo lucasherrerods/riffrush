@@ -41,7 +41,7 @@ describe("App", () => {
 
   it("apresenta a equipe com a foto de cada integrante", () => {
     render(<App />);
-    ["Lucas", "Felipe", "Vitor"].forEach((nome) => expect(screen.getAllByRole("img", { name: `Retrato de ${nome}` }).length).toBeGreaterThan(0));
+    ["Lucas", "Vitor", "Bruno", "Felipe"].forEach((nome) => expect(screen.getAllByRole("img", { name: `Retrato de ${nome}` }).length).toBeGreaterThan(0));
   });
 
   it("mostra os direitos autorais", () => {

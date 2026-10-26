@@ -1,4 +1,4 @@
-import { medidaEntre } from "./medida";
+import { colunaDaGrade, medidaEntre, posicaoNaGrade } from "./medida";
 
 describe("medidaEntre", () => {
   const cheio = { porcento: 100, px: 0 };
@@ -19,5 +19,24 @@ describe("medidaEntre", () => {
   it("não passa dos limites quando o progresso sai de 0 a 1", () => {
     expect(medidaEntre(cheio, terco, 2)).toBe(medidaEntre(cheio, terco, 1));
     expect(medidaEntre(cheio, terco, -1)).toBe(medidaEntre(cheio, terco, 0));
+  });
+});
+
+describe("colunaDaGrade e posicaoNaGrade", () => {
+  it("divide a largura em colunas iguais descontando os espaços", () => {
+    expect(colunaDaGrade(3, 24)).toEqual({ porcento: 100 / 3, px: -16 });
+    expect(colunaDaGrade(4, 24)).toEqual({ porcento: 25, px: -18 });
+  });
+
+  it("posiciona cada coluna logo depois da anterior e do espaço", () => {
+    expect(posicaoNaGrade(0, 4, 24)).toEqual({ porcento: 0, px: 0 });
+    expect(posicaoNaGrade(2, 4, 24)).toEqual({ porcento: 50, px: 12 });
+  });
+
+  it("encosta a última coluna na borda direita", () => {
+    const coluna = colunaDaGrade(4, 24);
+    const ultima = posicaoNaGrade(3, 4, 24);
+    expect(ultima.porcento + coluna.porcento).toBe(100);
+    expect(ultima.px + coluna.px).toBe(0);
   });
 });
