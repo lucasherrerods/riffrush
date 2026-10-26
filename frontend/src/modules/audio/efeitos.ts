@@ -37,3 +37,29 @@ export function tocarEfeito(nome: NomeDoEfeito, volume: number) {
   oscilador.start(inicio);
   oscilador.stop(inicio + efeito.duracao + 0.02);
 }
+
+/** Um trovão sintetizado: o estalo do raio e o ronco grave que vai sumindo. */
+export function tocarTrovao(volume: number) {
+  if (volume <= 0) return;
+  const audio = obterContextoDeAudio();
+  const inicio = audio.currentTime;
+  const duracao = 1.8;
+  const ruido = audio.createBuffer(1, Math.ceil(audio.sampleRate * duracao), audio.sampleRate);
+  const amostras = ruido.getChannelData(0);
+  for (let i = 0; i < amostras.length; i++) amostras[i] = Math.random() * 2 - 1;
+
+  const fonte = audio.createBufferSource();
+  fonte.buffer = ruido;
+  const filtro = audio.createBiquadFilter();
+  filtro.type = "lowpass";
+  // Começa aberto (o estalo) e fecha no grave (o ronco).
+  filtro.frequency.setValueAtTime(4000, inicio);
+  filtro.frequency.exponentialRampToValueAtTime(120, inicio + 0.35);
+  const ganho = audio.createGain();
+  ganho.gain.setValueAtTime(0.9 * volume, inicio);
+  ganho.gain.exponentialRampToValueAtTime(0.35 * volume, inicio + 0.3);
+  ganho.gain.exponentialRampToValueAtTime(0.0001, inicio + duracao);
+  fonte.connect(filtro).connect(ganho).connect(saidaDeAudio());
+  fonte.start(inicio);
+  fonte.stop(inicio + duracao);
+}

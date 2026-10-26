@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { definirTelaCheia } from "@/modules/platform";
@@ -40,6 +41,14 @@ vi.mock("@/modules/platform", () => ({
 // A partida de verdade é testada no módulo de gameplay; aqui só importa a ligação entre as telas.
 vi.mock("@/modules/gameplay", async (original) => ({
   ...(await original<typeof import("@/modules/gameplay")>()),
+  // A entrada com trovão abre na hora: os testes do App olham a partida, não a animação.
+  EntradaDaPartida: ({ aoAbrir, aoTerminar }: { aoAbrir: () => void; aoTerminar: () => void }) => {
+    useEffect(() => {
+      aoAbrir();
+      aoTerminar();
+    }, []);
+    return null;
+  },
   TelaDeJogo: ({ musica, dificuldade, recorde, rede, aoTerminar, aoSair }: { musica: { id: string; titulo: string }; dificuldade: string; recorde?: number; rede?: { adversarios?: React.ReactNode }; aoTerminar: (r: unknown) => void; aoSair: () => void }) => (
     <div>
       <h1>Jogando {musica.titulo}{rede ? " em rede" : ""}</h1>

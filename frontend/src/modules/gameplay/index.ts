@@ -19,6 +19,7 @@ export { resultadoDaPartida, type Resultado } from "./resultado";
 export { codigoDaEntrada, desempacotarReplay, emTicks, entradaDoCodigo, hashDoChart, type EntradaDoReplay, type EventoDaTransmissao, type Replay } from "./replay";
 export type { EstadoDoJogador } from "./rede";
 export { OPCOES_PADRAO_DA_PARTIDA, TelaDeJogo, type OpcoesDaPartida } from "./TelaDeJogo";
+export { EntradaDaPartida } from "./componentes/EntradaDaPartida";
 export { MedidorDeVida } from "./componentes/MedidorDeVida";
 export { corDaPrecisao } from "./componentes/PainelDePontos";
 export { estrelasPorPontos, progressoDasEstrelas } from "./estrelas";

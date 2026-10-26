@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { IndicadorDeVolume, definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/character";
 import { iniciarControle, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
-import { TelaDeJogo, type Resultado, desempacotarReplay, type Replay } from "@/modules/gameplay";
+import { EntradaDaPartida, TelaDeJogo, type Resultado, desempacotarReplay, type Replay } from "@/modules/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
 import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type XpDaPartida } from "@/modules/conta";
@@ -15,7 +15,7 @@ import { ChatGlobal, TelaDeEspectador, TelaOnline, presenca, presencaDisponivel,
 import { JanelaDoChart, TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
 import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
-import { MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
+import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { PainelDeRanking, PlacarAoVivo, TelaDeLeaderboard, TelaDePartidaDoRanking } from "@/modules/ranking";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
@@ -51,6 +51,8 @@ export function App() {
   const [resultado, setResultado] = useState<{ resultado: Resultado; recordeNovo: boolean } | null>(null);
   const [xpDaPartida, setXpDaPartida] = useState<XpDaPartida | null>(null);
   const [partida, setPartida] = useState(0);
+  /** A entrada com o trovão: `segurando` enquanto a partida ainda não monta por baixo dela. */
+  const [entrada, setEntrada] = useState<{ segurando: boolean } | null>(null);
   const [emRede, setEmRede] = useState<PartidaEmRede | null>(null);
   const [voltarDoPersonagemPara, setVoltarDoPersonagemPara] = useState<Tela>("menu");
   const [voltarDoPerfilPara, setVoltarDoPerfilPara] = useState<Tela>("menu");
@@ -246,6 +248,7 @@ export function App() {
     setEmRede(null);
     setAssistindo(null);
     setPartida((p) => p + 1);
+    setEntrada({ segurando: true });
     setTela("jogo");
   };
 
@@ -257,6 +260,7 @@ export function App() {
     setEmRede(null);
     setAssistindo({ replay, dificuldade: dificuldadeDoReplay, instrumento: instrumentoDoReplay });
     setPartida((p) => p + 1);
+    setEntrada({ segurando: true });
     setTela("jogo");
   };
 
@@ -331,6 +335,17 @@ export function App() {
   return (
     <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
       {!(naPista && configuracoes.modoCompetitivo) && <Fundo tocando={naPista} />}
+      {entrada && tela === "jogo" && (
+        <EntradaDaPartida
+          key={partida}
+          titulo={musica.titulo}
+          artista={musica.artista}
+          detalhe={[DIFICULDADES.find((d) => d.id === dificuldadeDaPartida)?.rotulo, INSTRUMENTOS.find((i) => i.id === instrumentoDaPartida)?.rotulo].filter(Boolean).join(" · ")}
+          volumeDosEfeitos={configuracoes.volumeDosEfeitos}
+          aoAbrir={() => setEntrada((atual) => (atual ? { segurando: false } : atual))}
+          aoTerminar={() => setEntrada(null)}
+        />
+      )}
       {!naPista && (
         <CabecalhoDoPlayerDeMusica volume={volumeGeral} aoMudarVolume={definirVolumeGeral}>
           {contasLigadas && (
@@ -519,7 +534,7 @@ export function App() {
                 }}
               />
             )}
-            {tela === "jogo" && (
+            {tela === "jogo" && !entrada?.segurando && (
               <TelaDeJogo
                 musica={musica}
                 dificuldade={dificuldadeDaPartida}
