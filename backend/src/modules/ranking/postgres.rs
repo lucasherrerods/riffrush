@@ -45,7 +45,7 @@ impl From<Linha> for LinhaDoRanking {
     }
 }
 
-/// O recorde de cada jogador (a view ordena por precisão, sequência e quem chegou primeiro), com o top e a linha de quem pediu.
+/// O recorde de cada jogador (a view ordena por pontos e, no empate, por quem chegou primeiro), com o top e a linha de quem pediu.
 const CONSULTA: &str = "
     SELECT r.posicao, r.jogadores, r.conta_id, r.partida_id, c.nome, c.avatar, r.pontos, r.acertos, r.total, r.precisao, r.maior_sequencia, r.jogada_em
     FROM recordes_do_ranking r
