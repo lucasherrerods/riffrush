@@ -39,6 +39,11 @@ describe("App", () => {
     expect(within(rodape).getByRole("link", { name: "Recursos" })).toHaveAttribute("href", "#recursos");
   });
 
+  it("apresenta a equipe com a foto de cada integrante", () => {
+    render(<App />);
+    ["Lucas", "Vitor", "Bruno", "Felipe"].forEach((nome) => expect(screen.getAllByRole("img", { name: `Retrato de ${nome}` }).length).toBeGreaterThan(0));
+  });
+
   it("mostra os direitos autorais", () => {
     render(<App />);
     expect(screen.getByText(/© 2026 Riff Rush/)).toBeInTheDocument();

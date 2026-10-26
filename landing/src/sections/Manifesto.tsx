@@ -28,7 +28,7 @@ function Instrumento({ indice, progresso }: { indice: number; progresso: MotionV
           {nome}
         </motion.p>
       </div>
-      <p className="mt-6 max-w-[36ch] text-xl text-texto-suave">{texto}</p>
+      <p className="mt-6 max-w-[36ch] text-lg text-texto-suave md:text-xl">{texto}</p>
     </motion.div>
   );
 }
@@ -59,9 +59,9 @@ export function Manifesto() {
   return (
     <section ref={ref} className="relative h-[300svh]">
       <div className="sticky top-0 flex h-svh flex-col overflow-hidden">
-        <div className="mx-auto flex w-full max-w-6xl items-end justify-between px-4 pt-28 md:px-6">
-          <h2 className="text-3xl text-texto-suave">Escolha o instrumento</h2>
-          <p className="font-titulo text-3xl text-texto-suave tabular-nums">
+        <div className="mx-auto flex w-full max-w-6xl items-end justify-between gap-4 px-4 pt-24 md:px-6 md:pt-28">
+          <h2 className="text-2xl text-texto-suave md:text-3xl">Escolha o instrumento</h2>
+          <p className="font-titulo text-2xl text-texto-suave tabular-nums md:text-3xl">
             <motion.span className="text-texto">{contador}</motion.span> / 0{TOTAL}
           </p>
         </div>

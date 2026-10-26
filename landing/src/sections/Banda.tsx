@@ -4,11 +4,11 @@ import { Surge, Titulo } from "./comuns";
 
 export function Banda() {
   return (
-    <section id="banda" className="scroll-mt-20 pb-32">
+    <section id="banda" className="scroll-mt-20 pb-20 md:pb-32">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <Surge className="flex flex-wrap items-end justify-between gap-6">
           <Titulo>Monte a sua banda</Titulo>
-          <p className="mb-12 max-w-[40ch] text-lg leading-relaxed text-texto-suave">
+          <p className="mb-8 max-w-[40ch] md:mb-12 text-lg leading-relaxed text-texto-suave">
             Cada um sobe com o próprio roqueiro. A sequência cresce, a banda vibra. Errou, ela sente.
           </p>
         </Surge>
