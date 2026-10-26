@@ -6,7 +6,7 @@ import { iniciarControle, nomeDoBotao, useControleConectado } from "@/modules/ga
 import { EntradaDaPartida, TelaDeJogo, type Resultado, desempacotarReplay, type Replay } from "@/modules/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
-import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type XpDaPartida } from "@/modules/conta";
+import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/player";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
@@ -49,7 +49,7 @@ export function App() {
   const [partidaAberta, setPartidaAberta] = useState<string | null>(null);
   const [assistindo, setAssistindo] = useState<{ replay: Replay; dificuldade: Dificuldade; instrumento: Instrumento } | null>(null);
   const [resultado, setResultado] = useState<{ resultado: Resultado; recordeNovo: boolean } | null>(null);
-  const [xpDaPartida, setXpDaPartida] = useState<XpDaPartida | null>(null);
+  const [xpDaPartida, setXpDaPartida] = useState<RegistroDaPartida | null>(null);
   const [partida, setPartida] = useState(0);
   /** A entrada com o trovão: `segurando` enquanto a partida ainda não monta por baixo dela. */
   const [entrada, setEntrada] = useState<{ segurando: boolean } | null>(null);

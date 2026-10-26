@@ -63,21 +63,27 @@ impl RepositorioDeContas for ContasPostgres {
     }
 
     async fn ultima_partida(&self, conta_id: Uuid) -> Result<Option<DateTime<Utc>>, FalhaExterna> {
-        sqlx::query_scalar("SELECT max(jogada_em) FROM partidas WHERE conta_id = $1")
-            .bind(conta_id)
-            .fetch_one(&self.0)
-            .await
-            .map_err(falha)
+        sqlx::query_scalar(
+            "SELECT max(quando) FROM (
+                SELECT jogada_em AS quando FROM partidas WHERE conta_id = $1
+                UNION ALL SELECT enviada_em FROM partidas_pendentes WHERE conta_id = $1
+             ) AS todas",
+        )
+        .bind(conta_id)
+        .fetch_one(&self.0)
+        .await
+        .map_err(falha)
     }
 
     async fn registrar_partida(&self, partida: &PartidaRegistrada) -> Result<Conta, FalhaExterna> {
         let mut transacao = self.0.begin().await.map_err(falha)?;
         let resumo = &partida.resumo;
-        sqlx::query(
+        let inserida = sqlx::query(
             "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, instrumento, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em, maior_sequencia, replay)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+             ON CONFLICT (id) DO NOTHING",
         )
-        .bind(Uuid::new_v4())
+        .bind(partida.id)
         .bind(partida.conta_id)
         .bind(&partida.musica_id)
         .bind(resumo.dificuldade.como_texto())
@@ -94,6 +100,11 @@ impl RepositorioDeContas for ContasPostgres {
         .execute(&mut *transacao)
         .await
         .map_err(falha)?;
+        if inserida.rows_affected() == 0 {
+            // A partida já foi registrada antes: devolve a conta sem somar o XP de novo.
+            transacao.rollback().await.map_err(falha)?;
+            return self.buscar(partida.conta_id).await?.ok_or_else(|| FalhaExterna("conta sumiu".into()));
+        }
         if partida.replay.is_some() {
             // Só o recorde guarda replay: as outras partidas desta música perdem o delas.
             sqlx::query(

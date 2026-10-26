@@ -88,6 +88,52 @@ pub fn desempacotar_replay(pacote: &[u8]) -> Result<Replay, ErroDoReplay> {
     })
 }
 
+/// O inverso de `desempacotar_replay`, no formato da versão atual. A API não grava replays; serve aos testes dela.
+pub fn empacotar_replay(replay: &Replay) -> Vec<u8> {
+    const CODIGOS: i64 = 13;
+    let mut bytes = vec![u8::from(replay.sem_falha) | (u8::from(replay.fantasma) << 1)];
+    bytes.extend((0..BYTES_DO_HASH).map(|i| u8::from_str_radix(replay.hash_do_chart.get(i * 2..i * 2 + 2).unwrap_or("00"), 16).unwrap_or(0)));
+    let em_ticks = |tempo: f64| {
+        // Tempos de música: cabem com folga num i64.
+        #[allow(clippy::cast_possible_truncation)]
+        let ticks = (tempo * TICKS_POR_SEGUNDO + 0.5).floor() as i64;
+        ticks
+    };
+    let mut anterior = replay.entradas.first().map_or(0, |e| em_ticks(e.tempo));
+    escrever_varint(
+        &mut bytes,
+        if anterior < 0 {
+            (-anterior * 2 - 1).unsigned_abs()
+        } else {
+            (anterior * 2).unsigned_abs()
+        },
+    );
+    escrever_varint(&mut bytes, replay.entradas.len() as u64);
+    for entrada in &replay.entradas {
+        let ticks = em_ticks(entrada.tempo);
+        let codigo = match (entrada.tipo, entrada.pista) {
+            (TipoDaEntrada::Estrela, _) => 10,
+            (TipoDaEntrada::Tocar, PISTA_ABERTA) => 11,
+            (TipoDaEntrada::Soltar, PISTA_ABERTA) => 12,
+            (TipoDaEntrada::Tocar, pista) => i64::from(pista),
+            (TipoDaEntrada::Soltar, pista) => 5 + i64::from(pista),
+        };
+        escrever_varint(&mut bytes, ((ticks - anterior) * CODIGOS + codigo).unsigned_abs());
+        anterior = ticks;
+    }
+    let mut pacote = vec![2];
+    pacote.extend(miniz_oxide::deflate::compress_to_vec(&bytes, 6));
+    pacote
+}
+
+fn escrever_varint(bytes: &mut Vec<u8>, mut valor: u64) {
+    while valor >= 128 {
+        bytes.push((valor % 128) as u8 | 128);
+        valor /= 128;
+    }
+    bytes.push(valor as u8);
+}
+
 /// 0 a 4 aperta a pista, 5 a 9 solta, 10 ativa o star power, 11 aperta e 12 solta a nota aberta.
 fn entrada_do_codigo(ticks: i64, codigo: u64) -> Entrada {
     // Os ticks de uma música cabem com folga nos 53 bits exatos do f64.
@@ -150,6 +196,33 @@ mod tests {
         assert_eq!(desempacotar_replay(&[42, 0]), Err(ErroDoReplay::VersaoDesconhecida));
         assert_eq!(desempacotar_replay(&[]), Err(ErroDoReplay::Corrompido));
         assert_eq!(desempacotar_replay(&[2, 1, 2, 3]), Err(ErroDoReplay::Corrompido));
+    }
+
+    #[test]
+    fn o_replay_empacotado_volta_igual() {
+        let replay = Replay {
+            sem_falha: true,
+            fantasma: false,
+            hash_do_chart: "00112233445566778899aabbccddeeff".into(),
+            entradas: vec![
+                Entrada {
+                    tempo: 1.25,
+                    tipo: TipoDaEntrada::Tocar,
+                    pista: 2,
+                },
+                Entrada {
+                    tempo: 1.5,
+                    tipo: TipoDaEntrada::Soltar,
+                    pista: PISTA_ABERTA,
+                },
+                Entrada {
+                    tempo: 2.0,
+                    tipo: TipoDaEntrada::Estrela,
+                    pista: 0,
+                },
+            ],
+        };
+        assert_eq!(desempacotar_replay(&empacotar_replay(&replay)), Ok(replay));
     }
 
     #[test]

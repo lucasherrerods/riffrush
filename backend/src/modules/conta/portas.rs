@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use super::dominio::{Conta, PerfilDoGoogle};
-use crate::modules::progresso::{Instrumento, ResumoDaPartida};
+use crate::modules::progresso::{Dificuldade, Instrumento, ResumoDaPartida};
 
 /// Algo de fora (banco, Google) falhou. O detalhe vai só para o log.
 #[derive(Debug, thiserror::Error)]
@@ -11,6 +11,7 @@ use crate::modules::progresso::{Instrumento, ResumoDaPartida};
 pub struct FalhaExterna(pub String);
 
 pub struct PartidaRegistrada {
+    pub id: Uuid,
     pub conta_id: Uuid,
     pub musica_id: String,
     pub instrumento: Instrumento,
@@ -22,13 +23,31 @@ pub struct PartidaRegistrada {
     pub replay: Option<Vec<u8>>,
 }
 
+/// Uma partida de chart do Encore à espera do servidor rejulgar o replay.
+pub struct PartidaNaFila {
+    pub id: Uuid,
+    pub conta_id: Uuid,
+    pub md5: String,
+    pub dificuldade: Dificuldade,
+    pub instrumento: Instrumento,
+    pub replay: Vec<u8>,
+    pub enviada_em: DateTime<Utc>,
+}
+
+#[async_trait]
+pub trait FilaDePartidas: Send + Sync {
+    async fn enfileirar(&self, partida: PartidaNaFila) -> Result<(), FalhaExterna>;
+}
+
 #[async_trait]
 pub trait RepositorioDeContas: Send + Sync {
     /// Primeiro login cria a conta; os seguintes atualizam nome e foto.
     async fn entrar(&self, perfil: &PerfilDoGoogle, novo_id: Uuid) -> Result<Conta, FalhaExterna>;
     async fn buscar(&self, id: Uuid) -> Result<Option<Conta>, FalhaExterna>;
+    /// A partida mais recente, contando as que ainda esperam na fila.
     async fn ultima_partida(&self, conta_id: Uuid) -> Result<Option<DateTime<Utc>>, FalhaExterna>;
     /// Guarda a partida e soma o XP na mesma transação; devolve a conta atualizada.
+    /// Uma partida com um id que já existe não muda nada: a fila pode entregar a mesma duas vezes.
     async fn registrar_partida(&self, partida: &PartidaRegistrada) -> Result<Conta, FalhaExterna>;
     /// Apaga a conta junto com as sessões e as partidas dela.
     async fn excluir(&self, id: Uuid) -> Result<(), FalhaExterna>;
