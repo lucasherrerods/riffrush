@@ -26,7 +26,6 @@ function cena(notas: Nota[], extra: Partial<Cena> = {}): Cena {
     frasesFalhas: new Set(),
     trovoes: [],
     estrelaDesde: null,
-    julgamento: null,
     ...extra,
   };
 }
@@ -108,12 +107,9 @@ describe("desenharPista", () => {
     expect(desenhar(comExplosao, 1.4).desenhos()).toHaveLength(0);
   });
 
-  it("escreve o julgamento do último acerto no meio do braço, mesmo sem efeitos, e some depois", () => {
-    const textos = (canvas: ReturnType<typeof desenhar>) => canvas.chamadas.filter((ch) => ch.metodo === "fillText").map((ch) => ch.args[0]);
-    const comJulgamento = cena([], { julgamento: { julgamento: "otimo", tempo: 1 } });
-    expect(textos(desenhar(comJulgamento, 1.2))).toEqual(["ÓTIMO"]);
-    expect(textos(desenhar(comJulgamento, 1.2, false))).toEqual(["ÓTIMO"]);
-    expect(textos(desenhar(comJulgamento, 1.6))).toEqual([]);
+  it("não escreve o julgamento no braço, para não tapar as notas", () => {
+    const textos = desenhar(cena([])).chamadas.filter((ch) => ch.metodo === "fillText");
+    expect(textos).toEqual([]);
   });
 
   it("desenha o rastro do sustain de uma nota sendo segurada", () => {
