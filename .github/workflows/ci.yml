@@ -69,6 +69,25 @@ jobs:
       - run: mkdir -p dist
       - run: cargo test --manifest-path src-tauri/Cargo.toml
 
+  motor:
+    name: Testes do motor da partida
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend/motor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend/motor
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+
   backend:
     name: Testes do backend
     runs-on: ubuntu-latest

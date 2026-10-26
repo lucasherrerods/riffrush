@@ -8,6 +8,7 @@ Jogo de ritmo estilo Guitar Hero / Clone Hero para desktop (Tauri), com multijog
 frontend/   o jogo: React + Tauri (desktop) + versão web servida aos celulares
 backend/    a API em Rust (contas, XP, partidas)
   relay/    Worker da Cloudflare do modo online, até ele virar parte da API
+  motor/    regras da partida em Rust, as mesmas do app, para a API rejulgar replays
 .github/    CI (precisa ficar na raiz)
 CLAUDE.md   este arquivo, único para o projeto inteiro
 ```
