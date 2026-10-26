@@ -461,7 +461,7 @@ async fn a_linha_do_ranking_abre_a_partida_com_a_maior_sequencia() {
         .unwrap();
 
     let linhas = ranking
-        .linhas(&musica, Dificuldade::Dificil, Instrumento::Baixo, Ordem::Precisao, 10, None)
+        .linhas(&musica, Dificuldade::Dificil, Instrumento::Baixo, Ordem::Pontos, 10, None)
         .await
         .unwrap();
     let partida = ranking.partida(linhas[0].partida_id).await.unwrap().unwrap();
@@ -518,7 +518,7 @@ async fn so_o_top_10_guarda_replay_e_quem_cai_perde_o_dele() {
 
     // Do mesmo jogador, só o recorde guarda o replay.
     let linhas = ranking
-        .linhas(&musica, Dificuldade::Facil, Instrumento::Guitarra, Ordem::Precisao, 10, None)
+        .linhas(&musica, Dificuldade::Facil, Instrumento::Guitarra, Ordem::Pontos, 10, None)
         .await
         .unwrap();
     let recorde = linhas[0].partida_id;
