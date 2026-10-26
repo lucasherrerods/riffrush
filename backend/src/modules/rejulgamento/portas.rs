@@ -38,6 +38,12 @@ pub trait CacheDeCharts: Send + Sync {
 }
 
 #[async_trait]
+pub trait LimiteDePedidos: Send + Sync {
+    /// Anota o pedido e devolve true se ele cabe no limite; sem espaço, não anota nada.
+    async fn pedir(&self, agora: DateTime<Utc>) -> Result<bool, FalhaExterna>;
+}
+
+#[async_trait]
 pub trait FonteDeCharts: Send + Sync {
     /// O .sng do chart, ou None se ele não existe lá.
     async fn baixar(&self, md5: &str) -> Result<Option<Vec<u8>>, FalhaExterna>;
