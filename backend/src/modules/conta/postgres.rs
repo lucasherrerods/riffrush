@@ -90,8 +90,8 @@ impl RepositorioDeContas for ContasPostgres {
                 .map_err(falha)?;
         }
         let inserida = sqlx::query(
-            "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, instrumento, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em, maior_sequencia, replay, precisao)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, instrumento, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em, maior_sequencia, replay, precisao, valor_dos_acertos)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
              ON CONFLICT (id) DO NOTHING",
         )
         .bind(partida.id)
@@ -109,6 +109,7 @@ impl RepositorioDeContas for ContasPostgres {
         .bind(resumo.maior_sequencia.map(|s| s as i32))
         .bind(partida.replay.as_deref())
         .bind(partida.precisao)
+        .bind(resumo.valor_dos_acertos.map(|v| i32::try_from(v).unwrap_or(i32::MAX)))
         .execute(&mut *transacao)
         .await
         .map_err(falha)?;

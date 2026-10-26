@@ -452,6 +452,7 @@ mod tests {
                 derrota: false,
                 fantasma: false,
                 maior_sequencia: None,
+                valor_dos_acertos: None,
             },
             replay: None,
         }

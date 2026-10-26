@@ -1,7 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import { CapaPequena, DIFICULDADES, INSTRUMENTOS, nomeDaMusica } from "@/modules/songs";
 import { useCarregamento } from "@/shared/hooks/useCarregamento";
-import { haQuantoTempo, porcentagem, precisaoDaPartida } from "@/shared/lib/formatar";
+import { haQuantoTempo, porcentagem } from "@/shared/lib/formatar";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
@@ -159,7 +159,7 @@ function Conteudo({ perfil, tituloDaMusica, mod }: { perfil: PerfilDaApi; titulo
                 </div>
                 <div className="flex flex-col items-end tabular-nums">
                   <span className="font-titulo text-xl leading-none">{formatar(p.pontos)}</span>
-                  <span className="text-sm text-texto-suave">{precisaoDaPartida(p.acertos, p.total)}</span>
+                  <span className="text-sm text-texto-suave">{porcentagem(p.precisao)}</span>
                 </div>
               </div>
             ))}

@@ -26,7 +26,7 @@ const perfil: PerfilDaApi = {
     { musica_id: "encore:abc", partidas: 7 },
     { musica_id: "encore:goofy", partidas: 2, titulo: "Goofy Goober Rock", artista: "Tom Rothrock", capa: "https://files.enchor.us/capa.jpg" },
   ],
-  recentes: [{ musica_id: "encore:abc", dificuldade: "expert", pontos: 98_500, acertos: 9, total: 10, derrota: true, jogada_em: "2026-10-20T12:00:00Z" }],
+  recentes: [{ musica_id: "encore:abc", dificuldade: "expert", pontos: 98_500, acertos: 9, total: 10, precisao: 0.25, derrota: true, jogada_em: "2026-10-20T12:00:00Z" }],
 };
 
 const tituloDaMusica = (id: string) => (id === "encore:abc" ? "Shine — Spektrem" : undefined);
@@ -50,6 +50,8 @@ describe("TelaDePerfil", () => {
     const goofy = screen.getByText("Goofy Goober Rock — Tom Rothrock").closest("li")!;
     expect(goofy.querySelector("img")).toHaveAttribute("src", "https://files.enchor.us/capa.jpg");
     expect(screen.getByText("Vaiada")).toBeInTheDocument();
+    // A precisão da partida vem da API, pesada pelo julgamento como no jogo, e não acertos sobre o total (90%).
+    expect(screen.getByText("25,00%")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "XP do nível 4" })).toBeInTheDocument();
   });
 

@@ -86,6 +86,7 @@ async fn partida_soma_xp_e_marca_a_ultima() {
             derrota: false,
             fantasma: false,
             maior_sequencia: None,
+            valor_dos_acertos: None,
         },
         xp_ganho: 120,
         jogada_em,
@@ -121,6 +122,7 @@ async fn excluir_apaga_a_conta_com_sessoes_e_partidas() {
             derrota: false,
             fantasma: false,
             maior_sequencia: None,
+            valor_dos_acertos: None,
         },
         xp_ganho: 10,
         jogada_em: agora,
@@ -156,6 +158,7 @@ async fn ranking_pega_o_recorde_de_cada_jogador_pelos_pontos() {
             derrota,
             fantasma: false,
             maior_sequencia: Some(5),
+            valor_dos_acertos: None,
         },
         xp_ganho: 0,
         jogada_em: agora + Duration::seconds(segundos),
@@ -224,6 +227,7 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
             derrota,
             fantasma: false,
             maior_sequencia: None,
+            valor_dos_acertos: None,
         },
         xp_ganho: 0,
         jogada_em: agora + Duration::seconds(segundos),
@@ -234,7 +238,14 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
         jogar("a", Dificuldade::Expert, 900, false, 0),
         // Vaiada conta como partida, mas não como melhor pontuação.
         jogar("a", Dificuldade::Expert, 5000, true, 1),
-        jogar("b", Dificuldade::Facil, 300, false, 2),
+        // App novo manda o valor dos acertos: 8 ÓTIMOS.
+        PartidaRegistrada {
+            resumo: ResumoDaPartida {
+                valor_dos_acertos: Some(8 * 100),
+                ..jogar("b", Dificuldade::Facil, 300, false, 2).resumo
+            },
+            ..jogar("b", Dificuldade::Facil, 300, false, 2)
+        },
     ] {
         banco.registrar_partida(&partida).await.unwrap();
     }
@@ -244,9 +255,19 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
     assert_eq!(dados.musicas_distintas, 2);
     let expert = dados.por_dificuldade.iter().find(|e| e.dificuldade == Dificuldade::Expert).unwrap();
     assert_eq!(
-        (expert.partidas, expert.derrotas, expert.acertos, expert.notas, expert.melhor_pontuacao),
-        (2, 1, 16, 20, 900)
+        (
+            expert.partidas,
+            expert.derrotas,
+            expert.valor_dos_acertos,
+            expert.notas,
+            expert.melhor_pontuacao
+        ),
+        // Sem o valor, cada acerto das partidas antigas conta como perfeito.
+        (2, 1, 16 * 300, 20, 900)
     );
+    let facil = dados.por_dificuldade.iter().find(|e| e.dificuldade == Dificuldade::Facil).unwrap();
+    assert_eq!(facil.valor_dos_acertos, 8 * 100);
+    assert_eq!(dados.recentes[0].valor_dos_acertos, 8 * 100);
     let recentes: Vec<_> = dados.recentes.iter().map(|p| p.musica_id.as_str()).collect();
     assert_eq!(recentes, ["b", "a"]);
     let instrumentos: Vec<_> = dados.por_instrumento.iter().map(|i| (i.instrumento, i.partidas)).collect();
@@ -276,6 +297,7 @@ async fn ranking_geral_ordena_por_xp_e_ignora_quem_nao_jogou() {
                 derrota: false,
                 fantasma: false,
                 maior_sequencia: None,
+                valor_dos_acertos: None,
             },
             xp_ganho: 1_000_000_000,
             jogada_em: Utc::now(),
@@ -315,6 +337,7 @@ async fn musicas_mais_jogadas_contam_partidas_e_jogadores_diferentes() {
                     derrota: false,
                     fantasma: false,
                     maior_sequencia: None,
+                    valor_dos_acertos: None,
                 },
                 xp_ganho: 0,
                 jogada_em: agora + Duration::seconds(i as i64),
@@ -351,6 +374,7 @@ async fn ranking_geral_da_a_posicao_certa_fora_do_top_e_no_empate() {
             derrota: false,
             fantasma: false,
             maior_sequencia: None,
+            valor_dos_acertos: None,
         },
         xp_ganho,
         jogada_em: Utc::now(),
@@ -400,6 +424,7 @@ async fn a_linha_do_ranking_abre_a_partida_com_a_maior_sequencia() {
                 derrota: false,
                 fantasma: false,
                 maior_sequencia: Some(6),
+                valor_dos_acertos: None,
             },
             xp_ganho: 0,
             jogada_em: Utc::now(),
@@ -444,6 +469,7 @@ async fn so_o_top_10_guarda_replay_e_quem_cai_perde_o_dele() {
             derrota: false,
             fantasma: false,
             maior_sequencia: None,
+            valor_dos_acertos: None,
         },
         xp_ganho: 0,
         jogada_em: agora + Duration::seconds(segundos),
@@ -571,6 +597,7 @@ async fn recordes_pegam_a_melhor_partida_terminada_de_cada_musica() {
             derrota,
             fantasma,
             maior_sequencia: None,
+            valor_dos_acertos: None,
         },
         xp_ganho: 0,
         jogada_em: Utc::now(),

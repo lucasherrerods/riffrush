@@ -1,5 +1,7 @@
 //! Regras de XP e nível. Só o servidor calcula: o cliente manda o resumo da partida e recebe o XP.
 
+use riffrush_motor::Julgamento;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Dificuldade {
@@ -77,6 +79,8 @@ pub struct ResumoDaPartida {
     pub fantasma: bool,
     /// Apps antigos não mandam.
     pub maior_sequencia: Option<u32>,
+    /// Soma do valor de cada acerto pelo julgamento (PERFEITO, ÓTIMO, BOM). Apps antigos não mandam.
+    pub valor_dos_acertos: Option<u32>,
 }
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -87,6 +91,8 @@ pub enum PartidaInvalida {
     AcertosDemais,
     #[error("a maior sequência passa dos acertos")]
     SequenciaDemais,
+    #[error("o valor dos acertos não bate com os julgamentos possíveis")]
+    ValorDosAcertosForaDaFaixa,
     #[error("o replay é inválido")]
     ReplayInvalido,
 }
@@ -123,8 +129,30 @@ impl ResumoDaPartida {
         if self.maior_sequencia.is_some_and(|s| s > self.acertos) {
             return Err(PartidaInvalida::SequenciaDemais);
         }
+        let faixa = self.acertos * Julgamento::Bom.valor()..=self.acertos * Julgamento::Perfeito.valor();
+        if self.valor_dos_acertos.is_some_and(|v| !faixa.contains(&v)) {
+            return Err(PartidaInvalida::ValorDosAcertosForaDaFaixa);
+        }
         Ok(self)
     }
+
+    /// De 0 a 1, como no jogo: cada nota pesa pelo julgamento, e só PERFEITO em todas dá 100%.
+    pub fn precisao(&self) -> f64 {
+        precisao_pelo_valor(u64::from(self.valor_dos_acertos()), u64::from(self.total))
+    }
+
+    /// Sem o valor (apps antigos), cada acerto conta como perfeito.
+    pub fn valor_dos_acertos(&self) -> u32 {
+        self.valor_dos_acertos.unwrap_or(self.acertos * Julgamento::Perfeito.valor())
+    }
+}
+
+/// A precisão de várias notas somadas: o valor dos acertos sobre o máximo possível.
+pub fn precisao_pelo_valor(valor_dos_acertos: u64, notas: u64) -> f64 {
+    if notas == 0 {
+        return 0.0;
+    }
+    valor_dos_acertos as f64 / (notas as f64 * f64::from(Julgamento::Perfeito.valor()))
 }
 
 /// Abaixo disso de precisão a partida não rende XP: passar a música sem tocar não conta.
@@ -232,6 +260,7 @@ mod tests {
             derrota: false,
             fantasma: false,
             maior_sequencia: None,
+            valor_dos_acertos: None,
         }
     }
 
@@ -293,6 +322,30 @@ mod tests {
         };
         assert_eq!(com_sequencia(9).validar(), Err(PartidaInvalida::SequenciaDemais));
         assert!(com_sequencia(8).validar().is_ok());
+    }
+
+    #[test]
+    fn recusa_valor_dos_acertos_fora_do_que_os_julgamentos_permitem() {
+        let com_valor = |v| ResumoDaPartida {
+            valor_dos_acertos: Some(v),
+            ..partida(Dificuldade::Medio, 8, 10)
+        };
+        // Oito acertos valem de 8 BONS (400) a 8 PERFEITOS (2400).
+        assert_eq!(com_valor(2401).validar(), Err(PartidaInvalida::ValorDosAcertosForaDaFaixa));
+        assert_eq!(com_valor(399).validar(), Err(PartidaInvalida::ValorDosAcertosForaDaFaixa));
+        assert!(com_valor(400).validar().is_ok());
+        assert!(com_valor(2400).validar().is_ok());
+    }
+
+    #[test]
+    fn precisao_pesa_o_julgamento_de_cada_nota_como_no_jogo() {
+        let so_otimos = ResumoDaPartida {
+            valor_dos_acertos: Some(10 * 100),
+            ..partida(Dificuldade::Medio, 10, 10)
+        };
+        assert!((so_otimos.precisao() - 1.0 / 3.0).abs() < 1e-9);
+        // Apps antigos não mandam o valor: cada acerto conta como perfeito, o cálculo de antes.
+        assert!((partida(Dificuldade::Medio, 5, 10).precisao() - 0.5).abs() < 1e-9);
     }
 
     #[test]

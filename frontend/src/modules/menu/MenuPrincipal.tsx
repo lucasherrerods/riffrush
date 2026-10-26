@@ -33,6 +33,7 @@ interface Item {
 }
 
 const URL_DO_PROJETO = "https://github.com/lucasherrerods/riffrush";
+const URL_DA_LANDING = "https://playriffrush.vercel.app";
 
 export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat }: Props) {
   const [selecionado, setSelecionado] = useState(0);
@@ -122,8 +123,8 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
       <footer className="absolute right-6 bottom-6 flex items-center gap-3 text-base text-texto-suave">
         {(
           [
-            ["privacidade", "Privacidade"],
-            ["termos", "Termos"],
+            ["privacidade", "Política de Privacidade"],
+            ["termos", "Termos de Uso"],
           ] as const
         ).map(([documento, rotulo]) => (
           <a
@@ -138,19 +139,29 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
             {rotulo}
           </a>
         ))}
+        <LinkExterno url={URL_DA_LANDING}>Sobre</LinkExterno>
         <span>© 2026 Riff Rush</span>
-        <a
-          href={URL_DO_PROJETO}
-          aria-label="Riff Rush no GitHub"
-          onClick={(evento) => {
-            evento.preventDefault();
-            void abrirLink(URL_DO_PROJETO);
-          }}
-          className="opacity-70 transition-opacity hover:opacity-100"
-        >
+        <LinkExterno url={URL_DO_PROJETO} rotulo="Riff Rush no GitHub">
           <IconeGithub />
-        </a>
+        </LinkExterno>
       </footer>
     </div>
+  );
+}
+
+/** Link para fora do jogo: no app desktop abre no navegador do sistema, e não dentro da janela. */
+function LinkExterno({ url, rotulo, children }: { url: string; rotulo?: string; children: ReactNode }) {
+  return (
+    <a
+      href={url}
+      aria-label={rotulo}
+      onClick={(evento) => {
+        evento.preventDefault();
+        void abrirLink(url);
+      }}
+      className="opacity-70 transition-opacity hover:opacity-100"
+    >
+      {children}
+    </a>
   );
 }

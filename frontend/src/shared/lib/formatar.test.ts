@@ -1,4 +1,4 @@
-import { haQuantoTempo, porcentagem, precisaoDaPartida } from "./formatar";
+import { haQuantoTempo, porcentagem } from "./formatar";
 
 describe("haQuantoTempo", () => {
   const agora = new Date("2026-10-24T12:00:00Z");
@@ -16,13 +16,6 @@ describe("haQuantoTempo", () => {
 
   it("um mês só fica no singular", () => {
     expect(haQuantoTempo("2026-09-20T12:00:00Z", agora)).toBe("há 1 mês");
-  });
-});
-
-describe("precisaoDaPartida", () => {
-  it("mostra a porcentagem com duas casas, como no osu!", () => {
-    expect(precisaoDaPartida(9946, 10000)).toBe("99,46%");
-    expect(precisaoDaPartida(0, 0)).toBe("0,00%");
   });
 });
 
