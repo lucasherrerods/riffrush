@@ -10,7 +10,7 @@ use std::time::Duration;
 
 pub use casos_de_uso::{Desfecho, ServicosDoRejulgamento};
 pub use dominio::{espera_da_tentativa, rejulgar, ChartGuardado, JanelaDePedidos, Recusa, Rejulgada, JANELA_DO_ENCORE, PEDIDOS_AO_ENCORE};
-pub use portas::{CacheDeCharts, FilaDoRejulgamento, FonteDeCharts, PartidaPendente};
+pub use portas::{CacheDeCharts, ChartBaixado, FilaDoRejulgamento, FonteDeCharts, PartidaPendente};
 pub use postgres::RejulgamentoPostgres;
 
 /// Sem nada na fila, espera um pouco antes de olhar de novo.

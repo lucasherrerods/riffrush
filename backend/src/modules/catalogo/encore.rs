@@ -2,12 +2,13 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use async_trait::async_trait;
+use riffrush_motor::ExtratorDeChart;
 use serde::Deserialize;
 
 use super::dominio::DadosDaMusica;
 use super::portas::FonteDeMusicas;
 use crate::modules::conta::{FalhaExterna, Relogio};
-use crate::modules::rejulgamento::{FonteDeCharts, JanelaDePedidos, JANELA_DO_ENCORE, PEDIDOS_AO_ENCORE};
+use crate::modules::rejulgamento::{ChartBaixado, FonteDeCharts, JanelaDePedidos, JANELA_DO_ENCORE, PEDIDOS_AO_ENCORE};
 
 const ENDERECO_DA_BUSCA: &str = "https://api.enchor.us/search/advanced";
 const ENDERECO_DOS_ARQUIVOS: &str = "https://files.enchor.us";
@@ -15,7 +16,8 @@ const ENDERECO_DOS_ARQUIVOS: &str = "https://files.enchor.us";
 const TEMPO_MAXIMO: Duration = Duration::from_secs(5);
 /// O .sng vem com o áudio: alguns MB que levam um tempo.
 const TEMPO_MAXIMO_DO_DOWNLOAD: Duration = Duration::from_secs(120);
-/// A versão sem vídeo de um chart fica bem abaixo disso; acima, é algo estranho.
+/// Só o chart fica na memória, mas um .sng com o chart depois de gigas de áudio ainda prende o download:
+/// passou disso sem achar o chart, desiste.
 const TAMANHO_MAXIMO_DO_SNG: usize = 200 * 1024 * 1024;
 
 /// O Encore (enchor.us), o mesmo que o app usa para baixar músicas. Os pedidos da busca e
@@ -123,25 +125,29 @@ impl FonteDeMusicas for Encore {
 
 #[async_trait]
 impl FonteDeCharts for Encore {
-    async fn baixar(&self, md5: &str) -> Result<Option<Vec<u8>>, FalhaExterna> {
+    async fn baixar(&self, md5: &str) -> Result<ChartBaixado, FalhaExterna> {
         let Some(endereco) = endereco_do_sng(&self.buscar(md5).await?, md5) else {
-            return Ok(None);
+            return Ok(ChartBaixado::NaoExiste);
         };
         self.pedir()?;
         let falha = |e: reqwest::Error| FalhaExterna(format!("encore: {e}"));
         let mut resposta = self.http.get(endereco).timeout(TEMPO_MAXIMO_DO_DOWNLOAD).send().await.map_err(falha)?;
         if resposta.status() == reqwest::StatusCode::NOT_FOUND {
-            return Ok(None);
+            return Ok(ChartBaixado::NaoExiste);
         }
         resposta = resposta.error_for_status().map_err(falha)?;
-        let mut sng = Vec::new();
+        let mut extrator = ExtratorDeChart::novo();
+        let mut lidos = 0;
         while let Some(pedaco) = resposta.chunk().await.map_err(falha)? {
-            if sng.len() + pedaco.len() > TAMANHO_MAXIMO_DO_SNG {
-                return Err(FalhaExterna("encore: .sng grande demais".into()));
+            lidos += pedaco.len();
+            match extrator.receber(&pedaco) {
+                // Achou o chart: o resto do arquivo (áudio) nem é baixado.
+                Ok(Some(chart)) => return Ok(ChartBaixado::Pronto(chart)),
+                Ok(None) if lidos <= TAMANHO_MAXIMO_DO_SNG => {}
+                Ok(None) | Err(_) => return Ok(ChartBaixado::Ilegivel),
             }
-            sng.extend_from_slice(&pedaco);
         }
-        Ok(Some(sng))
+        Ok(ChartBaixado::Ilegivel)
     }
 }
 

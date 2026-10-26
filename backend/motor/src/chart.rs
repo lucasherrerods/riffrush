@@ -48,39 +48,179 @@ pub struct PacoteSng {
     pub arquivos: HashMap<String, Vec<u8>>,
 }
 
-/// Lê o pacote: "SNGPKG", versão, máscara, metadados, índice e o conteúdo mascarado com XOR.
-pub fn ler_sng(bytes: &[u8]) -> Result<PacoteSng, ErroDoChart> {
-    if bytes.len() < 26 || &bytes[..6] != b"SNGPKG" {
+/// O começo do .sng: máscara, metadados e onde cada arquivo está. O conteúdo vem depois.
+struct Cabecalho {
+    mascara: [u8; 16],
+    metadados: HashMap<String, String>,
+    /// Nome (em minúsculas), posição no pacote e tamanho.
+    arquivos: Vec<(String, usize, usize)>,
+}
+
+/// Lê "SNGPKG", versão, máscara, metadados e índice. Devolve None enquanto `bytes` ainda não tem o cabeçalho inteiro.
+fn ler_cabecalho(bytes: &[u8]) -> Result<Option<Cabecalho>, ErroDoChart> {
+    if bytes.len() >= 6 && &bytes[..6] != b"SNGPKG" {
         return Err(ErroDoChart::SngInvalido);
     }
-    let mascara: [u8; 16] = bytes[10..26].try_into().map_err(|_| ErroDoChart::SngInvalido)?;
-    let mut leitor = Leitor { bytes, posicao: 26 };
+    // Cada seção começa pelo próprio tamanho: dá para saber se ela já chegou antes de ler.
+    let tamanho_em = |posicao: usize| -> Result<Option<usize>, ErroDoChart> {
+        match bytes.get(posicao..posicao + 8) {
+            None => Ok(None),
+            Some(b) => {
+                let tamanho = u64::from_le_bytes(b.try_into().map_err(|_| ErroDoChart::SngInvalido)?);
+                usize::try_from(tamanho).map(Some).map_err(|_| ErroDoChart::SngInvalido)
+            }
+        }
+    };
+    let Some(tamanho_dos_metadados) = tamanho_em(26)? else {
+        return Ok(None);
+    };
+    let inicio_do_indice = 34usize.checked_add(tamanho_dos_metadados).ok_or(ErroDoChart::SngInvalido)?;
+    let Some(tamanho_do_indice) = tamanho_em(inicio_do_indice)? else {
+        return Ok(None);
+    };
+    let fim_do_indice = (inicio_do_indice + 8).checked_add(tamanho_do_indice).ok_or(ErroDoChart::SngInvalido)?;
+    if bytes.len() < fim_do_indice {
+        return Ok(None);
+    }
 
+    let mascara: [u8; 16] = bytes[10..26].try_into().map_err(|_| ErroDoChart::SngInvalido)?;
+    let mut leitor = Leitor { bytes, posicao: 34 };
     let mut metadados = HashMap::new();
-    leitor.u64()?;
     for _ in 0..leitor.u64()? {
         let tamanho = leitor.i32()?;
         let chave = leitor.texto(tamanho)?;
         let tamanho = leitor.i32()?;
         metadados.insert(chave.to_lowercase(), leitor.texto(tamanho)?);
     }
-
-    let mut arquivos = HashMap::new();
-    leitor.u64()?;
+    leitor.posicao = inicio_do_indice + 8;
+    let mut arquivos = Vec::new();
     for _ in 0..leitor.u64()? {
         let tamanho = leitor.u8()?;
         let nome = leitor.texto(tamanho.into())?.to_lowercase();
         let tamanho = usize::try_from(leitor.u64()?).map_err(|_| ErroDoChart::SngInvalido)?;
         let inicio = usize::try_from(leitor.u64()?).map_err(|_| ErroDoChart::SngInvalido)?;
-        let fim = inicio.checked_add(tamanho).filter(|&f| f <= bytes.len()).ok_or(ErroDoChart::SngInvalido)?;
-        let conteudo = bytes[inicio..fim]
-            .iter()
-            .enumerate()
-            .map(|(j, b)| b ^ mascara[j & 15] ^ (j & 0xff) as u8)
-            .collect();
-        arquivos.insert(nome, conteudo);
+        arquivos.push((nome, inicio, tamanho));
     }
-    Ok(PacoteSng { metadados, arquivos })
+    Ok(Some(Cabecalho { mascara, metadados, arquivos }))
+}
+
+/// Tira a máscara XOR de um pedaço de um arquivo do pacote. `posicao` é a do primeiro byte do pedaço dentro do arquivo.
+fn desmascarar(mascara: [u8; 16], pedaco: &[u8], posicao: usize) -> Vec<u8> {
+    pedaco
+        .iter()
+        .enumerate()
+        .map(|(i, b)| {
+            let j = posicao + i;
+            b ^ mascara[j & 15] ^ (j & 0xff) as u8
+        })
+        .collect()
+}
+
+/// Lê o pacote inteiro, já na memória.
+pub fn ler_sng(bytes: &[u8]) -> Result<PacoteSng, ErroDoChart> {
+    let cabecalho = ler_cabecalho(bytes)?.ok_or(ErroDoChart::SngInvalido)?;
+    let mut arquivos = HashMap::new();
+    for (nome, inicio, tamanho) in cabecalho.arquivos {
+        let fim = inicio.checked_add(tamanho).filter(|&f| f <= bytes.len()).ok_or(ErroDoChart::SngInvalido)?;
+        arquivos.insert(nome, desmascarar(cabecalho.mascara, &bytes[inicio..fim], 0));
+    }
+    Ok(PacoteSng {
+        metadados: cabecalho.metadados,
+        arquivos,
+    })
+}
+
+/// O cabeçalho e o índice de um .sng cabem com folga nisto; mais que isso é arquivo estranho.
+const TAMANHO_MAXIMO_DO_CABECALHO: usize = 1024 * 1024;
+/// O maior chart de verdade tem poucas centenas de KB.
+const TAMANHO_MAXIMO_DO_CHART: usize = 16 * 1024 * 1024;
+
+/// Tira o chart de um .sng que chega aos poucos (um download), guardando só o cabeçalho e o chart.
+/// O áudio, que é quase todo o arquivo, passa sem ficar na memória, e o download pode parar assim que o chart chega.
+#[derive(Default)]
+pub struct ExtratorDeChart {
+    /// Quantos bytes do pacote já passaram.
+    recebidos: usize,
+    /// O começo do pacote, guardado até dar para ler o cabeçalho.
+    comeco: Vec<u8>,
+    alvo: Option<Alvo>,
+}
+
+struct Alvo {
+    mascara: [u8; 16],
+    inicio: usize,
+    tamanho: usize,
+    midi: bool,
+    atraso_ms: f64,
+    arquivo: Vec<u8>,
+}
+
+impl ExtratorDeChart {
+    pub fn novo() -> Self {
+        Self::default()
+    }
+
+    /// Recebe o próximo pedaço do pacote. Devolve o chart assim que ele chega inteiro.
+    pub fn receber(&mut self, pedaco: &[u8]) -> Result<Option<ChartGuardado>, ErroDoChart> {
+        let inicio_do_pedaco = self.recebidos;
+        self.recebidos += pedaco.len();
+        if self.alvo.is_some() {
+            return Ok(self.coletar(pedaco, inicio_do_pedaco));
+        }
+        self.comeco.extend_from_slice(pedaco);
+        let Some(cabecalho) = ler_cabecalho(&self.comeco)? else {
+            if self.comeco.len() > TAMANHO_MAXIMO_DO_CABECALHO {
+                return Err(ErroDoChart::SngInvalido);
+            }
+            return Ok(None);
+        };
+        self.alvo = Some(alvo_do_cabecalho(cabecalho)?);
+        // O começo guardado pode já ter parte do chart, ou ele inteiro.
+        let comeco = std::mem::take(&mut self.comeco);
+        Ok(self.coletar(&comeco, 0))
+    }
+
+    fn coletar(&mut self, pedaco: &[u8], inicio_do_pedaco: usize) -> Option<ChartGuardado> {
+        let alvo = self.alvo.as_mut()?;
+        let de = alvo.inicio.max(inicio_do_pedaco);
+        let ate = (alvo.inicio + alvo.tamanho).min(inicio_do_pedaco + pedaco.len());
+        if de < ate {
+            let trecho = &pedaco[de - inicio_do_pedaco..ate - inicio_do_pedaco];
+            alvo.arquivo.extend(desmascarar(alvo.mascara, trecho, de - alvo.inicio));
+        }
+        (alvo.arquivo.len() >= alvo.tamanho).then(|| ChartGuardado {
+            arquivo: std::mem::take(&mut alvo.arquivo),
+            midi: alvo.midi,
+            atraso_ms: alvo.atraso_ms,
+        })
+    }
+}
+
+/// O app prefere o .chart quando o pacote tem os dois.
+fn alvo_do_cabecalho(cabecalho: Cabecalho) -> Result<Alvo, ErroDoChart> {
+    let achar = |nome: &str| {
+        cabecalho
+            .arquivos
+            .iter()
+            .find(|(n, _, _)| n == nome)
+            .map(|&(_, inicio, tamanho)| (inicio, tamanho))
+    };
+    let ((inicio, tamanho), midi) = match (achar("notes.chart"), achar("notes.mid")) {
+        (Some(chart), _) => (chart, false),
+        (None, Some(midi)) => (midi, true),
+        (None, None) => return Err(ErroDoChart::SemChart),
+    };
+    if tamanho > TAMANHO_MAXIMO_DO_CHART || inicio.checked_add(tamanho).is_none() {
+        return Err(ErroDoChart::SngInvalido);
+    }
+    Ok(Alvo {
+        mascara: cabecalho.mascara,
+        inicio,
+        tamanho,
+        midi,
+        atraso_ms: cabecalho.metadados.get("delay").map_or(0.0, |d| numero_ou(d, 0.0)),
+        arquivo: Vec::with_capacity(tamanho),
+    })
 }
 
 struct Leitor<'a> {
@@ -615,16 +755,10 @@ pub struct ChartGuardado {
     pub atraso_ms: f64,
 }
 
+/// O chart de um .sng que já está todo na memória.
 pub fn extrair_chart(sng: &[u8]) -> Result<ChartGuardado, ErroDoChart> {
-    let mut pacote = ler_sng(sng)?;
-    let atraso_ms = pacote.metadados.get("delay").map_or(0.0, |d| numero_ou(d, 0.0));
-    // O app prefere o .chart quando o pacote tem os dois.
-    let (arquivo, midi) = match (pacote.arquivos.remove("notes.chart"), pacote.arquivos.remove("notes.mid")) {
-        (Some(texto), _) => (texto, false),
-        (None, Some(midi)) => (midi, true),
-        (None, None) => return Err(ErroDoChart::SemChart),
-    };
-    Ok(ChartGuardado { arquivo, midi, atraso_ms })
+    // Sem o chart inteiro depois do pacote todo, o pacote está cortado.
+    ExtratorDeChart::novo().receber(sng)?.ok_or(ErroDoChart::SngInvalido)
 }
 
 /// As notas que o app toca: o chart da trilha, já descontado o atraso.
@@ -702,6 +836,79 @@ mod tests {
         assert_eq!(como_no_javascript(-0.0), "0");
         assert_eq!(como_no_javascript(3.0), "3");
         assert_eq!(como_no_javascript(1.234), "1.234");
+    }
+
+    /// Um .sng com o chart no meio de outros arquivos, como os do Encore.
+    fn sng_com_audio() -> (Vec<u8>, Vec<u8>) {
+        let chart = b"[ExpertSingle]\n{\n192 = N 0 0\n}".to_vec();
+        let audio = vec![7u8; 5000];
+        let mascara: Vec<u8> = (0..16).map(|i| (i * 37 + 11) as u8).collect();
+        let metadados = {
+            let mut m = Vec::new();
+            m.extend(2u64.to_le_bytes());
+            for (chave, valor) in [("Name", "Teste"), ("delay", "250")] {
+                m.extend((chave.len() as i32).to_le_bytes());
+                m.extend(chave.as_bytes());
+                m.extend((valor.len() as i32).to_le_bytes());
+                m.extend(valor.as_bytes());
+            }
+            m
+        };
+        let arquivos: [(&str, &[u8]); 3] = [("song.ogg", &audio), ("notes.chart", &chart), ("guitar.ogg", &audio)];
+        let tamanho_do_indice = 8 + arquivos.iter().map(|(n, _)| 1 + n.len() + 16).sum::<usize>();
+        let mut posicao = 26 + 8 + metadados.len() + 8 + tamanho_do_indice + 8;
+        let mut pacote = b"SNGPKG".to_vec();
+        pacote.extend(1u32.to_le_bytes());
+        pacote.extend(&mascara);
+        pacote.extend((metadados.len() as u64).to_le_bytes());
+        pacote.extend(&metadados);
+        pacote.extend((tamanho_do_indice as u64).to_le_bytes());
+        pacote.extend((arquivos.len() as u64).to_le_bytes());
+        for (nome, conteudo) in arquivos {
+            pacote.push(nome.len() as u8);
+            pacote.extend(nome.as_bytes());
+            pacote.extend((conteudo.len() as u64).to_le_bytes());
+            pacote.extend((posicao as u64).to_le_bytes());
+            posicao += conteudo.len();
+        }
+        pacote.extend((arquivos.iter().map(|(_, c)| c.len()).sum::<usize>() as u64).to_le_bytes());
+        for (_, conteudo) in arquivos {
+            pacote.extend(conteudo.iter().enumerate().map(|(j, b)| b ^ mascara[j & 15] ^ (j & 0xff) as u8));
+        }
+        (pacote, chart)
+    }
+
+    #[test]
+    fn o_extrator_tira_o_chart_em_qualquer_corte_e_para_antes_do_fim() {
+        let (pacote, chart) = sng_com_audio();
+        let inteiro = extrair_chart(&pacote).unwrap();
+        assert_eq!((inteiro.arquivo.as_slice(), inteiro.midi, inteiro.atraso_ms), (chart.as_slice(), false, 250.0));
+        for tamanho_do_pedaco in [1, 7, 64, 4096] {
+            let mut extrator = ExtratorDeChart::novo();
+            let mut lidos = 0;
+            let mut achado = None;
+            for pedaco in pacote.chunks(tamanho_do_pedaco) {
+                lidos += pedaco.len();
+                if let Some(chart) = extrator.receber(pedaco).unwrap() {
+                    achado = Some(chart);
+                    break;
+                }
+            }
+            assert_eq!(achado.as_ref(), Some(&inteiro), "pedaços de {tamanho_do_pedaco}");
+            // O segundo áudio vem depois do chart: o download para antes dele.
+            assert!(lidos < pacote.len() - 5000 + tamanho_do_pedaco, "pedaços de {tamanho_do_pedaco}");
+        }
+    }
+
+    #[test]
+    fn o_extrator_recusa_pacote_sem_chart_e_pacote_cortado() {
+        let (pacote, _) = sng_com_audio();
+        let mut sem_chart = pacote.clone();
+        let nome = sem_chart.windows(11).position(|w| w == b"notes.chart").unwrap();
+        sem_chart[nome + 10] = b'x';
+        assert_eq!(extrair_chart(&sem_chart), Err(ErroDoChart::SemChart));
+        let corte = pacote.len() - 6000;
+        assert_eq!(extrair_chart(&pacote[..corte]), Err(ErroDoChart::SngInvalido));
     }
 
     #[test]

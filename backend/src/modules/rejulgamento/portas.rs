@@ -37,8 +37,18 @@ pub trait CacheDeCharts: Send + Sync {
     async fn guardar(&self, md5: &str, chart: &ChartGuardado) -> Result<(), FalhaExterna>;
 }
 
+/// O que veio do download de um chart.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ChartBaixado {
+    Pronto(ChartGuardado),
+    /// O Encore não tem esse md5.
+    NaoExiste,
+    /// O .sng veio, mas sem um chart que dê para ler.
+    Ilegivel,
+}
+
 #[async_trait]
 pub trait FonteDeCharts: Send + Sync {
-    /// O .sng do chart, ou None se ele não existe lá.
-    async fn baixar(&self, md5: &str) -> Result<Option<Vec<u8>>, FalhaExterna>;
+    /// Baixa o .sng do chart guardando só o chart: o áudio passa sem ficar na memória.
+    async fn baixar(&self, md5: &str) -> Result<ChartBaixado, FalhaExterna>;
 }
