@@ -1,4 +1,7 @@
 {
+  "git": {
+    "deploymentEnabled": { "*": false, "producao": true }
+  },
   "rewrites": [
     { "source": "/privacidade", "destination": "/index.html" },
     { "source": "/termos", "destination": "/index.html" }
