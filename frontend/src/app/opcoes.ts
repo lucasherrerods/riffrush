@@ -20,3 +20,12 @@ export function opcoesDaPartida(c: Configuracoes): OpcoesDaPartida {
     modoCompetitivo: c.modoCompetitivo,
   };
 }
+
+const iguais = (a: unknown, b: unknown) =>
+  Object.is(a, b) || (Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((item, i) => Object.is(item, b[i])));
+
+/** Opções com o mesmo conteúdo: a partida só deve receber um objeto novo quando algo dela mudou de verdade. */
+export function mesmasOpcoes(a: OpcoesDaPartida, b: OpcoesDaPartida) {
+  const chaves = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<keyof OpcoesDaPartida>;
+  return [...chaves].every((chave) => iguais(a[chave], b[chave]));
+}

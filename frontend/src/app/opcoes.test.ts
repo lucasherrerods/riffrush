@@ -1,5 +1,5 @@
 import { CONFIGURACOES_PADRAO } from "@/modules/settings";
-import { opcoesDaPartida } from "./opcoes";
+import { mesmasOpcoes, opcoesDaPartida } from "./opcoes";
 
 describe("opcoesDaPartida", () => {
   it("traduz as configurações do jogador para a partida", () => {
@@ -26,5 +26,16 @@ describe("opcoesDaPartida", () => {
   it("leva o modo competitivo", () => {
     expect(opcoesDaPartida(CONFIGURACOES_PADRAO).modoCompetitivo).toBe(false);
     expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, modoCompetitivo: true }).modoCompetitivo).toBe(true);
+  });
+});
+
+describe("mesmasOpcoes", () => {
+  it("compara campo a campo, e listas item a item", () => {
+    const base = opcoesDaPartida(CONFIGURACOES_PADRAO);
+    expect(mesmasOpcoes(base, opcoesDaPartida({ ...CONFIGURACOES_PADRAO, volumeGeral: 0.2 }))).toBe(true);
+    expect(mesmasOpcoes(base, { ...base, teclas: [...base.teclas] })).toBe(true);
+    expect(mesmasOpcoes(base, { ...base, teclas: ["KeyQ", ...base.teclas.slice(1)] })).toBe(false);
+    expect(mesmasOpcoes(base, { ...base, volumeDaMusica: 0.1 })).toBe(false);
+    expect(mesmasOpcoes(base, { ...base, rotulosDosTrastes: ["A"] })).toBe(false);
   });
 });
