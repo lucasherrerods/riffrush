@@ -10,18 +10,18 @@ const PASSOS = [
 /** A contagem do baterista antes da música: cada número bate no tempo, um depois do outro. */
 export function ComoJogar() {
   return (
-    <section id="como-jogar" className="scroll-mt-20 border-t border-borda py-32">
+    <section id="como-jogar" className="scroll-mt-20 border-t border-borda py-20 md:py-32">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <Surge>
           <Titulo>Um, dois, três, já</Titulo>
         </Surge>
-        <ol className="grid gap-12 md:grid-cols-3 md:gap-6">
+        <ol className="grid gap-12 overflow-hidden md:grid-cols-3 md:gap-6">
           {PASSOS.map((passo, i) => (
             <li key={passo.titulo}>
               <motion.span
                 aria-hidden
-                className="titulo-do-jogo block origin-bottom-left font-letreiro text-[9rem] leading-[0.8] text-primaria"
-                initial={{ opacity: 0, scale: 1.6, skewX: -6 }}
+                className="titulo-do-jogo block origin-bottom-left font-letreiro text-[7rem] leading-[0.8] md:text-[9rem] text-primaria"
+                initial={{ opacity: 0, scale: 1.3, skewX: -6 }}
                 whileInView={{ opacity: 1, scale: 1, skewX: -6 }}
                 viewport={{ once: true, margin: "-120px" }}
                 transition={{ delay: i * 0.45, type: "spring", stiffness: 500, damping: 18 }}
