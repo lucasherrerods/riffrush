@@ -1,4 +1,4 @@
-import type { Resultado } from "@/modules/gameplay";
+import { valorDosAcertos, type Resultado } from "@/modules/gameplay";
 import { invoke } from "@tauri-apps/api/core";
 import { URL_DA_API } from "@/shared/lib/api";
 import { ErroDaApi, criarApi, type ApiDaConta, type ClienteDoGoogle, type ContaDaApi, type RegistroDaPartida } from "./api";
@@ -144,6 +144,7 @@ export class SessaoDaConta {
       derrota: resultado.derrota,
       fantasma: !!resultado.fantasma,
       maior_sequencia: resultado.maiorSequencia,
+      ...(resultado.julgamentos && { valor_dos_acertos: valorDosAcertos(resultado.julgamentos) }),
       ...(replay && { replay: emBase64(replay) }),
     });
     if ("pendente" in xp) return xp;

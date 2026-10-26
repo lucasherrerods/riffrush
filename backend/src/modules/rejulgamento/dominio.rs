@@ -86,6 +86,7 @@ pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Di
             derrota: partida.derrota,
             fantasma: partida.fantasma,
             maior_sequencia: Some(partida.maior_sequencia),
+            valor_dos_acertos: Some(partida.valor_dos_acertos),
         },
         // Arredonda como o app (`Math.round`); os pontos nunca são negativos.
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -193,6 +194,7 @@ mod tests {
         assert_eq!((rejulgada.resumo.acertos, rejulgada.resumo.total), (3, 4));
         assert_eq!((rejulgada.perfeitos, rejulgada.otimos, rejulgada.bons), (1, 1, 1));
         assert_eq!(rejulgada.resumo.maior_sequencia, Some(3));
+        assert_eq!(rejulgada.resumo.valor_dos_acertos, Some(450));
         assert!((rejulgada.precisao - 450.0 / 1200.0).abs() < 1e-9);
         assert_eq!(rejulgada.pontos, 150);
     }

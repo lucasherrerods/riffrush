@@ -126,6 +126,14 @@ describe("SessaoDaConta", () => {
     expect(sessao.estado().conta).toMatchObject({ xp_total: 150, nivel: depois });
   });
 
+  it("manda o valor dos acertos, para o perfil mostrar a mesma precisão do jogo", async () => {
+    const { sessao, ambiente } = montar({ registrarPartida: vi.fn(async () => ({ xp_ganho: 0, antes: conta.nivel, depois: conta.nivel })) });
+    ambiente.local.setItem("riffrush:token", "tok");
+    await sessao.iniciar();
+    await sessao.registrarPartida({ ...resultado, julgamentos: { perfeito: 2, otimo: 2, bom: 0 } });
+    expect(vi.mocked(ambiente.api.registrarPartida).mock.calls[0][1]).toMatchObject({ valor_dos_acertos: 800 });
+  });
+
   it("partida que foi para a fila de validação não mexe no XP da conta", async () => {
     const { sessao, ambiente } = montar({ registrarPartida: vi.fn(async () => ({ pendente: true as const, id: "p1" })) });
     ambiente.local.setItem("riffrush:token", "tok");

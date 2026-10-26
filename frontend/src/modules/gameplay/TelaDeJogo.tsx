@@ -140,7 +140,7 @@ const INTERVALO_DO_ENVIO_MS = 125;
 const nada = () => {};
 /** Em telas mais estreitas os painéis encostam na pista em vez de sair da tela. */
 const LARGURA_DO_PAINEL = 250;
-const LARGURA_DO_HUD_LATERAL = 288;
+const LARGURA_DO_HUD_LATERAL = 256;
 const MARGEM_DO_HUD = 16;
 
 export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar, replay, transmissao, espectadores = 0 }: Props) {
@@ -848,14 +848,7 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
           {!comPalco && avatarDoJogador("mb-2 h-44 w-auto")}
           <div className="flex items-end gap-4">
             <BarraDeEstrelas progresso={hud.estrelas} recorde={hud.estrelasDoRecorde} />
-            <div className="flex flex-col items-center gap-2" aria-label="Star power">
-              <Zap className={cn("size-5", hud.estrela >= 0.5 ? "text-estrela" : "text-borda")} aria-hidden />
-              <div className="relative h-40 w-4 overflow-hidden rounded-full bg-superficie-elevada">
-                <div className={cn("absolute bottom-0 w-full rounded-full bg-estrela transition-all", hud.estrelaAtiva && "animate-pulse")} style={{ height: `${hud.estrela * 100}%` }} />
-                <div className="absolute bottom-1/2 h-px w-full bg-texto/60" />
-              </div>
-            </div>
-            <MedidorDeRock vida={hud.vida} fantasma={hud.fantasma} className="w-48" />
+            <MedidorDeRock vida={hud.vida} estrela={hud.estrela} estrelaAtiva={hud.estrelaAtiva} fantasma={hud.fantasma} className="w-48" />
           </div>
         </div>
       )}

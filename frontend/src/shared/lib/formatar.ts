@@ -23,7 +23,3 @@ export function haQuantoTempo(data: string, agora = new Date()) {
 export function porcentagem(fracao: number, casas = 2) {
   return `${(fracao * 100).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas })}%`;
 }
-
-export function precisaoDaPartida(acertos: number, total: number) {
-  return porcentagem(total ? acertos / total : 0);
-}

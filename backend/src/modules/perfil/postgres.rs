@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use riffrush_motor::Julgamento;
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
@@ -21,7 +22,7 @@ struct LinhaDaDificuldade {
     dificuldade: String,
     partidas: i64,
     derrotas: i64,
-    acertos: i64,
+    valor_dos_acertos: i64,
     notas: i64,
     melhor_pontuacao: i64,
 }
@@ -39,6 +40,7 @@ struct LinhaDaPartida {
     pontos: i64,
     acertos: i32,
     total: i32,
+    valor_dos_acertos: i64,
     derrota: bool,
     jogada_em: DateTime<Utc>,
 }
@@ -65,7 +67,8 @@ const RESUMO: &str = "
 
 const POR_DIFICULDADE: &str = "
     SELECT dificuldade, COUNT(*) AS partidas, COUNT(*) FILTER (WHERE derrota) AS derrotas,
-           COALESCE(SUM(acertos), 0)::BIGINT AS acertos, COALESCE(SUM(total), 0)::BIGINT AS notas,
+           COALESCE(SUM(COALESCE(valor_dos_acertos, acertos * $2)), 0)::BIGINT AS valor_dos_acertos,
+           COALESCE(SUM(total), 0)::BIGINT AS notas,
            COALESCE(MAX(pontos) FILTER (WHERE NOT derrota), 0) AS melhor_pontuacao
     FROM partidas WHERE conta_id = $1
     GROUP BY dificuldade";
@@ -84,9 +87,15 @@ const CONSULTA_DAS_MAIS_TOCADAS: &str = "
     LIMIT $2";
 
 const RECENTES: &str = "
-    SELECT musica_id, dificuldade, pontos, acertos, total, derrota, jogada_em
+    SELECT musica_id, dificuldade, pontos, acertos, total, COALESCE(valor_dos_acertos, acertos * $3)::BIGINT AS valor_dos_acertos,
+           derrota, jogada_em
     FROM partidas WHERE conta_id = $1
     ORDER BY jogada_em DESC LIMIT $2";
+
+/// Partidas de apps antigos não têm o valor dos acertos: cada acerto conta como perfeito.
+fn valor_do_perfeito() -> i32 {
+    i32::try_from(Julgamento::Perfeito.valor()).unwrap_or(i32::MAX)
+}
 
 fn falha(erro: sqlx::Error) -> FalhaExterna {
     FalhaExterna(format!("banco: {erro}"))
@@ -113,6 +122,7 @@ impl RepositorioDoPerfil for PerfilPostgres {
         };
         let por_dificuldade = sqlx::query_as::<_, LinhaDaDificuldade>(POR_DIFICULDADE)
             .bind(conta_id)
+            .bind(valor_do_perfeito())
             .fetch_all(&self.0)
             .await
             .map_err(falha)?
@@ -123,7 +133,7 @@ impl RepositorioDoPerfil for PerfilPostgres {
                     dificuldade: Dificuldade::do_texto(&l.dificuldade)?,
                     partidas: contagem(l.partidas),
                     derrotas: contagem(l.derrotas),
-                    acertos: positivo(l.acertos),
+                    valor_dos_acertos: positivo(l.valor_dos_acertos),
                     notas: positivo(l.notas),
                     melhor_pontuacao: positivo(l.melhor_pontuacao),
                 })
@@ -157,6 +167,7 @@ impl RepositorioDoPerfil for PerfilPostgres {
         let recentes = sqlx::query_as::<_, LinhaDaPartida>(RECENTES)
             .bind(conta_id)
             .bind(i64::from(recentes))
+            .bind(valor_do_perfeito())
             .fetch_all(&self.0)
             .await
             .map_err(falha)?
@@ -168,6 +179,7 @@ impl RepositorioDoPerfil for PerfilPostgres {
                     pontos: positivo(l.pontos),
                     acertos: l.acertos.max(0) as u32,
                     total: l.total.max(0) as u32,
+                    valor_dos_acertos: u32::try_from(l.valor_dos_acertos.max(0)).unwrap_or(u32::MAX),
                     derrota: l.derrota,
                     jogada_em: l.jogada_em,
                 })

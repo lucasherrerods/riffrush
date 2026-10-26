@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 
 use crate::modules::catalogo::DadosDaMusica;
 use crate::modules::conta::Conta;
-use crate::modules::progresso::{Dificuldade, Instrumento, Nivel};
+use crate::modules::progresso::{precisao_pelo_valor, Dificuldade, Instrumento, Nivel};
 
 /// Quantas partidas o perfil mostra na lista das últimas.
 pub const PARTIDAS_RECENTES: u32 = 10;
@@ -29,14 +29,15 @@ pub struct EstatisticasDaDificuldade {
     pub dificuldade: Dificuldade,
     pub partidas: u32,
     pub derrotas: u32,
-    pub acertos: u64,
+    /// Soma do valor de cada acerto pelo julgamento; partidas antigas contam cada acerto como perfeito.
+    pub valor_dos_acertos: u64,
     pub notas: u64,
     pub melhor_pontuacao: u64,
 }
 
 impl EstatisticasDaDificuldade {
     pub fn precisao(&self) -> f64 {
-        precisao(self.acertos, self.notas)
+        precisao_pelo_valor(self.valor_dos_acertos, self.notas)
     }
 }
 
@@ -47,8 +48,16 @@ pub struct PartidaRecente {
     pub pontos: u64,
     pub acertos: u32,
     pub total: u32,
+    pub valor_dos_acertos: u32,
     pub derrota: bool,
     pub jogada_em: DateTime<Utc>,
+}
+
+impl PartidaRecente {
+    /// De 0 a 1, a mesma do jogo.
+    pub fn precisao(&self) -> f64 {
+        precisao_pelo_valor(u64::from(self.valor_dos_acertos), u64::from(self.total))
+    }
 }
 
 /// A melhor partida terminada da conta numa música, dificuldade e instrumento: vaiada e fantasma não contam.
@@ -108,14 +117,6 @@ impl Perfil {
     }
 }
 
-fn precisao(acertos: u64, notas: u64) -> f64 {
-    if notas == 0 {
-        0.0
-    } else {
-        acertos as f64 / notas as f64
-    }
-}
-
 /// Soma as dificuldades no total e completa as que a conta nunca jogou.
 pub fn montar_perfil(conta: Conta, dados: DadosDoPerfil) -> Perfil {
     let por_dificuldade: Vec<_> = [Dificuldade::Facil, Dificuldade::Medio, Dificuldade::Dificil, Dificuldade::Expert]
@@ -130,7 +131,7 @@ pub fn montar_perfil(conta: Conta, dados: DadosDoPerfil) -> Perfil {
                     dificuldade,
                     partidas: 0,
                     derrotas: 0,
-                    acertos: 0,
+                    valor_dos_acertos: 0,
                     notas: 0,
                     melhor_pontuacao: 0,
                 })
@@ -138,7 +139,7 @@ pub fn montar_perfil(conta: Conta, dados: DadosDoPerfil) -> Perfil {
         .collect();
     let mut por_instrumento: Vec<_> = dados.por_instrumento.into_iter().filter(|i| i.partidas > 0).collect();
     por_instrumento.sort_by_key(|i| std::cmp::Reverse(i.partidas));
-    let acertos = por_dificuldade.iter().map(|e| e.acertos).sum();
+    let valor_dos_acertos = por_dificuldade.iter().map(|e| e.valor_dos_acertos).sum();
     let notas = por_dificuldade.iter().map(|e| e.notas).sum();
     Perfil {
         nivel: conta.nivel(),
@@ -146,7 +147,7 @@ pub fn montar_perfil(conta: Conta, dados: DadosDoPerfil) -> Perfil {
         criada_em: dados.criada_em,
         partidas: por_dificuldade.iter().map(|e| e.partidas).sum(),
         derrotas: por_dificuldade.iter().map(|e| e.derrotas).sum(),
-        precisao: precisao(acertos, notas),
+        precisao: precisao_pelo_valor(valor_dos_acertos, notas),
         melhor_pontuacao: por_dificuldade.iter().map(|e| e.melhor_pontuacao).max().unwrap_or(0),
         musicas_distintas: dados.musicas_distintas,
         por_dificuldade,
@@ -173,12 +174,12 @@ mod tests {
         }
     }
 
-    fn estatisticas(dificuldade: Dificuldade, partidas: u32, acertos: u64, notas: u64, melhor: u64) -> EstatisticasDaDificuldade {
+    fn estatisticas(dificuldade: Dificuldade, partidas: u32, valor_dos_acertos: u64, notas: u64, melhor: u64) -> EstatisticasDaDificuldade {
         EstatisticasDaDificuldade {
             dificuldade,
             partidas,
             derrotas: 1,
-            acertos,
+            valor_dos_acertos,
             notas,
             melhor_pontuacao: melhor,
         }
@@ -209,8 +210,8 @@ mod tests {
         let perfil = montar_perfil(
             conta(),
             dados(vec![
-                estatisticas(Dificuldade::Expert, 2, 900, 1000, 80_000),
-                estatisticas(Dificuldade::Facil, 3, 100, 100, 20_000),
+                estatisticas(Dificuldade::Expert, 2, 900 * 300, 1000, 80_000),
+                estatisticas(Dificuldade::Facil, 3, 100 * 300, 100, 20_000),
             ]),
         );
         assert_eq!((perfil.partidas, perfil.derrotas), (5, 2));
@@ -219,6 +220,29 @@ mod tests {
         assert_eq!(perfil.por_dificuldade[0].partidas, 3);
         assert_eq!(perfil.por_dificuldade[3].precisao(), 0.9);
         assert_eq!(perfil.musicas_distintas, 3);
+    }
+
+    #[test]
+    fn precisao_pesa_o_julgamento_de_cada_nota_como_no_jogo() {
+        // 100 notas acertadas, todas ÓTIMO (100 de 300): o jogo mostra 33%, não 100%.
+        let perfil = montar_perfil(conta(), dados(vec![estatisticas(Dificuldade::Medio, 1, 100 * 100, 100, 0)]));
+        assert!((perfil.precisao - 1.0 / 3.0).abs() < 1e-9);
+        assert!((perfil.por_dificuldade[1].precisao() - 1.0 / 3.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn a_partida_recente_tem_a_precisao_do_jogo() {
+        let partida = PartidaRecente {
+            musica_id: "a".into(),
+            dificuldade: Dificuldade::Facil,
+            pontos: 0,
+            acertos: 10,
+            total: 10,
+            valor_dos_acertos: 5 * 300 + 5 * 50,
+            derrota: false,
+            jogada_em: DateTime::UNIX_EPOCH,
+        };
+        assert!((partida.precisao() - 1750.0 / 3000.0).abs() < 1e-9);
     }
 
     #[test]
@@ -239,6 +263,7 @@ mod tests {
             pontos: 0,
             acertos: 0,
             total: 0,
+            valor_dos_acertos: 0,
             derrota: false,
             jogada_em: DateTime::UNIX_EPOCH,
         };
