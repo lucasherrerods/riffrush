@@ -6,7 +6,8 @@ mod partida;
 mod replay;
 
 pub use chart::{
-    extrair_chart, hash_do_chart, ler_chart, ler_midi, ler_sng, notas_do_chart, notas_do_sng, ChartGuardado, ChartLido, Dificuldade, ErroDoChart, Instrumento,
+    extrair_chart, hash_do_chart, ler_chart, ler_midi, ler_sng, notas_do_chart, notas_do_sng, ChartGuardado, ChartLido, Dificuldade, ErroDoChart,
+    ExtratorDeChart, Instrumento,
 };
 pub use partida::{
     acertar, ativar_estrela, avancar, criar_partida, estrela, julgar, multiplicador, precisao, quantizar, retirar_eventos, soltar, tocar, Evento, Julgamento,
