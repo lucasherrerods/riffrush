@@ -22,7 +22,7 @@ export function Abertura() {
   const luz = useTransform(scrollYProgress, [0, 0.8], [0.22, 0]);
 
   return (
-    <section ref={ref} className="relative isolate flex min-h-svh flex-col items-center overflow-hidden px-4 pt-32 pb-16 text-center md:pt-40">
+    <section ref={ref} className="relative isolate flex min-h-svh flex-col items-center overflow-hidden px-4 pt-28 pb-16 text-center md:pt-40">
       <motion.div className="pointer-events-none absolute inset-0 -z-20" style={{ opacity: parado ? 0.22 : luz }}>
         {HOLOFOTES.map((h) => (
           <div
@@ -43,12 +43,12 @@ export function Abertura() {
         <PistaDoPalco className="h-full w-full" />
       </motion.div>
 
-      <motion.div style={parado ? undefined : { y: tituloY, opacity: tituloOpacidade }} className="flex flex-col items-center">
+      <motion.div style={parado ? undefined : { y: tituloY, opacity: tituloOpacidade }} className="flex w-full flex-col items-center">
         <motion.h1
           initial={{ opacity: 0, y: 40, letterSpacing: "0.2em" }}
           animate={{ opacity: 1, y: 0, letterSpacing: "0.02em" }}
           transition={{ duration: 0.9, ease: ENTRADA }}
-          className="titulo-do-jogo text-[clamp(4.5rem,16vw,13rem)] leading-[0.82]"
+          className="titulo-do-jogo text-[clamp(3.5rem,17vw,13rem)] leading-[0.82]"
         >
           Riff <span className="text-primaria">Rush</span>
         </motion.h1>
@@ -56,11 +56,11 @@ export function Abertura() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35, duration: 0.6 }}
-          className="mt-8 max-w-[44ch] text-lg leading-relaxed text-texto-suave"
+          className="mt-6 max-w-[44ch] text-lg md:mt-8 leading-relaxed text-texto-suave"
         >
           Quatro amigos, uma música e nenhuma desculpa para errar a nota.
         </motion.p>
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.6 }} className="mt-10">
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.6 }} className="mt-8 w-full md:mt-10 md:w-auto">
           <Chamadas centralizadas />
         </motion.div>
       </motion.div>
