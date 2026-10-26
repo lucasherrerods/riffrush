@@ -373,10 +373,13 @@ mod tests {
     async fn partida_soma_xp_e_pode_subir_de_nivel() {
         let (servicos, _, _) = servicos();
         let entrada = servicos.entrar_com_google(&pedido("bom")).await.unwrap();
-        let xp = servicos.registrar_partida(&entrada.token, partida(400, 400)).await.unwrap();
-        assert_eq!(xp.xp_ganho, 150);
+        // Um expert perfeito de tamanho comum passa dos 100 XP do nível 1.
+        let mut expert = partida(400, 400);
+        expert.resumo.dificuldade = Dificuldade::Expert;
+        let xp = servicos.registrar_partida(&entrada.token, expert).await.unwrap();
+        assert_eq!(xp.xp_ganho, 108);
         assert_eq!((xp.antes.nivel, xp.depois.nivel), (1, 2));
-        assert_eq!(servicos.conta_da_sessao(&entrada.token).await.unwrap().xp_total, 150);
+        assert_eq!(servicos.conta_da_sessao(&entrada.token).await.unwrap().xp_total, 108);
     }
 
     #[tokio::test]
