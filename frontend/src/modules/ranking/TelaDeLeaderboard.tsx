@@ -13,6 +13,7 @@ import { apiDoRanking as apiPadrao, type ApiDoRanking, type MusicaNoRanking, typ
 import { filtrarMusicas, ORDENS_DAS_MUSICAS, type FiltroDasMusicas } from "./filtros";
 import { LinhaComPosicao } from "./LinhaComPosicao";
 import { PainelDaMusica } from "./PainelDaMusica";
+import { SeloDaNota } from "./SeloDaNota";
 
 interface Props {
   aoVoltar: () => void;
@@ -187,6 +188,7 @@ function AbaDeMusicas({ carregar, tituloDaMusica, aoAbrirMusicaDoEncore, aoAbrir
                       avatar={m.capa ?? null}
                       semFoto={Music}
                       minha={false}
+                      selo={m.recorde && <SeloDaNota precisao={m.recorde.precisao} />}
                       detalhe={
                         <>
                           {plural(m.jogadores, "jogador", "jogadores")}

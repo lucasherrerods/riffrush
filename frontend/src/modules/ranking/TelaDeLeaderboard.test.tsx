@@ -117,7 +117,9 @@ describe("TelaDeLeaderboard: filtros das músicas", () => {
     const { usuario } = abrir();
     await usuario.click(screen.getByRole("tab", { name: "Músicas" }));
     const lista = await screen.findByRole("list", { name: "Músicas" });
-    expect(within(lista).getAllByRole("listitem")[2]).toHaveTextContent("Bia 98,50% no Difícil");
+    const linha = within(lista).getAllByRole("listitem")[2];
+    expect(linha).toHaveTextContent("Bia 98,50% no Difícil");
+    expect(within(linha).getByLabelText("Nota S")).toBeInTheDocument();
   });
 });
 

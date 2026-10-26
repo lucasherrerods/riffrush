@@ -18,15 +18,18 @@ interface Props {
   rotuloDoClique?: string;
   /** Com ele, a linha vira um botão. */
   aoClicar?: () => void;
+  /** Vem logo depois da posição (ex.: a nota da partida). */
+  selo?: React.ReactNode;
   /** Um botão a mais no fim da linha (ex.: ouvir a prévia). */
   acao?: React.ReactNode;
 }
 
 /** Uma linha de ranking: posição, foto, nome e o número que ordena. */
-export function LinhaComPosicao({ posicao, nome, avatar, semFoto: SemFoto = UserRound, minha, detalhe, valor, aoClicar, rotuloDoClique = `Ver a partida de ${nome}`, acao }: Props) {
+export function LinhaComPosicao({ posicao, nome, avatar, semFoto: SemFoto = UserRound, minha, detalhe, valor, aoClicar, rotuloDoClique = `Ver a partida de ${nome}`, selo, acao }: Props) {
   const conteudo = (
     <>
       <span className={cn("w-12 shrink-0 text-center font-titulo text-xl", posicao <= 3 ? "text-ouro" : "text-texto-suave")}>#{posicao}</span>
+      {selo}
       {avatar ? (
         <img src={avatar} alt="" referrerPolicy="no-referrer" className="size-8 shrink-0 rounded-sm" />
       ) : (
