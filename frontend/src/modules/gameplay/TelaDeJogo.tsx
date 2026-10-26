@@ -140,7 +140,7 @@ const INTERVALO_DO_ENVIO_MS = 125;
 const nada = () => {};
 /** Em telas mais estreitas os painéis encostam na pista em vez de sair da tela. */
 const LARGURA_DO_PAINEL = 250;
-const LARGURA_DO_HUD_LATERAL = 240;
+const LARGURA_DO_HUD_LATERAL = 288;
 const MARGEM_DO_HUD = 16;
 
 export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar, replay, transmissao, espectadores = 0 }: Props) {
@@ -855,7 +855,7 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
                 <div className="absolute bottom-1/2 h-px w-full bg-texto/60" />
               </div>
             </div>
-            <MedidorDeRock vida={hud.vida} fantasma={hud.fantasma} className="w-36" />
+            <MedidorDeRock vida={hud.vida} fantasma={hud.fantasma} className="w-48" />
           </div>
         </div>
       )}
