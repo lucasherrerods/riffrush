@@ -1,5 +1,5 @@
 import { PISTA_ABERTA, type Nota } from "@/modules/songs";
-import { JANELA_DE_ACERTO, ativarEstrela, avancar, criarPartida, julgar, multiplicador, precisao, retirarEventos, soltar, tocar } from "./partida";
+import { JANELA_DE_ACERTO, ativarEstrela, janelaDoMotor, avancar, criarPartida, julgar, multiplicador, precisao, retirarEventos, soltar, tocar } from "./partida";
 
 const nota = (tempo: number, pista = 0, extra: Partial<Nota> = {}): Nota => ({ tempo, pista, frase: -1, duracao: 0, ...extra });
 
@@ -259,8 +259,9 @@ describe("julgar", () => {
     expect(julgar(-0.11)).toBe("bom");
   });
 
-  it("a janela de acerto acaba onde acaba o bom", () => {
+  it("a janela de acerto acaba onde acaba o bom, a mesma do motor", () => {
     expect(JANELA_DE_ACERTO).toBe(0.11);
+    expect(janelaDoMotor()).toBe(JANELA_DE_ACERTO);
   });
 });
 

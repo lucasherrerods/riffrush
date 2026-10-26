@@ -11,6 +11,8 @@ const PONTOS_POR_NOTA: f64 = 50.0;
 const PONTOS_POR_SEGUNDO_DE_SUSTAIN: f64 = 40.0;
 const ESTRELA_POR_FRASE: f64 = 0.25;
 const ESTRELA_MINIMA: f64 = 0.5;
+/// A cada tantas notas seguidas o app comemora a sequência.
+const AVISO_DE_SEQUENCIA: u32 = 50;
 const DURACAO_DA_ESTRELA: f64 = 16.0;
 const TOLERANCIA_DO_SUSTAIN: f64 = 0.1;
 const TICKS_POR_SEGUNDO: f64 = 1000.0;
@@ -91,11 +93,30 @@ pub struct OpcoesDaPartida {
     pub fantasma: bool,
 }
 
+/// O que a partida conta para o app tocar sons e mostrar avisos. A API ignora.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Evento {
+    /// `nota` é o índice em `Partida::notas`.
+    Acerto {
+        nota: usize,
+        julgamento: Julgamento,
+    },
+    Erro {
+        nota: usize,
+    },
+    Sequencia(u32),
+    FraseCompleta,
+    EstrelaPronta,
+    EstrelaAtivada,
+    Derrota,
+    VirouFantasma,
+}
+
 #[derive(Debug, Clone)]
 pub struct Partida {
     pub notas: Vec<NotaEmJogo>,
     /// Índice da primeira nota que ainda importa; as anteriores já passaram.
-    primeira: usize,
+    pub primeira: usize,
     pub tempo: Option<f64>,
     pub pontos: f64,
     pontos_das_notas: f64,
@@ -122,9 +143,10 @@ pub struct Partida {
     pub fantasma: bool,
     tamanho_das_frases: HashMap<i32, u32>,
     acertos_por_frase: HashMap<i32, u32>,
-    frases_falhas: HashSet<i32>,
+    pub frases_falhas: HashSet<i32>,
     /// Pistas cujo último aperto acertou uma nota: soltar a tecla pode acertar mais uma.
     armadas: HashSet<u8>,
+    eventos: Vec<Evento>,
 }
 
 pub fn criar_partida(notas: &[Nota], opcoes: OpcoesDaPartida) -> Partida {
@@ -174,10 +196,11 @@ pub fn criar_partida(notas: &[Nota], opcoes: OpcoesDaPartida) -> Partida {
         acertos_por_frase: HashMap::new(),
         frases_falhas: HashSet::new(),
         armadas: HashSet::new(),
+        eventos: Vec::new(),
     }
 }
 
-fn multiplicador(partida: &Partida) -> f64 {
+pub fn multiplicador(partida: &Partida) -> f64 {
     let base = (1 + partida.sequencia / 10).min(4);
     f64::from(base * if partida.estrela_ativa { 2 } else { 1 })
 }
@@ -191,6 +214,16 @@ pub fn precisao(partida: &Partida) -> f64 {
     f64::from(partida.valor_dos_acertos) / (f64::from(tocadas) * f64::from(Julgamento::Perfeito.valor()))
 }
 
+/// Os eventos acumulados desde a última chamada.
+pub fn retirar_eventos(partida: &mut Partida) -> Vec<Evento> {
+    std::mem::take(&mut partida.eventos)
+}
+
+/// De 0 a 1: quanto da barra de star power está cheia.
+pub fn estrela(partida: &Partida) -> f64 {
+    partida.estrela_em_ticks / ESTRELA_CHEIA
+}
+
 fn contar_frase(partida: &mut Partida, frase: i32) {
     if frase < 0 || partida.frases_falhas.contains(&frase) {
         return;
@@ -200,10 +233,17 @@ fn contar_frase(partida: &mut Partida, frase: i32) {
     if Some(&*acertos) < partida.tamanho_das_frases.get(&frase) {
         return;
     }
+    let antes = estrela(partida);
     partida.estrela_em_ticks = ESTRELA_CHEIA.min(partida.estrela_em_ticks + ESTRELA_POR_FRASE * ESTRELA_CHEIA);
+    partida.eventos.push(Evento::FraseCompleta);
+    if !partida.estrela_ativa && antes < ESTRELA_MINIMA && estrela(partida) >= ESTRELA_MINIMA {
+        partida.eventos.push(Evento::EstrelaPronta);
+    }
 }
 
-fn acertar(partida: &mut Partida, indice: usize, tempo: f64) {
+/// Marca a nota como acertada no instante `tempo` e aplica pontos, vida, sequência e star power.
+/// O bot do app usa direto, sem passar pela janela de acerto.
+pub fn acertar(partida: &mut Partida, indice: usize, tempo: f64) {
     let julgamento = julgar(tempo - partida.notas[indice].tempo);
     let nota = &mut partida.notas[indice];
     nota.acertada = true;
@@ -222,6 +262,10 @@ fn acertar(partida: &mut Partida, indice: usize, tempo: f64) {
     partida.pontos_das_notas += PONTOS_POR_NOTA * multiplicador(partida);
     atualizar_pontos(partida);
     partida.vida = (partida.vida + VIDA_POR_ACERTO).min(1.0);
+    partida.eventos.push(Evento::Acerto { nota: indice, julgamento });
+    if partida.sequencia.is_multiple_of(AVISO_DE_SEQUENCIA) {
+        partida.eventos.push(Evento::Sequencia(partida.sequencia));
+    }
     contar_frase(partida, frase);
 }
 
@@ -235,13 +279,16 @@ fn errar(partida: &mut Partida, indice: usize) {
     if frase >= 0 {
         partida.frases_falhas.insert(frase);
     }
+    partida.eventos.push(Evento::Erro { nota: indice });
     if partida.vida > 0.0 || partida.sem_falha {
         return;
     }
     if !partida.modo_fantasma {
         partida.derrota = true;
-    } else {
+        partida.eventos.push(Evento::Derrota);
+    } else if !partida.fantasma {
         partida.fantasma = true;
+        partida.eventos.push(Evento::VirouFantasma);
     }
 }
 
@@ -328,6 +375,7 @@ pub fn ativar_estrela(partida: &mut Partida) -> bool {
         return false;
     }
     partida.estrela_ativa = true;
+    partida.eventos.push(Evento::EstrelaAtivada);
     true
 }
 
@@ -446,6 +494,24 @@ mod tests {
         avancar(&mut partida, 3.0);
         assert_eq!((partida.otimos, partida.erros), (1, 1));
         assert!((precisao(&partida) - 100.0 / 600.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn conta_os_eventos_para_o_app() {
+        let mut partida = criar_partida(&[nota(1.0), nota(2.0)], OpcoesDaPartida::default());
+        tocar(&mut partida, 0, 1.05);
+        avancar(&mut partida, 3.0);
+        assert_eq!(
+            retirar_eventos(&mut partida),
+            [
+                Evento::Acerto {
+                    nota: 0,
+                    julgamento: Julgamento::Otimo
+                },
+                Evento::Erro { nota: 1 }
+            ]
+        );
+        assert!(retirar_eventos(&mut partida).is_empty());
     }
 
     #[test]

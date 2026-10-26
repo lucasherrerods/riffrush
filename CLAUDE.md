@@ -8,7 +8,7 @@ Jogo de ritmo estilo Guitar Hero / Clone Hero para desktop (Tauri), com multijog
 frontend/   o jogo: React + Tauri (desktop) + versão web servida aos celulares
 backend/    a API em Rust (contas, XP, partidas)
   relay/    Worker da Cloudflare do modo online, até ele virar parte da API
-  motor/    regras da partida em Rust, as mesmas do app, para a API rejulgar replays
+  motor/    regras da partida em Rust: a API rejulga replays com elas e o app roda as mesmas em WASM
 landing/    site de divulgação do jogo (Vite + React), usa as cores e a identidade do frontend
 .github/    CI (precisa ficar na raiz)
 CLAUDE.md   este arquivo, único para o projeto inteiro
@@ -57,6 +57,7 @@ Valem para o frontend e para o backend.
 ### Stack
 - Tauri 2 (Rust) + React 19 + TypeScript + Vite
 - Tailwind CSS 4 + shadcn/ui + lucide-react + framer-motion
+- Regras da partida: o crate `backend/motor`, compilado para WASM em `src/modules/gameplay/wasm` (gerado por `npm run motor` e commitado, para o build web não precisar de Rust). Para gerar: `rustup target add wasm32-unknown-unknown` e `cargo install wasm-bindgen-cli --version 0.2.100`.
 - Vitest + Testing Library
 
 ### Comandos
@@ -68,6 +69,7 @@ npm run dev         # só a versão web
 npm test            # roda os testes uma vez
 npm run test:watch  # testes em modo watch
 npm run build       # typecheck + build web (também é a versão servida aos celulares)
+npm run motor       # recompila o motor da partida (backend/motor) para WASM; rode depois de mudar o motor
 cargo test --manifest-path src-tauri/Cargo.toml   # testes do lado Rust do app
 ```
 
