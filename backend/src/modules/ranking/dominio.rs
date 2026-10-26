@@ -4,11 +4,13 @@ use uuid::Uuid;
 use crate::modules::catalogo::DadosDaMusica;
 use crate::modules::progresso::{Dificuldade, Instrumento};
 
-/// Como no osu!: o top da música, sem rolar uma lista infinita.
+/// O ranking geral e o das músicas mais jogadas, sem rolar uma lista infinita.
 pub const TAMANHO_DO_TOP: u32 = 50;
+/// O top de cada música, dificuldade e instrumento. Só ele guarda os replays.
+pub const TAMANHO_DO_TOP_DA_MUSICA: u32 = 10;
 
 /// A melhor partida de um jogador numa música e dificuldade, já com a posição dele.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LinhaDoRanking {
     pub posicao: u32,
     /// Quantos jogadores têm recorde nesta música e dificuldade.
@@ -21,6 +23,10 @@ pub struct LinhaDoRanking {
     pub pontos: u64,
     pub acertos: u32,
     pub total: u32,
+    /// De 0 a 1, pelo valor de cada nota. É o que ordena o ranking.
+    pub precisao: f64,
+    /// O desempate depois da precisão.
+    pub maior_sequencia: Option<u32>,
     pub jogada_em: DateTime<Utc>,
 }
 
@@ -37,7 +43,7 @@ pub struct LinhaDoGeral {
 }
 
 /// Uma partida aberta pelo ranking: só o que a tela de resultado mostra, sem dados privados da conta.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PartidaPublica {
     pub id: Uuid,
     pub nome: String,
@@ -48,6 +54,8 @@ pub struct PartidaPublica {
     pub pontos: u64,
     pub acertos: u32,
     pub total: u32,
+    /// Só as partidas que o servidor rejulgou têm.
+    pub precisao: Option<f64>,
     /// Partidas de antes da coluna não têm.
     pub maior_sequencia: Option<u32>,
     pub derrota: bool,
@@ -106,10 +114,10 @@ pub struct Ranking<L = LinhaDoRanking> {
 }
 
 /// O banco devolve o top e, se existir, a linha de quem pediu. Aqui cada uma vai para o seu lugar.
-pub fn montar_ranking<L: Posicionada>(linhas: Vec<L>, conta: Option<Uuid>) -> Ranking<L> {
+pub fn montar_ranking<L: Posicionada>(linhas: Vec<L>, conta: Option<Uuid>, tamanho: u32) -> Ranking<L> {
     let jogadores = linhas.first().map_or(0, |l| l.jogadores());
     let meu = conta.and_then(|id| linhas.iter().find(|l| l.conta_id() == id).cloned());
-    let top = linhas.into_iter().filter(|l| l.posicao() <= TAMANHO_DO_TOP).collect();
+    let top = linhas.into_iter().filter(|l| l.posicao() <= tamanho).collect();
     Ranking { top, jogadores, meu }
 }
 
@@ -177,6 +185,8 @@ mod tests {
             pontos: 1000 - u64::from(posicao),
             acertos: 10,
             total: 10,
+            precisao: 1.0,
+            maior_sequencia: Some(10),
             jogada_em: DateTime::UNIX_EPOCH,
         }
     }
@@ -191,7 +201,7 @@ mod tests {
             avatar: None,
             xp_total: 10_000 - u64::from(posicao),
         };
-        let ranking = montar_ranking(vec![geral(1, 1), geral(120, 9)], Some(Uuid::from_u128(9)));
+        let ranking = montar_ranking(vec![geral(1, 1), geral(120, 9)], Some(Uuid::from_u128(9)), TAMANHO_DO_TOP);
         assert_eq!(ranking.top.len(), 1);
         assert_eq!(ranking.meu.map(|l| l.posicao), Some(120));
         assert_eq!(ranking.jogadores, 300);
@@ -200,7 +210,7 @@ mod tests {
     #[test]
     fn sem_recordes_o_ranking_fica_vazio() {
         assert_eq!(
-            montar_ranking::<LinhaDoRanking>(vec![], Some(Uuid::nil())),
+            montar_ranking::<LinhaDoRanking>(vec![], Some(Uuid::nil()), TAMANHO_DO_TOP_DA_MUSICA),
             Ranking {
                 top: vec![],
                 jogadores: 0,
@@ -211,7 +221,7 @@ mod tests {
 
     #[test]
     fn quem_pediu_fora_do_top_aparece_so_como_meu() {
-        let ranking = montar_ranking(vec![linha(1, 1), linha(2, 2), linha(78, 9)], Some(Uuid::from_u128(9)));
+        let ranking = montar_ranking(vec![linha(1, 1), linha(2, 2), linha(78, 9)], Some(Uuid::from_u128(9)), TAMANHO_DO_TOP_DA_MUSICA);
         assert_eq!(ranking.top.iter().map(|l| l.posicao).collect::<Vec<_>>(), [1, 2]);
         assert_eq!(ranking.meu.map(|l| l.posicao), Some(78));
         assert_eq!(ranking.jogadores, 100);
@@ -219,14 +229,14 @@ mod tests {
 
     #[test]
     fn quem_pediu_dentro_do_top_aparece_nos_dois() {
-        let ranking = montar_ranking(vec![linha(1, 1), linha(2, 2)], Some(Uuid::from_u128(2)));
+        let ranking = montar_ranking(vec![linha(1, 1), linha(2, 2)], Some(Uuid::from_u128(2)), TAMANHO_DO_TOP_DA_MUSICA);
         assert_eq!(ranking.top.len(), 2);
         assert_eq!(ranking.meu.map(|l| l.posicao), Some(2));
     }
 
     #[test]
     fn sem_sessao_nao_tem_meu() {
-        assert_eq!(montar_ranking(vec![linha(1, 1)], None).meu, None);
+        assert_eq!(montar_ranking(vec![linha(1, 1)], None, TAMANHO_DO_TOP_DA_MUSICA).meu, None);
     }
 
     fn popular(musica_id: &str, partidas: u32, jogadores: u32) -> MusicaPopular {

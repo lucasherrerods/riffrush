@@ -21,6 +21,8 @@ struct Linha {
     pontos: i64,
     acertos: i32,
     total: i32,
+    precisao: f64,
+    maior_sequencia: Option<i32>,
     jogada_em: DateTime<Utc>,
 }
 
@@ -36,28 +38,20 @@ impl From<Linha> for LinhaDoRanking {
             pontos: l.pontos.max(0) as u64,
             acertos: l.acertos.max(0) as u32,
             total: l.total.max(0) as u32,
+            precisao: l.precisao,
+            maior_sequencia: l.maior_sequencia.and_then(|s| u32::try_from(s).ok()),
             jogada_em: l.jogada_em,
         }
     }
 }
 
-/// Uma partida por jogador (a de mais pontos; no empate, a mais antiga), numeradas, com o top e a linha de quem pediu.
+/// O recorde de cada jogador (a view ordena por precisão, sequência e quem chegou primeiro), com o top e a linha de quem pediu.
 const CONSULTA: &str = "
-    WITH melhores AS (
-        SELECT DISTINCT ON (conta_id) id AS partida_id, conta_id, pontos, acertos, total, jogada_em
-        FROM partidas
-        WHERE musica_id = $1 AND dificuldade = $2 AND instrumento = $3 AND NOT derrota AND NOT fantasma
-        ORDER BY conta_id, pontos DESC, jogada_em ASC
-    ),
-    numerados AS (
-        SELECT *, ROW_NUMBER() OVER (ORDER BY pontos DESC, jogada_em ASC) AS posicao, COUNT(*) OVER () AS jogadores
-        FROM melhores
-    )
-    SELECT n.posicao, n.jogadores, n.conta_id, n.partida_id, c.nome, c.avatar, n.pontos, n.acertos, n.total, n.jogada_em
-    FROM numerados n
-    JOIN contas c ON c.id = n.conta_id
-    WHERE n.posicao <= $4 OR n.conta_id = $5
-    ORDER BY n.posicao";
+    SELECT r.posicao, r.jogadores, r.conta_id, r.partida_id, c.nome, c.avatar, r.pontos, r.acertos, r.total, r.precisao, r.maior_sequencia, r.jogada_em
+    FROM recordes_do_ranking r
+    JOIN contas c ON c.id = r.conta_id
+    WHERE r.musica_id = $1 AND r.dificuldade = $2 AND r.instrumento = $3 AND (r.posicao <= $4 OR r.conta_id = $5)
+    ORDER BY r.posicao";
 
 #[derive(FromRow)]
 struct LinhaGeral {
@@ -136,6 +130,7 @@ struct LinhaDaPartida {
     pontos: i64,
     acertos: i32,
     total: i32,
+    precisao: Option<f64>,
     maior_sequencia: Option<i32>,
     derrota: bool,
     fantasma: bool,
@@ -156,6 +151,7 @@ impl LinhaDaPartida {
             pontos: self.pontos.max(0) as u64,
             acertos: self.acertos.max(0) as u32,
             total: self.total.max(0) as u32,
+            precisao: self.precisao,
             maior_sequencia: self.maior_sequencia.map(|s| s.max(0) as u32),
             derrota: self.derrota,
             fantasma: self.fantasma,
@@ -220,7 +216,7 @@ impl RepositorioDoRanking for RankingPostgres {
     async fn partida(&self, id: Uuid) -> Result<Option<PartidaPublica>, FalhaExterna> {
         let linha = sqlx::query_as::<_, LinhaDaPartida>(
             "SELECT p.id, c.nome, c.avatar, p.musica_id, p.dificuldade, p.instrumento, p.pontos, p.acertos, p.total,
-                    p.maior_sequencia, p.derrota, p.fantasma, p.jogada_em, p.replay IS NOT NULL AS tem_replay
+                    p.precisao, p.maior_sequencia, p.derrota, p.fantasma, p.jogada_em, p.replay IS NOT NULL AS tem_replay
              FROM partidas p JOIN contas c ON c.id = p.conta_id
              WHERE p.id = $1",
         )

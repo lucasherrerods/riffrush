@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 use super::dominio::{Conta, PerfilDoGoogle};
 use super::portas::{FalhaExterna, PartidaRegistrada, RepositorioDeContas, RepositorioDeSessoes};
+use crate::modules::ranking::TAMANHO_DO_TOP_DA_MUSICA;
 
 pub struct ContasPostgres(pub PgPool);
 
@@ -78,9 +79,19 @@ impl RepositorioDeContas for ContasPostgres {
     async fn registrar_partida(&self, partida: &PartidaRegistrada) -> Result<Conta, FalhaExterna> {
         let mut transacao = self.0.begin().await.map_err(falha)?;
         let resumo = &partida.resumo;
+        if partida.replay.is_some() {
+            // Duas partidas da mesma música chegando juntas decidiriam o top com dados velhos: uma espera a outra.
+            sqlx::query("SELECT pg_advisory_xact_lock(hashtext($1 || '|' || $2 || '|' || $3))")
+                .bind(&partida.musica_id)
+                .bind(resumo.dificuldade.como_texto())
+                .bind(partida.instrumento.como_texto())
+                .execute(&mut *transacao)
+                .await
+                .map_err(falha)?;
+        }
         let inserida = sqlx::query(
-            "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, instrumento, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em, maior_sequencia, replay)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, instrumento, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em, maior_sequencia, replay, precisao)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
              ON CONFLICT (id) DO NOTHING",
         )
         .bind(partida.id)
@@ -97,6 +108,7 @@ impl RepositorioDeContas for ContasPostgres {
         .bind(partida.jogada_em)
         .bind(resumo.maior_sequencia.map(|s| s as i32))
         .bind(partida.replay.as_deref())
+        .bind(partida.precisao)
         .execute(&mut *transacao)
         .await
         .map_err(falha)?;
@@ -106,18 +118,17 @@ impl RepositorioDeContas for ContasPostgres {
             return self.buscar(partida.conta_id).await?.ok_or_else(|| FalhaExterna("conta sumiu".into()));
         }
         if partida.replay.is_some() {
-            // Só o recorde guarda replay: as outras partidas desta música perdem o delas.
+            // Só os recordes do top guardam replay: quem saiu do top, ou superou a própria marca, perde o antigo.
             sqlx::query(
                 "UPDATE partidas SET replay = NULL
-                 WHERE conta_id = $1 AND musica_id = $2 AND dificuldade = $3 AND instrumento = $4 AND replay IS NOT NULL
-                   AND id <> (SELECT id FROM partidas
-                              WHERE conta_id = $1 AND musica_id = $2 AND dificuldade = $3 AND instrumento = $4 AND NOT derrota AND NOT fantasma
-                              ORDER BY pontos DESC, jogada_em ASC LIMIT 1)",
+                 WHERE musica_id = $1 AND dificuldade = $2 AND instrumento = $3 AND replay IS NOT NULL
+                   AND id NOT IN (SELECT partida_id FROM recordes_do_ranking
+                                  WHERE musica_id = $1 AND dificuldade = $2 AND instrumento = $3 AND posicao <= $4)",
             )
-            .bind(partida.conta_id)
             .bind(&partida.musica_id)
             .bind(resumo.dificuldade.como_texto())
             .bind(partida.instrumento.como_texto())
+            .bind(i64::from(TAMANHO_DO_TOP_DA_MUSICA))
             .execute(&mut *transacao)
             .await
             .map_err(falha)?;
@@ -130,6 +141,18 @@ impl RepositorioDeContas for ContasPostgres {
             .map_err(falha)?;
         transacao.commit().await.map_err(falha)?;
         Ok(conta.into())
+    }
+
+    async fn partidas_no_chart(&self, conta_id: Uuid, musica_id: &str, desde: DateTime<Utc>, exceto: Uuid) -> Result<u32, FalhaExterna> {
+        let quantas: i64 = sqlx::query_scalar("SELECT count(*) FROM partidas WHERE conta_id = $1 AND musica_id = $2 AND jogada_em >= $3 AND id <> $4")
+            .bind(conta_id)
+            .bind(musica_id)
+            .bind(desde)
+            .bind(exceto)
+            .fetch_one(&self.0)
+            .await
+            .map_err(falha)?;
+        Ok(u32::try_from(quantas).unwrap_or(u32::MAX))
     }
 
     async fn excluir(&self, id: Uuid) -> Result<(), FalhaExterna> {

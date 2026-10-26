@@ -38,6 +38,8 @@ fn linha(posicao: u32, conta_id: Uuid, nome: &str, pontos: u64) -> LinhaDoRankin
         pontos,
         acertos: 9,
         total: 10,
+        precisao: 0.9,
+        maior_sequencia: Some(9),
         jogada_em: DateTime::UNIX_EPOCH,
     }
 }
@@ -229,6 +231,7 @@ async fn a_partida_do_ranking_e_publica_e_traz_as_estatisticas() {
         pontos: 1_099_340,
         acertos: 9,
         total: 10,
+        precisao: Some(0.9),
         maior_sequencia: Some(7),
         derrota: false,
         fantasma: false,

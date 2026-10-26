@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::dominio::{juntar_mesmas_musicas, montar_ranking, LinhaDoGeral, MusicaPopular, PartidaPublica, Ranking, TAMANHO_DO_TOP};
+use super::dominio::{juntar_mesmas_musicas, montar_ranking, LinhaDoGeral, MusicaPopular, PartidaPublica, Ranking, TAMANHO_DO_TOP, TAMANHO_DO_TOP_DA_MUSICA};
 use super::portas::RepositorioDoRanking;
 use crate::modules::catalogo::{DadosDaMusica, ServicosDoCatalogo};
 use crate::modules::conta::{FalhaExterna, ServicosDaConta, TAMANHO_MAXIMO_DO_ID_DA_MUSICA};
@@ -31,15 +31,18 @@ impl ServicosDoRanking {
             return Err(ErroDoRanking::MusicaInvalida);
         }
         let conta = self.conta_de(token).await;
-        let linhas = self.repositorio.linhas(musica_id, dificuldade, instrumento, TAMANHO_DO_TOP, conta).await?;
-        Ok(montar_ranking(linhas, conta))
+        let linhas = self
+            .repositorio
+            .linhas(musica_id, dificuldade, instrumento, TAMANHO_DO_TOP_DA_MUSICA, conta)
+            .await?;
+        Ok(montar_ranking(linhas, conta, TAMANHO_DO_TOP_DA_MUSICA))
     }
 
     /// Os jogadores com mais XP. Com o token, vem também a posição de quem pediu.
     pub async fn geral(&self, token: Option<&str>) -> Result<Ranking<LinhaDoGeral>, ErroDoRanking> {
         let conta = self.conta_de(token).await;
         let linhas = self.repositorio.geral(TAMANHO_DO_TOP, conta).await?;
-        Ok(montar_ranking(linhas, conta))
+        Ok(montar_ranking(linhas, conta, TAMANHO_DO_TOP))
     }
 
     /// As músicas com mais partidas, somando todos os jogadores, com o que o catálogo sabe de cada uma.
@@ -180,6 +183,8 @@ mod tests {
             pontos: 1000,
             acertos: 9,
             total: 10,
+            precisao: 0.9,
+            maior_sequencia: Some(9),
             jogada_em: DateTime::UNIX_EPOCH,
         }
     }
@@ -199,7 +204,7 @@ mod tests {
         let ranking = servicos.ranking("encore:abc", Dificuldade::Expert, Instrumento::Guitarra, None).await.unwrap();
         assert_eq!(ranking.top.len(), 1);
         assert_eq!(ranking.meu, None);
-        assert_eq!(*repositorio.ultimo_limite.lock().unwrap(), Some(TAMANHO_DO_TOP));
+        assert_eq!(*repositorio.ultimo_limite.lock().unwrap(), Some(TAMANHO_DO_TOP_DA_MUSICA));
     }
 
     #[tokio::test]

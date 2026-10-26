@@ -9,6 +9,9 @@ export interface PosicaoNoRanking {
   pontos: number;
   acertos: number;
   total: number;
+  /** De 0 a 1, pelo valor de cada nota. É o que ordena o ranking. */
+  precisao: number;
+  maior_sequencia: number | null;
   jogada_em: string;
   /** A partida do recorde, para abrir as estatísticas dela. */
   partida_id: string;
@@ -25,6 +28,8 @@ export interface PartidaDoRanking {
   pontos: number;
   acertos: number;
   total: number;
+  /** Só as partidas que o servidor conferiu têm. */
+  precisao: number | null;
   /** Partidas antigas não têm. */
   maior_sequencia: number | null;
   derrota: boolean;

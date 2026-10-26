@@ -13,6 +13,7 @@ const partida: PartidaDoRanking = {
   pontos: 1_099_340,
   acertos: 990,
   total: 1000,
+  precisao: 0.9876,
   maior_sequencia: 512,
   derrota: false,
   fantasma: false,
@@ -36,6 +37,7 @@ describe("TelaDePartidaDoRanking", () => {
     expect(await screen.findByText("Partida de Srr 4")).toBeInTheDocument();
     expect(api.partida).toHaveBeenCalledWith("p1", expect.anything());
     expect(screen.getByText("990 / 1000")).toBeInTheDocument();
+    expect(screen.getByLabelText("Precisão")).toHaveTextContent("98,76%");
     expect(screen.getByText("512")).toBeInTheDocument();
     expect(screen.getByLabelText("1.099.340 pontos")).toBeInTheDocument();
     expect(screen.queryByText(/Tocar de novo/)).not.toBeInTheDocument();
