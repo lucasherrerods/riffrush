@@ -115,12 +115,15 @@ async fn eu_pede_token() {
 async fn partida_da_xp_e_sobe_de_nivel() {
     let app = app();
     let token = entrar(&app).await;
-    let (status, corpo) = chamar(&app, "POST", "/partidas", Some(&token), Some(partida())).await;
+    // Um expert perfeito de tamanho comum passa dos 100 XP do nível 1.
+    let mut expert = partida();
+    expert["dificuldade"] = json!("expert");
+    let (status, corpo) = chamar(&app, "POST", "/partidas", Some(&token), Some(expert)).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(corpo["xp_ganho"], 150);
+    assert_eq!(corpo["xp_ganho"], 108);
     assert_eq!((corpo["antes"]["nivel"].as_u64(), corpo["depois"]["nivel"].as_u64()), (Some(1), Some(2)));
     let (_, eu) = chamar(&app, "GET", "/eu", Some(&token), None).await;
-    assert_eq!(eu["xp_total"], 150);
+    assert_eq!(eu["xp_total"], 108);
 }
 
 #[tokio::test]

@@ -109,6 +109,8 @@ pub fn validar_replay(bytes: &[u8]) -> Result<(), PartidaInvalida> {
 pub const MAXIMO_DE_NOTAS: u32 = 10_000;
 /// Uma música de tamanho comum. Mais curta rende menos, mais longa rende um pouco mais.
 const NOTAS_DE_REFERENCIA: f64 = 400.0;
+/// Ajuste geral do ritmo: a fórmula dava XP demais e os níveis subiam rápido. Vale só para as partidas novas.
+const RITMO_DO_XP: f64 = 0.3;
 
 impl ResumoDaPartida {
     pub fn validar(self) -> Result<Self, PartidaInvalida> {
@@ -130,7 +132,7 @@ impl ResumoDaPartida {
 }
 
 /// XP de uma partida: a dificuldade dá a base, a precisão vale de 50% a 150%
-/// e o tamanho da música de 25% a 150%. Ser vaiado ainda rende um pouco.
+/// e o tamanho da música de 25% a 150%. Ser vaiado ainda rende um pouco. Tudo vezes `RITMO_DO_XP`.
 pub fn xp_da_partida(partida: ResumoDaPartida) -> u64 {
     let tamanho = (f64::from(partida.total) / NOTAS_DE_REFERENCIA).clamp(0.25, 1.5);
     let castigo = if partida.derrota {
@@ -140,7 +142,7 @@ pub fn xp_da_partida(partida: ResumoDaPartida) -> u64 {
     } else {
         1.0
     };
-    (partida.dificuldade.base() * (0.5 + partida.precisao()) * tamanho * castigo).round() as u64
+    (partida.dificuldade.base() * (0.5 + partida.precisao()) * tamanho * castigo * RITMO_DO_XP).round() as u64
 }
 
 /// XP para sair do nível `nivel` e chegar no seguinte. Cresce a cada nível.
@@ -217,22 +219,22 @@ mod tests {
 
     #[test]
     fn precisao_maior_rende_mais() {
-        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 400, 400)), 150);
-        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 200, 400)), 100);
-        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 0, 400)), 50);
+        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 400, 400)), 45);
+        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 200, 400)), 30);
+        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 0, 400)), 15);
     }
 
     #[test]
     fn musica_curta_rende_menos_e_longa_tem_teto() {
-        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 10, 10)), 38);
-        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 5000, 5000)), 225);
+        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 10, 10)), 11);
+        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 5000, 5000)), 68);
     }
 
     #[test]
     fn vaia_e_fantasma_rendem_menos() {
         let normal = partida(Dificuldade::Medio, 400, 400);
-        assert_eq!(xp_da_partida(ResumoDaPartida { derrota: true, ..normal }), 38);
-        assert_eq!(xp_da_partida(ResumoDaPartida { fantasma: true, ..normal }), 75);
+        assert_eq!(xp_da_partida(ResumoDaPartida { derrota: true, ..normal }), 11);
+        assert_eq!(xp_da_partida(ResumoDaPartida { fantasma: true, ..normal }), 23);
     }
 
     #[test]
