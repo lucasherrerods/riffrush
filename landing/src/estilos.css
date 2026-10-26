@@ -1,0 +1,41 @@
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+@import "@fontsource/bebas-neue";
+@import "@fontsource/rubik-dirt";
+@import "../../frontend/src/shared/styles/identidade.css";
+
+@source "../../frontend/src/shared/ui/IconeGithub.tsx";
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Geist Variable", sans-serif;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--cor-primaria);
+  color: var(--cor-texto);
+}
+
+.faixa {
+  animation: faixa-corre 30s linear infinite;
+}
+
+@keyframes faixa-corre {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .faixa {
+    animation: none;
+  }
+}

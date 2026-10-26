@@ -8,6 +8,7 @@ Jogo de ritmo estilo Guitar Hero / Clone Hero para desktop (Tauri), com multijog
 frontend/   o jogo: React + Tauri (desktop) + versão web servida aos celulares
 backend/    a API em Rust (contas, XP, partidas)
   relay/    Worker da Cloudflare do modo online, até ele virar parte da API
+landing/    site de divulgação do jogo (Vite + React), usa as cores e a identidade do frontend
 .github/    CI (precisa ficar na raiz)
 CLAUDE.md   este arquivo, único para o projeto inteiro
 ```
@@ -150,6 +151,10 @@ Regras:
 - Toda rota nova entra no OpenAPI (utoipa).
 - Rotas que recebem dados do cliente validam limites (tamanho, faixa de valores, frequência).
 - Logs com `tracing`, sem dados pessoais nem tokens.
+
+## Landing (`landing/`)
+
+Site de divulgação com uma demo jogável. Tem `package.json` próprio: `cd landing && npm run dev` (porta 1440), `npm test` e `npm run build`. Não copia nada do jogo: importa de `frontend/` pelo alias `@jogo` (tokens, `identidade.css`, ícones, logo e imagens). O que for compartilhado não pode depender de pacotes que só o frontend instala.
 
 ## Relay (`backend/relay/`)
 
