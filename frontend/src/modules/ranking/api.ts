@@ -9,7 +9,7 @@ export interface PosicaoNoRanking {
   pontos: number;
   acertos: number;
   total: number;
-  /** De 0 a 1, pelo valor de cada nota. É o que ordena o ranking. */
+  /** De 0 a 1, pelo valor de cada nota. Aparece na linha; quem ordena são os pontos. */
   precisao: number;
   maior_sequencia: number | null;
   jogada_em: string;
