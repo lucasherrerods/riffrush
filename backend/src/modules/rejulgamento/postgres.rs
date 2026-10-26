@@ -3,8 +3,8 @@ use chrono::{DateTime, Duration, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::dominio::ChartGuardado;
-use super::portas::{CacheDeCharts, FilaDoRejulgamento, PartidaPendente};
+use super::dominio::{cabe_mais_um, inicio_da_janela, ChartGuardado};
+use super::portas::{CacheDeCharts, FilaDoRejulgamento, LimiteDePedidos, PartidaPendente};
 use crate::modules::conta::{FalhaExterna, FilaDePartidas, PartidaNaFila};
 use crate::modules::progresso::{Dificuldade, Instrumento};
 
@@ -157,5 +157,36 @@ impl CacheDeCharts for RejulgamentoPostgres {
             .await
             .map(|_| ())
             .map_err(falha)
+    }
+}
+
+#[async_trait]
+impl LimiteDePedidos for RejulgamentoPostgres {
+    async fn pedir(&self, agora: DateTime<Utc>) -> Result<bool, FalhaExterna> {
+        let mut transacao = self.0.begin().await.map_err(falha)?;
+        // Uma instância por vez: duas contando juntas passariam do limite.
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtext('pedidos_ao_encore'))")
+            .execute(&mut *transacao)
+            .await
+            .map_err(falha)?;
+        sqlx::query("DELETE FROM pedidos_ao_encore WHERE feito_em <= $1")
+            .bind(inicio_da_janela(agora))
+            .execute(&mut *transacao)
+            .await
+            .map_err(falha)?;
+        let feitos: i64 = sqlx::query_scalar("SELECT count(*) FROM pedidos_ao_encore")
+            .fetch_one(&mut *transacao)
+            .await
+            .map_err(falha)?;
+        let cabe = cabe_mais_um(u32::try_from(feitos).unwrap_or(u32::MAX));
+        if cabe {
+            sqlx::query("INSERT INTO pedidos_ao_encore (feito_em) VALUES ($1)")
+                .bind(agora)
+                .execute(&mut *transacao)
+                .await
+                .map_err(falha)?;
+        }
+        transacao.commit().await.map_err(falha)?;
+        Ok(cabe)
     }
 }

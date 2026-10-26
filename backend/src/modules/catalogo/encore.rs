@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -7,7 +7,7 @@ use serde::Deserialize;
 use super::dominio::DadosDaMusica;
 use super::portas::FonteDeMusicas;
 use crate::modules::conta::{FalhaExterna, Relogio};
-use crate::modules::rejulgamento::{FonteDeCharts, JanelaDePedidos, JANELA_DO_ENCORE, PEDIDOS_AO_ENCORE};
+use crate::modules::rejulgamento::{FonteDeCharts, LimiteDePedidos};
 
 const ENDERECO_DA_BUSCA: &str = "https://api.enchor.us/search/advanced";
 const ENDERECO_DOS_ARQUIVOS: &str = "https://files.enchor.us";
@@ -19,29 +19,21 @@ const TEMPO_MAXIMO_DO_DOWNLOAD: Duration = Duration::from_secs(120);
 const TAMANHO_MAXIMO_DO_SNG: usize = 200 * 1024 * 1024;
 
 /// O Encore (enchor.us), o mesmo que o app usa para baixar músicas. Os pedidos da busca e
-/// dos downloads dividem o mesmo limite, porque o Encore conta todos juntos.
+/// dos downloads dividem o mesmo limite, porque o Encore conta todos juntos. O limite é contado
+/// no banco, então vale para todas as instâncias da API.
 pub struct Encore {
     http: reqwest::Client,
-    relogio: std::sync::Arc<dyn Relogio>,
-    pedidos: Mutex<JanelaDePedidos>,
+    relogio: Arc<dyn Relogio>,
+    limite: Arc<dyn LimiteDePedidos>,
 }
 
 impl Encore {
-    pub fn novo(http: reqwest::Client, relogio: std::sync::Arc<dyn Relogio>) -> Self {
-        Self {
-            http,
-            relogio,
-            pedidos: Mutex::new(JanelaDePedidos::nova(PEDIDOS_AO_ENCORE, JANELA_DO_ENCORE)),
-        }
+    pub fn novo(http: reqwest::Client, relogio: Arc<dyn Relogio>, limite: Arc<dyn LimiteDePedidos>) -> Self {
+        Self { http, relogio, limite }
     }
 
-    fn pedir(&self) -> Result<(), FalhaExterna> {
-        let cabe = self
-            .pedidos
-            .lock()
-            .map_err(|_| FalhaExterna("encore: limite travado".into()))?
-            .pedir(self.relogio.agora());
-        if cabe {
+    async fn pedir(&self) -> Result<(), FalhaExterna> {
+        if self.limite.pedir(self.relogio.agora()).await? {
             Ok(())
         } else {
             Err(FalhaExterna("encore: limite de pedidos".into()))
@@ -49,7 +41,7 @@ impl Encore {
     }
 
     async fn buscar(&self, md5: &str) -> Result<Resposta, FalhaExterna> {
-        self.pedir()?;
+        self.pedir().await?;
         let falha = |e: reqwest::Error| FalhaExterna(format!("encore: {e}"));
         self.http
             .post(ENDERECO_DA_BUSCA)
@@ -127,7 +119,7 @@ impl FonteDeCharts for Encore {
         let Some(endereco) = endereco_do_sng(&self.buscar(md5).await?, md5) else {
             return Ok(None);
         };
-        self.pedir()?;
+        self.pedir().await?;
         let falha = |e: reqwest::Error| FalhaExterna(format!("encore: {e}"));
         let mut resposta = self.http.get(endereco).timeout(TEMPO_MAXIMO_DO_DOWNLOAD).send().await.map_err(falha)?;
         if resposta.status() == reqwest::StatusCode::NOT_FOUND {

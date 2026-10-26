@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use chrono::{DateTime, Duration, Utc};
 use riffrush_motor as motor;
 
@@ -103,37 +101,18 @@ pub fn espera_da_tentativa(tentativas: u32) -> Duration {
 }
 
 /// O Encore aceita ~50 pedidos a cada 40 segundos. Fica uma margem para não encostar no limite.
-pub const PEDIDOS_AO_ENCORE: usize = 40;
+/// O limite vale para a API inteira: todas as instâncias contam os pedidos no mesmo lugar.
+pub const PEDIDOS_AO_ENCORE: u32 = 40;
 pub const JANELA_DO_ENCORE: Duration = Duration::seconds(40);
 
-/// Conta os pedidos da última janela e diz se cabe mais um.
-#[derive(Debug)]
-pub struct JanelaDePedidos {
-    maximo: usize,
-    janela: Duration,
-    feitos: VecDeque<DateTime<Utc>>,
+/// Pedidos feitos antes disso já saíram da janela e não contam mais.
+pub fn inicio_da_janela(agora: DateTime<Utc>) -> DateTime<Utc> {
+    agora - JANELA_DO_ENCORE
 }
 
-impl JanelaDePedidos {
-    pub fn nova(maximo: usize, janela: Duration) -> Self {
-        Self {
-            maximo,
-            janela,
-            feitos: VecDeque::new(),
-        }
-    }
-
-    /// Anota o pedido e devolve true se ele cabe; sem espaço, não anota nada.
-    pub fn pedir(&mut self, agora: DateTime<Utc>) -> bool {
-        while self.feitos.front().is_some_and(|&feito| agora - feito >= self.janela) {
-            self.feitos.pop_front();
-        }
-        if self.feitos.len() >= self.maximo {
-            return false;
-        }
-        self.feitos.push_back(agora);
-        true
-    }
+/// Com `feitos` pedidos na janela, cabe mais um?
+pub fn cabe_mais_um(feitos: u32) -> bool {
+    feitos < PEDIDOS_AO_ENCORE
 }
 
 #[cfg(test)]
@@ -225,12 +204,10 @@ mod tests {
     }
 
     #[test]
-    fn a_janela_segura_os_pedidos_ate_os_antigos_sairem() {
-        let inicio = Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap();
-        let mut janela = JanelaDePedidos::nova(2, Duration::seconds(40));
-        assert!(janela.pedir(inicio));
-        assert!(janela.pedir(inicio + Duration::seconds(1)));
-        assert!(!janela.pedir(inicio + Duration::seconds(39)));
-        assert!(janela.pedir(inicio + Duration::seconds(40)));
+    fn a_janela_tem_40_segundos_e_cabem_40_pedidos() {
+        let agora = Utc.with_ymd_and_hms(2026, 1, 1, 0, 1, 0).unwrap();
+        assert_eq!(inicio_da_janela(agora), Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 20).unwrap());
+        assert!(cabe_mais_um(39));
+        assert!(!cabe_mais_um(40));
     }
 }
