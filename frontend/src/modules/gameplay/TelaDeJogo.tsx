@@ -10,6 +10,7 @@ import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { criarBot, jogarSozinho } from "./bot";
+import { AvisoDeAcerto } from "./componentes/AvisoDeAcerto";
 import { MedidorDeRock } from "./componentes/MedidorDeRock";
 import { MedidorDeVida } from "./componentes/MedidorDeVida";
 import { MenuDePausa } from "./componentes/MenuDePausa";
@@ -18,7 +19,7 @@ import { BarraDeEstrelas } from "./componentes/BarraDeEstrelas";
 import { progressoDasEstrelas } from "./estrelas";
 import { criarLojaDoHud, useLoja, type LojaDoHud } from "./lojaDoHud";
 import { NOMES_DAS_PISTAS } from "./cores";
-import { avancar, criarPartida, multiplicador, precisao, retirarEventos } from "./partida";
+import { avancar, criarPartida, multiplicador, precisao, retirarEventos, type Julgamento } from "./partida";
 import { aplicarEntradas, criarGravador, empacotarReplay, hashDoChart, type EventoDaTransmissao, type Replay } from "./replay";
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { forcaDoTrovao } from "./pista/efeitos";
@@ -124,10 +125,12 @@ interface Hud {
   /** Última reação do personagem (erro, star power, derrota). */
   reacao: Reacao | null;
   fantasma: boolean;
+  /** O último acerto, para o aviso de PERFEITO / ÓTIMO / BOM ao lado da pista. */
+  julgamento: { julgamento: Julgamento; tempo: number } | null;
 }
 
 const ENTRADA = 2.5;
-const HUD_INICIAL: Hud = { pontos: 0, sequencia: 0, multiplicador: 1, vida: 0.5, estrela: 0, estrelaAtiva: false, progresso: 0, precisao: 1, contagem: 3, pulso: 0, estrelas: 0, estrelasDoRecorde: 0, reacao: null, fantasma: false };
+const HUD_INICIAL: Hud = { pontos: 0, sequencia: 0, multiplicador: 1, vida: 0.5, estrela: 0, estrelaAtiva: false, progresso: 0, precisao: 1, contagem: 3, pulso: 0, estrelas: 0, estrelasDoRecorde: 0, reacao: null, fantasma: false, julgamento: null };
 const MAXIMO_DE_EXPLOSOES = 20;
 /** Altura da faixa de toque da nota aberta, no pé da tela. */
 const ALTURA_DA_FAIXA_ABERTA = 64;
@@ -290,7 +293,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     const explosoes: Cena["explosoes"] = [];
     const trovoes: Cena["trovoes"] = [];
     let estrelaDesde: number | null = null;
-    let julgamento: Cena["julgamento"] = null;
+    let julgamento: Hud["julgamento"] = null;
     let reacao: Reacao | null = null;
     const reagir = (tipo: Reacao["tipo"]) => (reacao = novaReacao(reacao, tipo));
     let ultimoTrovao = -Infinity;
@@ -548,7 +551,6 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
             frasesFalhas: partida.frasesFalhas,
             trovoes,
             estrelaDesde,
-            julgamento,
           },
           opcoes.efeitos,
           sprites,
@@ -577,6 +579,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         estrelas: Math.round(progressoDasEstrelas(partida.pontos, carregada.notas.length) * 100) / 100,
         estrelasDoRecorde: progressoDasEstrelas(recordeAtual.current ?? 0, carregada.notas.length),
         reacao,
+        julgamento,
       };
       loja.definir(proximo);
       ultimoHud = loja.ler();
@@ -815,7 +818,16 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
         className={cn("absolute", estreita ? "top-20 left-4" : "bottom-10 -translate-x-full")}
         style={estreita ? undefined : { left: Math.max(layout.centro - layout.largura / 2 - 24, LARGURA_DO_PAINEL + MARGEM_DO_HUD) }}
       >
-        <PainelDePontos pontos={hud.pontos} sequencia={hud.sequencia} multiplicador={hud.multiplicador} precisao={hud.precisao} estrelaAtiva={hud.estrelaAtiva} compacto={estreita} />
+        {/* O aviso fica no painel, acima da precisão, e não em cima da pista: não tapa as notas que vêm chegando. */}
+        <PainelDePontos
+          pontos={hud.pontos}
+          sequencia={hud.sequencia}
+          multiplicador={hud.multiplicador}
+          precisao={hud.precisao}
+          estrelaAtiva={hud.estrelaAtiva}
+          compacto={estreita}
+          aviso={<AvisoDeAcerto julgamento={hud.julgamento} />}
+        />
       </div>
 
       {estreita ? (

@@ -70,4 +70,11 @@ describe("PainelDePontos", () => {
     render(<PainelDePontos {...base} compacto />);
     for (const rotulo of ["Pontos", "Sequência", "Multiplicador", "Precisão"]) expect(screen.getByLabelText(rotulo)).toBeInTheDocument();
   });
+
+  it("mostra o aviso do último acerto logo acima da precisão", () => {
+    render(<PainelDePontos {...base} aviso={<span>PERFEITO</span>} />);
+    const aviso = screen.getByText("PERFEITO");
+    const precisao = screen.getByLabelText("Precisão");
+    expect(aviso.compareDocumentPosition(precisao) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });
