@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         fila: rejulgamento.clone(),
     };
     // Um Encore só: a busca dos nomes e os downloads dos charts dividem o mesmo limite de pedidos.
-    let encore = Arc::new(Encore::novo(reqwest::Client::new(), relogio.clone()));
+    let encore = Arc::new(Encore::novo(reqwest::Client::new(), relogio.clone(), rejulgamento.clone()));
     let catalogo = ServicosDoCatalogo {
         repositorio: Arc::new(CatalogoPostgres(banco.clone())),
         encore: encore.clone(),

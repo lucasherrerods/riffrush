@@ -1,10 +1,26 @@
 import { motion } from "framer-motion";
-import { Hourglass, Sparkles } from "lucide-react";
+import { Hourglass, Info, Sparkles } from "lucide-react";
 import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
 import type { RegistroDaPartida } from "./api";
 
+interface Props {
+  xp: RegistroDaPartida;
+  /** Só as músicas do Encore valem XP: o servidor confere a partida pelo chart de lá. */
+  valeXp?: boolean;
+}
+
 /** No resultado: quanto XP a partida deu e se a conta subiu de nível. */
-export function GanhoDeXp({ xp }: { xp: RegistroDaPartida }) {
+export function GanhoDeXp({ xp, valeXp = true }: Props) {
+  if (!valeXp) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="chapa flex w-full max-w-2xl items-center gap-2 bg-superficie p-4">
+        <Info className="size-4 text-texto-suave opacity-70" />
+        <span className="font-titulo text-xl tracking-wide">Esta música não vale XP</span>
+        <span className="flex-1" />
+        <span className="text-base text-texto-suave">Só as baixadas em Buscar músicas valem, porque o servidor confere a partida.</span>
+      </motion.div>
+    );
+  }
   if ("pendente" in xp) {
     return (
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="chapa flex w-full max-w-2xl items-center gap-2 bg-superficie p-4">

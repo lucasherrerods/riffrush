@@ -591,7 +591,7 @@ export function App() {
                 rotuloDeContinuar={emRede ? "Voltar para a sala" : undefined}
                 extra={
                   <>
-                    {xpDaPartida && <GanhoDeXp xp={xpDaPartida} />}
+                    {xpDaPartida && <GanhoDeXp xp={xpDaPartida} valeXp={!!musica.md5DoEncore} />}
                     {emRede && conexao.sala && (
                       <Placar sala={conexao.sala} meusPontos={resultado.resultado.pontos} minhaDerrota={resultado.resultado.derrota} meuFantasma={resultado.resultado.fantasma} />
                     )}

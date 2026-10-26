@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use chrono::{DateTime, Duration, Utc};
 use riffrush_motor as motor;
 
@@ -17,6 +15,8 @@ pub struct Rejulgada {
     pub bons: u32,
     /// De 0 a 1, pelo valor de cada nota do chart.
     pub precisao: f64,
+    /// Jogou com o modificador sem falha: a vida não acaba, então a partida não vale para o ranking.
+    pub sem_falha: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
@@ -88,6 +88,7 @@ pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Di
         otimos: partida.otimos,
         bons: partida.bons,
         precisao: f64::from(partida.valor_dos_acertos) / (f64::from(total) * 300.0),
+        sem_falha: replay.sem_falha,
     })
 }
 
@@ -103,37 +104,18 @@ pub fn espera_da_tentativa(tentativas: u32) -> Duration {
 }
 
 /// O Encore aceita ~50 pedidos a cada 40 segundos. Fica uma margem para não encostar no limite.
-pub const PEDIDOS_AO_ENCORE: usize = 40;
+/// O limite vale para a API inteira: todas as instâncias contam os pedidos no mesmo lugar.
+pub const PEDIDOS_AO_ENCORE: u32 = 40;
 pub const JANELA_DO_ENCORE: Duration = Duration::seconds(40);
 
-/// Conta os pedidos da última janela e diz se cabe mais um.
-#[derive(Debug)]
-pub struct JanelaDePedidos {
-    maximo: usize,
-    janela: Duration,
-    feitos: VecDeque<DateTime<Utc>>,
+/// Pedidos feitos antes disso já saíram da janela e não contam mais.
+pub fn inicio_da_janela(agora: DateTime<Utc>) -> DateTime<Utc> {
+    agora - JANELA_DO_ENCORE
 }
 
-impl JanelaDePedidos {
-    pub fn nova(maximo: usize, janela: Duration) -> Self {
-        Self {
-            maximo,
-            janela,
-            feitos: VecDeque::new(),
-        }
-    }
-
-    /// Anota o pedido e devolve true se ele cabe; sem espaço, não anota nada.
-    pub fn pedir(&mut self, agora: DateTime<Utc>) -> bool {
-        while self.feitos.front().is_some_and(|&feito| agora - feito >= self.janela) {
-            self.feitos.pop_front();
-        }
-        if self.feitos.len() >= self.maximo {
-            return false;
-        }
-        self.feitos.push_back(agora);
-        true
-    }
+/// Com `feitos` pedidos na janela, cabe mais um?
+pub fn cabe_mais_um(feitos: u32) -> bool {
+    feitos < PEDIDOS_AO_ENCORE
 }
 
 #[cfg(test)]
@@ -151,6 +133,10 @@ pub mod testes {
 
     /// Toca as notas pedidas com o atraso dado, e deixa as outras passarem.
     pub fn replay(chart: &ChartGuardado, toques: &[(usize, f64)]) -> Vec<u8> {
+        replay_com(chart, toques, false)
+    }
+
+    pub fn replay_com(chart: &ChartGuardado, toques: &[(usize, f64)], sem_falha: bool) -> Vec<u8> {
         let notas = motor::notas_do_chart(chart, motor::Instrumento::Guitarra, motor::Dificuldade::Expert).unwrap();
         let mut entradas = Vec::new();
         for &(indice, atraso) in toques {
@@ -167,7 +153,7 @@ pub mod testes {
             });
         }
         motor::empacotar_replay(&motor::Replay {
-            sem_falha: false,
+            sem_falha,
             fantasma: false,
             hash_do_chart: motor::hash_do_chart(&notas),
             entradas,
@@ -179,7 +165,7 @@ pub mod testes {
 mod tests {
     use chrono::TimeZone;
 
-    use super::testes::{chart, replay};
+    use super::testes::{chart, replay, replay_com};
     use super::*;
 
     #[test]
@@ -197,6 +183,15 @@ mod tests {
         assert_eq!(rejulgada.resumo.maior_sequencia, Some(3));
         assert!((rejulgada.precisao - 450.0 / 1200.0).abs() < 1e-9);
         assert_eq!(rejulgada.pontos, 150);
+    }
+
+    #[test]
+    fn diz_quando_a_partida_foi_sem_falha() {
+        let chart = chart();
+        let normal = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &replay(&chart, &[(0, 0.0)])).unwrap();
+        let sem_falha = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &replay_com(&chart, &[(0, 0.0)], true)).unwrap();
+        assert!(!normal.sem_falha);
+        assert!(sem_falha.sem_falha);
     }
 
     #[test]
@@ -225,12 +220,10 @@ mod tests {
     }
 
     #[test]
-    fn a_janela_segura_os_pedidos_ate_os_antigos_sairem() {
-        let inicio = Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap();
-        let mut janela = JanelaDePedidos::nova(2, Duration::seconds(40));
-        assert!(janela.pedir(inicio));
-        assert!(janela.pedir(inicio + Duration::seconds(1)));
-        assert!(!janela.pedir(inicio + Duration::seconds(39)));
-        assert!(janela.pedir(inicio + Duration::seconds(40)));
+    fn a_janela_tem_40_segundos_e_cabem_40_pedidos() {
+        let agora = Utc.with_ymd_and_hms(2026, 1, 1, 0, 1, 0).unwrap();
+        assert_eq!(inicio_da_janela(agora), Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 20).unwrap());
+        assert!(cabe_mais_um(39));
+        assert!(!cabe_mais_um(40));
     }
 }

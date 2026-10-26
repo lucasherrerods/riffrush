@@ -48,6 +48,12 @@ pub enum ChartBaixado {
 }
 
 #[async_trait]
+pub trait LimiteDePedidos: Send + Sync {
+    /// Anota o pedido e devolve true se ele cabe no limite; sem espaço, não anota nada.
+    async fn pedir(&self, agora: DateTime<Utc>) -> Result<bool, FalhaExterna>;
+}
+
+#[async_trait]
 pub trait FonteDeCharts: Send + Sync {
     /// Baixa o .sng do chart guardando só o chart: o áudio passa sem ficar na memória.
     async fn baixar(&self, md5: &str) -> Result<ChartBaixado, FalhaExterna>;
