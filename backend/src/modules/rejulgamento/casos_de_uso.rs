@@ -62,6 +62,7 @@ impl ServicosDoRejulgamento {
                 pontos: rejulgada.pontos,
                 resumo: rejulgada.resumo,
                 precisao: rejulgada.precisao,
+                sem_falha: rejulgada.sem_falha,
                 jogada_em: partida.enviada_em,
                 replay: partida.replay.clone(),
             })

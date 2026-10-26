@@ -17,6 +17,8 @@ pub struct Rejulgada {
     pub bons: u32,
     /// De 0 a 1, pelo valor de cada nota do chart.
     pub precisao: f64,
+    /// Jogou com o modificador sem falha: a vida não acaba, então a partida não vale para o ranking.
+    pub sem_falha: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
@@ -88,6 +90,7 @@ pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Di
         otimos: partida.otimos,
         bons: partida.bons,
         precisao: f64::from(partida.valor_dos_acertos) / (f64::from(total) * 300.0),
+        sem_falha: replay.sem_falha,
     })
 }
 
@@ -151,6 +154,10 @@ pub mod testes {
 
     /// Toca as notas pedidas com o atraso dado, e deixa as outras passarem.
     pub fn replay(chart: &ChartGuardado, toques: &[(usize, f64)]) -> Vec<u8> {
+        replay_com(chart, toques, false)
+    }
+
+    pub fn replay_com(chart: &ChartGuardado, toques: &[(usize, f64)], sem_falha: bool) -> Vec<u8> {
         let notas = motor::notas_do_chart(chart, motor::Instrumento::Guitarra, motor::Dificuldade::Expert).unwrap();
         let mut entradas = Vec::new();
         for &(indice, atraso) in toques {
@@ -167,7 +174,7 @@ pub mod testes {
             });
         }
         motor::empacotar_replay(&motor::Replay {
-            sem_falha: false,
+            sem_falha,
             fantasma: false,
             hash_do_chart: motor::hash_do_chart(&notas),
             entradas,
@@ -179,7 +186,7 @@ pub mod testes {
 mod tests {
     use chrono::TimeZone;
 
-    use super::testes::{chart, replay};
+    use super::testes::{chart, replay, replay_com};
     use super::*;
 
     #[test]
@@ -197,6 +204,15 @@ mod tests {
         assert_eq!(rejulgada.resumo.maior_sequencia, Some(3));
         assert!((rejulgada.precisao - 450.0 / 1200.0).abs() < 1e-9);
         assert_eq!(rejulgada.pontos, 150);
+    }
+
+    #[test]
+    fn diz_quando_a_partida_foi_sem_falha() {
+        let chart = chart();
+        let normal = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &replay(&chart, &[(0, 0.0)])).unwrap();
+        let sem_falha = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &replay_com(&chart, &[(0, 0.0)], true)).unwrap();
+        assert!(!normal.sem_falha);
+        assert!(sem_falha.sem_falha);
     }
 
     #[test]
