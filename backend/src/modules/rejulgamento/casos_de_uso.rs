@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
-use riffrush_motor::extrair_chart;
-
 use super::dominio::{espera_da_tentativa, rejulgar, ChartGuardado, MAXIMO_DE_TENTATIVAS};
-use super::portas::{CacheDeCharts, FilaDoRejulgamento, FonteDeCharts, PartidaPendente};
+use super::portas::{CacheDeCharts, ChartBaixado, FilaDoRejulgamento, FonteDeCharts, PartidaPendente};
 use crate::modules::conta::{FalhaExterna, PartidaRejulgada, Relogio, ServicosDaConta};
 
 pub const TAMANHO_DO_LOTE: u32 = 10;
@@ -85,15 +83,15 @@ impl ServicosDoRejulgamento {
                 return Err(SemChart::Indisponivel);
             }
         }
-        let sng = match self.fonte.baixar(md5).await {
-            Ok(Some(sng)) => sng,
-            Ok(None) => return Err(SemChart::Desistir("o chart não existe no Encore".into())),
+        let chart = match self.fonte.baixar(md5).await {
+            Ok(ChartBaixado::Pronto(chart)) => chart,
+            Ok(ChartBaixado::NaoExiste) => return Err(SemChart::Desistir("o chart não existe no Encore".into())),
+            Ok(ChartBaixado::Ilegivel) => return Err(SemChart::Desistir("o .sng do Encore é ilegível".into())),
             Err(falha) => {
                 tracing::info!(%falha, "Encore indisponível, a partida espera");
                 return Err(SemChart::Indisponivel);
             }
         };
-        let chart = extrair_chart(&sng).map_err(|_| SemChart::Desistir("o .sng do Encore é ilegível".into()))?;
         if let Err(falha) = self.cache.guardar(md5, &chart).await {
             tracing::warn!(%falha, "não deu para guardar o chart");
         }
@@ -180,9 +178,13 @@ mod fakes {
 
     #[async_trait]
     impl FonteDeCharts for EncoreFalso {
-        async fn baixar(&self, _md5: &str) -> Result<Option<Vec<u8>>, FalhaExterna> {
+        async fn baixar(&self, _md5: &str) -> Result<ChartBaixado, FalhaExterna> {
             *self.chamadas.lock().unwrap() += 1;
-            self.resposta.clone().map_err(FalhaExterna)
+            // Passa o .sng pelo mesmo extrator do download de verdade.
+            Ok(match self.resposta.clone().map_err(FalhaExterna)? {
+                Some(sng) => riffrush_motor::extrair_chart(&sng).map_or(ChartBaixado::Ilegivel, ChartBaixado::Pronto),
+                None => ChartBaixado::NaoExiste,
+            })
         }
     }
 }
@@ -320,6 +322,16 @@ mod tests {
         assert_eq!(
             sumiu.servicos.processar_lote().await.unwrap(),
             [Desfecho::Desistida("o chart não existe no Encore".into())]
+        );
+    }
+
+    #[tokio::test]
+    async fn sng_sem_chart_que_de_para_ler_nao_vale() {
+        let c = cenario(Ok(Some(b"SNGPKG nada aqui".to_vec()))).await;
+        c.fila.na_vez.lock().unwrap().push(pendente(9, c.conta_id, vec![2, 0], 1));
+        assert_eq!(
+            c.servicos.processar_lote().await.unwrap(),
+            [Desfecho::Desistida("o .sng do Encore é ilegível".into())]
         );
     }
 }
