@@ -16,7 +16,16 @@ const ranking: RespostaDoGeral = { jogadores: 120, top: [posicao(1, "Ana", 9000)
 const musicas: MusicaNoRanking[] = [
   { posicao: 1, musica_id: "encore:abc", partidas: 30, jogadores: 4 },
   { posicao: 2, musica_id: "encore:xyz", partidas: 1, jogadores: 1 },
-  { posicao: 3, musica_id: "encore:goofy", partidas: 1, jogadores: 1, titulo: "Goofy Goober Rock", artista: "Tom Rothrock", capa: "https://files.enchor.us/capa.jpg" },
+  {
+    posicao: 3,
+    musica_id: "encore:goofy",
+    partidas: 1,
+    jogadores: 1,
+    titulo: "Goofy Goober Rock",
+    artista: "Tom Rothrock",
+    capa: "https://files.enchor.us/capa.jpg",
+    recorde: { nome: "Bia", precisao: 0.985, dificuldade: "dificil" },
+  },
   { posicao: 4, musica_id: "embutida:shine", partidas: 1, jogadores: 1, titulo: "Embutida", artista: "Riff Rush" },
 ];
 
@@ -28,14 +37,87 @@ function abrir(props: Partial<React.ComponentProps<typeof TelaDeLeaderboard>> = 
   return { carregarMusicas, usuario: userEvent.setup() };
 }
 
-describe("TelaDeLeaderboard: baixar as músicas do Encore", () => {
-  it("clicar numa música do Encore abre a janela de baixar dela; as outras não são clicáveis", async () => {
+describe("TelaDeLeaderboard: cada música", () => {
+  const rankingDaMusica = { jogadores: 1, top: [{ posicao: 1, nome: "Ana", avatar: null, pontos: 1000, acertos: 9, total: 10, precisao: 0.9, maior_sequencia: 9, jogada_em: new Date().toISOString(), partida_id: "p1" }], meu: null };
+
+  async function abrirMusica(nome: RegExp, props: Partial<React.ComponentProps<typeof TelaDeLeaderboard>> = {}) {
+    const api = { buscar: vi.fn(async () => rankingDaMusica) };
+    const tela = abrir({ apiDoRanking: api, ...props });
+    await tela.usuario.click(screen.getByRole("tab", { name: "Músicas" }));
+    await tela.usuario.click(await screen.findByRole("button", { name: nome }));
+    return { ...tela, api };
+  }
+
+  it("clicar numa música abre o ranking dela, na dificuldade do recorde e pela precisão", async () => {
+    const { api } = await abrirMusica(/Ver o ranking de Goofy Goober Rock/);
+    expect(await screen.findByRole("list", { name: "Ranking" })).toHaveTextContent("Ana");
+    expect(api.buscar).toHaveBeenLastCalledWith("encore:goofy", "dificil", expect.objectContaining({ instrumento: "guitarra", ordem: "precisao" }));
+  });
+
+  it("troca a dificuldade, o instrumento e a ordem do ranking da música", async () => {
+    const { api, usuario } = await abrirMusica(/Ver o ranking de Shine/);
+    await screen.findByRole("list", { name: "Ranking" });
+    await usuario.selectOptions(screen.getByLabelText("Dificuldade"), "medio");
+    await usuario.selectOptions(screen.getByLabelText("Instrumento"), "baixo");
+    await usuario.click(screen.getByRole("radio", { name: "Pontos" }));
+    await vi.waitFor(() => expect(api.buscar).toHaveBeenLastCalledWith("encore:abc", "medio", expect.objectContaining({ instrumento: "baixo", ordem: "pontos" })));
+  });
+
+  it("abrir uma partida do ranking da música leva o nome da música", async () => {
+    const aoAbrirPartida = vi.fn();
+    const { usuario } = await abrirMusica(/Ver o ranking de Goofy Goober Rock/, { aoAbrirPartida });
+    await usuario.click(await screen.findByRole("button", { name: "Ver a partida de Ana" }));
+    expect(aoAbrirPartida).toHaveBeenCalledWith("p1", { titulo: "Goofy Goober Rock", artista: "Tom Rothrock" });
+  });
+
+  it("só música do Encore tem botão de baixar, e só música da biblioteca tem prévia", async () => {
     const aoAbrirMusicaDoEncore = vi.fn();
-    const { usuario } = abrir({ aoAbrirMusicaDoEncore });
+    const ouvir = vi.fn();
+    const previa = (id: string) => (id === "encore:abc" ? ouvir : undefined);
+    const { usuario } = await abrirMusica(/Ver o ranking de Shine/, { aoAbrirMusicaDoEncore, previa });
+    await usuario.click(screen.getByRole("button", { name: "Ouvir prévia" }));
+    expect(ouvir).toHaveBeenCalled();
+    await usuario.click(screen.getByRole("button", { name: "Baixar" }));
+    expect(aoAbrirMusicaDoEncore).toHaveBeenCalledWith("abc");
+
+    await usuario.click(screen.getByRole("button", { name: "Voltar às músicas" }));
+    await usuario.click(await screen.findByRole("button", { name: /Ver o ranking de Embutida/ }));
+    expect(screen.queryByRole("button", { name: "Baixar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ouvir prévia" })).not.toBeInTheDocument();
+  });
+
+  it("a lista tem prévia direto na linha das músicas que estão na biblioteca", async () => {
+    const ouvir = vi.fn();
+    const { usuario } = abrir({ previa: (id) => (id === "encore:abc" ? ouvir : undefined) });
     await usuario.click(screen.getByRole("tab", { name: "Músicas" }));
-    await usuario.click(await screen.findByRole("button", { name: "Baixar Goofy Goober Rock — Tom Rothrock" }));
-    expect(aoAbrirMusicaDoEncore).toHaveBeenCalledWith("goofy");
-    expect(screen.queryByRole("button", { name: /Embutida/ })).not.toBeInTheDocument();
+    await usuario.click(await screen.findByRole("button", { name: "Ouvir prévia de Shine — Spektrem" }));
+    expect(ouvir).toHaveBeenCalled();
+    expect(screen.getAllByRole("button", { name: /Ouvir prévia de/ })).toHaveLength(1);
+  });
+});
+
+describe("TelaDeLeaderboard: filtros das músicas", () => {
+  it("busca pelo nome e ordena pela escolha", async () => {
+    const { usuario } = abrir();
+    await usuario.click(screen.getByRole("tab", { name: "Músicas" }));
+    const lista = await screen.findByRole("list", { name: "Músicas" });
+
+    await usuario.type(screen.getByRole("searchbox", { name: "Buscar música" }), "goofy");
+    expect(within(lista).getAllByRole("listitem")).toHaveLength(1);
+    await usuario.clear(screen.getByRole("searchbox", { name: "Buscar música" }));
+
+    await usuario.selectOptions(screen.getByLabelText("Ordenar por"), "nome");
+    expect(within(lista).getAllByRole("listitem")[0]).toHaveTextContent("Embutida");
+
+    await usuario.type(screen.getByRole("searchbox", { name: "Buscar música" }), "zzz");
+    expect(screen.getByText("Nenhuma música com esse nome.")).toBeInTheDocument();
+  });
+
+  it("cada linha mostra o recorde da música", async () => {
+    const { usuario } = abrir();
+    await usuario.click(screen.getByRole("tab", { name: "Músicas" }));
+    const lista = await screen.findByRole("list", { name: "Músicas" });
+    expect(within(lista).getAllByRole("listitem")[2]).toHaveTextContent("Bia 98,50% no Difícil");
   });
 });
 
@@ -97,5 +179,15 @@ describe("TelaDeLeaderboard", () => {
     const { usuario } = abrir({ aoVoltar });
     await usuario.click(screen.getByRole("button", { name: "Voltar" }));
     expect(aoVoltar).toHaveBeenCalled();
+  });
+});
+
+describe("TelaDeLeaderboard: música lembrada por quem usa a tela", () => {
+  it("com uma música aberta, abre direto no ranking dela; voltar avisa quem guarda", async () => {
+    const aoAbrirMusica = vi.fn();
+    const { usuario } = abrir({ musicaAberta: musicas[2], aoAbrirMusica, apiDoRanking: { buscar: vi.fn(async () => ({ jogadores: 0, top: [], meu: null })) } });
+    expect(screen.getByRole("heading", { name: "Goofy Goober Rock — Tom Rothrock" })).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Voltar às músicas" }));
+    expect(aoAbrirMusica).toHaveBeenCalledWith(null);
   });
 });

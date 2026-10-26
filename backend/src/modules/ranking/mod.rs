@@ -11,12 +11,12 @@ mod postgres;
 pub use casos_de_uso::fakes;
 pub use casos_de_uso::{ErroDoRanking, ServicosDoRanking};
 pub use dominio::{
-    juntar_mesmas_musicas, montar_ranking, LinhaDoGeral, LinhaDoRanking, MusicaPopular, PartidaPublica, Posicionada, Ranking, TAMANHO_DO_TOP,
+    juntar_mesmas_musicas, montar_ranking, LinhaDoGeral, LinhaDoRanking, MusicaPopular, Ordem, PartidaPublica, Posicionada, Ranking, RecordeDaMusica, TAMANHO_DO_TOP,
     TAMANHO_DO_TOP_DA_MUSICA,
 };
 pub use http::{
     __path_geral, __path_musicas, __path_partida, __path_ranking, __path_replay, geral, musicas, partida, ranking, replay, rotas, MusicaNoRanking,
-    PartidaDoRanking, PosicaoNoGeral, PosicaoNoRanking, RespostaDoGeral, RespostaDoRanking,
+    PartidaDoRanking, PosicaoNoGeral, PosicaoNoRanking, RecordeNoRanking, RespostaDoGeral, RespostaDoRanking,
 };
 pub use portas::RepositorioDoRanking;
 pub use postgres::RankingPostgres;

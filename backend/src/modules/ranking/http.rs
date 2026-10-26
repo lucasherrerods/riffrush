@@ -9,7 +9,7 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use super::casos_de_uso::ErroDoRanking;
-use super::dominio::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, PartidaPublica, Ranking};
+use super::dominio::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, Ordem, PartidaPublica, Ranking, RecordeDaMusica};
 use crate::modules::catalogo::DadosDaMusica;
 use crate::modules::conta::{NivelDaConta, TokenOpcional};
 use crate::modules::progresso::{nivel_do_xp, Dificuldade, Instrumento};
@@ -35,6 +35,10 @@ pub struct PedidoDoRanking {
     #[serde(default)]
     #[param(value_type = Option<String>, example = "baixo")]
     instrumento: Instrumento,
+    /// Sem ela, pela precisão.
+    #[serde(default)]
+    #[param(value_type = Option<String>, example = "pontos")]
+    ordem: Ordem,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -46,7 +50,7 @@ pub struct PosicaoNoRanking {
     pontos: u64,
     acertos: u32,
     total: u32,
-    /// De 0 a 1, pelo valor de cada nota. É o que ordena o ranking.
+    /// De 0 a 1, pelo valor de cada nota. Ordena o ranking, a não ser que o pedido seja por pontos.
     precisao: f64,
     maior_sequencia: Option<u32>,
     jogada_em: DateTime<Utc>,
@@ -143,6 +147,27 @@ pub struct MusicaNoRanking {
     artista: Option<String>,
     /// Endereço da imagem da capa.
     capa: Option<String>,
+    recorde: Option<RecordeNoRanking>,
+}
+
+/// O primeiro lugar da música, na dificuldade mais alta em que alguém terminou.
+#[derive(Serialize, ToSchema)]
+pub struct RecordeNoRanking {
+    nome: String,
+    /// De 0 a 1.
+    precisao: f64,
+    #[schema(value_type = String, example = "expert")]
+    dificuldade: Dificuldade,
+}
+
+impl From<RecordeDaMusica> for RecordeNoRanking {
+    fn from(r: RecordeDaMusica) -> Self {
+        Self {
+            nome: r.nome,
+            precisao: r.precisao,
+            dificuldade: r.dificuldade,
+        }
+    }
 }
 
 impl From<(MusicaPopular, DadosDaMusica)> for MusicaNoRanking {
@@ -155,6 +180,7 @@ impl From<(MusicaPopular, DadosDaMusica)> for MusicaNoRanking {
             titulo: dados.titulo,
             artista: dados.artista,
             capa: dados.capa,
+            recorde: m.recorde.map(Into::into),
         }
     }
 }
@@ -165,7 +191,7 @@ pub async fn musicas(State(estado): State<EstadoDoApp>) -> Result<Json<Vec<Music
     Ok(Json(estado.ranking.musicas().await?.into_iter().map(Into::into).collect()))
 }
 
-/// O top de uma música, dificuldade e instrumento. Com o token, vem também o recorde de quem pediu.
+/// O top de uma música, dificuldade e instrumento, pela precisão ou pelos pontos. Com o token, vem também o recorde de quem pediu.
 #[utoipa::path(get, path = "/ranking", params(PedidoDoRanking), responses((status = 200, body = RespostaDoRanking), (status = 400)), security((), ("token" = [])))]
 pub async fn ranking(
     State(estado): State<EstadoDoApp>,
@@ -174,7 +200,7 @@ pub async fn ranking(
 ) -> Result<Json<RespostaDoRanking>, ErroDaApi> {
     let ranking = estado
         .ranking
-        .ranking(&pedido.musica_id, pedido.dificuldade, pedido.instrumento, token.as_deref())
+        .ranking(&pedido.musica_id, pedido.dificuldade, pedido.instrumento, pedido.ordem, token.as_deref())
         .await?;
     Ok(Json(ranking.into()))
 }

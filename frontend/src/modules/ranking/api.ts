@@ -69,7 +69,12 @@ export interface MusicaNoRanking {
   artista?: string | null;
   /** Endereço da imagem da capa. */
   capa?: string | null;
+  /** O primeiro lugar na dificuldade mais alta. Sem ele, ninguém terminou com a precisão conferida. */
+  recorde?: { nome: string; precisao: number; dificuldade: Dificuldade } | null;
 }
+
+/** O que ordena o ranking de uma música. */
+export type OrdemDoRanking = "precisao" | "pontos";
 
 function conferirMusicas(corpo: unknown): MusicaNoRanking[] {
   if (!Array.isArray(corpo)) throw new Error("As músicas mais jogadas vieram num formato inesperado.");
@@ -91,9 +96,12 @@ export function criarApiDoRanking(base: string, buscar?: typeof fetch) {
     buscar: (
       musicaId: string,
       dificuldade: Dificuldade,
-      { instrumento = "guitarra", token, sinal }: { instrumento?: Instrumento; token?: string; sinal?: AbortSignal } = {},
-    ) =>
-      chamar<unknown>("GET", `/ranking?${new URLSearchParams({ musica_id: musicaId, dificuldade, instrumento })}`, { token, sinal }).then(conferirRanking<PosicaoNoRanking>),
+      { instrumento = "guitarra", ordem = "precisao", token, sinal }: { instrumento?: Instrumento; ordem?: OrdemDoRanking; token?: string; sinal?: AbortSignal } = {},
+    ) => {
+      // A precisão é o padrão da API: o pedido só leva a ordem quando ela muda.
+      const parametros = new URLSearchParams({ musica_id: musicaId, dificuldade, instrumento, ...(ordem === "pontos" && { ordem }) });
+      return chamar<unknown>("GET", `/ranking?${parametros}`, { token, sinal }).then(conferirRanking<PosicaoNoRanking>);
+    },
     geral: ({ token, sinal }: { token?: string; sinal?: AbortSignal } = {}) =>
       chamar<unknown>("GET", "/ranking/geral", { token, sinal }).then(conferirRanking<PosicaoNoGeral>),
     partida: (id: string, { sinal }: { sinal?: AbortSignal } = {}) =>

@@ -27,6 +27,7 @@ use shared::estado::EstadoDoApp;
         modules::ranking::RespostaDoGeral,
         modules::ranking::PosicaoNoGeral,
         modules::ranking::MusicaNoRanking,
+        modules::ranking::RecordeNoRanking,
         modules::ranking::PartidaDoRanking,
         modules::perfil::RespostaDoPerfil,
         modules::perfil::RecordeDaConta,
