@@ -9,7 +9,7 @@ export interface PosicaoNoRanking {
   pontos: number;
   acertos: number;
   total: number;
-  /** De 0 a 1, pelo valor de cada nota. É o que ordena o ranking. */
+  /** De 0 a 1, pelo valor de cada nota. Aparece na linha; quem ordena são os pontos. */
   precisao: number;
   maior_sequencia: number | null;
   jogada_em: string;
@@ -69,8 +69,8 @@ export interface MusicaNoRanking {
   artista?: string | null;
   /** Endereço da imagem da capa. */
   capa?: string | null;
-  /** O primeiro lugar na dificuldade mais alta. Sem ele, ninguém terminou com a precisão conferida. */
-  recorde?: { nome: string; precisao: number; dificuldade: Dificuldade } | null;
+  /** O primeiro lugar pelos pontos na dificuldade mais alta. Sem ele, ninguém terminou uma partida conferida pelo servidor. */
+  recorde?: { nome: string; pontos: number; precisao: number; dificuldade: Dificuldade } | null;
 }
 
 /** O que ordena o ranking de uma música. */
@@ -96,10 +96,10 @@ export function criarApiDoRanking(base: string, buscar?: typeof fetch) {
     buscar: (
       musicaId: string,
       dificuldade: Dificuldade,
-      { instrumento = "guitarra", ordem = "precisao", token, sinal }: { instrumento?: Instrumento; ordem?: OrdemDoRanking; token?: string; sinal?: AbortSignal } = {},
+      { instrumento = "guitarra", ordem = "pontos", token, sinal }: { instrumento?: Instrumento; ordem?: OrdemDoRanking; token?: string; sinal?: AbortSignal } = {},
     ) => {
-      // A precisão é o padrão da API: o pedido só leva a ordem quando ela muda.
-      const parametros = new URLSearchParams({ musica_id: musicaId, dificuldade, instrumento, ...(ordem === "pontos" && { ordem }) });
+      // Os pontos são o padrão da API: o pedido só leva a ordem quando ela muda.
+      const parametros = new URLSearchParams({ musica_id: musicaId, dificuldade, instrumento, ...(ordem === "precisao" && { ordem }) });
       return chamar<unknown>("GET", `/ranking?${parametros}`, { token, sinal }).then(conferirRanking<PosicaoNoRanking>);
     },
     geral: ({ token, sinal }: { token?: string; sinal?: AbortSignal } = {}) =>

@@ -65,13 +65,13 @@ describe("PainelDeRanking", () => {
     expect(api.buscar).toHaveBeenCalledWith("encore:abc", "expert", expect.objectContaining({ token: "tok" }));
   });
 
-  it("pede pela precisão e, com a ordem por pontos, pede por pontos", async () => {
+  it("pede pelos pontos e, com a ordem por precisão, pede por precisão", async () => {
     const api = apiCom({ jogadores: 0, top: [], meu: null });
     const { rerender } = abrir(api);
     await screen.findByText(/Ninguém terminou/);
-    expect(api.buscar).toHaveBeenLastCalledWith("encore:abc", "expert", expect.objectContaining({ ordem: "precisao" }));
-    rerender(<PainelDeRanking musicaId="encore:abc" dificuldade="expert" api={api} atrasoMs={0} lerToken={() => null} ordem="pontos" />);
-    await vi.waitFor(() => expect(api.buscar).toHaveBeenLastCalledWith("encore:abc", "expert", expect.objectContaining({ ordem: "pontos" })));
+    expect(api.buscar).toHaveBeenLastCalledWith("encore:abc", "expert", expect.objectContaining({ ordem: "pontos" }));
+    rerender(<PainelDeRanking musicaId="encore:abc" dificuldade="expert" api={api} atrasoMs={0} lerToken={() => null} ordem="precisao" />);
+    await vi.waitFor(() => expect(api.buscar).toHaveBeenLastCalledWith("encore:abc", "expert", expect.objectContaining({ ordem: "precisao" })));
   });
 
   it("sem ninguém no ranking, convida a ser o primeiro", async () => {

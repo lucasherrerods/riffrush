@@ -24,7 +24,7 @@ const musicas: MusicaNoRanking[] = [
     titulo: "Goofy Goober Rock",
     artista: "Tom Rothrock",
     capa: "https://files.enchor.us/capa.jpg",
-    recorde: { nome: "Bia", precisao: 0.985, dificuldade: "dificil" },
+    recorde: { nome: "Bia", pontos: 980_000, precisao: 0.985, dificuldade: "dificil" },
   },
   { posicao: 4, musica_id: "embutida:shine", partidas: 1, jogadores: 1, titulo: "Embutida", artista: "Riff Rush" },
 ];
@@ -48,10 +48,10 @@ describe("TelaDeLeaderboard: cada música", () => {
     return { ...tela, api };
   }
 
-  it("clicar numa música abre o ranking dela, na dificuldade do recorde e pela precisão", async () => {
+  it("clicar numa música abre o ranking dela, na dificuldade do recorde e pelos pontos", async () => {
     const { api } = await abrirMusica(/Ver o ranking de Goofy Goober Rock/);
     expect(await screen.findByRole("list", { name: "Ranking" })).toHaveTextContent("Ana");
-    expect(api.buscar).toHaveBeenLastCalledWith("encore:goofy", "dificil", expect.objectContaining({ instrumento: "guitarra", ordem: "precisao" }));
+    expect(api.buscar).toHaveBeenLastCalledWith("encore:goofy", "dificil", expect.objectContaining({ instrumento: "guitarra", ordem: "pontos" }));
   });
 
   it("troca a dificuldade, o instrumento e a ordem do ranking da música", async () => {
@@ -59,8 +59,8 @@ describe("TelaDeLeaderboard: cada música", () => {
     await screen.findByRole("list", { name: "Ranking" });
     await usuario.selectOptions(screen.getByLabelText("Dificuldade"), "medio");
     await usuario.selectOptions(screen.getByLabelText("Instrumento"), "baixo");
-    await usuario.click(screen.getByRole("radio", { name: "Pontos" }));
-    await vi.waitFor(() => expect(api.buscar).toHaveBeenLastCalledWith("encore:abc", "medio", expect.objectContaining({ instrumento: "baixo", ordem: "pontos" })));
+    await usuario.click(screen.getByRole("radio", { name: "Precisão" }));
+    await vi.waitFor(() => expect(api.buscar).toHaveBeenLastCalledWith("encore:abc", "medio", expect.objectContaining({ instrumento: "baixo", ordem: "precisao" })));
   });
 
   it("abrir uma partida do ranking da música leva o nome da música", async () => {

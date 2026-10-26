@@ -23,7 +23,7 @@ pub struct LinhaDoRanking {
     pub pontos: u64,
     pub acertos: u32,
     pub total: u32,
-    /// De 0 a 1, pelo valor de cada nota. É o que ordena o ranking.
+    /// De 0 a 1, pelo valor de cada nota. Aparece na linha; quem ordena são os pontos.
     pub precisao: f64,
     /// O desempate depois da precisão.
     pub maior_sequencia: Option<u32>,
@@ -68,25 +68,26 @@ pub struct PartidaPublica {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Ordem {
-    /// O padrão: a precisão, depois a maior sequência.
+    /// O padrão: os pontos, e no empate quem chegou primeiro.
     #[default]
-    Precisao,
-    /// Os pontos, depois a precisão.
     Pontos,
+    /// A precisão, depois a maior sequência.
+    Precisao,
 }
 
-/// O primeiro lugar de uma música, na dificuldade mais alta em que alguém terminou.
+/// O primeiro lugar de uma música pelos pontos, na dificuldade mais alta em que alguém terminou.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecordeDaMusica {
     pub nome: String,
+    pub pontos: u64,
     pub precisao: f64,
     pub dificuldade: Dificuldade,
 }
 
 impl RecordeDaMusica {
-    /// Vale mais o da dificuldade mais alta; na mesma, o de mais precisão.
+    /// Vale mais o da dificuldade mais alta; na mesma, o de mais pontos.
     fn supera(&self, outro: &Self) -> bool {
-        (self.dificuldade, self.precisao) > (outro.dificuldade, outro.precisao)
+        (self.dificuldade, self.pontos) > (outro.dificuldade, outro.pontos)
     }
 }
 
@@ -282,10 +283,11 @@ mod tests {
         }
     }
 
-    fn recorde(nome: &str, precisao: f64, dificuldade: Dificuldade) -> Option<RecordeDaMusica> {
+    fn recorde(nome: &str, pontos: u64, dificuldade: Dificuldade) -> Option<RecordeDaMusica> {
         Some(RecordeDaMusica {
             nome: nome.into(),
-            precisao,
+            pontos,
+            precisao: 0.9,
             dificuldade,
         })
     }
@@ -295,14 +297,14 @@ mod tests {
         let musicas = vec![
             (
                 MusicaPopular {
-                    recorde: recorde("ana", 0.99, Dificuldade::Dificil),
+                    recorde: recorde("ana", 990_000, Dificuldade::Dificil),
                     ..popular("arquivo:x", 2, 2)
                 },
                 dados("Crazy", "Aerosmith", None),
             ),
             (
                 MusicaPopular {
-                    recorde: recorde("bia", 0.7, Dificuldade::Expert),
+                    recorde: recorde("bia", 700_000, Dificuldade::Expert),
                     ..popular("encore:x", 1, 1)
                 },
                 dados("Crazy", "Aerosmith", Some("capa.jpg")),
@@ -310,7 +312,7 @@ mod tests {
             (popular("arquivo:y", 1, 1), dados("Crazy", "Gnarls Barkley", None)),
             (
                 MusicaPopular {
-                    recorde: recorde("caio", 0.8, Dificuldade::Facil),
+                    recorde: recorde("caio", 800_000, Dificuldade::Facil),
                     ..popular("encore:y", 1, 1)
                 },
                 dados("Crazy", "Gnarls Barkley", Some("capa.jpg")),
@@ -324,9 +326,9 @@ mod tests {
     }
 
     #[test]
-    fn na_mesma_dificuldade_o_recorde_e_o_de_mais_precisao() {
-        let a = recorde("a", 0.9, Dificuldade::Expert).unwrap();
-        let b = recorde("b", 0.95, Dificuldade::Expert).unwrap();
+    fn na_mesma_dificuldade_o_recorde_e_o_de_mais_pontos() {
+        let a = recorde("a", 900, Dificuldade::Expert).unwrap();
+        let b = recorde("b", 950, Dificuldade::Expert).unwrap();
         assert!(b.supera(&a));
         assert!(!a.supera(&b));
     }

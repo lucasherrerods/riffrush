@@ -86,12 +86,29 @@ pub struct NotaEmJogo {
     pub segurou_ate: f64,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct OpcoesDaPartida {
     pub sem_falha: bool,
     /// Multijogador: a vida zerada não tira da música, só deixa a marca de fantasma.
     pub fantasma: bool,
+    /// Velocidade da música (1 é a normal). As notas vêm no tempo da música e a partida roda no tempo
+    /// real: com a música a 1,5x, uma nota no segundo 3 da música chega no segundo 2. Os pontos são
+    /// multiplicados por ela, então a música mais lenta rende menos e a mais rápida, mais.
+    pub velocidade: f64,
 }
+
+impl Default for OpcoesDaPartida {
+    fn default() -> Self {
+        Self {
+            sem_falha: false,
+            fantasma: false,
+            velocidade: 1.0,
+        }
+    }
+}
+
+/// As velocidades que o jogo oferece. Outra é replay adulterado.
+pub const VELOCIDADES: [f64; 5] = [0.5, 0.75, 1.0, 1.25, 1.5];
 
 /// O que a partida conta para o app tocar sons e mostrar avisos. A API ignora.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -138,6 +155,7 @@ pub struct Partida {
     pub estrela_ativa: bool,
     pub derrota: bool,
     sem_falha: bool,
+    velocidade: f64,
     modo_fantasma: bool,
     /// A vida zerou em algum momento.
     pub fantasma: bool,
@@ -158,12 +176,12 @@ pub fn criar_partida(notas: &[Nota], opcoes: OpcoesDaPartida) -> Partida {
         notas: notas
             .iter()
             .map(|n| {
-                let tempo = quantizar(n.tempo);
+                let tempo = quantizar(n.tempo / opcoes.velocidade);
                 NotaEmJogo {
                     tempo,
                     pista: n.pista,
                     frase: n.frase,
-                    duracao: quantizar(n.tempo + n.duracao) - tempo,
+                    duracao: quantizar((n.tempo + n.duracao) / opcoes.velocidade) - tempo,
                     acertada: false,
                     perdida: false,
                     segurando: false,
@@ -190,6 +208,7 @@ pub fn criar_partida(notas: &[Nota], opcoes: OpcoesDaPartida) -> Partida {
         estrela_ativa: false,
         derrota: false,
         sem_falha: opcoes.sem_falha,
+        velocidade: opcoes.velocidade,
         modo_fantasma: opcoes.fantasma,
         fantasma: false,
         tamanho_das_frases,
@@ -293,7 +312,7 @@ fn errar(partida: &mut Partida, indice: usize) {
 }
 
 fn atualizar_pontos(partida: &mut Partida) {
-    partida.pontos = partida.pontos_das_notas + (partida.sustain_ponderado * PONTOS_POR_SEGUNDO_DE_SUSTAIN) / TICKS_POR_SEGUNDO;
+    partida.pontos = (partida.pontos_das_notas + (partida.sustain_ponderado * PONTOS_POR_SEGUNDO_DE_SUSTAIN) / TICKS_POR_SEGUNDO) * partida.velocidade;
 }
 
 fn pontuar_sustain(partida: &mut Partida, indice: usize, tempo: f64) {
@@ -512,6 +531,26 @@ mod tests {
             ]
         );
         assert!(retirar_eventos(&mut partida).is_empty());
+    }
+
+    #[test]
+    fn a_velocidade_traz_as_notas_para_o_tempo_real_e_multiplica_os_pontos() {
+        let rapida = OpcoesDaPartida {
+            velocidade: 1.5,
+            ..OpcoesDaPartida::default()
+        };
+        let mut partida = criar_partida(&[nota(3.0)], rapida);
+        assert_eq!(partida.notas[0].tempo, 2.0);
+        assert!(tocar(&mut partida, 0, 2.0));
+        assert_eq!(partida.pontos, 75.0);
+
+        let lenta = OpcoesDaPartida {
+            velocidade: 0.5,
+            ..OpcoesDaPartida::default()
+        };
+        let mut partida = criar_partida(&[nota(1.0)], lenta);
+        assert!(tocar(&mut partida, 0, 2.0));
+        assert_eq!(partida.pontos, 25.0);
     }
 
     #[test]

@@ -35,9 +35,9 @@ pub struct PedidoDoRanking {
     #[serde(default)]
     #[param(value_type = Option<String>, example = "baixo")]
     instrumento: Instrumento,
-    /// Sem ela, pela precisão.
+    /// Sem ela, pelos pontos.
     #[serde(default)]
-    #[param(value_type = Option<String>, example = "pontos")]
+    #[param(value_type = Option<String>, example = "precisao")]
     ordem: Ordem,
 }
 
@@ -50,7 +50,7 @@ pub struct PosicaoNoRanking {
     pontos: u64,
     acertos: u32,
     total: u32,
-    /// De 0 a 1, pelo valor de cada nota. Ordena o ranking, a não ser que o pedido seja por pontos.
+    /// De 0 a 1, pelo valor de cada nota. Ordena o ranking quando o pedido é por precisão; por padrão, são os pontos.
     precisao: f64,
     maior_sequencia: Option<u32>,
     jogada_em: DateTime<Utc>,
@@ -150,10 +150,11 @@ pub struct MusicaNoRanking {
     recorde: Option<RecordeNoRanking>,
 }
 
-/// O primeiro lugar da música, na dificuldade mais alta em que alguém terminou.
+/// O primeiro lugar da música pelos pontos, na dificuldade mais alta em que alguém terminou.
 #[derive(Serialize, ToSchema)]
 pub struct RecordeNoRanking {
     nome: String,
+    pontos: u64,
     /// De 0 a 1.
     precisao: f64,
     #[schema(value_type = String, example = "expert")]
@@ -164,6 +165,7 @@ impl From<RecordeDaMusica> for RecordeNoRanking {
     fn from(r: RecordeDaMusica) -> Self {
         Self {
             nome: r.nome,
+            pontos: r.pontos,
             precisao: r.precisao,
             dificuldade: r.dificuldade,
         }
@@ -191,7 +193,7 @@ pub async fn musicas(State(estado): State<EstadoDoApp>) -> Result<Json<Vec<Music
     Ok(Json(estado.ranking.musicas().await?.into_iter().map(Into::into).collect()))
 }
 
-/// O top de uma música, dificuldade e instrumento, pela precisão ou pelos pontos. Com o token, vem também o recorde de quem pediu.
+/// O top de uma música, dificuldade e instrumento, pelos pontos ou pela precisão. Com o token, vem também o recorde de quem pediu.
 #[utoipa::path(get, path = "/ranking", params(PedidoDoRanking), responses((status = 200, body = RespostaDoRanking), (status = 400)), security((), ("token" = [])))]
 pub async fn ranking(
     State(estado): State<EstadoDoApp>,

@@ -5,10 +5,10 @@ import { ativarEstrela, avancar, quantizar, soltar, tocar, type Partida } from "
  * Um replay guarda só as entradas do jogador (como o .osr do osu!), não vídeo: a partida é
  * determinística, então reaplicar as entradas sobre o mesmo chart reproduz tudo, ponto por ponto.
  */
-export const VERSAO_DO_REPLAY = 2;
+export const VERSAO_DO_REPLAY = 3;
 const TICKS_POR_SEGUNDO = 1000;
-/** Quantos códigos de tecla cada versão tem: a 2 ganhou os da nota aberta. */
-const CODIGOS_DA_VERSAO: Record<number, number> = { 1: 11, 2: 13 };
+/** Quantos códigos de tecla cada versão tem: a 2 ganhou os da nota aberta. A 3 só acrescentou a velocidade. */
+const CODIGOS_DA_VERSAO: Record<number, number> = { 1: 11, 2: 13, 3: 13 };
 const CODIGOS = CODIGOS_DA_VERSAO[VERSAO_DO_REPLAY];
 const ESTRELA = 10;
 const APERTA_A_ABERTA = 11;
@@ -25,6 +25,8 @@ export interface EntradaDoReplay {
 export interface Replay {
   semFalha: boolean;
   fantasma: boolean;
+  /** Velocidade da música. Os replays de antes da versão 3 são todos a 1x. */
+  velocidade: number;
   /** Identifica o chart: o replay só vale nas mesmas notas. */
   hashDoChart: string;
   entradas: EntradaDoReplay[];
@@ -34,7 +36,7 @@ export interface Replay {
 
 /** O que a partida conta para quem assiste ao vivo: quem leva isso à rede é o módulo de presença. */
 export type EventoDaTransmissao =
-  | { tipo: "inicio"; hashDoChart: string; semFalha: boolean }
+  | { tipo: "inicio"; hashDoChart: string; semFalha: boolean; velocidade: number }
   | { tipo: "lote"; entradas: EntradaDoReplay[]; ate: number }
   | { tipo: "pausa"; pausado: boolean }
   | { tipo: "fim" };
@@ -101,7 +103,8 @@ export async function hashDoChart(notas: Nota[]) {
  * entrada, um varint com o intervalo desde a anterior e o código da tecla. Fica com 1 a 2 bytes por entrada.
  */
 export async function empacotarReplay(replay: Replay) {
-  const bytes: number[] = [(replay.semFalha ? 1 : 0) | (replay.fantasma ? 2 : 0)];
+  // A velocidade vai em centésimos: 0,75x é 75.
+  const bytes: number[] = [(replay.semFalha ? 1 : 0) | (replay.fantasma ? 2 : 0), Math.round(replay.velocidade * 100)];
   for (let i = 0; i < BYTES_DO_HASH; i++) bytes.push(parseInt(replay.hashDoChart.slice(i * 2, i * 2 + 2), 16));
   let anterior = replay.entradas.length ? emTicks(replay.entradas[0].tempo) : 0;
   escreverVarint(bytes, anterior < 0 ? -anterior * 2 - 1 : anterior * 2);
@@ -124,8 +127,11 @@ export async function desempacotarReplay(pacote: Uint8Array): Promise<Replay> {
   const bytes = await transformar(pacote.slice(1), new DecompressionStream("deflate-raw"));
   const leitor = { bytes, posicao: 0 };
   const opcoes = bytes[leitor.posicao++];
-  const hash = [...bytes.slice(1, 1 + BYTES_DO_HASH)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  leitor.posicao = 1 + BYTES_DO_HASH;
+  // A versão 3 guarda a velocidade logo depois das opções.
+  const velocidade = pacote[0] >= 3 ? bytes[leitor.posicao++] / 100 : 1;
+  const inicioDoHash = leitor.posicao;
+  const hash = [...bytes.slice(inicioDoHash, inicioDoHash + BYTES_DO_HASH)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  leitor.posicao = inicioDoHash + BYTES_DO_HASH;
   const primeiro = lerVarint(leitor);
   let ticks = primeiro % 2 ? -(primeiro + 1) / 2 : primeiro / 2;
   const quantas = lerVarint(leitor);
@@ -136,7 +142,7 @@ export async function desempacotarReplay(pacote: Uint8Array): Promise<Replay> {
     ticks += (valor - codigo) / codigos;
     entradas.push(entradaDoCodigo(ticks, codigo));
   }
-  return { semFalha: !!(opcoes & 1), fantasma: !!(opcoes & 2), hashDoChart: hash, entradas };
+  return { semFalha: !!(opcoes & 1), fantasma: !!(opcoes & 2), velocidade, hashDoChart: hash, entradas };
 }
 
 export const emTicks = (tempo: number) => Math.round(tempo * TICKS_POR_SEGUNDO);

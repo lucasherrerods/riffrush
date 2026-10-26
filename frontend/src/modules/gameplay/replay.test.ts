@@ -7,6 +7,7 @@ const nota = (tempo: number, pista = 0, duracao = 0): Nota => ({ tempo, pista, d
 const replay: Replay = {
   semFalha: false,
   fantasma: true,
+  velocidade: 1.25,
   hashDoChart: "00112233445566778899aabbccddeeff",
   entradas: [
     { tempo: -0.5, tipo: "tocar", pista: 2 },
@@ -33,6 +34,7 @@ describe("empacotarReplay", () => {
     const corpo = new Uint8Array([0, ...new Uint8Array(16), 0, 2, 0, 11 * 5 + 5]);
     const comprimido = new Uint8Array(await new Response(new Response(corpo).body!.pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer());
     const lido = await desempacotarReplay(new Uint8Array([1, ...comprimido]));
+    expect(lido.velocidade).toBe(1);
     expect(lido.entradas).toEqual([
       { tempo: 0, tipo: "tocar", pista: 0 },
       { tempo: 0.005, tipo: "soltar", pista: 0 },

@@ -137,25 +137,25 @@ async fn excluir_apaga_a_conta_com_sessoes_e_partidas() {
 }
 
 #[tokio::test]
-async fn ranking_pega_o_recorde_de_cada_jogador_pela_precisao() {
+async fn ranking_pega_o_recorde_de_cada_jogador_pelos_pontos() {
     let Some(banco) = banco().await else { return };
     let ranking = RankingPostgres(banco.0.clone());
     // Música só deste teste, para não se misturar com as outras partidas do banco.
     let musica = format!("teste:{}", Uuid::new_v4());
     let agora = Utc::now();
-    let jogar = |conta_id: Uuid, precisao: Option<f64>, sequencia: u32, derrota: bool, segundos: i64| PartidaRegistrada {
+    let jogar = |conta_id: Uuid, pontos: u64, precisao: Option<f64>, derrota: bool, segundos: i64| PartidaRegistrada {
         id: Uuid::new_v4(),
         conta_id,
         musica_id: musica.clone(),
         instrumento: Instrumento::Guitarra,
-        pontos: 100,
+        pontos,
         resumo: ResumoDaPartida {
             dificuldade: Dificuldade::Expert,
             acertos: 9,
             total: 10,
             derrota,
             fantasma: false,
-            maior_sequencia: Some(sequencia),
+            maior_sequencia: Some(5),
         },
         xp_ganho: 0,
         jogada_em: agora + Duration::seconds(segundos),
@@ -168,45 +168,48 @@ async fn ranking_pega_o_recorde_de_cada_jogador_pela_precisao() {
     let davi = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let eva = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     for partida in [
-        jogar(ana.id, Some(0.8), 5, false, 0),
-        jogar(ana.id, Some(0.9), 5, false, 1),
-        // Vaiada não conta, mesmo com mais precisão.
-        jogar(bia.id, Some(1.0), 9, true, 2),
-        // Mesma precisão da Ana: desempata pela maior sequência.
-        jogar(bia.id, Some(0.9), 8, false, 3),
-        jogar(caio.id, Some(0.5), 2, false, 4),
+        jogar(ana.id, 500, Some(0.9), false, 0),
+        // A melhor da Ana é a de mais pontos, mesmo com menos precisão.
+        jogar(ana.id, 900, Some(0.8), false, 1),
+        // Vaiada não conta, mesmo com mais pontos.
+        jogar(bia.id, 5000, Some(1.0), true, 2),
+        jogar(bia.id, 950, Some(0.7), false, 3),
+        jogar(caio.id, 100, Some(1.0), false, 4),
         // Sem precisão (o servidor não conferiu): fica fora.
-        jogar(davi.id, None, 9, false, 5),
-        // Mesma precisão e sequência da Ana, mas chegou depois.
-        jogar(eva.id, Some(0.9), 5, false, 6),
+        jogar(davi.id, 9999, None, false, 5),
+        // Mesmos pontos da Ana, mas chegou depois.
+        jogar(eva.id, 900, Some(0.95), false, 6),
         // No baixo é outro ranking: não entra no da guitarra.
         PartidaRegistrada {
             id: Uuid::new_v4(),
             instrumento: Instrumento::Baixo,
-            ..jogar(caio.id, Some(0.99), 9, false, 7)
+            ..jogar(caio.id, 9999, Some(0.99), false, 7)
         },
     ] {
         banco.registrar_partida(&partida).await.unwrap();
     }
 
     let linhas = ranking
-        .linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, Ordem::Precisao, 2, Some(caio.id))
+        .linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, Ordem::Pontos, 2, Some(caio.id))
         .await
         .unwrap();
 
-    let resumo: Vec<_> = linhas.iter().map(|l| (l.posicao, l.conta_id, l.precisao, l.jogadores)).collect();
-    assert_eq!(resumo, [(1, bia.id, 0.9, 4), (2, ana.id, 0.9, 4), (4, caio.id, 0.5, 4)]);
+    let resumo: Vec<_> = linhas.iter().map(|l| (l.posicao, l.conta_id, l.pontos, l.jogadores)).collect();
+    assert_eq!(resumo, [(1, bia.id, 950, 4), (2, ana.id, 900, 4), (4, caio.id, 100, 4)]);
     assert!(ranking
-        .linhas(&musica, Dificuldade::Facil, Instrumento::Guitarra, Ordem::Precisao, 50, None)
+        .linhas(&musica, Dificuldade::Facil, Instrumento::Guitarra, Ordem::Pontos, 50, None)
         .await
         .unwrap()
         .is_empty());
-    let baixo = ranking.linhas(&musica, Dificuldade::Expert, Instrumento::Baixo, Ordem::Precisao, 50, None).await.unwrap();
-    assert_eq!(baixo.iter().map(|l| (l.conta_id, l.precisao)).collect::<Vec<_>>(), [(caio.id, 0.99)]);
+    let baixo = ranking
+        .linhas(&musica, Dificuldade::Expert, Instrumento::Baixo, Ordem::Pontos, 50, None)
+        .await
+        .unwrap();
+    assert_eq!(baixo.iter().map(|l| (l.conta_id, l.pontos)).collect::<Vec<_>>(), [(caio.id, 9999)]);
 }
 
 #[tokio::test]
-async fn ranking_por_pontos_pega_a_partida_de_mais_pontos_de_cada_jogador() {
+async fn ranking_por_precisao_pega_a_partida_de_mais_precisao_de_cada_jogador() {
     let Some(banco) = banco().await else { return };
     let ranking = RankingPostgres(banco.0.clone());
     let musica = format!("teste:{}", Uuid::new_v4());
@@ -234,7 +237,7 @@ async fn ranking_por_pontos_pega_a_partida_de_mais_pontos_de_cada_jogador() {
     let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let caio = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     for partida in [
-        // A de mais precisão da Ana fez menos pontos.
+        // A de mais pontos da Ana teve menos precisão.
         jogar(ana.id, 500, Some(0.99), 0),
         jogar(ana.id, 900, Some(0.8), 1),
         jogar(bia.id, 700, Some(0.95), 2),
@@ -245,12 +248,12 @@ async fn ranking_por_pontos_pega_a_partida_de_mais_pontos_de_cada_jogador() {
     }
 
     let linhas = ranking
-        .linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, Ordem::Pontos, 10, None)
+        .linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, Ordem::Precisao, 10, None)
         .await
         .unwrap();
 
     let resumo: Vec<_> = linhas.iter().map(|l| (l.posicao, l.conta_id, l.pontos, l.jogadores)).collect();
-    assert_eq!(resumo, [(1, ana.id, 900, 2), (2, bia.id, 700, 2)]);
+    assert_eq!(resumo, [(1, ana.id, 500, 2), (2, bia.id, 700, 2)]);
 }
 
 #[tokio::test]
@@ -457,7 +460,10 @@ async fn a_linha_do_ranking_abre_a_partida_com_a_maior_sequencia() {
         .await
         .unwrap();
 
-    let linhas = ranking.linhas(&musica, Dificuldade::Dificil, Instrumento::Baixo, Ordem::Precisao, 10, None).await.unwrap();
+    let linhas = ranking
+        .linhas(&musica, Dificuldade::Dificil, Instrumento::Baixo, Ordem::Precisao, 10, None)
+        .await
+        .unwrap();
     let partida = ranking.partida(linhas[0].partida_id).await.unwrap().unwrap();
 
     assert_eq!(
@@ -479,12 +485,12 @@ async fn so_o_top_10_guarda_replay_e_quem_cai_perde_o_dele() {
     let ranking = RankingPostgres(banco.0.clone());
     let musica = format!("teste:{}", Uuid::new_v4());
     let agora = Utc::now();
-    let partida = |conta_id: Uuid, precisao: f64, replay: u8, segundos: i64| PartidaRegistrada {
+    let partida = |conta_id: Uuid, pontos: u64, replay: u8, segundos: i64| PartidaRegistrada {
         id: Uuid::new_v4(),
         conta_id,
         musica_id: musica.clone(),
         instrumento: Instrumento::Guitarra,
-        pontos: 10,
+        pontos,
         resumo: ResumoDaPartida {
             dificuldade: Dificuldade::Facil,
             acertos: 1,
@@ -496,7 +502,7 @@ async fn so_o_top_10_guarda_replay_e_quem_cai_perde_o_dele() {
         xp_ganho: 0,
         jogada_em: agora + Duration::seconds(segundos),
         replay: Some(vec![1, replay]),
-        precisao: Some(precisao),
+        precisao: Some(0.9),
     };
     let com_replay = || async {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM partidas WHERE musica_id = $1 AND replay IS NOT NULL")
@@ -506,12 +512,15 @@ async fn so_o_top_10_guarda_replay_e_quem_cai_perde_o_dele() {
             .unwrap()
     };
     let jogador = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
-    banco.registrar_partida(&partida(jogador.id, 0.5, 5, 0)).await.unwrap();
-    banco.registrar_partida(&partida(jogador.id, 0.9, 9, 1)).await.unwrap();
-    banco.registrar_partida(&partida(jogador.id, 0.7, 7, 2)).await.unwrap();
+    banco.registrar_partida(&partida(jogador.id, 500, 5, 0)).await.unwrap();
+    banco.registrar_partida(&partida(jogador.id, 900, 9, 1)).await.unwrap();
+    banco.registrar_partida(&partida(jogador.id, 700, 7, 2)).await.unwrap();
 
     // Do mesmo jogador, só o recorde guarda o replay.
-    let linhas = ranking.linhas(&musica, Dificuldade::Facil, Instrumento::Guitarra, Ordem::Precisao, 10, None).await.unwrap();
+    let linhas = ranking
+        .linhas(&musica, Dificuldade::Facil, Instrumento::Guitarra, Ordem::Precisao, 10, None)
+        .await
+        .unwrap();
     let recorde = linhas[0].partida_id;
     assert_eq!(ranking.replay(recorde).await.unwrap(), Some(vec![1, 9]));
     assert!(ranking.partida(recorde).await.unwrap().unwrap().tem_replay);
@@ -520,7 +529,10 @@ async fn so_o_top_10_guarda_replay_e_quem_cai_perde_o_dele() {
     // Dez jogadores melhores enchem o top: o primeiro jogador cai para o 11º e perde o replay.
     for i in 0..10u8 {
         let outro = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
-        banco.registrar_partida(&partida(outro.id, 0.95, 20 + i, 3 + i64::from(i))).await.unwrap();
+        banco
+            .registrar_partida(&partida(outro.id, 1000 + u64::from(i), 20 + i, 3 + i64::from(i)))
+            .await
+            .unwrap();
     }
     assert_eq!(com_replay().await, 10);
     assert_eq!(ranking.replay(recorde).await.unwrap(), None);

@@ -50,8 +50,20 @@ describe("lerMensagemDaTransmissao", () => {
     expect(lerMensagemDaTransmissao('{"tipo":"lote","ate":12.5,"entradas":[[12001,0],[12100,5]]}')).toEqual({ tipo: "lote", ate: 12.5, entradas: [[12001, 0], [12100, 5]] });
     expect(lerMensagemDaTransmissao('{"tipo":"pausa","pausado":true}')).toEqual({ tipo: "pausa", pausado: true });
     expect(lerMensagemDaTransmissao('{"tipo":"fim"}')).toEqual({ tipo: "fim" });
-    const inicio = { tipo: "inicio", partida: { musica: "encore:abc", dificuldade: "expert", instrumento: "guitarra", hashDoChart: "a".repeat(32), semFalha: false } };
+    const inicio = { tipo: "inicio", partida: { musica: "encore:abc", dificuldade: "expert", instrumento: "guitarra", hashDoChart: "a".repeat(32), semFalha: false, velocidade: 1.25 } };
     expect(lerMensagemDaTransmissao(JSON.stringify(inicio))).toEqual(inicio);
+  });
+
+  it("velocidade que o jogo não oferece, ou de app antigo que não manda, vira a normal", () => {
+    const partida = { musica: "encore:abc", dificuldade: "expert", instrumento: "guitarra", hashDoChart: "a".repeat(32), semFalha: false };
+    const velocidadeLida = (extra: object) => {
+      const lida = lerMensagemDaTransmissao(JSON.stringify({ tipo: "inicio", partida: { ...partida, ...extra } }));
+      return lida?.tipo === "inicio" ? lida.partida.velocidade : null;
+    };
+    expect(velocidadeLida({ velocidade: 3 })).toBe(1);
+    expect(velocidadeLida({ velocidade: "1.5" })).toBe(1);
+    expect(velocidadeLida({})).toBe(1);
+    expect(velocidadeLida({ velocidade: 0.5 })).toBe(0.5);
   });
 
   it("recusa lotes com entradas inválidas, mensagens grandes e JSON quebrado", () => {

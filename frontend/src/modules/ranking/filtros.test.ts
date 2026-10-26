@@ -5,8 +5,8 @@ const musica = (musica_id: string, partidas: number, jogadores: number, extra: P
 
 const musicas = [
   musica("a", 30, 2, { titulo: "Shine", artista: "Spektrem" }),
-  musica("b", 10, 6, { titulo: "Barracuda", artista: "Heart", recorde: { nome: "Ana", precisao: 0.9, dificuldade: "expert" } }),
-  musica("c", 5, 3, { titulo: "Ação", artista: "Banda", recorde: { nome: "Bia", precisao: 0.99, dificuldade: "medio" } }),
+  musica("b", 10, 6, { titulo: "Barracuda", artista: "Heart", recorde: { nome: "Ana", pontos: 900, precisao: 0.9, dificuldade: "expert" } }),
+  musica("c", 5, 3, { titulo: "Ação", artista: "Banda", recorde: { nome: "Bia", pontos: 990, precisao: 0.99, dificuldade: "medio" } }),
 ];
 const nome = (m: MusicaNoRanking) => `${m.titulo} — ${m.artista}`;
 const ids = (lista: MusicaNoRanking[]) => lista.map((m) => m.musica_id);

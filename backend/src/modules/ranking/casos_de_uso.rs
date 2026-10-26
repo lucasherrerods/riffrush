@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use super::dominio::{juntar_mesmas_musicas, montar_ranking, LinhaDoGeral, MusicaPopular, Ordem, PartidaPublica, Ranking, TAMANHO_DO_TOP, TAMANHO_DO_TOP_DA_MUSICA};
+use super::dominio::{
+    juntar_mesmas_musicas, montar_ranking, LinhaDoGeral, MusicaPopular, Ordem, PartidaPublica, Ranking, TAMANHO_DO_TOP, TAMANHO_DO_TOP_DA_MUSICA,
+};
 use super::portas::RepositorioDoRanking;
 use crate::modules::catalogo::{DadosDaMusica, ServicosDoCatalogo};
 use crate::modules::conta::{FalhaExterna, ServicosDaConta, TAMANHO_MAXIMO_DO_ID_DA_MUSICA};
@@ -225,10 +227,10 @@ mod tests {
     async fn a_ordem_pedida_chega_ao_repositorio() {
         let (servicos, repositorio) = ranking_com(servicos().0, vec![]);
         servicos
-            .ranking("encore:abc", Dificuldade::Expert, Instrumento::Guitarra, Ordem::Pontos, None)
+            .ranking("encore:abc", Dificuldade::Expert, Instrumento::Guitarra, Ordem::Precisao, None)
             .await
             .unwrap();
-        assert_eq!(*repositorio.ultima_ordem.lock().unwrap(), Some(Ordem::Pontos));
+        assert_eq!(*repositorio.ultima_ordem.lock().unwrap(), Some(Ordem::Precisao));
     }
 
     #[tokio::test]
@@ -263,7 +265,9 @@ mod tests {
         ));
         let enorme = "x".repeat(TAMANHO_MAXIMO_DO_ID_DA_MUSICA + 1);
         assert!(matches!(
-            servicos.ranking(&enorme, Dificuldade::Medio, Instrumento::Guitarra, Ordem::Precisao, None).await,
+            servicos
+                .ranking(&enorme, Dificuldade::Medio, Instrumento::Guitarra, Ordem::Precisao, None)
+                .await,
             Err(ErroDoRanking::MusicaInvalida)
         ));
     }

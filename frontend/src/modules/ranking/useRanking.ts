@@ -9,14 +9,14 @@ export interface OpcoesDoRanking {
   /** Espera o pedido parar de mudar antes de buscar: girar o carrossel passa por muitas músicas. */
   atrasoMs?: number;
   lerToken?: () => string | null;
-  /** Sem ela, pela precisão. */
+  /** Sem ela, pelos pontos. */
   ordem?: OrdemDoRanking;
 }
 
 export type EstadoDoRanking = { tipo: "carregando" } | { tipo: "pronto"; ranking: RespostaDoRanking } | { tipo: "erro" };
 
 /** Busca o ranking da música; descarta respostas de pedidos que já mudaram. */
-export function useRanking(musicaId: string, dificuldade: Dificuldade, instrumento: Instrumento, { api = apiDoRanking, atrasoMs = 300, lerToken = () => sessaoDaConta.token(), ordem = "precisao" }: OpcoesDoRanking = {}) {
+export function useRanking(musicaId: string, dificuldade: Dificuldade, instrumento: Instrumento, { api = apiDoRanking, atrasoMs = 300, lerToken = () => sessaoDaConta.token(), ordem = "pontos" }: OpcoesDoRanking = {}) {
   // Entrar ou sair da conta muda o recorde pessoal: a conta entra no pedido.
   const contaId = useConta().conta?.id ?? null;
   const pedido = useValorAtrasado(`${musicaId}\n${dificuldade}\n${instrumento}\n${ordem}\n${contaId}`, atrasoMs);

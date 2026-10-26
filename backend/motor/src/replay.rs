@@ -30,6 +30,8 @@ pub struct Entrada {
 pub struct Replay {
     pub sem_falha: bool,
     pub fantasma: bool,
+    /// Velocidade da música. Os replays de antes da versão 3 são todos a 1x.
+    pub velocidade: f64,
     pub hash_do_chart: String,
     pub entradas: Vec<Entrada>,
 }
@@ -44,7 +46,7 @@ pub enum ErroDoReplay {
 fn codigos_da_versao(versao: u8) -> Option<u64> {
     match versao {
         1 => Some(11),
-        2 => Some(13),
+        2 | 3 => Some(13),
         _ => None,
     }
 }
@@ -53,14 +55,22 @@ pub fn desempacotar_replay(pacote: &[u8]) -> Result<Replay, ErroDoReplay> {
     let (&versao, comprimido) = pacote.split_first().ok_or(ErroDoReplay::Corrompido)?;
     let codigos = codigos_da_versao(versao).ok_or(ErroDoReplay::VersaoDesconhecida)?;
     let bytes = miniz_oxide::inflate::decompress_to_vec_with_limit(comprimido, MAXIMO_DESCOMPRIMIDO).map_err(|_| ErroDoReplay::Corrompido)?;
-    if bytes.len() < 1 + BYTES_DO_HASH {
+    if bytes.is_empty() {
         return Err(ErroDoReplay::Corrompido);
     }
     let opcoes = bytes[0];
-    let hash_do_chart = bytes[1..=BYTES_DO_HASH].iter().map(|b| format!("{b:02x}")).collect();
+    // A versão 3 guarda a velocidade, em centésimos, logo depois das opções.
+    let (velocidade, inicio_do_hash) = if versao >= 3 { (f64::from(bytes[1]) / 100.0, 2) } else { (1.0, 1) };
+    if bytes.len() < inicio_do_hash + BYTES_DO_HASH {
+        return Err(ErroDoReplay::Corrompido);
+    }
+    let hash_do_chart = bytes[inicio_do_hash..inicio_do_hash + BYTES_DO_HASH]
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
     let mut leitor = Leitor {
         bytes: &bytes,
-        posicao: 1 + BYTES_DO_HASH,
+        posicao: inicio_do_hash + BYTES_DO_HASH,
     };
     let primeiro = leitor.varint()?;
     let mut ticks = if primeiro % 2 == 1 {
@@ -83,6 +93,7 @@ pub fn desempacotar_replay(pacote: &[u8]) -> Result<Replay, ErroDoReplay> {
     Ok(Replay {
         sem_falha: opcoes & 1 != 0,
         fantasma: opcoes & 2 != 0,
+        velocidade,
         hash_do_chart,
         entradas,
     })
@@ -91,7 +102,10 @@ pub fn desempacotar_replay(pacote: &[u8]) -> Result<Replay, ErroDoReplay> {
 /// O inverso de `desempacotar_replay`, no formato da versão atual. A API não grava replays; serve aos testes dela.
 pub fn empacotar_replay(replay: &Replay) -> Vec<u8> {
     const CODIGOS: i64 = 13;
-    let mut bytes = vec![u8::from(replay.sem_falha) | (u8::from(replay.fantasma) << 1)];
+    // A velocidade vai em centésimos: 0,75x é 75.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let velocidade = (replay.velocidade * 100.0).round().clamp(0.0, 255.0) as u8;
+    let mut bytes = vec![u8::from(replay.sem_falha) | (u8::from(replay.fantasma) << 1), velocidade];
     bytes.extend((0..BYTES_DO_HASH).map(|i| u8::from_str_radix(replay.hash_do_chart.get(i * 2..i * 2 + 2).unwrap_or("00"), 16).unwrap_or(0)));
     let em_ticks = |tempo: f64| {
         // Tempos de música: cabem com folga num i64.
@@ -121,7 +135,7 @@ pub fn empacotar_replay(replay: &Replay) -> Vec<u8> {
         escrever_varint(&mut bytes, ((ticks - anterior) * CODIGOS + codigo).unsigned_abs());
         anterior = ticks;
     }
-    let mut pacote = vec![2];
+    let mut pacote = vec![3];
     pacote.extend(miniz_oxide::deflate::compress_to_vec(&bytes, 6));
     pacote
 }
@@ -203,6 +217,7 @@ mod tests {
         let replay = Replay {
             sem_falha: true,
             fantasma: false,
+            velocidade: 0.75,
             hash_do_chart: "00112233445566778899aabbccddeeff".into(),
             entradas: vec![
                 Entrada {

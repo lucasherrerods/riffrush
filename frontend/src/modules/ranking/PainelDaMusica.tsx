@@ -8,8 +8,8 @@ import type { ApiDoRanking, MusicaNoRanking, OrdemDoRanking } from "./api";
 import { PainelDeRanking } from "./PainelDeRanking";
 
 const ORDENS: { id: OrdemDoRanking; rotulo: string }[] = [
-  { id: "precisao", rotulo: "Precisão" },
   { id: "pontos", rotulo: "Pontos" },
+  { id: "precisao", rotulo: "Precisão" },
 ];
 
 interface Props {
@@ -29,7 +29,7 @@ export function PainelDaMusica({ musica, nome, aoVoltar, aoBaixar, aoOuvir, aoAb
   // Abre onde está o recorde: é onde a disputa é mais interessante.
   const [dificuldade, setDificuldade] = useState<Dificuldade>(musica.recorde?.dificuldade ?? "expert");
   const [instrumento, setInstrumento] = useState<Instrumento>("guitarra");
-  const [ordem, setOrdem] = useState<OrdemDoRanking>("precisao");
+  const [ordem, setOrdem] = useState<OrdemDoRanking>("pontos");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">

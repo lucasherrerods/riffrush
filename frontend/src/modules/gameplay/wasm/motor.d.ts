@@ -8,6 +8,10 @@ export function quantizar(tempo: number): number;
  * 0 é perfeito, 1 ótimo e 2 bom.
  */
 export function julgar(distancia: number): number;
+/**
+ * As velocidades da música que o jogo oferece.
+ */
+export function velocidades(): Float64Array;
 export function janela_de_acerto(): number;
 export class MotorDaPartida {
   free(): void;
@@ -24,13 +28,14 @@ export class MotorDaPartida {
   multiplicador(): number;
   ativar_estrela(): boolean;
   /**
-   * Tempo e duração de cada nota já na grade da partida, para o espelho começar igual.
+   * Tempo e duração de cada nota já no tempo real (dividido pela velocidade) e na grade da partida,
+   * para o espelho começar igual.
    */
   grade_das_notas(): Float64Array;
   /**
    * As notas vêm em quatro listas paralelas, que passam para o WASM sem um objeto por nota.
    */
-  constructor(tempos: Float64Array, pistas: Uint8Array, frases: Int32Array, duracoes: Float64Array, sem_falha: boolean, fantasma: boolean);
+  constructor(tempos: Float64Array, pistas: Uint8Array, frases: Int32Array, duracoes: Float64Array, sem_falha: boolean, fantasma: boolean, velocidade: number);
   tocar(pista: number, tempo: number): boolean;
   soltar(pista: number, tempo: number): void;
   acertar(indice: number, tempo: number): void;
@@ -50,12 +55,13 @@ export interface InitOutput {
   readonly motordapartida_avancar: (a: number, b: number) => void;
   readonly motordapartida_grade_das_notas: (a: number) => [number, number];
   readonly motordapartida_multiplicador: (a: number) => number;
-  readonly motordapartida_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => number;
+  readonly motordapartida_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number) => number;
   readonly motordapartida_precisao: (a: number) => number;
   readonly motordapartida_sincronizar: (a: number) => [number, number];
   readonly motordapartida_soltar: (a: number, b: number, c: number) => void;
   readonly motordapartida_tocar: (a: number, b: number, c: number) => number;
   readonly quantizar: (a: number) => number;
+  readonly velocidades: () => [number, number];
   readonly __wbindgen_export_0: WebAssembly.Table;
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;

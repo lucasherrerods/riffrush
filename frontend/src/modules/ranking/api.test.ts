@@ -18,10 +18,10 @@ describe("criarApiDoRanking", () => {
     expect(buscar.mock.calls[0] as unknown as [string]).toEqual([expect.stringContaining("instrumento=baixo"), expect.anything()]);
   });
 
-  it("pede o ranking por pontos quando a ordem muda", async () => {
+  it("pede o ranking por precisão quando a ordem muda", async () => {
     const buscar = vi.fn(async () => resposta({ jogadores: 0, top: [], meu: null }));
-    await criarApiDoRanking("http://api", buscar).buscar("m", "medio", { ordem: "pontos" });
-    expect(buscar.mock.calls[0] as unknown as [string]).toEqual([expect.stringContaining("&ordem=pontos"), expect.anything()]);
+    await criarApiDoRanking("http://api", buscar).buscar("m", "medio", { ordem: "precisao" });
+    expect(buscar.mock.calls[0] as unknown as [string]).toEqual([expect.stringContaining("&ordem=precisao"), expect.anything()]);
   });
 
   it("com token, manda o token para vir o recorde pessoal", async () => {

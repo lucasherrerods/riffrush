@@ -136,13 +136,13 @@ async fn cada_instrumento_tem_o_proprio_ranking_e_sem_ele_vale_a_guitarra() {
 }
 
 #[tokio::test]
-async fn a_ordem_vem_do_pedido_e_sem_ela_vale_a_precisao() {
+async fn a_ordem_vem_do_pedido_e_sem_ela_valem_os_pontos() {
     let (app, _, repositorio) = app().await;
     chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert", None).await;
-    assert_eq!(*repositorio.ultima_ordem.lock().unwrap(), Some(Ordem::Precisao));
-    let (status, _) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&ordem=pontos", None).await;
-    assert_eq!(status, StatusCode::OK);
     assert_eq!(*repositorio.ultima_ordem.lock().unwrap(), Some(Ordem::Pontos));
+    let (status, _) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&ordem=precisao", None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(*repositorio.ultima_ordem.lock().unwrap(), Some(Ordem::Precisao));
     assert_eq!(
         chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&ordem=sorte", None).await.0,
         StatusCode::BAD_REQUEST
@@ -212,6 +212,7 @@ async fn as_musicas_mais_jogadas_vem_com_partidas_e_jogadores() {
         jogadores: 4,
         recorde: Some(RecordeDaMusica {
             nome: "Ana".into(),
+            pontos: 1_200_000,
             precisao: 0.98,
             dificuldade: Dificuldade::Expert,
         }),
@@ -227,6 +228,7 @@ async fn as_musicas_mais_jogadas_vem_com_partidas_e_jogadores() {
     assert_eq!(corpo[0]["partidas"], 30);
     assert_eq!(corpo[0]["jogadores"], 4);
     assert_eq!(corpo[0]["recorde"]["nome"], "Ana");
+    assert_eq!(corpo[0]["recorde"]["pontos"], 1_200_000);
     assert_eq!(corpo[0]["recorde"]["precisao"], 0.98);
     assert_eq!(corpo[0]["recorde"]["dificuldade"], "expert");
     assert!(chamar(&app, "/openapi.json", None).await.1["paths"]["/ranking/musicas"]["get"].is_object());
