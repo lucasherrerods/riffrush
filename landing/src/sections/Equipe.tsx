@@ -18,7 +18,7 @@ const INTEGRANTES = [
 const DESTAQUE = 1;
 
 /** Espaço entre os cards, em px. */
-const GAP = 24;
+const GAP = 16;
 const COLUNA = colunaDaGrade(INTEGRANTES.length, GAP);
 const POSICOES = INTEGRANTES.map((_, i) => posicaoNaGrade(i, INTEGRANTES.length, GAP));
 const TELA_CHEIA: Medida = { porcento: 100, px: 0 };
@@ -135,10 +135,10 @@ export function Equipe() {
 
       <div className="hidden h-[320svh] md:block">
         <div className="sticky top-0 flex h-svh flex-col">
-          <motion.div style={{ opacity: cabecalho }} className="mx-auto w-full max-w-6xl px-6 pt-24">
+          <motion.div style={{ opacity: cabecalho }} className="mx-auto w-full max-w-[90rem] px-6 pt-24">
             {titulo}
           </motion.div>
-          <div className="relative mx-auto mb-12 w-full max-w-6xl flex-1 px-6">
+          <div className="relative mx-auto mb-12 w-full max-w-[90rem] flex-1 px-6">
             <div className="relative h-full">
               {INTEGRANTES.map((integrante, indice) =>
                 indice === DESTAQUE ? null : <CardQueSai key={integrante.nome} indice={indice} progresso={progresso} />,
