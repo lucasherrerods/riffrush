@@ -8,14 +8,14 @@
 
 html {
   scroll-behavior: smooth;
+  /* Sem isso o celular alarga a página para caber o que as animações jogam para fora. */
+  overflow-x: clip;
 }
 
 body {
   font-family: "Geist Variable", sans-serif;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
-  /* As animações de entrada partem de fora da tela; sem isso a página ganha scroll lateral. */
-  overflow-x: clip;
 }
 
 ::selection {
