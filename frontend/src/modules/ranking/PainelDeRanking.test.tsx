@@ -9,6 +9,8 @@ const posicao = (n: number, nome: string, pontos: number): PosicaoNoRanking => (
   pontos,
   acertos: 9948,
   total: 10000,
+  precisao: 0.9735,
+  maior_sequencia: null,
   jogada_em: new Date().toISOString(),
   partida_id: `partida-${n}`,
 });
@@ -45,7 +47,7 @@ describe("PainelDeRanking", () => {
     expect(linhas).toHaveLength(2);
     expect(linhas[0]).toHaveTextContent("#1");
     expect(linhas[0]).toHaveTextContent("Srr 4");
-    expect(linhas[0]).toHaveTextContent("99,48%");
+    expect(linhas[0]).toHaveTextContent("97,35%");
     expect(linhas[0]).toHaveTextContent("1.099.340");
   });
 

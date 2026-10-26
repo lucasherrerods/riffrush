@@ -21,6 +21,8 @@ pub struct PartidaRegistrada {
     pub jogada_em: DateTime<Utc>,
     /// Só vem em partida que vale para o ranking.
     pub replay: Option<Vec<u8>>,
+    /// Só as partidas que o servidor rejulgou têm, e só elas entram no ranking.
+    pub precisao: Option<f64>,
 }
 
 /// Uma partida de chart do Encore à espera do servidor rejulgar o replay.
@@ -49,6 +51,8 @@ pub trait RepositorioDeContas: Send + Sync {
     /// Guarda a partida e soma o XP na mesma transação; devolve a conta atualizada.
     /// Uma partida com um id que já existe não muda nada: a fila pode entregar a mesma duas vezes.
     async fn registrar_partida(&self, partida: &PartidaRegistrada) -> Result<Conta, FalhaExterna>;
+    /// Quantas partidas a conta registrou no chart desde `desde`, sem contar a `exceto`.
+    async fn partidas_no_chart(&self, conta_id: Uuid, musica_id: &str, desde: DateTime<Utc>, exceto: Uuid) -> Result<u32, FalhaExterna>;
     /// Apaga a conta junto com as sessões e as partidas dela.
     async fn excluir(&self, id: Uuid) -> Result<(), FalhaExterna>;
 }

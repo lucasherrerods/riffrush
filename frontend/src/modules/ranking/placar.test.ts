@@ -1,7 +1,7 @@
 import type { PosicaoNoRanking, RespostaDoRanking } from "./api";
 import { montarPlacar } from "./placar";
 
-const posicao = (n: number, nome: string, pontos: number): PosicaoNoRanking => ({ posicao: n, nome, avatar: null, pontos, acertos: 1, total: 1, jogada_em: "", partida_id: `p${n}` });
+const posicao = (n: number, nome: string, pontos: number): PosicaoNoRanking => ({ posicao: n, nome, avatar: null, pontos, acertos: 1, total: 1, precisao: 1, maior_sequencia: null, jogada_em: "", partida_id: `p${n}` });
 
 const ranking = (top: PosicaoNoRanking[], meu: PosicaoNoRanking | null = null): RespostaDoRanking => ({ jogadores: top.length, top, meu });
 

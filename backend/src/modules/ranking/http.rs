@@ -46,6 +46,9 @@ pub struct PosicaoNoRanking {
     pontos: u64,
     acertos: u32,
     total: u32,
+    /// De 0 a 1, pelo valor de cada nota. É o que ordena o ranking.
+    precisao: f64,
+    maior_sequencia: Option<u32>,
     jogada_em: DateTime<Utc>,
 }
 
@@ -59,6 +62,8 @@ impl From<LinhaDoRanking> for PosicaoNoRanking {
             pontos: l.pontos,
             acertos: l.acertos,
             total: l.total,
+            precisao: l.precisao,
+            maior_sequencia: l.maior_sequencia,
             jogada_em: l.jogada_em,
         }
     }
@@ -187,6 +192,8 @@ pub struct PartidaDoRanking {
     pontos: u64,
     acertos: u32,
     total: u32,
+    /// De 0 a 1, pelo valor de cada nota. Só as partidas que o servidor rejulgou têm.
+    precisao: Option<f64>,
     /// Partidas antigas não têm.
     maior_sequencia: Option<u32>,
     derrota: bool,
@@ -208,6 +215,7 @@ impl From<PartidaPublica> for PartidaDoRanking {
             pontos: p.pontos,
             acertos: p.acertos,
             total: p.total,
+            precisao: p.precisao,
             maior_sequencia: p.maior_sequencia,
             derrota: p.derrota,
             fantasma: p.fantasma,

@@ -1,7 +1,7 @@
 import { Loader2 } from "lucide-react";
 import type { Dificuldade, Instrumento } from "@/modules/songs";
 import type { PosicaoNoRanking } from "./api";
-import { haQuantoTempo, precisaoDaPartida } from "@/shared/lib/formatar";
+import { haQuantoTempo, porcentagem } from "@/shared/lib/formatar";
 import { LinhaComPosicao } from "./LinhaComPosicao";
 import { useRanking, type OpcoesDoRanking } from "./useRanking";
 
@@ -69,7 +69,7 @@ function LinhaDoRanking({ linha, minha, aoAbrir }: { linha: PosicaoNoRanking; mi
       nome={linha.nome}
       avatar={linha.avatar}
       minha={minha}
-      detalhe={`${precisaoDaPartida(linha.acertos, linha.total)} · ${haQuantoTempo(linha.jogada_em)}`}
+      detalhe={`${porcentagem(linha.precisao)} · ${haQuantoTempo(linha.jogada_em)}`}
       valor={formatar(linha.pontos)}
       aoClicar={aoAbrir && (() => aoAbrir(linha.partida_id))}
     />
