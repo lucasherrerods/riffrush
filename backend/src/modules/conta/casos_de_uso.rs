@@ -82,6 +82,8 @@ pub struct PartidaRejulgada {
     pub resumo: ResumoDaPartida,
     /// De 0 a 1, pelo valor de cada nota.
     pub precisao: f64,
+    /// Com o modificador sem falha a partida rende XP, mas fica fora do ranking.
+    pub sem_falha: bool,
     pub jogada_em: chrono::DateTime<chrono::Utc>,
     pub replay: Vec<u8>,
 }
@@ -176,7 +178,7 @@ impl ServicosDaConta {
     /// Registra a partida que saiu da fila, com o XP calculado sobre o rejulgamento.
     pub async fn registrar_partida_rejulgada(&self, partida: PartidaRejulgada) -> Result<(), ErroDaConta> {
         let resumo = partida.resumo.validar()?;
-        let vale_para_o_ranking = !resumo.derrota && !resumo.fantasma;
+        let vale_para_o_ranking = !resumo.derrota && !resumo.fantasma && !partida.sem_falha;
         let repeticoes = self
             .contas
             .partidas_no_chart(partida.conta_id, &partida.musica_id, partida.jogada_em - JANELA_DAS_REPETICOES, partida.id)
@@ -192,7 +194,8 @@ impl ServicosDaConta {
                 xp_ganho: xp_da_partida(resumo, partida.precisao, repeticoes),
                 jogada_em: partida.jogada_em,
                 replay: vale_para_o_ranking.then_some(partida.replay),
-                precisao: Some(partida.precisao),
+                // O ranking só lê partidas com precisão: sem ela, a partida fica de fora.
+                precisao: vale_para_o_ranking.then_some(partida.precisao),
             })
             .await?;
         Ok(())
@@ -519,6 +522,7 @@ mod tests {
             pontos: 500,
             resumo,
             precisao: 1.0,
+            sem_falha: false,
             jogada_em: quando,
             replay: vec![2, 0],
         }
@@ -621,6 +625,20 @@ mod tests {
     async fn excluir_sem_sessao_e_recusado() {
         let (servicos, _, _) = servicos();
         assert!(matches!(servicos.excluir_conta("inventado").await, Err(ErroDaConta::SessaoInvalida)));
+    }
+
+    #[tokio::test]
+    async fn partida_sem_falha_rende_xp_mas_fica_fora_do_ranking() {
+        let (servicos, banco, relogio) = servicos();
+        let entrada = servicos.entrar_com_google(&pedido("bom")).await.unwrap();
+        let sem_falha = PartidaRejulgada {
+            sem_falha: true,
+            ..rejulgada(1, entrada.conta.id, relogio.agora())
+        };
+        servicos.registrar_partida_rejulgada(sem_falha).await.unwrap();
+        assert_eq!(servicos.conta_da_sessao(&entrada.token).await.unwrap().xp_total, 108);
+        assert_eq!(*banco.ultimo_replay.lock().unwrap(), None);
+        assert_eq!(*banco.ultima_precisao.lock().unwrap(), None);
     }
 
     #[tokio::test]
