@@ -11,4 +11,5 @@ export const SECOES = [
   { id: "banda", rotulo: "Banda" },
   { id: "recursos", rotulo: "Recursos" },
   { id: "como-jogar", rotulo: "Como jogar" },
+  { id: "equipe", rotulo: "Equipe" },
 ];
