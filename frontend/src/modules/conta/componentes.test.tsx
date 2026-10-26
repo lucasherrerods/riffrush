@@ -20,6 +20,13 @@ describe("GanhoDeXp", () => {
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
 
+  it("música que o servidor não confere explica por que não deu XP", () => {
+    render(<GanhoDeXp xp={{ xp_ganho: 0, antes: nivel(3, 10, 520), depois: nivel(3, 10, 520) }} valeXp={false} />);
+    expect(screen.getByText("Esta música não vale XP")).toBeInTheDocument();
+    expect(screen.getByText(/baixadas em Buscar músicas/)).toBeInTheDocument();
+    expect(screen.queryByText("+0 XP")).not.toBeInTheDocument();
+  });
+
   it("comemora quando sobe de nível", () => {
     render(<GanhoDeXp xp={{ xp_ganho: 150, antes: nivel(1, 0, 100), depois: nivel(2, 50, 283) }} />);
     expect(screen.getByText("Subiu para o nível 2!")).toBeInTheDocument();
