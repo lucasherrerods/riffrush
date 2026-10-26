@@ -39,24 +39,33 @@ export type EventoDaTransmissao =
   | { tipo: "pausa"; pausado: boolean }
   | { tipo: "fim" };
 
-/** Repassa as entradas para a partida e anota cada uma com o tempo que a partida de fato usou. */
+/**
+ * Repassa as entradas para a partida e anota cada uma com o tempo que a partida de fato usou: o da entrada na
+ * grade, sem voltar para antes do que já passou. Não lê `partida.tempo` depois, porque uma derrota no meio do
+ * caminho para a partida antes do toque. Depois da derrota nada mais muda a partida, então nada é gravado.
+ */
 export function criarGravador(partida: Partida) {
   const entradas: EntradaDoReplay[] = [];
-  const anotar = (tipo: EntradaDoReplay["tipo"], pista: number) => partida.tempo !== null && entradas.push({ tempo: partida.tempo, tipo, pista });
+  const tempoUsado = (tempo: number) => Math.max(quantizar(tempo), partida.tempo ?? -Infinity);
+  const anotar = (tipo: EntradaDoReplay["tipo"], pista: number, tempo: number) => entradas.push({ tempo, tipo, pista });
   return {
     entradas,
     tocar(pista: number, tempo: number) {
+      if (partida.derrota) return false;
+      const usado = tempoUsado(tempo);
       const acertou = tocar(partida, pista, tempo);
-      anotar("tocar", pista);
+      anotar("tocar", pista, usado);
       return acertou;
     },
     soltar(pista: number, tempo: number) {
+      if (partida.derrota) return;
+      const usado = tempoUsado(tempo);
       soltar(partida, pista, tempo);
-      anotar("soltar", pista);
+      anotar("soltar", pista, usado);
     },
     ativarEstrela() {
       const ativou = ativarEstrela(partida);
-      if (ativou) anotar("estrela", 0);
+      if (ativou && partida.tempo !== null) anotar("estrela", 0, partida.tempo);
       return ativou;
     },
   };
