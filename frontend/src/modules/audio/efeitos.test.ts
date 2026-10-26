@@ -33,6 +33,12 @@ describe("tocarEfeito", () => {
     expect(oscilador.fim).toBeLessThan(EFEITOS.estrela.duracao + 0.1);
   });
 
+  it("a nota perdida tem um som próprio, diferente do erro", async () => {
+    const { EFEITOS } = await importar();
+    expect(EFEITOS.notaPerdida).toBeDefined();
+    expect(EFEITOS.notaPerdida).not.toEqual(EFEITOS.erro);
+  });
+
   it("todos os efeitos têm duração positiva", async () => {
     const { EFEITOS } = await importar();
     for (const efeito of Object.values(EFEITOS)) expect(efeito.duracao).toBeGreaterThan(0);

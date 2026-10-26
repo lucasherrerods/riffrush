@@ -291,6 +291,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     if (canvas.current) observador?.observe(canvas.current);
     const apertados = Array<boolean>(PISTA_ABERTA + 1).fill(false);
     const explosoes: Cena["explosoes"] = [];
+    const falhas: Cena["falhas"] = [];
     const trovoes: Cena["trovoes"] = [];
     let estrelaDesde: number | null = null;
     let julgamento: Hud["julgamento"] = null;
@@ -302,7 +303,6 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     let pausadoAgora = false;
     let terminou = false;
     let quadro = 0;
-    let ultimoHud = HUD_INICIAL;
     // Com o bot o recorde não vale, então também não tem festa.
     let recordeBatido = opcoes.bot || !!replay;
     let ultimaSincroniaDoVideo = 0;
@@ -360,7 +360,9 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
           }
         } else if (evento.tipo === "erro") {
           reagir("errou");
-          if (ultimoHud.sequencia >= 10) tocarEfeito("erro", opcoes.volumeDosEfeitos * 0.6);
+          falhas.push({ pista: evento.nota.pista, tempo });
+          if (falhas.length > MAXIMO_DE_EXPLOSOES) falhas.shift();
+          tocarEfeito("notaPerdida", opcoes.volumeDosEfeitos);
         } else if (evento.tipo === "sequencia") {
           avisar(`${evento.valor} notas seguidas!`);
         } else if (evento.tipo === "fraseCompleta") {
@@ -546,6 +548,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
             batidas,
             apertados,
             explosoes,
+            falhas,
             estrelaAtiva: partida.estrelaAtiva,
             multiplicador: Math.min(4, 1 + Math.floor(partida.sequencia / 10)),
             frasesFalhas: partida.frasesFalhas,
@@ -582,7 +585,6 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         julgamento,
       };
       loja.definir(proximo);
-      ultimoHud = loja.ler();
     };
     quadro = requestAnimationFrame(desenhar);
 

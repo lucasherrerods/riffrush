@@ -21,6 +21,7 @@ function cena(notas: Nota[], extra: Partial<Cena> = {}): Cena {
     batidas: [],
     apertados: [false, false, false, false, false, false],
     explosoes: [],
+    falhas: [],
     estrelaAtiva: false,
     multiplicador: 1,
     frasesFalhas: new Set(),
@@ -105,6 +106,14 @@ describe("desenharPista", () => {
     const comExplosao = cena([], { explosoes: [{ pista: 2, tempo: 1 }] });
     expect(desenhar(comExplosao, 1.1).desenhos()).toHaveLength(1);
     expect(desenhar(comExplosao, 1.4).desenhos()).toHaveLength(0);
+  });
+
+  it("escreve MISS em cima da tecla da nota perdida, por pouco tempo", () => {
+    const comFalha = cena([], { falhas: [{ pista: 1, tempo: 1 }] });
+    const textos = (t: number, efeitos = true) => desenhar(comFalha, t, efeitos).chamadas.filter((ch) => ch.metodo === "fillText");
+    expect(textos(1.1).map((ch) => ch.args[0])).toEqual(["MISS"]);
+    expect(textos(1.1, false).map((ch) => ch.args[0])).toEqual(["MISS"]);
+    expect(textos(2)).toEqual([]);
   });
 
   it("não escreve o julgamento no braço, para não tapar as notas", () => {
