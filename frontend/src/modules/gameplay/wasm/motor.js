@@ -84,6 +84,17 @@ export function julgar(distancia) {
 }
 
 /**
+ * As velocidades da música que o jogo oferece.
+ * @returns {Float64Array}
+ */
+export function velocidades() {
+    const ret = wasm.velocidades();
+    var v1 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    return v1;
+}
+
+/**
  * @returns {number}
  */
 export function janela_de_acerto() {
@@ -139,7 +150,8 @@ export class MotorDaPartida {
         return ret !== 0;
     }
     /**
-     * Tempo e duração de cada nota já na grade da partida, para o espelho começar igual.
+     * Tempo e duração de cada nota já no tempo real (dividido pela velocidade) e na grade da partida,
+     * para o espelho começar igual.
      * @returns {Float64Array}
      */
     grade_das_notas() {
@@ -156,8 +168,9 @@ export class MotorDaPartida {
      * @param {Float64Array} duracoes
      * @param {boolean} sem_falha
      * @param {boolean} fantasma
+     * @param {number} velocidade
      */
-    constructor(tempos, pistas, frases, duracoes, sem_falha, fantasma) {
+    constructor(tempos, pistas, frases, duracoes, sem_falha, fantasma, velocidade) {
         const ptr0 = passArrayF64ToWasm0(tempos, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
         const ptr1 = passArray8ToWasm0(pistas, wasm.__wbindgen_malloc);
@@ -166,7 +179,7 @@ export class MotorDaPartida {
         const len2 = WASM_VECTOR_LEN;
         const ptr3 = passArrayF64ToWasm0(duracoes, wasm.__wbindgen_malloc);
         const len3 = WASM_VECTOR_LEN;
-        const ret = wasm.motordapartida_new(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, sem_falha, fantasma);
+        const ret = wasm.motordapartida_new(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, sem_falha, fantasma, velocidade);
         this.__wbg_ptr = ret >>> 0;
         MotorDaPartidaFinalization.register(this, this.__wbg_ptr, this);
         return this;

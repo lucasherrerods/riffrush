@@ -266,6 +266,7 @@ describe("TelaDeJogo", () => {
     const replay: Replay = {
       semFalha: false,
       fantasma: false,
+      velocidade: 1,
       hashDoChart: await hashDoChart([nota(0.5), nota(0.8, 1)]),
       entradas: [{ tempo: 0.5, tipo: "tocar", pista: 0 }],
     };
@@ -283,7 +284,7 @@ describe("TelaDeJogo", () => {
 
   it("replay gravado em outro chart avisa e não toca", async () => {
     carregarCom([nota(0.5)]);
-    abrir({}, undefined, { semFalha: false, fantasma: false, hashDoChart: "0".repeat(32), entradas: [] });
+    abrir({}, undefined, { semFalha: false, fantasma: false, velocidade: 1, hashDoChart: "0".repeat(32), entradas: [] });
     expect(await screen.findByText(/outra versão do chart/)).toBeInTheDocument();
   });
 
@@ -314,7 +315,7 @@ describe("TelaDeJogo", () => {
 
   it("ao vivo, quem assiste não passa do que já chegou", async () => {
     carregarCom([nota(0.5)]);
-    const replay: Replay = { semFalha: false, fantasma: false, hashDoChart: await hashDoChart([nota(0.5)]), entradas: [], ateAgora: 0.2 };
+    const replay: Replay = { semFalha: false, fantasma: false, velocidade: 1, hashDoChart: await hashDoChart([nota(0.5)]), entradas: [], ateAgora: 0.2 };
     abrir({}, undefined, replay);
     await partidaPronta();
     irPara(1);
@@ -333,6 +334,23 @@ describe("TelaDeJogo", () => {
     await partidaPronta();
     irPara(5);
     expect(await screen.findByRole("heading", { name: /A galera vaiou/ })).toBeInTheDocument();
+  });
+
+  it("na velocidade escolhida, a música toca mais rápida, as notas chegam antes e o replay guarda a velocidade", async () => {
+    carregarCom([nota(3)]);
+    const { aoTerminar, usuario } = abrir({ velocidadeDaMusica: 1.5 });
+    await partidaPronta();
+    expect(audio().fontes.at(-1)!.playbackRate.value).toBe(1.5);
+    expect(screen.getByText("1,5x")).toBeInTheDocument();
+    // A nota do segundo 3 da música chega no segundo 2 de tempo real.
+    irPara(2);
+    await usuario.keyboard("a");
+    await waitFor(() => expect(screen.getByLabelText("Sequência")).toHaveTextContent("1"));
+    irPara(20);
+    await waitFor(() => expect(aoTerminar).toHaveBeenCalled());
+    const replay = await desempacotarReplay(await aoTerminar.mock.calls[0][1]());
+    expect(replay.velocidade).toBe(1.5);
+    expect(aoTerminar.mock.calls[0][0].pontos).toBe(75);
   });
 
   it("mostra o selo BOT quando o bot está ligado", async () => {

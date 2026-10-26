@@ -86,6 +86,9 @@ export function lerEstado(valor: unknown): EstadoOnline | null {
   return { tipo: "tocando", musica, titulo, artista, dificuldade, instrumento, transmitindo: estado.transmitindo === true };
 }
 
+/** As velocidades da música que o jogo oferece (as mesmas do motor da partida). */
+const VELOCIDADES = [0.5, 0.75, 1, 1.25, 1.5];
+
 /** O início de uma partida transmitida: o que quem assiste precisa para montar a mesma partida. */
 export interface PartidaTransmitida {
   musica: string;
@@ -93,6 +96,8 @@ export interface PartidaTransmitida {
   instrumento: string;
   hashDoChart: string;
   semFalha: boolean;
+  /** Velocidade da música: quem assiste toca o replay na mesma. */
+  velocidade: number;
   /** O .sng da música no Encore, para quem assiste baixar com um clique. */
   urlDoEncore?: string;
 }
@@ -150,7 +155,9 @@ export function lerMensagemDaTransmissao(bruta: string): MensagemDaTransmissao |
     const instrumento = texto(p?.instrumento, 20);
     const hash = texto(p?.hashDoChart, 32);
     if (musica === null || dificuldade === null || instrumento === null || hash === null || !/^[0-9a-f]{32}$/.test(hash)) return null;
-    const partida: PartidaTransmitida = { musica, dificuldade, instrumento, hashDoChart: hash, semFalha: p?.semFalha === true };
+    // Velocidade estranha vira a normal: o replay de quem assiste fica fora de ritmo, mas a transmissão segue.
+    const velocidade = typeof p?.velocidade === "number" && VELOCIDADES.includes(p.velocidade) ? p.velocidade : 1;
+    const partida: PartidaTransmitida = { musica, dificuldade, instrumento, hashDoChart: hash, semFalha: p?.semFalha === true, velocidade };
     // Link estranho não derruba a transmissão: só não vai junto.
     if (linkDoChartConfere(p?.urlDoEncore, musica)) partida.urlDoEncore = p.urlDoEncore;
     return { tipo: "inicio", partida };

@@ -11,6 +11,6 @@ pub use chart::{
 };
 pub use partida::{
     acertar, ativar_estrela, avancar, criar_partida, estrela, julgar, multiplicador, precisao, quantizar, retirar_eventos, soltar, tocar, Evento, Julgamento,
-    Nota, NotaEmJogo, OpcoesDaPartida, Partida, JANELA_DE_ACERTO, PISTA_ABERTA,
+    Nota, NotaEmJogo, OpcoesDaPartida, Partida, JANELA_DE_ACERTO, PISTA_ABERTA, VELOCIDADES,
 };
 pub use replay::{aplicar_entradas, desempacotar_replay, empacotar_replay, Entrada, ErroDoReplay, Replay, TipoDaEntrada};

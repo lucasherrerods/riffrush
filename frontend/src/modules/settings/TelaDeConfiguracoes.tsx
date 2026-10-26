@@ -1,3 +1,4 @@
+import { rotuloDaVelocidade, velocidadesDaMusica } from "@/modules/gameplay";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Gamepad2, Keyboard, Monitor, RotateCcw, Volume2 } from "lucide-react";
 import { capturarBotao, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
@@ -166,6 +167,21 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
               aoMudar={(atrasoMs) => mudar({ atrasoMs })}
             />
             <Calibracao aoMedir={(atrasoMs) => mudar({ atrasoMs })} />
+            <LinhaDeOpcao rotulo="Velocidade da música" dica="Mais lenta rende menos pontos; mais rápida, mais. O tom muda junto">
+              <div role="radiogroup" aria-label="Velocidade da música" className="flex flex-wrap gap-2">
+                {velocidadesDaMusica().map((v) => (
+                  <Button
+                    key={v}
+                    role="radio"
+                    aria-checked={configuracoes.velocidadeDaMusica === v}
+                    variant={configuracoes.velocidadeDaMusica === v ? "default" : "outline"}
+                    onClick={() => mudar({ velocidadeDaMusica: v })}
+                  >
+                    {rotuloDaVelocidade(v)}
+                  </Button>
+                ))}
+              </div>
+            </LinhaDeOpcao>
             <LinhaDeOpcao rotulo="Modo sem falha" dica="O medidor de rock nunca tira você da música" para="sem-falha">
               <Switch id="sem-falha" checked={configuracoes.semFalha} onCheckedChange={(semFalha) => mudar({ semFalha })} />
             </LinhaDeOpcao>

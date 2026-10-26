@@ -38,6 +38,7 @@ export class OsciladorFalso {
 
 export class FonteFalsa {
   buffer: unknown = null;
+  playbackRate = { value: 1 };
   inicio?: number;
   deslocamento?: number;
   parada = false;

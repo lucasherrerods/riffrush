@@ -100,6 +100,7 @@ export function criarTransmissao(partida: PartidaParaTransmitir, deps: Dependenc
           instrumento: partida.instrumento,
           hashDoChart: evento.hashDoChart,
           semFalha: evento.semFalha,
+          velocidade: evento.velocidade,
           ...(partida.urlDoEncore && { urlDoEncore: partida.urlDoEncore }),
         },
       });
