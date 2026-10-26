@@ -10,7 +10,7 @@ pub use chart::{
     ExtratorDeChart, Instrumento,
 };
 pub use partida::{
-    ativar_estrela, avancar, criar_partida, julgar, precisao, quantizar, soltar, tocar, Julgamento, Nota, NotaEmJogo, OpcoesDaPartida, Partida,
-    JANELA_DE_ACERTO, PISTA_ABERTA,
+    acertar, ativar_estrela, avancar, criar_partida, estrela, julgar, multiplicador, precisao, quantizar, retirar_eventos, soltar, tocar, Evento, Julgamento,
+    Nota, NotaEmJogo, OpcoesDaPartida, Partida, JANELA_DE_ACERTO, PISTA_ABERTA,
 };
 pub use replay::{aplicar_entradas, desempacotar_replay, empacotar_replay, Entrada, ErroDoReplay, Replay, TipoDaEntrada};

@@ -5,6 +5,7 @@ export {
   ativarEstrela,
   avancar,
   criarPartida,
+  iniciarMotor,
   multiplicador,
   retirarEventos,
   soltar,
