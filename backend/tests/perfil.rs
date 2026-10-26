@@ -136,3 +136,15 @@ async fn a_rota_esta_no_openapi() {
     let (_, corpo) = chamar(&app, "/openapi.json", None).await;
     assert!(corpo["paths"]["/eu/perfil"]["get"].is_object());
 }
+
+#[tokio::test]
+async fn recordes_de_quem_esta_logado() {
+    let (app, token) = app().await;
+    let (status, corpo) = chamar(&app, "/eu/recordes", Some(&token)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(corpo, serde_json::json!([]));
+    assert_eq!(chamar(&app, "/eu/recordes", None).await.0, StatusCode::UNAUTHORIZED);
+
+    let (_, openapi) = chamar(&app, "/openapi.json", None).await;
+    assert!(openapi["paths"]["/eu/recordes"]["get"].is_object());
+}

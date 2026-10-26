@@ -10,10 +10,12 @@ mod postgres;
 pub use casos_de_uso::fakes;
 pub use casos_de_uso::{ErroDoPerfil, ServicosDoPerfil};
 pub use dominio::{
-    montar_perfil, DadosDoPerfil, EstatisticasDaDificuldade, MusicaMaisTocada, PartidaRecente, PartidasNoInstrumento, Perfil, MAIS_TOCADAS, PARTIDAS_RECENTES,
+    montar_perfil, DadosDoPerfil, EstatisticasDaDificuldade, MusicaMaisTocada, PartidaRecente, PartidasNoInstrumento, Perfil, Recorde, MAIS_TOCADAS,
+    PARTIDAS_RECENTES,
 };
 pub use http::{
-    __path_perfil, perfil, rotas, DadosDaMusicaNoPerfil, DificuldadeDoPerfil, InstrumentoDoPerfil, MusicaDoPerfil, PartidaDoPerfil, RespostaDoPerfil,
+    __path_perfil, __path_recordes, perfil, recordes, rotas, DadosDaMusicaNoPerfil, DificuldadeDoPerfil, InstrumentoDoPerfil, MusicaDoPerfil, PartidaDoPerfil,
+    RecordeDaConta, RespostaDoPerfil,
 };
 pub use portas::RepositorioDoPerfil;
 pub use postgres::PerfilPostgres;

@@ -13,7 +13,7 @@ import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
 import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { ChatGlobal, TelaDeEspectador, TelaOnline, presenca, presencaDisponivel, transmitirPartida, usePresenca, useSouDaModeracao, type PessoaOnline } from "@/modules/presenca";
 import { JanelaDoChart, TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/search";
-import { TelaDeResultado, carregarRecordes, recordeDe, salvarRecorde } from "@/modules/results";
+import { TelaDeResultado, anotarRecorde, definirRecordes, recordeDe, useRecordes } from "@/modules/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { PainelDeRanking, PlacarAoVivo, TelaDeLeaderboard, TelaDePartidaDoRanking } from "@/modules/ranking";
@@ -57,6 +57,23 @@ export function App() {
   const [voltarDaBuscaPara, setVoltarDaBuscaPara] = useState<Tela>("menu");
   const [espectando, setEspectando] = useState<PessoaOnline | null>(null);
   const { conta } = useConta();
+  const recordes = useRecordes();
+  // Os recordes vêm da conta: trocar de conta (ou sair) troca os recordes da seleção.
+  const contaId = conta?.id;
+  const contaDosRecordes = useRef(contaId);
+  useEffect(() => {
+    if (contaDosRecordes.current !== contaId) definirRecordes([]);
+    contaDosRecordes.current = contaId;
+    if (!contaId) return;
+    let cancelado = false;
+    sessaoDaConta
+      .recordes()
+      .then((lista) => !cancelado && definirRecordes(lista))
+      .catch(() => {});
+    return () => {
+      cancelado = true;
+    };
+  }, [contaId]);
   /** Com a conta conectada, o nome é o do Google em todo lugar, e o nível vai junto para o lobby. */
   const personagemEmJogo = useMemo<PersonagemNaSala>(
     () => (conta ? { ...personagem, nome: conta.nome.trim().slice(0, 16) || personagem.nome, nivel: conta.nivel.nivel } : personagem),
@@ -267,8 +284,9 @@ export function App() {
 
   const terminar = useCallback(
     (r: Resultado, gerarReplay?: () => Promise<Uint8Array>) => {
-      // Com o bot tocando, o recorde não é do jogador.
-      setResultado({ resultado: r, recordeNovo: !configuracoes.bot && salvarRecorde(r) });
+      // Com o bot tocando, o recorde não é do jogador. Sem conta, não há onde guardar recorde.
+      const comConta = !!sessaoDaConta.token();
+      setResultado({ resultado: r, recordeNovo: !configuracoes.bot && comConta && anotarRecorde({ ...r, musicaId: idDoRanking(musicaDaPartida.current) }) });
       setXpDaPartida(null);
       if (!configuracoes.bot) {
         // Sem o replay a partida ainda vale: só não dá para assistir depois.
@@ -526,7 +544,7 @@ export function App() {
                 instrumento={instrumentoDaPartida}
                 opcoes={opcoes}
                 personagem={personagemEmJogo}
-                recorde={assistindo ? undefined : recordeDe(carregarRecordes(), musica.id, dificuldadeDaPartida, instrumentoDaPartida)?.pontos}
+                recorde={assistindo ? undefined : recordeDe(recordes, idDoRanking(musica), dificuldadeDaPartida, instrumentoDaPartida)?.pontos}
                 replay={assistindo?.replay}
                 rede={
                   emRede && conexao.sala

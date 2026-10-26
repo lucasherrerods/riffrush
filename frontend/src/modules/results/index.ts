@@ -1,2 +1,2 @@
 export { TelaDeResultado } from "./TelaDeResultado";
-export { carregarRecordes, estrelasDoResultado, recordeDe, salvarRecorde, type Recorde, type Recordes } from "./recordes";
+export { anotarRecorde, definirRecordes, estrelasDoResultado, recordeDe, recordesAtuais, recordesDaApi, useRecordes, type Recorde, type RecordeDaApi, type Recordes } from "./recordes";
