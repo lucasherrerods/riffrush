@@ -1,4 +1,4 @@
-# Pontos para investigar
+# Pontos instáveis para verificar depois
 
 Problemas encontrados de passagem, fora do escopo da mudança que estava sendo feita. Cada item diz onde apareceu, o que se viu e o que já se sabe. Quando um item for resolvido, apague-o daqui no mesmo PR da correção.
 
