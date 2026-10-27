@@ -71,6 +71,7 @@ async fn app() -> (Router, String, Arc<RankingEmMemoria>) {
     ];
     let app = riffrush_api::app(
         EstadoDoApp {
+            mania: riffrush_api::modules::mania::fakes::servicos_vazios(conta.clone()),
             banco: Arc::new(BancoOk),
             moderacao: riffrush_api::modules::moderacao::fakes::servicos_de_moderacao(conta.clone(), None).0,
             presenca: riffrush_api::modules::presenca::ServicosDePresenca {

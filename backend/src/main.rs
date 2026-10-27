@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use riffrush_api::modules::catalogo::{CatalogoPostgres, Encore, ServicosDoCatalogo};
 use riffrush_api::modules::conta::{ContasPostgres, CredenciaisDoGoogle, GeradorAleatorio, Google, RelogioDoSistema, ServicosDaConta};
+use riffrush_api::modules::mania::{self, CredenciaisDoOsu, ManiaPostgres, Osu, ServicosDoMania};
 use riffrush_api::modules::moderacao::{ModeracaoPostgres, RelayHttp, ServicosDeModeracao};
 use riffrush_api::modules::perfil::{PerfilPostgres, ServicosDoPerfil};
 use riffrush_api::modules::presenca::ServicosDePresenca;
@@ -86,6 +87,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         conta: conta.clone(),
         relogio,
     });
+    if config.osu.is_none() {
+        tracing::warn!("sem OSU_CLIENT_ID e OSU_CLIENT_SECRET: as partidas do Mania esperam na fila sem XP");
+    }
+    let servicos_do_mania = ServicosDoMania {
+        repositorio: Arc::new(ManiaPostgres(banco.clone())),
+        fonte: Arc::new(Osu::novo(
+            reqwest::Client::new(),
+            config
+                .osu
+                .clone()
+                .map(|(client_id, client_secret)| CredenciaisDoOsu { client_id, client_secret }),
+        )),
+        conta: conta.clone(),
+        relogio: conta.relogio.clone(),
+        gerador: conta.gerador.clone(),
+    };
+    mania::iniciar_trabalhador(servicos_do_mania.clone());
     let estado = EstadoDoApp {
         banco: Arc::new(BancoPostgres(banco)),
         conta,
@@ -93,6 +111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         perfil,
         presenca,
         moderacao,
+        mania: servicos_do_mania,
     };
     let app = riffrush_api::app(estado, &config.origens_permitidas);
 

@@ -1371,6 +1371,7 @@ dependencies = [
  "reqwest",
  "riffrush-api",
  "riffrush-motor",
+ "riffrush-motor-mania",
  "serde",
  "serde_json",
  "sha2",
@@ -1392,6 +1393,14 @@ dependencies = [
  "miniz_oxide",
  "regex",
  "sha2",
+]
+
+[[package]]
+name = "riffrush-motor-mania"
+version = "0.1.0"
+dependencies = [
+ "md-5",
+ "miniz_oxide",
 ]
 
 [[package]]

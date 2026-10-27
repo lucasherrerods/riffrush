@@ -45,6 +45,7 @@ async fn montar() -> Montado {
     repositorio.contas.lock().unwrap().insert(entrada.conta.id, "Eu".into());
     let app = riffrush_api::app(
         EstadoDoApp {
+            mania: riffrush_api::modules::mania::fakes::servicos_vazios(conta.clone()),
             banco: Arc::new(BancoOk),
             ranking: servicos_do_ranking(conta.clone()).0,
             perfil: riffrush_api::modules::perfil::fakes::servicos_do_perfil(conta.clone()).0,

@@ -14,6 +14,7 @@ dotenvy = "0.15"
 hex = "0.4"
 rand = "0.8"
 riffrush-motor = { path = "motor" }
+riffrush-motor-mania = { path = "motor-mania" }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
