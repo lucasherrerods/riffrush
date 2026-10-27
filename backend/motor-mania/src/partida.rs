@@ -2,6 +2,7 @@
 //! O tempo é em milissegundos inteiros, como no `.osu`: o replay guarda os mesmos números e a partida se repete igual.
 
 use crate::beatmap::{Beatmap, Nota};
+use crate::mods::{colunas_com_mods, Mods};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Julgamento {
@@ -94,8 +95,9 @@ pub const FATOR_DA_PONTA: f64 = 1.5;
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct OpcoesDaPartida {
-    /// A vida zerada não tira da música.
-    pub sem_falha: bool,
+    pub mods: Mods,
+    /// Semente do mod Random.
+    pub semente: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -140,9 +142,24 @@ pub struct Partida {
     eventos: Vec<Evento>,
 }
 
+/// As notas chegam no tempo da música e a partida roda no tempo real: com DT, a nota no segundo 3 da música chega no
+/// segundo 2. As janelas ficam no tempo da música, então encolhem no tempo real junto com ela.
 pub fn criar_partida(beatmap: &Beatmap, opcoes: OpcoesDaPartida) -> Partida {
     let teclas = beatmap.dificuldade.teclas;
-    let notas = beatmap.notas.clone();
+    let mods = opcoes.mods;
+    let velocidade = mods.velocidade();
+    let colunas = colunas_com_mods(teclas, mods, opcoes.semente);
+    let no_tempo_real = |tempo: i32| (f64::from(tempo) / velocidade).round() as i32;
+    let mut notas: Vec<Nota> = beatmap
+        .notas
+        .iter()
+        .map(|n| Nota {
+            coluna: colunas[usize::from(n.coluna)],
+            tempo_ms: no_tempo_real(n.tempo_ms),
+            fim_ms: n.fim_ms.map(no_tempo_real),
+        })
+        .collect();
+    notas.sort_by_key(|n| (n.tempo_ms, n.coluna));
     let mut por_coluna = vec![Vec::new(); usize::from(teclas)];
     for (indice, nota) in notas.iter().enumerate() {
         por_coluna[usize::from(nota.coluna)].push(indice);
@@ -151,7 +168,7 @@ pub fn criar_partida(beatmap: &Beatmap, opcoes: OpcoesDaPartida) -> Partida {
         estados: vec![Estado::Esperando; notas.len()],
         notas,
         teclas,
-        janelas: Janelas::do_od(beatmap.dificuldade.od),
+        janelas: Janelas::do_od(beatmap.dificuldade.od).escaladas(mods.fator_das_janelas() / velocidade),
         hp: beatmap.dificuldade.hp,
         opcoes,
         proxima: vec![0; usize::from(teclas)],
@@ -185,7 +202,7 @@ pub fn precisao(partida: &Partida) -> f64 {
     f64::from(soma) / f64::from(PESO_MAXIMO * julgados)
 }
 
-/// Até 1.000.000: 99% pela precisão e 1% pelo maior combo, sobre o mapa inteiro.
+/// Até 1.000.000: 99% pela precisão e 1% pelo maior combo, sobre o mapa inteiro, vezes o multiplicador dos mods.
 pub fn pontuacao(partida: &Partida) -> u32 {
     let total = total_de_julgamentos(partida);
     if total == 0 {
@@ -194,7 +211,7 @@ pub fn pontuacao(partida: &Partida) -> u32 {
     let soma: u32 = JULGAMENTOS.iter().zip(partida.contagem).map(|(j, n)| j.peso() * n).sum();
     let parte_da_precisao = f64::from(soma) / f64::from(PESO_MAXIMO * total);
     let parte_do_combo = f64::from(partida.maior_combo) / f64::from(total);
-    (1_000_000.0 * (0.99 * parte_da_precisao + 0.01 * parte_do_combo)).round() as u32
+    (1_000_000.0 * (0.99 * parte_da_precisao + 0.01 * parte_do_combo) * partida.opcoes.mods.multiplicador()).round() as u32
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -219,8 +236,8 @@ pub fn classificacao(precisao: f64) -> Classificacao {
 }
 
 /// Quanto cada julgamento mexe na vida. O HP do mapa (0 a 10) deixa o erro mais caro.
-fn variacao_da_vida(julgamento: Julgamento, hp: f64) -> f64 {
-    let peso_do_hp = 1.0 + hp / 10.0;
+fn variacao_da_vida(julgamento: Julgamento, hp: f64, mods: Mods) -> f64 {
+    let peso_do_hp = (1.0 + hp / 10.0) * if mods.tem(Mods::EZ) { 0.5 } else { 1.0 };
     match julgamento {
         Julgamento::Max | Julgamento::J300 => 0.01,
         Julgamento::J200 => 0.005,
@@ -239,7 +256,7 @@ fn registrar(partida: &mut Partida, nota: usize, julgamento: Julgamento, ponta: 
         partida.combo += 1;
         partida.maior_combo = partida.maior_combo.max(partida.combo);
     }
-    partida.vida = (partida.vida + variacao_da_vida(julgamento, partida.hp)).clamp(0.0, 1.0);
+    partida.vida = (partida.vida + variacao_da_vida(julgamento, partida.hp, partida.opcoes.mods)).clamp(0.0, 1.0);
     let coluna = partida.notas[nota].coluna;
     partida.eventos.push(Evento::Julgamento {
         nota,
@@ -248,7 +265,11 @@ fn registrar(partida: &mut Partida, nota: usize, julgamento: Julgamento, ponta: 
         ponta,
         desvio_ms,
     });
-    if partida.vida <= 0.0 && !partida.opcoes.sem_falha && !partida.derrota {
+    let mods = partida.opcoes.mods;
+    let falhou = (partida.vida <= 0.0 && !mods.tem(Mods::NF))
+        || (mods.tem(Mods::SD) && julgamento == Julgamento::Miss)
+        || (mods.tem(Mods::PF) && julgamento != Julgamento::Max);
+    if falhou && !partida.derrota {
         partida.derrota = true;
         partida.eventos.push(Evento::Derrota);
     }
@@ -521,7 +542,13 @@ mod tests {
     #[test]
     fn sem_falha_nao_perde() {
         let notas: Vec<_> = (0..20).map(|i| (0, 1000 + i * 100, None)).collect();
-        let mut p = criar_partida(&mapa(5.0, 10.0, &notas), OpcoesDaPartida { sem_falha: true });
+        let mut p = criar_partida(
+            &mapa(5.0, 10.0, &notas),
+            OpcoesDaPartida {
+                mods: Mods::NF,
+                ..OpcoesDaPartida::default()
+            },
+        );
         avancar(&mut p, 10_000);
         assert!(!p.derrota);
         assert_eq!(p.contagem[5], 20);
@@ -543,6 +570,72 @@ mod tests {
             }]
         );
         assert!(retirar_eventos(&mut p).is_empty());
+    }
+
+    fn com_mods(mods: Mods, notas: &[(u8, i32, Option<i32>)]) -> Partida {
+        criar_partida(&mapa(5.0, 5.0, notas), OpcoesDaPartida { mods, semente: 7 })
+    }
+
+    #[test]
+    fn dt_traz_as_notas_para_o_tempo_real_e_encolhe_as_janelas() {
+        let mut p = com_mods(Mods::DT, &[(0, 3000, Some(4500))]);
+        assert_eq!(
+            p.notas[0],
+            Nota {
+                coluna: 0,
+                tempo_ms: 2000,
+                fim_ms: Some(3000)
+            }
+        );
+        // A janela do 300 é de 49 ms na música: 32,7 ms no tempo real.
+        assert_eq!(tocar(&mut p, 0, 2033), Some(Julgamento::J200));
+    }
+
+    #[test]
+    fn ht_estica_o_tempo() {
+        let p = com_mods(Mods::HT, &[(0, 3000, None)]);
+        assert_eq!(p.notas[0].tempo_ms, 4000);
+    }
+
+    #[test]
+    fn hr_encolhe_e_ez_alarga_as_janelas() {
+        // 300 em ±49: com HR, ±35; com EZ, ±68,6.
+        assert_eq!(tocar(&mut com_mods(Mods::HR, &[(0, 1000, None)]), 0, 1040), Some(Julgamento::J200));
+        assert_eq!(tocar(&mut com_mods(Mods::EZ, &[(0, 1000, None)]), 0, 1060), Some(Julgamento::J300));
+    }
+
+    #[test]
+    fn ez_perde_metade_da_vida_e_reduz_a_pontuacao() {
+        let mut normal = com_mods(Mods::NENHUM, &[(0, 1000, None)]);
+        let mut facil = com_mods(Mods::EZ, &[(0, 1000, None)]);
+        avancar(&mut normal, 2000);
+        avancar(&mut facil, 2000);
+        assert!((1.0 - facil.vida - (1.0 - normal.vida) / 2.0).abs() < 1e-12);
+        let mut acerto = com_mods(Mods::EZ, &[(0, 1000, None)]);
+        tocar(&mut acerto, 0, 1000);
+        assert_eq!(pontuacao(&acerto), 500_000);
+    }
+
+    #[test]
+    fn sd_perde_no_primeiro_miss_e_pf_no_primeiro_abaixo_do_max() {
+        let mut sd = com_mods(Mods::SD, &[(0, 1000, None), (1, 1000, None)]);
+        tocar(&mut sd, 0, 1040);
+        assert!(!sd.derrota);
+        avancar(&mut sd, 2000);
+        assert!(sd.derrota);
+        let mut pf = com_mods(Mods::PF, &[(0, 1000, None)]);
+        tocar(&mut pf, 0, 1020);
+        assert!(pf.derrota);
+    }
+
+    #[test]
+    fn mirror_e_random_mudam_as_colunas() {
+        let p = com_mods(Mods::MIRROR, &[(0, 1000, None), (3, 2000, None)]);
+        assert_eq!(p.notas.iter().map(|n| n.coluna).collect::<Vec<_>>(), [3, 0]);
+        let aleatoria = com_mods(Mods::RANDOM, &[(0, 1000, None), (1, 1100, None), (2, 1200, None), (3, 1300, None)]);
+        let mut colunas: Vec<_> = aleatoria.notas.iter().map(|n| n.coluna).collect();
+        colunas.sort_unstable();
+        assert_eq!(colunas, [0, 1, 2, 3]);
     }
 
     #[test]
