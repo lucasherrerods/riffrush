@@ -231,9 +231,9 @@ export function TelaDeSelecao(props: Props) {
               aria-pressed={favorita}
               title="Favoritar (F)"
               onClick={alternarFavoritaAtual}
-              className={cn("rounded-md bg-superficie hover:bg-superficie-elevada", favorita && "text-primaria")}
+              className="rounded-md bg-superficie"
             >
-              {favorita ? "Tirar das favoritas" : "Favoritar"}
+              {favorita ? "Tirar dos favoritos" : "Favoritar"}
             </Button>
           </div>
 

@@ -325,7 +325,7 @@ describe("TelaDeSelecao removendo músicas", () => {
     expect(coracao).toHaveAttribute("aria-pressed", "false");
 
     await usuario.click(coracao);
-    expect(screen.getByRole("button", { name: "Tirar das favoritas" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Tirar dos favoritos" })).toHaveAttribute("aria-pressed", "true");
     expect(within(screen.getByRole("list", { name: "Músicas" })).getAllByLabelText("Favorita")).toHaveLength(1);
 
     await usuario.keyboard("f");
