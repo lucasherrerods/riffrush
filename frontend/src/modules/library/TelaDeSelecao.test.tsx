@@ -325,4 +325,52 @@ describe("TelaDeSelecao removendo músicas", () => {
     await usuario.keyboard("f");
     expect(JSON.parse(localStorage.getItem("riffrush:favoritas")!)).toEqual([MUSICAS_DE_TESTE[0].id]);
   });
+
+  describe("filtro de favoritas", () => {
+    it("começa desligado; ligado mostra só as favoritas e desligado volta a mostrar todas", async () => {
+      localStorage.setItem("riffrush:favoritas", JSON.stringify(["neon-highway", "overdrive"]));
+      const { usuario } = abrir({ indice: 0 });
+      const filtro = screen.getByRole("button", { name: "Favoritos" });
+      expect(filtro).toHaveAttribute("aria-pressed", "false");
+
+      await usuario.click(filtro);
+      expect(filtro).toHaveAttribute("aria-pressed", "true");
+      const lista = screen.getByRole("list", { name: "Músicas" });
+      expect(within(lista).getAllByRole("listitem").map((li) => li.textContent)).toEqual([expect.stringMatching(/Neon Highway/), expect.stringMatching(/Overdrive/)]);
+
+      await usuario.click(filtro);
+      expect(filtro).toHaveAttribute("aria-pressed", "false");
+      expect(screen.getAllByRole("listitem")).toHaveLength(MUSICAS_DE_TESTE.length);
+    });
+
+    it("ligar com a selecionada fora das favoritas seleciona a próxima favorita", async () => {
+      localStorage.setItem("riffrush:favoritas", JSON.stringify(["neon-highway", "overdrive"]));
+      const { aoSelecionar, usuario } = abrir({ indice: 1 });
+      await usuario.click(screen.getByRole("button", { name: "Favoritos" }));
+      expect(aoSelecionar).toHaveBeenLastCalledWith(3);
+    });
+
+    it("as setas andam só pelas favoritas", async () => {
+      localStorage.setItem("riffrush:favoritas", JSON.stringify(["neon-highway", "overdrive"]));
+      const { aoSelecionar, usuario } = abrir({ indice: 3 });
+      await usuario.click(screen.getByRole("button", { name: "Favoritos" }));
+      await usuario.keyboard("{ArrowDown}");
+      expect(aoSelecionar).toHaveBeenLastCalledWith(0);
+    });
+
+    it("sem favoritas, avisa no lugar da lista", async () => {
+      const { usuario } = abrir();
+      await usuario.click(screen.getByRole("button", { name: "Favoritos" }));
+      expect(screen.queryByRole("list", { name: "Músicas" })).not.toBeInTheDocument();
+      expect(screen.getByText(/Nenhuma música favorita/)).toBeInTheDocument();
+    });
+
+    it("desfavoritar a selecionada com o filtro ligado seleciona a próxima favorita", async () => {
+      localStorage.setItem("riffrush:favoritas", JSON.stringify(["neon-highway", "overdrive"]));
+      const { aoSelecionar, usuario } = abrir({ indice: 3 });
+      await usuario.click(screen.getByRole("button", { name: "Favoritos" }));
+      await usuario.keyboard("f");
+      expect(aoSelecionar).toHaveBeenLastCalledWith(0);
+    });
+  });
 });

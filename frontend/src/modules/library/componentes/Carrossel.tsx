@@ -24,6 +24,7 @@ interface Props {
   aoGirar: (passos: number) => void;
   /** Botão de opções no canto da música selecionada (ex.: apagar a importada). */
   menuDaSelecionada?: ReactNode;
+  className?: string;
 }
 
 /** A selecionada sai um pouco da roda, para a esquerda. */
@@ -43,7 +44,7 @@ const COR_DA_DIFICULDADE: Record<Dificuldade, string> = {
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 /** Lista de músicas em roda, como no osu!lazer: a selecionada fica no meio, com as dificuldades abertas embaixo. */
-export function Carrossel({ musicas, indice, dificuldade, instrumento, dificuldades, recordes, favoritas, aoEscolherMusica, aoEscolherDificuldade, aoJogar, aoGirar, menuDaSelecionada }: Props) {
+export function Carrossel({ musicas, indice, dificuldade, instrumento, dificuldades, recordes, favoritas, aoEscolherMusica, aoEscolherDificuldade, aoJogar, aoGirar, menuDaSelecionada, className }: Props) {
   const giro = useRef(0);
   const posicoes = posicoesNoCarrossel(musicas.length, indice, dificuldades.length);
   const centro = centroDoGrupoAberto(dificuldades.length);
@@ -56,7 +57,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
         giro.current = resto;
         if (passos) aoGirar(passos);
       }}
-      className="relative col-span-7 min-h-0 min-w-0 overflow-hidden max-md:col-span-1 max-md:min-h-80"
+      className={cn("relative col-span-7 min-h-0 min-w-0 overflow-hidden max-md:col-span-1 max-md:min-h-80", className)}
     >
       {musicas.map((m, i) => {
         const posicao = posicoes[i];
