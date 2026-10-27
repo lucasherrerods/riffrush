@@ -113,12 +113,12 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
       </nav>
 
       {chat && (
-        <aside aria-label="Chat" className="absolute bottom-6 left-6 flex max-h-72 w-96 flex-col justify-end max-lg:hidden">
+        <aside aria-label="Chat" className="absolute bottom-4 left-4 flex max-h-72 w-96 origin-bottom-left scale-[0.8] flex-col justify-end max-lg:hidden">
           {chat}
         </aside>
       )}
 
-      <footer className="absolute right-6 bottom-6 flex items-center gap-3 text-sm text-texto-suave">
+      <footer className="absolute right-4 bottom-4 flex items-center gap-3 text-xs [&_svg]:size-4 text-texto-suave">
         {(
           [
             ["privacidade", "Política de Privacidade"],
