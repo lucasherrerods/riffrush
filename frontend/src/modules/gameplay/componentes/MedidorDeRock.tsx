@@ -18,8 +18,6 @@ const PINOS = [
   { x: 318, y: 124 },
   { x: 412, y: 122 },
 ];
-/** Os raios do brilho, em graus. */
-const RAIOS = [-150, -120, -90, -60, -30, 0, 180];
 
 interface Props {
   vida: number;
@@ -55,7 +53,7 @@ export function MedidorDeRock({ vida, estrela = 0, estrelaAtiva = false, fantasm
         </g>
         <defs>
           <filter id={desfoque} x="-100%" y="-100%" width="300%" height="300%">
-            <feGaussianBlur stdDeviation={9} />
+            <feGaussianBlur stdDeviation={5} />
           </filter>
         </defs>
         <g role="progressbar" aria-label="Star power" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(estrela * 100)} className={cn(estrelaAtiva && "animate-pulse")}>
@@ -65,15 +63,16 @@ export function MedidorDeRock({ vida, estrela = 0, estrelaAtiva = false, fantasm
               <g key={i} data-testid="pino" data-aceso={aceso}>
                 {aceso && destaque && (
                   <g data-testid="destaque-do-pino" className="animate-pulse">
-                    <ellipse cx={x} cy={y} rx={34} ry={42} className="fill-estrela" opacity={0.55} filter={`url(#${desfoque})`} />
-                    {RAIOS.map((angulo) => {
-                      const r = (angulo * Math.PI) / 180;
-                      return <line key={angulo} x1={x + Math.cos(r) * 30} y1={y + Math.sin(r) * 34} x2={x + Math.cos(r) * 56} y2={y + Math.sin(r) * 62} className="stroke-estrela" strokeWidth={3} strokeLinecap="round" opacity={0.8} />;
-                    })}
+                    {/* O contorno do conector: um halo desfocado e uma linha clara por cima. */}
+                    <rect x={x - 24} y={y - 36} width={48} height={72} rx={12} className="fill-none stroke-estrela" strokeWidth={12} filter={`url(#${desfoque})`} />
+                    <rect x={x - 24} y={y - 36} width={48} height={72} rx={12} className="fill-none stroke-texto" strokeWidth={2.5} opacity={0.9} />
                   </g>
                 )}
+                {/* O pino aceso clareia o conector inteiro com o azul do star power. */}
+                {aceso && <rect x={x - 22} y={y - 34} width={44} height={68} rx={10} className="fill-estrela" opacity={0.45} style={{ mixBlendMode: "screen" }} />}
                 {/* A luz verde da imagem vira azul quando o pino acende, e escurece quando está vazio. */}
-                <rect x={x - 7} y={y - 19} width={14} height={38} rx={7} className={aceso ? "fill-estrela" : "fill-fundo"} opacity={aceso ? 1 : 0.8} />
+                <rect x={x - 8} y={y - 20} width={16} height={40} rx={8} className={aceso ? "fill-estrela" : "fill-fundo"} opacity={aceso ? 1 : 0.8} />
+                {aceso && <rect x={x - 2.5} y={y - 15} width={5} height={30} rx={2.5} className="fill-texto" opacity={0.75} />}
               </g>
             );
           })}
