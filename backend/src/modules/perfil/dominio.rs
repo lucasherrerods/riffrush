@@ -61,7 +61,7 @@ impl PartidaRecente {
 }
 
 /// A melhor partida terminada da conta numa música, dificuldade e instrumento: vaiada e fantasma não contam.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Recorde {
     pub musica_id: String,
     pub dificuldade: Dificuldade,
@@ -69,6 +69,8 @@ pub struct Recorde {
     pub pontos: u64,
     pub acertos: u32,
     pub total: u32,
+    /// Fração de 0 a 1; partidas de antes da precisão não têm.
+    pub precisao: Option<f64>,
 }
 
 /// O que o repositório devolve sobre uma conta.

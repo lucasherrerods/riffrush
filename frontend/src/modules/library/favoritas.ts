@@ -25,3 +25,13 @@ export function alternarFavorita(favoritas: Set<string>, id: string): Set<string
   else novas.add(id);
   return novas;
 }
+
+/** Posições na lista das músicas que aparecem: todas, ou só as favoritas com o filtro ligado. */
+export function indicesVisiveis(musicas: { id: string }[], favoritas: Set<string>, soFavoritas: boolean): number[] {
+  return musicas.flatMap((m, i) => (!soFavoritas || favoritas.has(m.id) ? [i] : []));
+}
+
+/** Onde a seleção fica quando o filtro muda: no lugar, ou na próxima visível. Sem nenhuma visível, não há seleção. */
+export function selecaoNoFiltro(visiveis: number[], indice: number): number | undefined {
+  return visiveis.find((i) => i >= indice) ?? visiveis[0];
+}

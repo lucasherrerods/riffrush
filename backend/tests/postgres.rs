@@ -660,7 +660,7 @@ async fn recordes_pegam_a_melhor_partida_terminada_de_cada_musica() {
         xp_ganho: 0,
         jogada_em: Utc::now(),
         replay: None,
-        precisao: None,
+        precisao: Some(pontos as f64 / 1000.0),
     };
     for partida in [
         jogar(Instrumento::Guitarra, 500, false, false),
@@ -678,11 +678,14 @@ async fn recordes_pegam_a_melhor_partida_terminada_de_cada_musica() {
         .await
         .unwrap()
         .into_iter()
-        .map(|r| (r.instrumento, r.pontos, r.acertos, r.total))
+        .map(|r| (r.instrumento, r.pontos, r.acertos, r.total, r.precisao))
         .collect();
     recordes.sort_by_key(|r| r.1);
 
-    assert_eq!(recordes, [(Instrumento::Baixo, 300, 10, 10), (Instrumento::Guitarra, 900, 10, 10)]);
+    assert_eq!(
+        recordes,
+        [(Instrumento::Baixo, 300, 10, 10, Some(0.3)), (Instrumento::Guitarra, 900, 10, 10, Some(0.9))]
+    );
     assert!(repositorio.recordes(Uuid::new_v4()).await.unwrap().is_empty());
 }
 

@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Heart, Star } from "lucide-react";
 import { recordeDe, type Recordes } from "@/modules/results";
 import { idDoRanking, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
+import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { cn } from "@/shared/lib/utils";
 import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, centroDoGrupoAberto, passosDaRoda, posicoesNoCarrossel, recuoNaCurva } from "../carrossel";
 import { Capa } from "./Capa";
@@ -24,6 +25,7 @@ interface Props {
   aoGirar: (passos: number) => void;
   /** Botão de opções no canto da música selecionada (ex.: apagar a importada). */
   menuDaSelecionada?: ReactNode;
+  className?: string;
 }
 
 /** A selecionada sai um pouco da roda, para a esquerda. */
@@ -43,7 +45,7 @@ const COR_DA_DIFICULDADE: Record<Dificuldade, string> = {
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 /** Lista de músicas em roda, como no osu!lazer: a selecionada fica no meio, com as dificuldades abertas embaixo. */
-export function Carrossel({ musicas, indice, dificuldade, instrumento, dificuldades, recordes, favoritas, aoEscolherMusica, aoEscolherDificuldade, aoJogar, aoGirar, menuDaSelecionada }: Props) {
+export function Carrossel({ musicas, indice, dificuldade, instrumento, dificuldades, recordes, favoritas, aoEscolherMusica, aoEscolherDificuldade, aoJogar, aoGirar, menuDaSelecionada, className }: Props) {
   const giro = useRef(0);
   const posicoes = posicoesNoCarrossel(musicas.length, indice, dificuldades.length);
   const centro = centroDoGrupoAberto(dificuldades.length);
@@ -56,7 +58,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
         giro.current = resto;
         if (passos) aoGirar(passos);
       }}
-      className="relative col-span-7 min-h-0 min-w-0 overflow-hidden max-md:col-span-1 max-md:min-h-80"
+      className={cn("relative col-span-7 min-h-0 min-w-0 overflow-hidden max-md:col-span-1 max-md:min-h-80", className)}
     >
       {musicas.map((m, i) => {
         const posicao = posicoes[i];
@@ -125,6 +127,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
                       <span className={cn("w-1 self-stretch rounded-sm", COR_DA_DIFICULDADE[d.id])} />
                       <span className={cn("flex-1 font-titulo text-xl tracking-wide uppercase", escolhida && "text-destaque")}>{d.rotulo}</span>
                       {recordeDaDificuldade?.fullCombo && <span className="font-titulo text-xl text-destaque">FC</span>}
+                      {recordeDaDificuldade?.precisao !== undefined && <SeloDaNota precisao={recordeDaDificuldade.precisao} />}
                       <span className="font-mono text-base text-texto-suave">{recordeDaDificuldade ? formatar(recordeDaDificuldade.pontos) : "—"}</span>
                     </motion.button>
                   );
