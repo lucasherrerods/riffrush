@@ -1,16 +1,16 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { PERSONAGEM_PADRAO } from "@/modules/character";
+import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
 import { MUSICAS_DE_TESTE } from "@/test/musicas";
 import { estadoInicial, type EstadoDaSala } from "../protocolo";
 import { enviarChat, expulsar, passarLideranca } from "../sala";
 import { Lobby } from "./Lobby";
 
-vi.mock("@/modules/character", async (original) => ({
-  ...(await original<typeof import("@/modules/character")>()),
+vi.mock("@/modules/rock/character", async (original) => ({
+  ...(await original<typeof import("@/modules/rock/character")>()),
   Avatar: () => null,
 }));
-vi.mock("@/modules/player", () => ({ useSeguirMusica: () => {} }));
+vi.mock("@/modules/rock/player", () => ({ useSeguirMusica: () => {} }));
 vi.mock("../sala", async (original) => ({ ...(await original<typeof import("../sala")>()), expulsar: vi.fn(), enviarChat: vi.fn(() => true), passarLideranca: vi.fn() }));
 
 const [primeira, segunda] = MUSICAS_DE_TESTE;

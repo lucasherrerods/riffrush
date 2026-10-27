@@ -1,4 +1,4 @@
-import type { OpcoesDaPartida } from "@/modules/gameplay";
+import type { OpcoesDaPartida } from "@/modules/rock/gameplay";
 import { antecedenciaDasNotas, nomeDaTecla, type Configuracoes } from "@/modules/settings";
 
 /** A partida não conhece as configurações: o App traduz o que ela precisa. */

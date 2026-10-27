@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { PERSONAGEM_PADRAO } from "@/modules/character";
+import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { estadoInicial, type EstadoDaSala } from "./protocolo";
 import { resolverMusica } from "./musicaNaRede";
@@ -8,7 +8,7 @@ import * as sala from "./sala";
 import { avisar } from "@/shared/ui/avisos";
 import { TelaDeMultijogador } from "./TelaDeMultijogador";
 import { MUSICAS_DE_TESTE } from "@/test/musicas";
-import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
+import { MUSICAS_EMBUTIDAS } from "@/modules/rock/songs";
 
 vi.mock("./sala", () => ({
   PORTA_DA_SALA: 7777,

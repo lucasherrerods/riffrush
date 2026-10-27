@@ -63,7 +63,7 @@ Valem para o frontend e para o backend.
 ### Stack
 - Tauri 2 (Rust) + React 19 + TypeScript + Vite
 - Tailwind CSS 4 + shadcn/ui + lucide-react + framer-motion
-- Regras da partida: o crate `backend/motor`, compilado para WASM em `src/modules/gameplay/wasm` (gerado por `npm run motor` e commitado, para o build web não precisar de Rust). Para gerar: `rustup target add wasm32-unknown-unknown` e `cargo install wasm-bindgen-cli --version 0.2.100`.
+- Regras da partida: o crate `backend/motor`, compilado para WASM em `src/modules/rock/gameplay/wasm` (gerado por `npm run motor` e commitado, para o build web não precisar de Rust). Para gerar: `rustup target add wasm32-unknown-unknown` e `cargo install wasm-bindgen-cli --version 0.2.100`.
 - Vitest + Testing Library
 
 ### Comandos

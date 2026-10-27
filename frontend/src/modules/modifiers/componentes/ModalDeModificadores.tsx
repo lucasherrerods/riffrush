@@ -1,4 +1,4 @@
-import { rotuloDaVelocidade, velocidadesDaMusica } from "@/modules/gameplay";
+import { rotuloDaVelocidade, velocidadesDaMusica } from "@/modules/rock/gameplay";
 import { cn } from "@/shared/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/ui/dialog";
 import { multiplicadorDePontos, proximaVelocidade } from "../modificadores";

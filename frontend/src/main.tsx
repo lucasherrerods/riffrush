@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "@/app/App";
 import { desbloquearNoPrimeiroToque, instalarAtalhosDeVolume } from "@/modules/audio";
-import { iniciarMotor } from "@/modules/gameplay";
+import { iniciarMotor } from "@/modules/rock/gameplay";
 import { aplicarTokens } from "@/shared/styles/tokens";
 import "@/shared/styles/global.css";
 

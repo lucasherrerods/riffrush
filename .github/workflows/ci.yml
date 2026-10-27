@@ -92,7 +92,7 @@ jobs:
       - run: cargo test
       - run: cargo fmt --check && cargo clippy -- -D warnings
         working-directory: backend/motor/wasm
-      # O app roda este motor em WASM, com o .wasm commitado em frontend/src/modules/gameplay/wasm (o job web
+      # O app roda este motor em WASM, com o .wasm commitado em frontend/src/modules/rock/gameplay/wasm (o job web
       # testa esse). Aqui o motor é recompilado e os testes de jogo do app rodam com o .wasm novo. Os dois
       # conferem o mesmo tests/paridade.json, então um .wasm commitado que ficou para trás do código falha lá.
       - run: rustup target add wasm32-unknown-unknown
@@ -109,7 +109,7 @@ jobs:
         run: |
           npm ci
           npm run motor
-          npx vitest run src/modules/gameplay
+          npx vitest run src/modules/rock/gameplay
 
   backend:
     name: Testes do backend

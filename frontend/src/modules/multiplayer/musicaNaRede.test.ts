@@ -1,8 +1,8 @@
-import { MUSICAS_EMBUTIDAS, type Musica } from "@/modules/songs";
-import { baixarSng } from "@/modules/search";
+import { MUSICAS_EMBUTIDAS, type Musica } from "@/modules/rock/songs";
+import { baixarSng } from "@/modules/rock/search";
 import { paraRede, resolverMusica } from "./musicaNaRede";
 
-vi.mock("@/modules/search", () => ({ baixarSng: vi.fn() }));
+vi.mock("@/modules/rock/search", () => ({ baixarSng: vi.fn() }));
 beforeEach(() => vi.mocked(baixarSng).mockClear());
 
 const importada: Musica = {

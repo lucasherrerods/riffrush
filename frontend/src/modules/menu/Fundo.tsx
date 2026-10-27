@@ -1,5 +1,5 @@
 import type React from "react";
-import { CORES_DAS_PISTAS } from "@/modules/gameplay";
+import { CORES_DAS_PISTAS } from "@/modules/rock/gameplay";
 import { cn } from "@/shared/lib/utils";
 
 const PARTICULAS = 24;

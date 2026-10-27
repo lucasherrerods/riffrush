@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ArrowLeft, Music, Search, Users } from "lucide-react";
 import { sessaoDaConta, useConta } from "@/modules/conta";
-import { DIFICULDADES, nomeDaMusica } from "@/modules/songs";
+import { DIFICULDADES, nomeDaMusica } from "@/modules/rock/songs";
 import { porcentagem } from "@/shared/lib/formatar";
 import { useCarregamento } from "@/shared/hooks/useCarregamento";
 import { Button } from "@/shared/ui/button";

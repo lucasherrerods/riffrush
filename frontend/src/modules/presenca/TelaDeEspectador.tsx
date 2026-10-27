@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Download, Eye, Loader2, Search } from "lucide-react";
-import type { Personagem } from "@/modules/character";
-import { TelaDeJogo, type OpcoesDaPartida, type Replay } from "@/modules/gameplay";
+import type { Personagem } from "@/modules/rock/character";
+import { TelaDeJogo, type OpcoesDaPartida, type Replay } from "@/modules/rock/gameplay";
 import { URL_DO_RELAY } from "@/modules/multiplayer";
-import { linkDoChartConfere } from "@/modules/search";
-import { idDoRanking, type Musica } from "@/modules/songs";
+import { linkDoChartConfere } from "@/modules/rock/search";
+import { idDoRanking, type Musica } from "@/modules/rock/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
 import { ATRASO_AO_VIVO, assistirTransmissao, inicioParaAssistir, precisaSincronizar } from "./espectador";

@@ -1,4 +1,4 @@
-import { MUSICAS_EMBUTIDAS, type Musica } from "@/modules/songs";
+import { MUSICAS_EMBUTIDAS, type Musica } from "@/modules/rock/songs";
 import { INTERVALO_DO_ESTADO_ONLINE_MS, deveEnviarEstado, lerSalasOnline, normalizarCodigo, podeTocarOnline, urlDasSalas, urlParaCriarSala, urlParaEntrarNaSala } from "./online";
 
 const estado = { pontos: 10, vida: 0.5, sequencia: 1, pulso: 1, derrota: false, terminou: false };

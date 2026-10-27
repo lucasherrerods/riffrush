@@ -1,4 +1,4 @@
-import { valorDosAcertos, type Resultado } from "@/modules/gameplay";
+import { valorDosAcertos, type Resultado } from "@/modules/rock/gameplay";
 import { invoke } from "@tauri-apps/api/core";
 import { URL_DA_API } from "@/shared/lib/api";
 import { ErroDaApi, criarApi, type ApiDaConta, type ClienteDoGoogle, type ContaDaApi, type RegistroDaPartida, type XpDaPartida } from "./api";
