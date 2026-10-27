@@ -40,12 +40,12 @@ pub enum Julgamento {
 }
 
 impl Julgamento {
-    /// Quanto vale na precisão, como no osu!. A nota perdida vale zero.
+    /// Quanto vale na precisão, como no osu!mania. A nota perdida vale zero.
     pub fn valor(self) -> u32 {
         match self {
             Self::Perfeito => 300,
-            Self::Otimo => 100,
-            Self::Bom => 50,
+            Self::Otimo => 200,
+            Self::Bom => 100,
         }
     }
 }
@@ -496,6 +496,12 @@ mod tests {
     }
 
     #[test]
+    fn otimo_vale_dois_tercos_e_bom_um_terco_do_perfeito() {
+        let valores = [Julgamento::Perfeito, Julgamento::Otimo, Julgamento::Bom].map(Julgamento::valor);
+        assert_eq!(valores, [300, 200, 100]);
+    }
+
+    #[test]
     fn sem_aberta_a_nota_aberta_vira_verde_e_sai_com_o_traste_verde() {
         let aberta = Nota {
             tempo: 1.0,
@@ -545,7 +551,7 @@ mod tests {
         assert!(tocar(&mut partida, 0, 1.05));
         avancar(&mut partida, 3.0);
         assert_eq!((partida.otimos, partida.erros), (1, 1));
-        assert!((precisao(&partida) - 100.0 / 600.0).abs() < 1e-9);
+        assert!((precisao(&partida) - 200.0 / 600.0).abs() < 1e-9);
     }
 
     #[test]
