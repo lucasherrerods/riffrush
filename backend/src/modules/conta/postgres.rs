@@ -4,7 +4,7 @@ use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use super::dominio::{Conta, PerfilDoGoogle};
-use super::portas::{FalhaExterna, PartidaRegistrada, RepositorioDeContas, RepositorioDeSessoes};
+use super::portas::{FalhaExterna, PartidaGuardada, PartidaRegistrada, RepositorioDeContas, RepositorioDeSessoes};
 use crate::modules::ranking::TAMANHO_DO_TOP_DA_MUSICA;
 
 pub struct ContasPostgres(pub PgPool);
@@ -154,6 +154,33 @@ impl RepositorioDeContas for ContasPostgres {
             .await
             .map_err(falha)?;
         Ok(u32::try_from(quantas).unwrap_or(u32::MAX))
+    }
+
+    async fn situacao_da_partida(&self, conta_id: Uuid, id: Uuid) -> Result<Option<PartidaGuardada>, FalhaExterna> {
+        let registrada: Option<i64> = sqlx::query_scalar("SELECT xp_ganho FROM partidas WHERE id = $1 AND conta_id = $2")
+            .bind(id)
+            .bind(conta_id)
+            .fetch_optional(&self.0)
+            .await
+            .map_err(falha)?;
+        if let Some(xp_ganho) = registrada {
+            return Ok(Some(PartidaGuardada::Registrada {
+                xp_ganho: u64::try_from(xp_ganho).unwrap_or(0),
+            }));
+        }
+        let pendente: Option<Option<String>> = sqlx::query_scalar("SELECT desistiu_por FROM partidas_pendentes WHERE id = $1 AND conta_id = $2")
+            .bind(id)
+            .bind(conta_id)
+            .fetch_optional(&self.0)
+            .await
+            .map_err(falha)?;
+        Ok(pendente.map(|desistiu_por| {
+            if desistiu_por.is_some() {
+                PartidaGuardada::Recusada
+            } else {
+                PartidaGuardada::NaFila
+            }
+        }))
     }
 
     async fn excluir(&self, id: Uuid) -> Result<(), FalhaExterna> {

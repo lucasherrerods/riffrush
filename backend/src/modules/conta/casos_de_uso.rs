@@ -4,8 +4,8 @@ use uuid::Uuid;
 
 use super::dominio::{hash_do_token, pode_registrar, Conta, DURACAO_DA_SESSAO, TAMANHO_MAXIMO_DO_ID_DA_MUSICA};
 use super::portas::{
-    ErroDeLogin, FalhaExterna, FilaDePartidas, Gerador, PartidaNaFila, PartidaRegistrada, PedidoDeLogin, ProvedorDeLogin, Relogio, RepositorioDeContas,
-    RepositorioDeSessoes,
+    ErroDeLogin, FalhaExterna, FilaDePartidas, Gerador, PartidaGuardada, PartidaNaFila, PartidaRegistrada, PedidoDeLogin, ProvedorDeLogin, Relogio,
+    RepositorioDeContas, RepositorioDeSessoes,
 };
 use crate::modules::catalogo::{origem_do_id, Origem};
 use crate::modules::progresso::{nivel_do_xp, validar_replay, xp_da_partida, Instrumento, Nivel, PartidaInvalida, ResumoDaPartida};
@@ -36,6 +36,8 @@ pub enum ErroDaConta {
     RapidoDemais,
     #[error("partida de música do Encore precisa do replay")]
     ReplayObrigatorio,
+    #[error("partida não encontrada")]
+    PartidaNaoEncontrada,
     #[error(transparent)]
     Falha(#[from] FalhaExterna),
 }
@@ -70,6 +72,14 @@ pub enum Registro {
     Registrada(XpDaPartida),
     /// Música do Encore: o XP entra quando o servidor terminar de rejulgar o replay.
     NaFila { id: Uuid },
+}
+
+/// Em que pé está uma partida que foi para a fila.
+#[derive(Debug, PartialEq, Eq)]
+pub enum SituacaoDaPartida {
+    Registrada(XpDaPartida),
+    NaFila,
+    Recusada,
 }
 
 /// Uma partida que o servidor rejulgou: os números vêm do replay, não do app.
@@ -201,6 +211,23 @@ impl ServicosDaConta {
         Ok(())
     }
 
+    /// Para o app saber quando o XP de uma partida da fila entrou na conta.
+    /// O `depois` é o nível atual da conta, e o `antes` tira dele o XP desta partida.
+    pub async fn situacao_da_partida(&self, token: &str, id: Uuid) -> Result<SituacaoDaPartida, ErroDaConta> {
+        let conta = self.conta_da_sessao(token).await?;
+        Ok(
+            match self.contas.situacao_da_partida(conta.id, id).await?.ok_or(ErroDaConta::PartidaNaoEncontrada)? {
+                PartidaGuardada::Registrada { xp_ganho } => SituacaoDaPartida::Registrada(XpDaPartida {
+                    xp_ganho,
+                    antes: nivel_do_xp(conta.xp_total.saturating_sub(xp_ganho)),
+                    depois: conta.nivel(),
+                }),
+                PartidaGuardada::NaFila => SituacaoDaPartida::NaFila,
+                PartidaGuardada::Recusada => SituacaoDaPartida::Recusada,
+            },
+        )
+    }
+
     /// A pessoa pede para apagar tudo o que a API guarda dela (LGPD).
     pub async fn excluir_conta(&self, token: &str) -> Result<(), ErroDaConta> {
         let conta_id = self.id_da_sessao(token).await?;
@@ -243,6 +270,10 @@ pub mod fakes {
         pub por_chart: Mutex<Vec<PartidaNoChart>>,
         /// A precisão da última partida registrada.
         pub ultima_precisao: Mutex<Option<f64>>,
+        /// (conta, id, xp) de cada partida registrada.
+        pub xp_das_partidas: Mutex<Vec<(Uuid, Uuid, u64)>>,
+        /// (conta, id, recusada) das partidas que o teste põe na fila.
+        pub na_fila: Mutex<Vec<(Uuid, Uuid, bool)>>,
     }
 
     /// Guarda o que entrou na fila, para o teste conferir.
@@ -307,6 +338,7 @@ pub mod fakes {
                 .unwrap()
                 .push((partida.conta_id, partida.musica_id.clone(), partida.jogada_em, partida.id));
             *self.ultima_precisao.lock().unwrap() = partida.precisao;
+            self.xp_das_partidas.lock().unwrap().push((partida.conta_id, partida.id, partida.xp_ganho));
             self.partidas.lock().unwrap().push((partida.conta_id, partida.jogada_em, partida.xp_ganho));
             *self.ultimo_replay.lock().unwrap() = partida.replay.clone();
             let mut contas = self.contas.lock().unwrap();
@@ -323,6 +355,18 @@ pub mod fakes {
                 .filter(|(c, m, quando, id)| *c == conta_id && m == musica_id && *quando >= desde && *id != exceto)
                 .count();
             Ok(u32::try_from(quantas).unwrap_or(u32::MAX))
+        }
+        async fn situacao_da_partida(&self, conta_id: Uuid, id: Uuid) -> Result<Option<PartidaGuardada>, FalhaExterna> {
+            if let Some((_, _, xp_ganho)) = self.xp_das_partidas.lock().unwrap().iter().find(|(c, i, _)| *c == conta_id && *i == id) {
+                return Ok(Some(PartidaGuardada::Registrada { xp_ganho: *xp_ganho }));
+            }
+            Ok(self
+                .na_fila
+                .lock()
+                .unwrap()
+                .iter()
+                .find(|(c, i, _)| *c == conta_id && *i == id)
+                .map(|(_, _, recusada)| if *recusada { PartidaGuardada::Recusada } else { PartidaGuardada::NaFila }))
         }
         async fn excluir(&self, id: Uuid) -> Result<(), FalhaExterna> {
             self.contas.lock().unwrap().remove(&id);
@@ -706,6 +750,43 @@ mod tests {
         assert!(matches!(
             servicos.registrar_partida(&entrada.token, desistiu).await,
             Ok(Registro::Registrada(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn situacao_da_partida_da_fila_mostra_o_xp_quando_ela_sai_da_fila() {
+        let (servicos, banco, relogio) = servicos();
+        let entrada = servicos.entrar_com_google(&pedido("bom")).await.unwrap();
+        let id = Uuid::from_u128(9);
+        banco.na_fila.lock().unwrap().push((entrada.conta.id, id, false));
+        assert_eq!(servicos.situacao_da_partida(&entrada.token, id).await.unwrap(), SituacaoDaPartida::NaFila);
+
+        servicos
+            .registrar_partida_rejulgada(rejulgada(9, entrada.conta.id, relogio.agora()))
+            .await
+            .unwrap();
+        let SituacaoDaPartida::Registrada(xp) = servicos.situacao_da_partida(&entrada.token, id).await.unwrap() else {
+            panic!("a partida devia estar registrada");
+        };
+        let conta = servicos.conta_da_sessao(&entrada.token).await.unwrap();
+        assert!(xp.xp_ganho > 0);
+        assert_eq!(xp.depois, conta.nivel());
+        assert_eq!(xp.antes, nivel_do_xp(conta.xp_total - xp.xp_ganho));
+    }
+
+    #[tokio::test]
+    async fn situacao_da_partida_recusada_ou_de_outra_conta() {
+        let (servicos, banco, _) = servicos();
+        let entrada = servicos.entrar_com_google(&pedido("bom")).await.unwrap();
+        banco.na_fila.lock().unwrap().push((entrada.conta.id, Uuid::from_u128(1), true));
+        banco.na_fila.lock().unwrap().push((Uuid::from_u128(42), Uuid::from_u128(2), false));
+        assert_eq!(
+            servicos.situacao_da_partida(&entrada.token, Uuid::from_u128(1)).await.unwrap(),
+            SituacaoDaPartida::Recusada
+        );
+        assert!(matches!(
+            servicos.situacao_da_partida(&entrada.token, Uuid::from_u128(2)).await,
+            Err(ErroDaConta::PartidaNaoEncontrada)
         ));
     }
 
