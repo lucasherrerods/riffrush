@@ -1,5 +1,5 @@
 import { BOTAO_DA_ESTRELA_PADRAO, BOTOES_DOS_TRASTES_PADRAO } from "@/modules/gamepad";
-import type { QualidadeDoPalco } from "@/modules/stage";
+import type { QualidadeDoPalco } from "@/modules/rock/stage";
 
 export interface Configuracoes {
   /** Códigos das teclas dos 5 trastes e da nota aberta, nesta ordem (KeyboardEvent.code). */

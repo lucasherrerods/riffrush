@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Loader2, PlayCircle } from "lucide-react";
-import { TelaDeResultado } from "@/modules/results";
+import { TelaDeResultado } from "@/modules/rock/results";
 import { avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
 import { useCarregamento } from "@/shared/hooks/useCarregamento";

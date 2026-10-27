@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { Avatar, reacaoDoFimDaPartida } from "@/modules/character";
-import { MedidorDeVida } from "@/modules/gameplay";
+import { Avatar, reacaoDoFimDaPartida } from "@/modules/rock/character";
+import { MedidorDeVida } from "@/modules/rock/gameplay";
 import { cn } from "@/shared/lib/utils";
 import type { EstadoDaSala } from "../protocolo";
 

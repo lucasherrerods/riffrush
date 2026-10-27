@@ -1,4 +1,4 @@
-import type { Musica } from "@/modules/songs";
+import type { Musica } from "@/modules/rock/songs";
 
 /**
  * Músicas de mentira para os testes de tela, que precisam de uma lista com várias.

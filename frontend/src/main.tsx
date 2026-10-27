@@ -2,11 +2,12 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "@/app/App";
 import { desbloquearNoPrimeiroToque, instalarAtalhosDeVolume } from "@/modules/audio";
-import { iniciarMotor } from "@/modules/gameplay";
-import { aplicarTokens } from "@/shared/styles/tokens";
+import { iniciarMotor } from "@/modules/rock/gameplay";
+import { definirTema } from "@/shared/styles/tema";
+import { TEMA_PADRAO } from "@/shared/styles/tokens";
 import "@/shared/styles/global.css";
 
-aplicarTokens(document.documentElement);
+definirTema(TEMA_PADRAO);
 desbloquearNoPrimeiroToque();
 // Antes das telas: o Alt + roda do volume é ouvido antes de qualquer tela.
 instalarAtalhosDeVolume();

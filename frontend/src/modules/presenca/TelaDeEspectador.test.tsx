@@ -1,8 +1,8 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { PERSONAGEM_PADRAO } from "@/modules/character";
-import { OPCOES_PADRAO_DA_PARTIDA, hashDoChart } from "@/modules/gameplay";
-import { carregarMusica, idDoRanking, type Nota } from "@/modules/songs";
+import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
+import { OPCOES_PADRAO_DA_PARTIDA, hashDoChart } from "@/modules/rock/gameplay";
+import { carregarMusica, idDoRanking, type Nota } from "@/modules/rock/songs";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { MUSICAS_DE_TESTE } from "@/test/musicas";
 import { WebSocketFalso } from "@/test/websocketFalso";
@@ -10,8 +10,8 @@ import { inicioParaAssistir, precisaSincronizar } from "./espectador";
 import type { PessoaOnline } from "./protocolo";
 import { TelaDeEspectador } from "./TelaDeEspectador";
 
-vi.mock("@/modules/songs", async (original) => ({
-  ...(await original<typeof import("@/modules/songs")>()),
+vi.mock("@/modules/rock/songs", async (original) => ({
+  ...(await original<typeof import("@/modules/rock/songs")>()),
   carregarMusica: vi.fn(),
 }));
 vi.stubGlobal("AudioContext", AudioContextFalso);

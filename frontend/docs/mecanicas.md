@@ -10,7 +10,7 @@ Cada aperto de tecla (ou botão do controle) toca uma nota. Não existe palheta 
 
 Inspirado no gamepad mode da V1.1 do Clone Hero, que acerta notas tanto ao apertar quanto ao soltar. Isso facilita trechos de spam de notas, porque um aperto e uma soltura viram duas notas, como palhetar para cima e para baixo.
 
-Regras (`soltar` em `src/modules/gameplay/partida.ts`):
+Regras (`soltar` em `src/modules/rock/gameplay/partida.ts`):
 
 - Soltar só acerta se o aperto daquela tecla acertou uma nota.
 - A nota acertada é a mais próxima da mesma pista, dentro da janela de acerto.
@@ -26,7 +26,7 @@ Todo tempo que entra na partida é arredondado para uma grade de 1 ms (`quantiza
 
 ## Replay
 
-Como o `.osr` do osu!, o replay guarda só as entradas do jogador, não vídeo (`src/modules/gameplay/replay.ts`):
+Como o `.osr` do osu!, o replay guarda só as entradas do jogador, não vídeo (`src/modules/rock/gameplay/replay.ts`):
 
 - Cada entrada é apertar ou soltar uma pista, ou ativar o star power, com o tempo que a partida de fato usou.
 - O formato é 1 byte de versão, fora da compressão, mais o deflate de: opções (sem falha, fantasma), hash do chart com 16 bytes de SHA-256, o primeiro tempo e um varint por entrada com o intervalo e o código da tecla.

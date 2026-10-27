@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Musica } from "@/modules/songs";
+import type { Musica } from "@/modules/rock/songs";
 import { resolverMusica } from "./musicaNaRede";
 import type { EstadoDaSala } from "./protocolo";
 

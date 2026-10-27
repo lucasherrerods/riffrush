@@ -1,5 +1,5 @@
 import { ArrowLeft } from "lucide-react";
-import { CapaPequena, DIFICULDADES, INSTRUMENTOS, nomeDaMusica } from "@/modules/songs";
+import { CapaPequena, DIFICULDADES, INSTRUMENTOS, nomeDaMusica } from "@/modules/rock/songs";
 import { useCarregamento } from "@/shared/hooks/useCarregamento";
 import { haQuantoTempo, porcentagem } from "@/shared/lib/formatar";
 import { cn } from "@/shared/lib/utils";

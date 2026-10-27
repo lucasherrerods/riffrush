@@ -11,7 +11,7 @@ const cargo = process.env.CARGO_HOME ?? resolve(homedir(), ".cargo");
 const ambiente = { ...process.env, RUSTFLAGS: `--remap-path-prefix=${cargo}=/cargo --remap-path-prefix=${raiz}=/riffrush` };
 
 const MOTORES = {
-  rock: { crate: "backend/motor/wasm", wasm: "riffrush_motor_wasm.wasm", destino: "src/modules/gameplay/wasm" },
+  rock: { crate: "backend/motor/wasm", wasm: "riffrush_motor_wasm.wasm", destino: "src/modules/rock/gameplay/wasm" },
   mania: { crate: "backend/motor-mania/wasm", wasm: "riffrush_motor_mania_wasm.wasm", destino: "src/modules/mania/gameplay/wasm" },
 };
 

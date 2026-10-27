@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import type { Dificuldade, Instrumento } from "@/modules/songs";
+import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
 import type { PosicaoNoRanking } from "./api";
 import { haQuantoTempo, porcentagem } from "@/shared/lib/formatar";
 import { LinhaComPosicao } from "./LinhaComPosicao";

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Gamepad2, Keyboard, Monitor, RotateCcw, Volume2 } from "lucide-react";
 import { capturarBotao, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
-import { CORES_DAS_PISTAS, COR_DA_ABERTA, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "@/modules/gameplay";
-import { PISTA_ABERTA } from "@/modules/songs";
+import { CORES_DAS_PISTAS, COR_DA_ABERTA, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "@/modules/rock/gameplay";
+import { PISTA_ABERTA } from "@/modules/rock/songs";
 import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
-import { QUALIDADES_DO_PALCO } from "@/modules/stage";
+import { QUALIDADES_DO_PALCO } from "@/modules/rock/stage";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";

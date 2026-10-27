@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowLeft, Download, Music, Play } from "lucide-react";
-import { DIFICULDADES, INSTRUMENTOS, type Dificuldade, type Instrumento } from "@/modules/songs";
+import { DIFICULDADES, INSTRUMENTOS, type Dificuldade, type Instrumento } from "@/modules/rock/songs";
 import { Button } from "@/shared/ui/button";
 import { CampoDeSelecao } from "@/shared/ui/CampoDeSelecao";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";

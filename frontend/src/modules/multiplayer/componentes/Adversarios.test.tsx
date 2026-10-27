@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { PERSONAGEM_PADRAO } from "@/modules/character";
+import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
 import { estadoInicial, type EstadoDaSala } from "../protocolo";
 import { Adversarios } from "./Adversarios";
 

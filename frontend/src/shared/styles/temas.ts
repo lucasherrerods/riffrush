@@ -5,6 +5,8 @@
  */
 export interface Tema {
   nome: string;
+  /** Claro ou escuro: muda as regras de contraste e o colorScheme do navegador. Sem ele, o tema é escuro. */
+  esquema?: "claro" | "escuro";
   cores: {
     /** Neutros frios e levemente tingidos; quanto mais elevada a superfície, mais clara. */
     fundo: string;
@@ -103,6 +105,27 @@ export const TEMAS = {
     },
     pista: PISTA_CLASSICA,
   },
+  /** Riff Rush Mania: rosa e branco. O único tema claro; neutros quentes, tingidos de rosa. */
+  mania: {
+    nome: "Riff Rush Mania",
+    esquema: "claro",
+    cores: {
+      fundo: "#f3eef0",
+      superficie: "#f8f4f5",
+      superficieElevada: "#fcf9fa",
+      borda: "#ddd3d6",
+      texto: "#241c20",
+      textoSuave: "#6b5f65",
+      primaria: "#e0357f",
+      sucesso: "#15803d",
+      perigo: "#b91c1c",
+      destaque: "#9d174d",
+      ouro: "#ca8a04",
+      estrela: "#0284c7",
+    },
+    pista: PISTA_CLASSICA,
+  },
 } satisfies Record<string, Tema>;
 
-export const temaAtivo: Tema = TEMAS.riffRush;
+/** O tema da abertura e o da landing. O tema da interface muda com o modo de jogo (tema.ts). */
+export const TEMA_PADRAO: Tema = TEMAS.riffRush;
