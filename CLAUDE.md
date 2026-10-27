@@ -42,6 +42,11 @@ Valem para o frontend e para o backend.
 - Leia `frontend/docs/design.md` só quando a mudança for de interface.
 - Não leia nem busque em `node_modules`, `dist`, `coverage`, `target`, `.wrangler` e arquivos de áudio.
 
+### Problemas encontrados de passagem
+- Se aparecer algo instável ou suspeito que não tem a ver com a mudança em andamento (um teste que falha e depois passa, um aviso estranho, um bug de outra tela), não corrija nesse PR: anote em `pontos-instaveis-para-verificar-depois.md`, na raiz, com onde apareceu, o que se viu, a suspeita e o próximo passo.
+- Se o problema tiver a ver com a mudança em andamento, ele é parte dela: corrija no mesmo PR e não anote.
+- Quando um item de `pontos-instaveis-para-verificar-depois.md` for resolvido apague o item do arquivo na mesma correção do PR.
+
 ### Git
 - Commits convencionais, curtos e em português: `feat: adiciona sustain nas notas`, `fix: corrige atraso do input`, `test: cobre parser de .chart`.
 - Nunca adicione co-autor nos commits nem assinatura nas descrições de PR.
