@@ -167,13 +167,15 @@ body {
     display: inline-grid;
     place-items: center;
     flex-shrink: 0;
-    min-width: 1.6em;
+    padding: 0.06em 0.08em 0;
     font-family: var(--font-titulo);
-    line-height: 1;
     transform: skewX(-10deg) scale(var(--escala, 1));
   }
 
   .selo-da-nota-letra {
+    display: block;
+    /* Só a altura das maiúsculas, sem o espaço vazio da linha. */
+    line-height: 0.8;
     background: linear-gradient(
       175deg,
       color-mix(in oklab, var(--cor-ouro), white 55%) 0%,
