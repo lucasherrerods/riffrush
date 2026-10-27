@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { MedidorDeRock } from "./MedidorDeRock";
+import { PINOS_DO_STAR_POWER } from "../pinos";
 
 describe("MedidorDeRock", () => {
   it("é um medidor da vida, de 0 a 100", () => {
@@ -28,12 +29,12 @@ describe("MedidorDeRock", () => {
     expect(screen.getByTestId("barra-apagada")).toHaveAttribute("x", String(x));
   });
 
-  it("os quatro pinos de cima guardam o star power", () => {
-    render(<MedidorDeRock vida={0.5} estrela={0.5} />);
-    expect(screen.getByRole("progressbar", { name: "Star power" })).toHaveAttribute("aria-valuenow", "50");
+  it("os três pinos de cima guardam o star power, um por terço", () => {
+    render(<MedidorDeRock vida={0.5} estrela={0.7} />);
+    expect(screen.getByRole("progressbar", { name: "Star power" })).toHaveAttribute("aria-valuenow", "70");
     const pinos = screen.getAllByTestId("pino");
-    expect(pinos).toHaveLength(4);
-    expect(pinos.map((p) => p.getAttribute("opacity"))).toEqual(["1", "1", "0", "0"]);
+    expect(pinos).toHaveLength(PINOS_DO_STAR_POWER);
+    expect(pinos.map((p) => p.getAttribute("data-aceso"))).toEqual(["true", "true", "false"]);
   });
 
   it("com o star power ligado, os pinos piscam", () => {
