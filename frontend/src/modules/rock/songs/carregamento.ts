@@ -3,6 +3,7 @@ import { criarCacheLimitado } from "@/shared/lib/cacheLimitado";
 import { chartDoAudio } from "./chartAutomatico";
 import { escolherTrilha, trilhasDoChart, lerChart, lerMidi, lerSng, type ChartLido, type PacoteSng } from "./cloneHero";
 import { mixarEmSegundoPlano } from "./mixagem";
+import { CAPAS } from "@/modules/rock/tema";
 import type { Batida, Dificuldade, Instrumento, Musica, MusicaCarregada } from "./tipos";
 
 const AUDIO_DO_SNG = /^(song|guitar|bass|rhythm|keys|vocals?|vocals_\d|drums(_\d)?|backing)\.(opus|ogg|mp3|wav)$/;
@@ -139,7 +140,7 @@ function musicaDoNome(arquivo: File): Musica {
     artista: artista.trim(),
     genero: ehVideo(arquivo) ? "Clipe" : "Sua música",
     bpm: 0,
-    capa: ["#14b8a6", "#1a1722"],
+    capa: CAPAS.importada,
     intensidade: 3,
     arquivo,
     video: ehVideo(arquivo),
@@ -156,7 +157,7 @@ export async function importarArquivo(arquivo: File, aoProgredir: AoProgredir = 
     aoProgredir(1);
     return base;
   }
-  const musica: Musica = { ...base, sng: true, genero: "Clone Hero", capa: ["#f59e0b", "#7c2d12"] };
+  const musica: Musica = { ...base, sng: true, genero: "Clone Hero", capa: CAPAS.sng };
   const { pacote, chart } = await abrirSng(musica, aoProgredir);
   aoProgredir(1);
   const { metadados, arquivos } = pacote;

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Ator, EstadoDoAvatar } from "@/modules/rock/character";
-import { cores } from "@/modules/rock/tema";
+import { CORES_DA_CENA, cores } from "@/modules/rock/tema";
 import { luzesDoPalco, planoDaCamera } from "./direcao";
 import { ajustesDoPalco, type QualidadeDoPalco } from "./qualidade";
 
@@ -89,7 +89,7 @@ function montarCenario(cena: THREE.Scene) {
   cena.add(tablado, borda, chao);
 
   const textura = texturaDoTelao();
-  const telao = new THREE.Mesh(new THREE.PlaneGeometry(12, 6), new THREE.MeshBasicMaterial({ map: textura, color: "#ffffff" }));
+  const telao = new THREE.Mesh(new THREE.PlaneGeometry(12, 6), new THREE.MeshBasicMaterial({ map: textura, color: CORES_DA_CENA.telao }));
   telao.position.set(0, 3.2, -3.5);
   cena.add(telao);
 
@@ -150,8 +150,8 @@ export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoP
   const cena = new THREE.Scene();
   cena.background = new THREE.Color(cores.fundo);
   cena.fog = new THREE.Fog(cores.fundo, 9, 24);
-  const ambiente = new THREE.AmbientLight("#ffffff", 0.35);
-  const frente = new THREE.DirectionalLight("#fff4e6", 0.6);
+  const ambiente = new THREE.AmbientLight(CORES_DA_CENA.luz, 0.35);
+  const frente = new THREE.DirectionalLight(CORES_DA_CENA.luzQuente, 0.6);
   frente.position.set(0, 3, 6);
   cena.add(ambiente, frente);
   const materialDoTelao = montarCenario(cena);
