@@ -111,6 +111,25 @@ jobs:
           npm run motor
           npx vitest run src/modules/gameplay
 
+  motor-mania:
+    name: Testes do motor do Mania
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend/motor-mania
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend/motor-mania
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+
   backend:
     name: Testes do backend
     runs-on: ubuntu-latest

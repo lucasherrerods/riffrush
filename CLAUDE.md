@@ -9,6 +9,7 @@ frontend/   o jogo: React + Tauri (desktop) + versão web servida aos celulares
 backend/    a API em Rust (contas, XP, partidas)
   relay/    Worker da Cloudflare do modo online, até ele virar parte da API
   motor/    regras da partida em Rust: a API rejulga replays com elas e o app roda as mesmas em WASM
+  motor-mania/  as mesmas peças para o modo Mania (beatmaps do osu!mania), num crate à parte do Rock
 landing/    site de divulgação do jogo (Vite + React), usa as cores e a identidade do frontend
 .github/    CI (precisa ficar na raiz)
 CLAUDE.md   este arquivo, único para o projeto inteiro
