@@ -44,6 +44,10 @@ interface Props {
   aoVelocidadeDaMusica: (velocidade: number) => void;
 }
 
+/** Os botões acima da lista têm o recorte do botão principal: vermelhos ligados, da cor do header desligados. */
+const estiloDoFiltro = (ligado: boolean) =>
+  ligado ? { variant: "default" as const } : { variant: "ghost" as const, className: "corte gasto bg-superficie hover:bg-superficie-elevada" };
+
 const TIPOS_IMPORTAVEIS = "audio/*,video/*,.sng";
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
@@ -288,11 +292,11 @@ export function TelaDeSelecao(props: Props) {
 
         <div className="col-span-7 flex min-h-0 min-w-0 flex-col gap-4 max-md:col-span-1">
           <div className="flex justify-end gap-2">
-            <Button variant={velocidadeDaMusica !== 1 ? "default" : "outline"} onClick={() => setModificadoresAbertos(true)}>
+            <Button {...estiloDoFiltro(velocidadeDaMusica !== 1)} onClick={() => setModificadoresAbertos(true)}>
               <Gauge className="opacity-70" /> Modificadores
               {velocidadeDaMusica !== 1 && <span className="font-mono">{rotuloDaVelocidade(velocidadeDaMusica)}</span>}
             </Button>
-            <Button variant={soFavoritas ? "default" : "outline"} aria-pressed={soFavoritas} onClick={alternarFiltro}>
+            <Button {...estiloDoFiltro(soFavoritas)} aria-pressed={soFavoritas} onClick={alternarFiltro}>
               <Heart className={cn(soFavoritas ? "fill-current" : "opacity-70")} /> Favoritos
             </Button>
           </div>
