@@ -20,12 +20,10 @@ interface Props {
   aoClicar?: () => void;
   /** Vem logo depois da posição (ex.: a nota da partida). */
   selo?: React.ReactNode;
-  /** Um botão a mais no fim da linha (ex.: ouvir a prévia). */
-  acao?: React.ReactNode;
 }
 
 /** Uma linha de ranking: posição, foto, nome e o número que ordena. */
-export function LinhaComPosicao({ posicao, nome, avatar, semFoto: SemFoto = UserRound, minha, detalhe, valor, aoClicar, rotuloDoClique = `Ver a partida de ${nome}`, selo, acao }: Props) {
+export function LinhaComPosicao({ posicao, nome, avatar, semFoto: SemFoto = UserRound, minha, detalhe, valor, aoClicar, rotuloDoClique = `Ver a partida de ${nome}`, selo }: Props) {
   const conteudo = (
     <>
       <span className={cn("w-12 shrink-0 text-center font-titulo text-xl", posicao <= 3 ? "text-ouro" : "text-texto-suave")}>#{posicao}</span>
@@ -46,20 +44,13 @@ export function LinhaComPosicao({ posicao, nome, avatar, semFoto: SemFoto = User
   // Compacta: a 720p cabem várias linhas no espaço que sobra ao lado da roda.
   const classe = cn("chapa flex items-center gap-2 px-2 py-1 pr-4", minha ? "border-primaria bg-superficie-elevada" : "border-borda bg-superficie");
   if (!aoClicar) {
-    return (
-      <li className={classe}>
-        {conteudo}
-        {acao}
-      </li>
-    );
+    return <li className={classe}>{conteudo}</li>;
   }
-  // A ação fica fora do botão da linha: botão dentro de botão não é permitido.
   return (
     <li className={cn(classe, "hover:bg-superficie-hover")}>
       <button type="button" aria-label={rotuloDoClique} onClick={aoClicar} className="flex min-w-0 flex-1 items-center gap-2 text-left">
         {conteudo}
       </button>
-      {acao}
     </li>
   );
 }
