@@ -23,7 +23,7 @@ export function iniciarMotorComBytes(bytes: BufferSource) {
 export const JANELAS = { perfeito: 0.035, otimo: 0.07, bom: 0.11 } as const;
 export type Julgamento = keyof typeof JANELAS;
 /** Quanto cada julgamento vale na precisão, como no osu!. A nota perdida vale zero. */
-export const VALOR_DO_JULGAMENTO: Record<Julgamento, number> = { perfeito: 300, otimo: 100, bom: 50 };
+export const VALOR_DO_JULGAMENTO: Record<Julgamento, number> = { perfeito: 300, otimo: 200, bom: 100 };
 export const JANELA_DE_ACERTO = JANELAS.bom;
 export const PONTOS_POR_NOTA = 50;
 const JULGAMENTOS: Julgamento[] = ["perfeito", "otimo", "bom"];

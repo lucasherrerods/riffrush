@@ -196,8 +196,8 @@ mod tests {
         assert_eq!((rejulgada.resumo.acertos, rejulgada.resumo.total), (3, 4));
         assert_eq!((rejulgada.perfeitos, rejulgada.otimos, rejulgada.bons), (1, 1, 1));
         assert_eq!(rejulgada.resumo.maior_sequencia, Some(3));
-        assert_eq!(rejulgada.resumo.valor_dos_acertos, Some(450));
-        assert!((rejulgada.precisao - 450.0 / 1200.0).abs() < 1e-9);
+        assert_eq!(rejulgada.resumo.valor_dos_acertos, Some(600));
+        assert!((rejulgada.precisao - 600.0 / 1200.0).abs() < 1e-9);
         assert_eq!(rejulgada.pontos, 150);
     }
 
