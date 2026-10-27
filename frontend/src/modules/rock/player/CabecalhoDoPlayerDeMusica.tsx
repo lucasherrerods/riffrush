@@ -25,24 +25,24 @@ export function CabecalhoDoPlayerDeMusica({ volume, aoMudarVolume, children }: P
   if (volume > 0) ultimoAudivel.current = volume;
 
   return (
-    <header className="relative z-10 flex items-center gap-4 border-b border-borda bg-superficie px-4 py-2">
+    <header className="relative z-10 flex items-center gap-3 border-b border-borda bg-superficie px-3 py-1">
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon" aria-label="Música anterior" onClick={() => playerDeMusica.anterior()}>
+        <Button variant="ghost" size="icon-xs" aria-label="Música anterior" onClick={() => playerDeMusica.anterior()}>
           <SkipBack />
         </Button>
-        <Button variant="ghost" size="icon" aria-label={tocando ? "Pausar" : "Tocar"} disabled={!musica || carregando} onClick={() => playerDeMusica.alternar()}>
+        <Button variant="ghost" size="icon-xs" aria-label={tocando ? "Pausar" : "Tocar"} disabled={!musica || carregando} onClick={() => playerDeMusica.alternar()}>
           {carregando ? <Loader2 className="animate-spin" /> : tocando ? <Pause /> : <Play />}
         </Button>
-        <Button variant="ghost" size="icon" aria-label="Próxima música" onClick={() => playerDeMusica.proxima()}>
+        <Button variant="ghost" size="icon-xs" aria-label="Próxima música" onClick={() => playerDeMusica.proxima()}>
           <SkipForward />
         </Button>
       </div>
       <div className="flex min-w-0 items-center gap-2 sm:w-64">
-        <Music className="size-4 shrink-0 text-texto-suave" />
-        <span className="truncate text-base font-bold">{musica ? `${musica.titulo}${musica.artista ? ` — ${musica.artista}` : ""}` : "Nenhuma música"}</span>
+        <Music className="size-3 shrink-0 text-texto-suave" />
+        <span className="truncate text-sm font-bold">{musica ? `${musica.titulo}${musica.artista ? ` — ${musica.artista}` : ""}` : "Nenhuma música"}</span>
       </div>
-      <div className="hidden max-w-md flex-1 items-center gap-2 sm:flex">
-        <span className="w-12 text-right font-mono text-sm tabular-nums text-texto-suave">{formatarTempo(tempo)}</span>
+      <div className="hidden max-w-sm flex-1 items-center gap-2 sm:flex">
+        <span className="w-10 text-right font-mono text-xs tabular-nums text-texto-suave">{formatarTempo(tempo)}</span>
         <Slider
           aria-label="Tempo da música"
           min={0}
@@ -56,12 +56,12 @@ export function CabecalhoDoPlayerDeMusica({ volume, aoMudarVolume, children }: P
             setArrastando(null);
           }}
         />
-        <span className="w-12 font-mono text-sm tabular-nums text-texto-suave">{formatarTempo(duracao)}</span>
+        <span className="w-10 font-mono text-xs tabular-nums text-texto-suave">{formatarTempo(duracao)}</span>
       </div>
       <div className="flex items-center gap-1 max-sm:ml-auto">
         <Button
           variant="ghost"
-          size="icon"
+          size="icon-xs"
           aria-label={volume > 0 ? "Mutar" : "Tirar do mudo"}
           onClick={() => aoMudarVolume(volumeAoAlternarMudo(volume, ultimoAudivel.current))}
         >
@@ -69,7 +69,7 @@ export function CabecalhoDoPlayerDeMusica({ volume, aoMudarVolume, children }: P
         </Button>
         <Slider
           aria-label="Volume geral"
-          className="w-24 max-sm:w-16"
+          className="w-20 max-sm:w-16"
           min={0}
           max={1}
           step={0.05}
