@@ -3,7 +3,7 @@ import type { Dificuldade, Instrumento } from "@/modules/songs";
 import type { PosicaoNoRanking } from "./api";
 import { haQuantoTempo, porcentagem } from "@/shared/lib/formatar";
 import { LinhaComPosicao } from "./LinhaComPosicao";
-import { SeloDaNota } from "./SeloDaNota";
+import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { useRanking, type OpcoesDoRanking } from "./useRanking";
 
 interface Props extends OpcoesDoRanking {

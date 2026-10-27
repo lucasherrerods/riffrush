@@ -13,7 +13,7 @@ import { apiDoRanking as apiPadrao, type ApiDoRanking, type MusicaNoRanking, typ
 import { filtrarMusicas, ORDENS_DAS_MUSICAS, type FiltroDasMusicas } from "./filtros";
 import { LinhaComPosicao } from "./LinhaComPosicao";
 import { PainelDaMusica } from "./PainelDaMusica";
-import { SeloDaNota } from "./SeloDaNota";
+import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 
 interface Props {
   aoVoltar: () => void;

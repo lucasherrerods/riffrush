@@ -18,7 +18,7 @@ interface Props<T extends string> {
 export function GrupoDeOpcoes<T extends string>({ titulo, opcoes, valor, aoEscolher }: Props<T>) {
   return (
     <div>
-      <p className="mb-2 text-base font-semibold text-texto-suave">{titulo}</p>
+      <p className="mb-1.5 text-sm font-semibold text-texto-suave">{titulo}</p>
       <div role="radiogroup" aria-label={titulo} className="flex flex-wrap gap-2">
         {opcoes.map((opcao) => {
           const escolhida = opcao.id === valor;
@@ -33,7 +33,7 @@ export function GrupoDeOpcoes<T extends string>({ titulo, opcoes, valor, aoEscol
                 "transition-colors",
                 opcao.cor
                   ? "size-10 rounded-full border-2"
-                  : "rounded-lg border px-4 py-2 text-base font-semibold",
+                  : "rounded-lg border px-3 py-1 text-sm font-semibold max-md:px-4 max-md:py-2 max-md:text-base",
                 opcao.cor && (escolhida ? "border-texto" : "border-borda"),
                 !opcao.cor && (escolhida ? "border-primaria bg-primaria text-texto" : "border-borda bg-superficie text-texto-suave hover:bg-superficie-elevada"),
               )}

@@ -69,20 +69,25 @@ describe("anotarRecorde", () => {
     expect(recordeDe(recordesAtuais(), "neon", "medio")?.pontos).toBe(500);
     expect(recordeDe(recordesAtuais(), "neon", "medio", "baixo")?.pontos).toBe(800);
   });
+
+  it("guarda a precisão, para a nota aparecer ao lado do recorde", () => {
+    anotarRecorde(resultado({ pontos: 5000, precisao: 0.92 }));
+    expect(recordeDe(recordesAtuais(), "neon", "medio")?.precisao).toBe(0.92);
+  });
 });
 
 describe("recordesDaApi", () => {
   it("monta os recordes com estrelas e full combo a partir das partidas da API", () => {
     const recordes = recordesDaApi([
-      { musica_id: "encore:abc", dificuldade: "expert", instrumento: "guitarra", pontos: 10_000, acertos: 100, total: 100 },
-      { musica_id: "encore:abc", dificuldade: "expert", instrumento: "baixo", pontos: 2_500, acertos: 80, total: 100 },
+      { musica_id: "encore:abc", dificuldade: "expert", instrumento: "guitarra", pontos: 10_000, acertos: 100, total: 100, precisao: 0.97 },
+      { musica_id: "encore:abc", dificuldade: "expert", instrumento: "baixo", pontos: 2_500, acertos: 80, total: 100, precisao: null },
     ]);
-    expect(recordeDe(recordes, "encore:abc", "expert")).toEqual({ pontos: 10_000, estrelas: 4, fullCombo: true });
-    expect(recordeDe(recordes, "encore:abc", "expert", "baixo")).toEqual({ pontos: 2_500, estrelas: 2, fullCombo: false });
+    expect(recordeDe(recordes, "encore:abc", "expert")).toEqual({ pontos: 10_000, estrelas: 4, fullCombo: true, precisao: 0.97 });
+    expect(recordeDe(recordes, "encore:abc", "expert", "baixo")).toEqual({ pontos: 2_500, estrelas: 2, fullCombo: false, precisao: undefined });
   });
 
   it("trocar de conta troca os recordes", () => {
-    definirRecordes([{ musica_id: "a", dificuldade: "facil", instrumento: "guitarra", pontos: 1, acertos: 1, total: 1 }]);
+    definirRecordes([{ musica_id: "a", dificuldade: "facil", instrumento: "guitarra", pontos: 1, acertos: 1, total: 1, precisao: null }]);
     definirRecordes([]);
     expect(recordesAtuais()).toEqual({});
   });

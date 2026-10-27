@@ -49,6 +49,11 @@ describe("TelaDeResultado", () => {
     expect(screen.getByRole("img", { name: "4 de 5 estrelas" })).toBeInTheDocument();
   });
 
+  it("mostra a nota da partida ao lado da pontuação", () => {
+    abrir({ resultado: { ...resultado, precisao: 0.7098 } });
+    expect(screen.getByLabelText("Nota C")).toBeInTheDocument();
+  });
+
   it("mostra a precisão em destaque logo abaixo da pontuação", () => {
     abrir();
     const precisao = screen.getByLabelText("Precisão");
@@ -127,7 +132,10 @@ describe("TelaDeResultado em rede", () => {
     abrir({ extra: <p>placar da sala</p>, rotuloDeContinuar: "Voltar para a sala" });
     const conteudo = screen.getByText("placar da sala").closest(".overflow-y-auto");
     expect(conteudo).not.toBeNull();
-    expect(conteudo).not.toContainElement(screen.getByRole("button", { name: /Voltar para a sala/ }));
+    const barra = screen.getByRole("button", { name: /Voltar para a sala/ }).closest(".sticky");
+    expect(barra).not.toBeNull();
+    // A barra dos botões é transparente: o conteúdo continua visível atrás dela.
+    expect(barra?.className).not.toMatch(/bg-/);
   });
 
   it("em rede não dá para tocar de novo sozinho", async () => {
