@@ -12,6 +12,7 @@ export function opcoesDaPartida(c: Configuracoes): OpcoesDaPartida {
     volumeDosEfeitos: c.volumeDosEfeitos,
     atrasoMs: c.atrasoMs,
     semFalha: c.semFalha,
+    semAberta: !c.notaAberta,
     velocidadeDaMusica: c.velocidadeDaMusica,
     bot: c.bot,
     efeitos: c.efeitos,

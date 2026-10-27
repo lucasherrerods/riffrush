@@ -71,6 +71,7 @@ pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Di
             sem_falha: replay.sem_falha,
             fantasma: replay.fantasma,
             velocidade: replay.velocidade,
+            sem_aberta: replay.sem_aberta,
         },
     );
     motor::aplicar_entradas(&mut partida, &replay.entradas);
@@ -167,6 +168,7 @@ pub mod testes {
         motor::empacotar_replay(&motor::Replay {
             sem_falha,
             fantasma: false,
+            sem_aberta: false,
             velocidade,
             hash_do_chart: motor::hash_do_chart(&notas),
             entradas,
@@ -197,6 +199,56 @@ mod tests {
         assert_eq!(rejulgada.resumo.valor_dos_acertos, Some(450));
         assert!((rejulgada.precisao - 450.0 / 1200.0).abs() < 1e-9);
         assert_eq!(rejulgada.pontos, 150);
+    }
+
+    #[test]
+    fn sem_a_nota_aberta_o_traste_verde_acerta_a_aberta() {
+        let chart = ChartGuardado {
+            arquivo: b"[Song]
+{
+ Resolution = 192
+}
+[ExpertSingle]
+{
+192 = N 7 0
+384 = N 1 0
+}"
+            .to_vec(),
+            midi: false,
+            atraso_ms: 0.0,
+        };
+        let notas = motor::notas_do_chart(&chart, motor::Instrumento::Guitarra, motor::Dificuldade::Expert).unwrap();
+        let toques = |pista_da_aberta| {
+            [(notas[0].tempo, pista_da_aberta), (notas[1].tempo, 1)].into_iter().flat_map(|(tempo, pista)| {
+                [
+                    motor::Entrada {
+                        tempo,
+                        tipo: motor::TipoDaEntrada::Tocar,
+                        pista,
+                    },
+                    motor::Entrada {
+                        tempo: tempo + 0.05,
+                        tipo: motor::TipoDaEntrada::Soltar,
+                        pista,
+                    },
+                ]
+            })
+        };
+        let replay = |sem_aberta, pista_da_aberta| {
+            motor::empacotar_replay(&motor::Replay {
+                sem_falha: false,
+                fantasma: false,
+                sem_aberta,
+                velocidade: 1.0,
+                // O hash é sempre o do chart original, com a aberta.
+                hash_do_chart: motor::hash_do_chart(&notas),
+                entradas: toques(pista_da_aberta).collect(),
+            })
+        };
+        let sem_aberta = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &replay(true, 0)).unwrap();
+        let com_aberta = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &replay(false, motor::PISTA_ABERTA)).unwrap();
+        assert_eq!((sem_aberta.resumo.acertos, sem_aberta.resumo.total), (2, 2));
+        assert_eq!(sem_aberta.pontos, com_aberta.pontos);
     }
 
     #[test]

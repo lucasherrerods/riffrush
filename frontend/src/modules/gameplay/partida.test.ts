@@ -25,6 +25,14 @@ describe("tocar", () => {
     expect(partida.acertos).toBe(1);
   });
 
+  it("sem a nota aberta, ela vira verde e sai com o traste verde", () => {
+    const partida = criarPartida([nota(1, PISTA_ABERTA, { duracao: 0.5 }), nota(2, 1)], { semAberta: true });
+    expect(partida.notas.map((n) => n.pista)).toEqual([0, 1]);
+    expect(partida.notas[0].duracao).toBe(0.5);
+    expect(tocar(partida, PISTA_ABERTA, 1)).toBe(false);
+    expect(tocar(partida, 0, 1)).toBe(true);
+  });
+
   it("não acerta nota de outra pista", () => {
     expect(tocar(criarPartida([nota(1, 2)]), 0, 1)).toBe(false);
   });
