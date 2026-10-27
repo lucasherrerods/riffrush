@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { InfoDoBeatmap, MotorDoMania, hashDoBeatmap, iniciarMotorDoManiaComBytes } from "./motor";
+import { InfoDoBeatmap, MotorDoMania, hashDoBeatmap } from "./motor";
 
 /** Os mesmos casos que o motor em Rust confere em `backend/motor-mania/tests/paridade.rs`. */
 const casos: {
@@ -12,8 +12,6 @@ const casos: {
   fim_ms: number;
   esperado: unknown;
 }[] = JSON.parse(readFileSync(resolve(process.cwd(), "../backend/motor-mania/tests/paridade.json"), "utf8"));
-
-beforeAll(() => iniciarMotorDoManiaComBytes(readFileSync(resolve(process.cwd(), "src/modules/mania/gameplay/wasm/motor_bg.wasm"))));
 
 describe("paridade com o motor da API", () => {
   it.each(casos.map((c) => [c.nome, c] as const))("%s dá o resultado gravado", (_, caso) => {
