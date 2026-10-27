@@ -7,12 +7,25 @@ interface Props {
   xp: RegistroDaPartida;
   /** Só as músicas do Encore valem XP: o servidor confere a partida pelo chart de lá. */
   valeXp?: boolean;
+  /** No Mania valem os mapas ranked e loved baixados da busca, conferidos pelo .osu do osu!. */
+  modo?: "rock" | "mania";
 }
 
+const TEXTOS = {
+  rock: {
+    semXp: "Só as baixadas em Buscar músicas valem, porque o servidor confere a partida.",
+    recusada: "O servidor não conseguiu conferir a partida pelo chart do Encore.",
+  },
+  mania: {
+    semXp: "Só os mapas ranked e loved baixados em Buscar mapas valem, porque o servidor confere a partida.",
+    recusada: "O servidor não conseguiu conferir a partida pelo mapa do osu!.",
+  },
+};
+
 /** No resultado: quanto XP a partida deu e se a conta subiu de nível. */
-export function GanhoDeXp({ xp, valeXp = true }: Props) {
-  if (!valeXp) return <Aviso icone={Info} titulo="Esta música não vale XP" detalhe="Só as baixadas em Buscar músicas valem, porque o servidor confere a partida." />;
-  if ("recusada" in xp) return <Aviso icone={Info} titulo="Esta partida não valeu XP" detalhe="O servidor não conseguiu conferir a partida pelo chart do Encore." />;
+export function GanhoDeXp({ xp, valeXp = true, modo = "rock" }: Props) {
+  if (!valeXp) return <Aviso icone={Info} titulo="Esta música não vale XP" detalhe={TEXTOS[modo].semXp} />;
+  if ("recusada" in xp) return <Aviso icone={Info} titulo="Esta partida não valeu XP" detalhe={TEXTOS[modo].recusada} />;
   if ("pendente" in xp) return <Aviso icone={Hourglass} titulo="XP em validação" detalhe="Entra na conta assim que o servidor conferir a partida." />;
   const { depois } = xp;
   const subiu = depois.nivel > xp.antes.nivel;

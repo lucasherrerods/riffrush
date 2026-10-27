@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
-import { abrirBibliotecaDoMania, type BibliotecaDoMania, type ConjuntoSalvo, type DificuldadeSalva } from "./beatmaps/biblioteca";
+import { abrirBibliotecaDoMania, valeXpNoMania, type BibliotecaDoMania, type ConjuntoSalvo, type DificuldadeSalva } from "./beatmaps/biblioteca";
+import { MODS } from "./gameplay/mods";
+import { empacotarReplayDoMania } from "./gameplay/replay";
 import { useBibliotecaDoMania } from "./beatmaps/useBibliotecaDoMania";
 import { ResultadoDoMania } from "./gameplay/ResultadoDoMania";
 import { TelaDeJogoMania, type MapaParaJogar, type ResultadoDoMania as Resultado } from "./gameplay/TelaDeJogoMania";
@@ -27,6 +30,8 @@ export function TelaDoMania({ aoTrocarDeModo, abrirBiblioteca = abrirBibliotecaD
   const { conjuntos, importar, guardarBaixado, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
   const [tela, setTela] = useState<Tela>({ nome: "selecao" });
   const [mods, setMods] = useState(0);
+  const { conta } = useConta();
+  const [xp, setXp] = useState<RegistroDaPartida | undefined>();
   // A semente do Random muda a cada partida; o replay a guarda.
   const [semente, setSemente] = useState(() => (Math.random() * 2 ** 32) >>> 0);
 
@@ -54,7 +59,33 @@ export function TelaDoMania({ aoTrocarDeModo, abrirBiblioteca = abrirBibliotecaD
     if (!lido || !audio) return avisar.error("Não foi possível abrir este mapa.");
     void usar(conjunto.id);
     setSemente((Math.random() * 2 ** 32) >>> 0);
-    setTela({ nome: "jogo", mapa: { titulo: conjunto.tituloUnicode || conjunto.titulo, dificuldade: lido.dificuldade, texto: lido.texto, hash: lido.hash, audio } });
+    setTela({
+      nome: "jogo",
+      mapa: {
+        titulo: conjunto.tituloUnicode || conjunto.titulo,
+        dificuldade: lido.dificuldade,
+        beatmapId: lido.beatmapId,
+        valeXp: valeXpNoMania(conjunto) && !!lido.beatmapId,
+        texto: lido.texto,
+        hash: lido.hash,
+        audio,
+      },
+    });
+  };
+
+  /** Com a conta conectada, o replay vai para a API, que confere a partida e devolve o XP. */
+  const aoTerminar = (mapa: MapaParaJogar, resultado: Resultado) => {
+    setTela({ nome: "resultado", mapa, resultado });
+    setXp(undefined);
+    if (!conta) return;
+    if (!mapa.valeXp || !mapa.beatmapId || resultado.mods & MODS.AT) return setXp({ recusada: true });
+    const beatmapId = mapa.beatmapId;
+    setXp({ pendente: true, id: "" });
+    void empacotarReplayDoMania({ mods: resultado.mods, semente: resultado.semente, hash: resultado.hash, entradas: resultado.entradas })
+      .then((replay) => sessaoDaConta.registrarPartidaDoMania(beatmapId, replay))
+      .then((registro) => (registro && "pendente" in registro ? sessaoDaConta.esperarXp(registro.id, { modo: "mania" }) : registro))
+      .then((registro) => registro && setXp(registro))
+      .catch(() => avisar.error("Não foi possível mandar a partida para a sua conta."));
   };
 
   if (tela.nome === "jogo")
@@ -65,7 +96,7 @@ export function TelaDoMania({ aoTrocarDeModo, abrirBiblioteca = abrirBibliotecaD
         semente={semente}
         decodificar={decodificar}
         aoSair={() => setTela({ nome: "selecao" })}
-        aoTerminar={(resultado) => setTela({ nome: "resultado", mapa: tela.mapa, resultado })}
+        aoTerminar={(resultado) => aoTerminar(tela.mapa, resultado)}
       />
     );
 
@@ -75,6 +106,8 @@ export function TelaDoMania({ aoTrocarDeModo, abrirBiblioteca = abrirBibliotecaD
         titulo={tela.mapa.titulo}
         dificuldade={tela.mapa.dificuldade}
         resultado={tela.resultado}
+        xp={xp}
+        valeXp={tela.mapa.valeXp}
         aoJogarDeNovo={() => setTela({ nome: "jogo", mapa: tela.mapa })}
         aoVoltar={() => setTela({ nome: "selecao" })}
       />

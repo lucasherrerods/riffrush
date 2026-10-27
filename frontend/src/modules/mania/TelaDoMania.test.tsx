@@ -7,6 +7,20 @@ import type { BibliotecaDoMania, ConjuntoSalvo } from "./beatmaps/biblioteca";
 import { lerOsz } from "./beatmaps/osz";
 import { TelaDoMania } from "./TelaDoMania";
 
+const conta = vi.hoisted(() => ({
+  logada: false,
+  registrar: vi.fn(async () => ({ pendente: true as const, id: "m1" })),
+  esperar: vi.fn(async () => ({ xp_ganho: 77, antes: { nivel: 1, xp_no_nivel: 0, xp_para_o_proximo: 100 }, depois: { nivel: 1, xp_no_nivel: 77, xp_para_o_proximo: 100 } })),
+}));
+vi.mock("@/modules/conta", async (original) => {
+  const real = await original<typeof import("@/modules/conta")>();
+  return {
+    ...real,
+    useConta: () => ({ conta: conta.logada ? { id: "c", nome: "Ana" } : null }),
+    sessaoDaConta: { registrarPartidaDoMania: conta.registrar, esperarXp: conta.esperar },
+  };
+});
+
 vi.stubGlobal("AudioContext", AudioContextFalso);
 const audio = () => obterContextoDeAudio() as unknown as AudioContextFalso;
 
@@ -100,6 +114,34 @@ describe("TelaDoMania", () => {
     await usuario.click(screen.getByRole("button", { name: "Biblioteca" }));
     expect(await screen.findByText("Música")).toBeInTheDocument();
     expect(screen.queryByText("Importado · sem XP")).not.toBeInTheDocument();
+  });
+
+  it("com a conta conectada, partida em mapa ranked manda o replay e mostra o XP", async () => {
+    conta.logada = true;
+    try {
+      const biblioteca = bibliotecaNaMemoria();
+      const mapa = { beatmapsetId: 7, titulo: "Musica", tituloUnicode: "Música", artista: "Banda", artistaUnicode: "Banda", mapper: "Mapper", status: "ranked", dificuldades: [] };
+      render(<TelaDoMania abrirBiblioteca={async () => biblioteca} buscar={async () => [mapa]} baixar={async () => arquivoOsz()} decodificar={async () => ({}) as AudioBuffer} />);
+      const usuario = userEvent.setup();
+      await usuario.click(screen.getByRole("button", { name: "Buscar mapas" }));
+      await usuario.click(await screen.findByRole("button", { name: "Baixar Musica" }));
+      await screen.findByText("Baixado");
+      await usuario.click(screen.getByRole("button", { name: "Biblioteca" }));
+      await usuario.click(await screen.findByText("Música"));
+      await usuario.click(within(screen.getByRole("list", { name: "Dificuldades" })).getByRole("button", { name: /4K.*Hard/ }));
+      const fontesAntes = audio().fontes.length;
+      await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+      await waitFor(() => expect(audio().fontes.length).toBeGreaterThan(fontesAntes));
+      await act(async () => {
+        audio().currentTime += 10;
+        await new Promise((r) => requestAnimationFrame(() => r(null)));
+      });
+      expect(await screen.findByText("+77 XP")).toBeInTheDocument();
+      expect(conta.registrar).toHaveBeenCalledWith(11, expect.any(Uint8Array));
+      expect(conta.esperar).toHaveBeenCalledWith("m1", { modo: "mania" });
+    } finally {
+      conta.logada = false;
+    }
   });
 
   it("o botão do cabeçalho volta para o Rock", async () => {

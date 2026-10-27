@@ -19,6 +19,10 @@ export interface ConjuntoSalvo extends Conjunto {
   usadoEm: number;
 }
 
+/** Só os mapas baixados do osu! que não mudam mais valem XP: a API confere a partida pelo .osu oficial. */
+const STATUS_QUE_VALEM = ["ranked", "approved", "loved"];
+export const valeXpNoMania = (conjunto: ConjuntoSalvo) => conjunto.origem === "osu" && STATUS_QUE_VALEM.includes(conjunto.status ?? "");
+
 /** Os conjuntos ficam salvos com o .osz inteiro: o áudio e os .osu saem dele na hora de jogar. */
 export interface BibliotecaDoMania {
   /** Do usado por último para o mais antigo. */
