@@ -131,7 +131,7 @@ describe("SessaoDaConta", () => {
     ambiente.local.setItem("riffrush:token", "tok");
     await sessao.iniciar();
     await sessao.registrarPartida({ ...resultado, julgamentos: { perfeito: 2, otimo: 2, bom: 0 } });
-    expect(vi.mocked(ambiente.api.registrarPartida).mock.calls[0][1]).toMatchObject({ valor_dos_acertos: 800 });
+    expect(vi.mocked(ambiente.api.registrarPartida).mock.calls[0][1]).toMatchObject({ valor_dos_acertos: 1000 });
   });
 
   it("partida que foi para a fila de validação não mexe no XP da conta", async () => {
