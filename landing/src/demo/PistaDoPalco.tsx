@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
-import { comAlfa, temaAtivo } from "@jogo/src/shared/styles/tokens";
+import { comAlfa, TEMA_PADRAO } from "@jogo/src/shared/styles/tokens";
 import { PISTAS, notasDoRiff, notasNaTela, type Nota } from "./riff";
 
-const CORES = temaAtivo.pista.trastes;
+const CORES = TEMA_PADRAO.pista.trastes;
 const ANTECEDENCIA = 1600;
 /** Altura do alvo, em fração da altura do canvas. */
 const ALVO = 0.86;
@@ -64,9 +64,9 @@ export function PistaDoPalco({ className }: { className?: string }) {
       const meiaNoFundo = largura / 2 - (fundo.x - fundo.larguraDaPista / 2);
       const meiaNaBase = largura / 2 - (base.x - base.larguraDaPista / 2);
       const braco = ctx.createLinearGradient(0, 0, 0, base.y);
-      braco.addColorStop(0, comAlfa(temaAtivo.cores.superficie, 0));
-      braco.addColorStop(0.4, comAlfa(temaAtivo.cores.superficie, 0.8));
-      braco.addColorStop(1, temaAtivo.cores.superficieElevada);
+      braco.addColorStop(0, comAlfa(TEMA_PADRAO.cores.superficie, 0));
+      braco.addColorStop(0.4, comAlfa(TEMA_PADRAO.cores.superficie, 0.8));
+      braco.addColorStop(1, TEMA_PADRAO.cores.superficieElevada);
       ctx.fillStyle = braco;
       ctx.beginPath();
       ctx.moveTo(largura / 2 - meiaNoFundo, 0);
@@ -83,7 +83,7 @@ export function PistaDoPalco({ className }: { className?: string }) {
         if (posicao < 0 || posicao > 1.1) continue;
         const a = ponto(largura, altura, posicao, 0);
         const b = ponto(largura, altura, posicao, PISTAS - 1);
-        ctx.strokeStyle = comAlfa(temaAtivo.cores.texto, 0.06 + 0.1 * posicao);
+        ctx.strokeStyle = comAlfa(TEMA_PADRAO.cores.texto, 0.06 + 0.1 * posicao);
         ctx.lineWidth = 1 + posicao * 2;
         ctx.beginPath();
         ctx.moveTo(a.x - a.larguraDaPista / 2, a.y);
@@ -113,7 +113,7 @@ export function PistaDoPalco({ className }: { className?: string }) {
         ctx.shadowBlur = 8 + brilho * 40;
         ctx.lineWidth = 4;
         ctx.strokeStyle = CORES[pista];
-        ctx.fillStyle = comAlfa(temaAtivo.cores.fundo, 0.85);
+        ctx.fillStyle = comAlfa(TEMA_PADRAO.cores.fundo, 0.85);
         ctx.beginPath();
         ctx.ellipse(x, y, raio, raio * 0.55, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -139,7 +139,7 @@ export function PistaDoPalco({ className }: { className?: string }) {
         ctx.ellipse(x, y, raio, raio * 0.55, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
-        ctx.fillStyle = comAlfa(temaAtivo.cores.texto, 0.85);
+        ctx.fillStyle = comAlfa(TEMA_PADRAO.cores.texto, 0.85);
         ctx.beginPath();
         ctx.ellipse(x, y - raio * 0.08, raio * 0.42, raio * 0.2, 0, 0, Math.PI * 2);
         ctx.fill();

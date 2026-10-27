@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Ator, EstadoDoAvatar } from "@/modules/rock/character";
-import { cores } from "@/shared/styles/tokens";
+import { cores } from "@/modules/rock/tema";
 import { luzesDoPalco, planoDaCamera } from "./direcao";
 import { ajustesDoPalco, type QualidadeDoPalco } from "./qualidade";
 

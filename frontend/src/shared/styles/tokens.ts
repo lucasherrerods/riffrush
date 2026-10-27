@@ -1,15 +1,6 @@
-import { temaAtivo, type Tema } from "./temas";
+import { TEMA_PADRAO, type Tema } from "./temas";
 
-export { TEMAS, temaAtivo, type Tema } from "./temas";
-
-export const cores = temaAtivo.cores;
-
-export const paleta = {
-  primaria: cores.primaria,
-  sucesso: cores.sucesso,
-  perigo: cores.perigo,
-  destaque: cores.destaque,
-};
+export { TEMAS, TEMA_PADRAO, type Tema } from "./temas";
 
 const canais = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
 
@@ -32,6 +23,6 @@ export function comAlfa(hex: string, alfa: number) {
 
 const paraVariavel = (nome: string) => `--cor-${nome.replace(/[A-Z]/g, (letra) => `-${letra.toLowerCase()}`)}`;
 
-export function aplicarTokens(raiz: HTMLElement, tema: Tema = temaAtivo) {
+export function aplicarTokens(raiz: HTMLElement, tema: Tema = TEMA_PADRAO) {
   for (const [nome, valor] of Object.entries(tema.cores)) raiz.style.setProperty(paraVariavel(nome), valor);
 }

@@ -1,5 +1,6 @@
 import { geradorAleatorio } from "@/shared/lib/aleatorio";
-import { cores, comAlfa } from "@/shared/styles/tokens";
+import { cores } from "@/modules/rock/tema";
+import { comAlfa } from "@/shared/styles/tokens";
 import { COR_DA_ESTRELA, COR_DA_NOTA_DE_ESTRELA } from "../cores";
 import { SPRITE_DA_ABERTA, SPRITE_DA_NOTA, type Sprites } from "./desenhar";
 

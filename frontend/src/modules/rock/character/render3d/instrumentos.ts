@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { cores } from "@/shared/styles/tokens";
+import { cores } from "@/modules/rock/tema";
 import type { Instrumento } from "../catalogo";
 import { parte } from "./materiais";
 
