@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { AvatarPalhetando } from "./componentes/AvatarPalhetando";
 import { Capa } from "./componentes/Capa";
 import { Carrossel } from "./componentes/Carrossel";
-import { alternarFavorita, carregarFavoritas, salvarFavoritas } from "./favoritas";
+import { alternarFavorita, carregarFavoritas, indicesVisiveis, salvarFavoritas, selecaoNoFiltro } from "./favoritas";
 import { ehImportada, semAudio } from "./storage/historico";
 
 interface Props {
@@ -53,10 +53,35 @@ export function TelaDeSelecao(props: Props) {
   const efeito = (nome: "mover" | "selecionar" | "voltar") => tocarEfeito(nome, volumeDosEfeitos);
   const dispositivo = useDispositivo();
 
-  /** Anda pelas músicas dando a volta no fim da lista. */
-  const andar = (passos: number) => {
+  const [favoritas, setFavoritas] = useState(carregarFavoritas);
+  const [soFavoritas, setSoFavoritas] = useState(false);
+  const favorita = favoritas.has(musica.id);
+  const alternarFavoritaAtual = () => {
     efeito("mover");
-    aoSelecionar((((indice + passos) % musicas.length) + musicas.length) % musicas.length);
+    const novas = alternarFavorita(favoritas, musica.id);
+    setFavoritas(novas);
+    salvarFavoritas(novas);
+    if (!soFavoritas || novas.has(musica.id)) return;
+    // Desfavoritada com o filtro ligado, ela some da lista: a seleção vai para a próxima favorita.
+    const proxima = selecaoNoFiltro(indicesVisiveis(musicas, novas, true), indice);
+    if (proxima !== undefined) aoSelecionar(proxima);
+  };
+  const visiveis = indicesVisiveis(musicas, favoritas, soFavoritas);
+  const alternarFiltro = () => {
+    efeito("mover");
+    const ligado = !soFavoritas;
+    setSoFavoritas(ligado);
+    // A selecionada que some do filtro dá lugar à próxima favorita.
+    const proxima = selecaoNoFiltro(indicesVisiveis(musicas, favoritas, ligado), indice);
+    if (proxima !== undefined && proxima !== indice) aoSelecionar(proxima);
+  };
+
+  /** Anda pelas músicas visíveis dando a volta no fim da lista. */
+  const andar = (passos: number) => {
+    if (!visiveis.length) return;
+    efeito("mover");
+    const atual = Math.max(visiveis.indexOf(indice), 0);
+    aoSelecionar(visiveis[(((atual + passos) % visiveis.length) + visiveis.length) % visiveis.length]);
   };
   const escolherDificuldade = (id: Dificuldade) => {
     efeito("mover");
@@ -76,15 +101,6 @@ export function TelaDeSelecao(props: Props) {
   const importarEscolhidos = (campo: HTMLInputElement) => {
     aoImportar(Array.from(campo.files ?? []));
     campo.value = "";
-  };
-
-  const [favoritas, setFavoritas] = useState(carregarFavoritas);
-  const favorita = favoritas.has(musica.id);
-  const alternarFavoritaAtual = () => {
-    efeito("mover");
-    const novas = alternarFavorita(favoritas, musica.id);
-    setFavoritas(novas);
-    salvarFavoritas(novas);
   };
 
   const [removendo, setRemovendo] = useState(false);
@@ -262,38 +278,50 @@ export function TelaDeSelecao(props: Props) {
           )}
         </section>
 
-        <Carrossel
-          musicas={musicas}
-          indice={indice}
-          dificuldade={dificuldade}
-          instrumento={instrumento}
-          dificuldades={dificuldades}
-          recordes={recordes}
-          favoritas={favoritas}
-          aoEscolherMusica={(i) => {
-            efeito("mover");
-            aoSelecionar(i);
-          }}
-          aoEscolherDificuldade={escolherDificuldade}
-          aoJogar={jogar}
-          aoGirar={andar}
-          menuDaSelecionada={
-            podeRemover && (
-              <DropdownMenu open={menuAberto} onOpenChange={setMenuAberto}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label={`Opções de ${musica.titulo}`}>
-                    <Ellipsis />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem variant="perigo" onSelect={() => setRemovendo(true)}>
-                    <Trash2 /> Apagar música
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )
-          }
-        />
+        <div className="col-span-7 flex min-h-0 min-w-0 flex-col gap-4 max-md:col-span-1">
+          <div className="flex justify-end">
+            <Button variant={soFavoritas ? "default" : "outline"} aria-pressed={soFavoritas} onClick={alternarFiltro}>
+              <Heart className={cn(soFavoritas ? "fill-current" : "opacity-70")} /> Favoritos
+            </Button>
+          </div>
+          {visiveis.length ? (
+            <Carrossel
+              className="flex-1"
+              musicas={visiveis.map((i) => musicas[i])}
+              indice={visiveis.indexOf(indice)}
+              dificuldade={dificuldade}
+              instrumento={instrumento}
+              dificuldades={dificuldades}
+              recordes={recordes}
+              favoritas={favoritas}
+              aoEscolherMusica={(i) => {
+                efeito("mover");
+                aoSelecionar(visiveis[i]);
+              }}
+              aoEscolherDificuldade={escolherDificuldade}
+              aoJogar={jogar}
+              aoGirar={andar}
+              menuDaSelecionada={
+                podeRemover && (
+                  <DropdownMenu open={menuAberto} onOpenChange={setMenuAberto}>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" aria-label={`Opções de ${musica.titulo}`}>
+                        <Ellipsis />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem variant="perigo" onSelect={() => setRemovendo(true)}>
+                        <Trash2 /> Apagar música
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )
+              }
+            />
+          ) : (
+            <p className="placa p-4 text-base text-texto-suave">Nenhuma música favorita ainda. Favorite com o coração ou a tecla F.</p>
+          )}
+        </div>
       </div>
 
       <footer className="flex items-center gap-8 bg-superficie px-8 py-2 max-md:hidden">
