@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { CORES_DA_CENA } from "@/modules/rock/tema";
 import { criarAtor, type Ator, type EstadoDoAvatar } from "./ator";
 
 export type { EstadoDoAvatar } from "./ator";
@@ -72,8 +73,8 @@ function desenhar(agora: number) {
 
 function criarCena() {
   const cena = new THREE.Scene();
-  cena.add(new THREE.AmbientLight("#ffffff", 1.2));
-  const principal = new THREE.DirectionalLight("#fff4e6", 2.4);
+  cena.add(new THREE.AmbientLight(CORES_DA_CENA.luz, 1.2));
+  const principal = new THREE.DirectionalLight(CORES_DA_CENA.luzQuente, 2.4);
   principal.position.set(1.5, 2.5, 3);
   cena.add(principal);
   return cena;

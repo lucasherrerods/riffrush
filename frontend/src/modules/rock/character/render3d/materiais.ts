@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { CORES_DA_CENA } from "@/modules/rock/tema";
 
 /** Três faixas de luz com borda dura: sombra, meia-luz e luz. É o que dá o visual de cel-shading. */
 function criarFaixasDeLuz() {
@@ -36,7 +37,7 @@ export function materialToon(cor: string) {
 /** Contorno por casco invertido: a malha empurrada pela normal, desenhada só por dentro e em cor escura. */
 const materialDoContorno = new THREE.ShaderMaterial({
   side: THREE.BackSide,
-  uniforms: { espessura: { value: 0.006 }, cor: { value: new THREE.Color("#120d0b") } },
+  uniforms: { espessura: { value: 0.006 }, cor: { value: new THREE.Color(CORES_DA_CENA.contorno) } },
   vertexShader: `
     uniform float espessura;
     void main() {

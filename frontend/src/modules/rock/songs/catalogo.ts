@@ -1,4 +1,5 @@
 import shine from "./audio/spektrem-shine.mp3";
+import { CAPAS } from "@/modules/rock/tema";
 import type { Musica } from "./tipos";
 
 /**
@@ -12,7 +13,7 @@ export const MUSICAS_EMBUTIDAS: Musica[] = [
     artista: "Spektrem",
     genero: "Electro House",
     bpm: 128,
-    capa: ["#22d3ee", "#7c3aed"],
+    capa: CAPAS.shine,
     intensidade: 3,
     audioEmbutido: shine,
   },

@@ -1,3 +1,5 @@
+import { CORES_DO_PERSONAGEM } from "@/modules/rock/tema";
+
 /**
  * Tudo que pode ser escolhido na criação do personagem.
  * - Novo personagem: gere um com scripts/gerar-personagem.mjs (docs/personagens.md) ou exporte um .vrm (VRoid Studio, Booth…), coloque em public/modelos/personagens e registre em BASES.
@@ -81,12 +83,4 @@ export const PARTES_COLORIVEIS: Opcao<ParteColorivel>[] = [
   { id: "calcados", rotulo: "Calçados" },
 ];
 
-/** Cores do conteúdo do personagem, não da interface: por isso ficam fora do tema. */
-export const PALETAS: Record<ParteColorivel, string[]> = {
-  pele: ["#f6dcc4", "#e8bf98", "#c99470", "#9a6644", "#5e3a24"],
-  cabelo: ["#1c1a19", "#4a2e1c", "#8a5a2b", "#d9b56a", "#b9b6b0", "#8f1d1d", "#2b4c8c"],
-  olhos: ["#3b2a1e", "#2f6b3a", "#2b5c9c", "#6b6b6b", "#a0482a"],
-  roupa: ["#1f1d1b", "#5a1a1a", "#2d3a4f", "#3d4a2c", "#6b4a2e", "#d8d2c4"],
-  calca: ["#1f1d1b", "#2d3a4f", "#4a3b2c", "#5a1a1a"],
-  calcados: ["#1f1d1b", "#4a2e1c", "#8a1c1c", "#d8d2c4"],
-};
+export const PALETAS: Record<ParteColorivel, string[]> = CORES_DO_PERSONAGEM;

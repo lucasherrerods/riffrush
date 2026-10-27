@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { cores } from "@/modules/rock/tema";
+import { CORES_DOS_INSTRUMENTOS, cores } from "@/modules/rock/tema";
 import type { Instrumento } from "../catalogo";
 import { parte } from "./materiais";
 
@@ -13,9 +13,7 @@ export interface Montado {
   osso: "rightHand" | "leftHand" | "maos";
 }
 
-const PRETO = "#16110f";
-const MARFIM = "#e8e4dc";
-const MADEIRA = "#d9b98a";
+const { preto: PRETO, marfim: MARFIM, madeira: MADEIRA, metal: METAL, escala: ESCALA } = CORES_DOS_INSTRUMENTOS;
 
 const CIMA = new THREE.Vector3(0, 1, 0);
 const DISTANCIA_MINIMA_ENTRE_AS_MAOS = 0.08;
@@ -69,8 +67,6 @@ function noEncaixe(peca: THREE.Object3D) {
   return encaixe;
 }
 
-const METAL = "#c9c6c0";
-const ESCALA = "#2a1a12";
 
 /** Malha com nome, para os testes e para achar a peça na cena. */
 function peca(nome: string, geometria: THREE.BufferGeometry, cor: string, comContorno = true) {
@@ -227,7 +223,7 @@ export function criarInstrumento(instrumento: Instrumento): Montado[] {
     case "vocal": {
       const microfone = new THREE.Group();
       microfone.add(parte(new THREE.CylinderGeometry(0.018, 0.012, 0.16, 10), PRETO));
-      microfone.add(posicionar(parte(new THREE.SphereGeometry(0.03, 12, 10), "#b9b6b0"), 0, 0.09, 0));
+      microfone.add(posicionar(parte(new THREE.SphereGeometry(0.03, 12, 10), CORES_DOS_INSTRUMENTOS.gradeDoMicrofone), 0, 0.09, 0));
       return [{ objeto: posicionar(microfone, 0, -0.06, 0.03), osso: "rightHand" }];
     }
   }
