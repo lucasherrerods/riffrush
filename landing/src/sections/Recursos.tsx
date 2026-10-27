@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { temaAtivo } from "@jogo/src/shared/styles/tokens";
+import { TEMA_PADRAO } from "@jogo/src/shared/styles/tokens";
 import { Surge, Titulo } from "./comuns";
 
 const RECURSOS = [
@@ -11,7 +11,7 @@ const RECURSOS = [
 
 /** Os recursos como o setlist colado no chão do palco: uma faixa por linha. */
 export function Recursos() {
-  const trastes = temaAtivo.pista.trastes;
+  const trastes = TEMA_PADRAO.pista.trastes;
   return (
     <section id="recursos" className="scroll-mt-20 py-20 md:py-32">
       <div className="mx-auto max-w-6xl px-4 md:px-6">

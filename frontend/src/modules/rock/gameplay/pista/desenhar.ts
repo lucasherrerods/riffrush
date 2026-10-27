@@ -1,5 +1,6 @@
 import { PISTA_ABERTA, type Batida, type TipoDaNota } from "@/modules/rock/songs";
-import { cores, comAlfa } from "@/shared/styles/tokens";
+import { cores } from "@/modules/rock/tema";
+import { comAlfa } from "@/shared/styles/tokens";
 import { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ABERTA, COR_DA_ESTRELA, COR_DA_NOTA_PERDIDA, TRILHO_DA_ESTRELA, corDaPista } from "../cores";
 import type { NotaEmJogo } from "../partida";
 import { pontosDoRaio, tremor } from "./efeitos";

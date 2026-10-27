@@ -5,6 +5,8 @@
  */
 export interface Tema {
   nome: string;
+  /** Claro ou escuro: muda as regras de contraste e o colorScheme do navegador. Sem ele, o tema é escuro. */
+  esquema?: "claro" | "escuro";
   cores: {
     /** Neutros frios e levemente tingidos; quanto mais elevada a superfície, mais clara. */
     fundo: string;
@@ -105,4 +107,5 @@ export const TEMAS = {
   },
 } satisfies Record<string, Tema>;
 
-export const temaAtivo: Tema = TEMAS.riffRush;
+/** O tema da abertura e o da landing. O tema da interface muda com o modo de jogo (tema.ts). */
+export const TEMA_PADRAO: Tema = TEMAS.riffRush;

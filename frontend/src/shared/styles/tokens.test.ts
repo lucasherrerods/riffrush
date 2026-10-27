@@ -1,5 +1,7 @@
-import { aplicarTokens, brilho, comAlfa, croma, cores, paleta } from "./tokens";
-import { TEMAS, temaAtivo } from "./temas";
+import { aplicarTokens, brilho, comAlfa, croma } from "./tokens";
+import { TEMAS, TEMA_PADRAO } from "./temas";
+
+const { cores } = TEMA_PADRAO;
 
 describe.each(Object.values(TEMAS).map((tema) => [tema.nome, tema] as const))("tema %s (regras de docs/design.md)", (_, tema) => {
   const { cores } = tema;
@@ -46,11 +48,11 @@ describe.each(Object.values(TEMAS).map((tema) => [tema.nome, tema] as const))("t
   });
 });
 
-describe("tema ativo", () => {
+describe("tema padrão", () => {
   it("é o Riff Rush, com as cores da logo", () => {
-    expect(temaAtivo.nome).toBe("Riff Rush");
+    expect(TEMA_PADRAO.nome).toBe("Riff Rush");
     expect(cores.texto).toBe("#e8e4dc");
-    expect(paleta.primaria).toBe("#e3191f");
+    expect(cores.primaria).toBe("#e3191f");
   });
 });
 

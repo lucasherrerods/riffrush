@@ -1,6 +1,6 @@
 /** Efeitos de jogo da pista, em funções puras: o desenho fica em desenhar.ts. */
 
-import { cores } from "@/shared/styles/tokens";
+import { cores } from "@/modules/rock/tema";
 import type { Julgamento } from "../partida";
 
 /** Quanto tempo o julgamento do último acerto fica escrito acima da nota. */
