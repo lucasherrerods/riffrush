@@ -40,6 +40,6 @@ describe("resultadoDaPartida", () => {
 
 describe("valorDosAcertos", () => {
   it("soma o valor de cada acerto pelo julgamento, como a precisão do jogo", () => {
-    expect(valorDosAcertos({ perfeito: 2, otimo: 1, bom: 1 })).toBe(2 * 300 + 100 + 50);
+    expect(valorDosAcertos({ perfeito: 2, otimo: 1, bom: 1 })).toBe(2 * 300 + 200 + 100);
   });
 });
