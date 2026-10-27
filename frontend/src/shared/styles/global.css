@@ -85,15 +85,8 @@ body {
   transform-origin: top;
   transform: rotateX(62deg);
   background-image:
-    linear-gradient(
-      color-mix(in srgb, var(--cor-borda) 70%, transparent) 2px,
-      transparent 2px
-    ),
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--cor-borda) 70%, transparent) 2px,
-      transparent 2px
-    );
+    linear-gradient(color-mix(in srgb, var(--cor-borda) 70%, transparent) 2px, transparent 2px),
+    linear-gradient(90deg, color-mix(in srgb, var(--cor-borda) 70%, transparent) 2px, transparent 2px);
   background-size: 70px 70px;
   will-change: transform;
   animation: grade-anda 1.6s linear infinite;
@@ -131,6 +124,7 @@ body {
   }
 }
 
+
 /* Rola com a roda e o toque, mas sem a barra aparecendo. */
 @utility sem-barra-de-rolagem {
   scrollbar-width: none;
@@ -143,31 +137,11 @@ body {
 @layer base {
   html,
   body {
-    cursor:
-      url("/cursores/palheta-normal.svg") 5 8,
-      auto;
+    cursor: url("/cursores/palheta-normal.svg") 5 8, auto;
   }
 
-  :where(
-    a[href],
-    button,
-    [role="button"],
-    [role="tab"],
-    [role="menuitem"],
-    [role="option"],
-    [role="switch"],
-    [role="checkbox"],
-    [role="radio"],
-    label[for],
-    select,
-    summary,
-    input[type="checkbox"],
-    input[type="radio"],
-    input[type="range"]
-  ):not(:disabled, [aria-disabled="true"]) {
-    cursor:
-      url("/cursores/palheta.svg") 5 8,
-      pointer;
+  :where(a[href], button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], [role="switch"], [role="checkbox"], [role="radio"], label[for], select, summary, input[type="checkbox"], input[type="radio"], input[type="range"]):not(:disabled, [aria-disabled="true"]) {
+    cursor: url("/cursores/palheta.svg") 5 8, pointer;
   }
 
   input:not([type="checkbox"], [type="radio"], [type="range"]),
@@ -177,9 +151,7 @@ body {
 
   :disabled,
   [aria-disabled="true"] {
-    cursor:
-      url("/cursores/palheta-normal.svg") 5 8,
-      not-allowed;
+    cursor: url("/cursores/palheta-normal.svg") 5 8, not-allowed;
   }
 }
 
