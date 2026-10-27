@@ -108,11 +108,11 @@ describe("desenharPista", () => {
     expect(desenhar(comExplosao, 1.4).desenhos()).toHaveLength(0);
   });
 
-  it("escreve MISS em cima da tecla da nota perdida, por pouco tempo", () => {
+  it("escreve ERRO em cima da tecla da nota perdida, por pouco tempo", () => {
     const comFalha = cena([], { falhas: [{ pista: 1, tempo: 1 }] });
     const textos = (t: number, efeitos = true) => desenhar(comFalha, t, efeitos).chamadas.filter((ch) => ch.metodo === "fillText");
-    expect(textos(1.1).map((ch) => ch.args[0])).toEqual(["MISS"]);
-    expect(textos(1.1, false).map((ch) => ch.args[0])).toEqual(["MISS"]);
+    expect(textos(1.1).map((ch) => ch.args[0])).toEqual(["ERRO"]);
+    expect(textos(1.1, false).map((ch) => ch.args[0])).toEqual(["ERRO"]);
     expect(textos(2)).toEqual([]);
   });
 
