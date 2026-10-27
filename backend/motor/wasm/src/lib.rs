@@ -33,6 +33,8 @@ pub struct MotorDaPartida {
 #[wasm_bindgen]
 impl MotorDaPartida {
     /// As notas vêm em quatro listas paralelas, que passam para o WASM sem um objeto por nota.
+    // O wasm-bindgen só aceita argumentos soltos no construtor, sem um struct de opções.
+    #[allow(clippy::too_many_arguments)]
     #[wasm_bindgen(constructor)]
     pub fn new(
         tempos: &[f64],
