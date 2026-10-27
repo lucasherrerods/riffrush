@@ -441,6 +441,8 @@ export function App() {
                 instrumento={instrumentoDaSelecao}
                 personagem={personagemEmJogo}
                 volumeDosEfeitos={configuracoes.volumeDosEfeitos}
+                velocidadeDaMusica={configuracoes.velocidadeDaMusica}
+                aoVelocidadeDaMusica={(velocidadeDaMusica) => mudarConfiguracoes({ ...configuracoes, velocidadeDaMusica })}
                 aoSelecionar={setIndice}
                 aoDificuldade={setDificuldade}
                 aoInstrumento={setInstrumento}

@@ -1,9 +1,11 @@
 import { useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Ellipsis, FileAudio, Flame, Heart, Info, ListOrdered, Play, RotateCcw, Trash2, Trophy } from "lucide-react";
+import { ArrowLeft, Ellipsis, Gauge, FileAudio, Flame, Heart, Info, ListOrdered, Play, RotateCcw, Trash2, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
+import { rotuloDaVelocidade } from "@/modules/gameplay";
+import { ModalDeModificadores } from "@/modules/modifiers";
 import { recordeDe, useRecordes } from "@/modules/results";
 import { DIFICULDADES, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, instrumentosDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
@@ -37,13 +39,20 @@ interface Props {
   aoRemover: (musica: Musica) => void;
   /** O ranking online da música, montado pelo App. Sem ele (contas desligadas), só os detalhes aparecem. */
   ranking?: ReactNode;
+  /** Velocidade da música, o modificador escolhido na modal (1 é a normal). */
+  velocidadeDaMusica: number;
+  aoVelocidadeDaMusica: (velocidade: number) => void;
 }
+
+/** Os botões acima da lista têm o recorte do botão principal: vermelhos ligados, da cor do header desligados. */
+const estiloDoFiltro = (ligado: boolean) =>
+  ligado ? { variant: "default" as const } : { variant: "ghost" as const, className: "corte gasto bg-superficie hover:bg-superficie-hover" };
 
 const TIPOS_IMPORTAVEIS = "audio/*,video/*,.sng";
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 export function TelaDeSelecao(props: Props) {
-  const { musicas, indice, dificuldade, personagem, volumeDosEfeitos, aoSelecionar, aoDificuldade, aoInstrumento, aoJogar, aoVoltar, aoImportar, aoRemover, ranking } = props;
+  const { musicas, indice, dificuldade, personagem, volumeDosEfeitos, aoSelecionar, aoDificuldade, aoInstrumento, aoJogar, aoVoltar, aoImportar, aoRemover, ranking, velocidadeDaMusica, aoVelocidadeDaMusica } = props;
   const recordes = useRecordes();
   const musica = musicas[indice];
   const instrumentos = instrumentosDaMusica(musica);
@@ -106,6 +115,7 @@ export function TelaDeSelecao(props: Props) {
 
   const [removendo, setRemovendo] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
+  const [modificadoresAbertos, setModificadoresAbertos] = useState(false);
   const podeRemover = ehImportada(musica);
   const confirmarRemocao = () => {
     setRemovendo(false);
@@ -114,7 +124,7 @@ export function TelaDeSelecao(props: Props) {
 
   useTeclado((evento) => {
     // Com o modal ou o menu de opções aberto, as teclas são dele: Esc o fecha, sem voltar ao menu.
-    if (removendo || menuAberto) return;
+    if (removendo || menuAberto || modificadoresAbertos) return;
     if (evento.code === "Delete" && podeRemover) return setRemovendo(true);
     if (evento.code === "KeyF") return alternarFavoritaAtual();
     // Shift+Tab é do modo competitivo; o Tab sozinho troca o instrumento.
@@ -217,13 +227,13 @@ export function TelaDeSelecao(props: Props) {
             </div>
             <Button
               variant="ghost"
-              size="icon"
-              aria-label={favorita ? "Tirar das favoritas" : "Favoritar"}
+              size="sm"
               aria-pressed={favorita}
               title="Favoritar (F)"
               onClick={alternarFavoritaAtual}
+              className={cn("rounded-md", favorita ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-superficie")}
             >
-              <Heart className={cn(favorita ? "fill-primaria text-primaria" : "opacity-70")} />
+              {favorita ? "Tirar dos favoritos" : "Favoritar"}
             </Button>
           </div>
 
@@ -281,8 +291,12 @@ export function TelaDeSelecao(props: Props) {
         </section>
 
         <div className="col-span-7 flex min-h-0 min-w-0 flex-col gap-4 max-md:col-span-1">
-          <div className="flex justify-end">
-            <Button variant={soFavoritas ? "default" : "outline"} aria-pressed={soFavoritas} onClick={alternarFiltro}>
+          <div className="flex justify-end gap-2">
+            <Button {...estiloDoFiltro(velocidadeDaMusica !== 1)} onClick={() => setModificadoresAbertos(true)}>
+              <Gauge className="opacity-70" /> Modificadores
+              {velocidadeDaMusica !== 1 && <span className="font-mono">{rotuloDaVelocidade(velocidadeDaMusica)}</span>}
+            </Button>
+            <Button {...estiloDoFiltro(soFavoritas)} aria-pressed={soFavoritas} onClick={alternarFiltro}>
               <Heart className={cn(soFavoritas ? "fill-current" : "opacity-70")} /> Favoritos
             </Button>
           </div>
@@ -334,6 +348,12 @@ export function TelaDeSelecao(props: Props) {
         {dispositivo === "teclado" && <Comando teclas="F">Favoritar</Comando>}
         <Comando teclas={rotuloDoComando("voltar", dispositivo)}>Voltar</Comando>
       </footer>
+      <ModalDeModificadores
+        aberto={modificadoresAbertos}
+        aoMudarAberto={setModificadoresAbertos}
+        velocidadeDaMusica={velocidadeDaMusica}
+        aoMudarVelocidade={aoVelocidadeDaMusica}
+      />
       <Dialog open={removendo} onOpenChange={setRemovendo}>
         <DialogContent>
           <DialogTitle>Remover {musica.titulo}?</DialogTitle>

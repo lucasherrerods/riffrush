@@ -1,4 +1,3 @@
-import { rotuloDaVelocidade, velocidadesDaMusica } from "@/modules/gameplay";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Gamepad2, Keyboard, Monitor, RotateCcw, Volume2 } from "lucide-react";
 import { capturarBotao, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
@@ -70,7 +69,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
     <button
       aria-label={`Tecla ${nome}`}
       onClick={() => setTrocando(indice)}
-      className="min-w-28 rounded-lg border-2 bg-superficie px-4 py-2 font-mono text-base font-bold transition-colors hover:bg-superficie-elevada"
+      className="min-w-28 rounded-lg border-2 bg-superficie px-4 py-2 font-mono text-base font-bold transition-colors hover:bg-superficie-hover"
       style={{ borderColor: trocando === indice ? "var(--cor-texto)" : cor }}
     >
       {trocando === indice ? "Aperte..." : nomeDaTecla(codigo)}
@@ -81,7 +80,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
     <button
       aria-label={`Botão do controle ${nome}`}
       onClick={() => setTrocandoNoControle(trocandoNoControle === indice ? null : indice)}
-      className="min-w-28 rounded-lg border-2 bg-superficie px-4 py-2 font-mono text-base font-bold transition-colors hover:bg-superficie-elevada"
+      className="min-w-28 rounded-lg border-2 bg-superficie px-4 py-2 font-mono text-base font-bold transition-colors hover:bg-superficie-hover"
       style={{ borderColor: trocandoNoControle === indice ? "var(--cor-texto)" : cor }}
     >
       {trocandoNoControle === indice ? "Aperte..." : nomeDoBotao(botao)}
@@ -167,21 +166,6 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
               aoMudar={(atrasoMs) => mudar({ atrasoMs })}
             />
             <Calibracao aoMedir={(atrasoMs) => mudar({ atrasoMs })} />
-            <LinhaDeOpcao rotulo="Velocidade da música" dica="Mais lenta rende menos pontos; mais rápida, mais. O tom muda junto">
-              <div role="radiogroup" aria-label="Velocidade da música" className="flex flex-wrap gap-2">
-                {velocidadesDaMusica().map((v) => (
-                  <Button
-                    key={v}
-                    role="radio"
-                    aria-checked={configuracoes.velocidadeDaMusica === v}
-                    variant={configuracoes.velocidadeDaMusica === v ? "default" : "outline"}
-                    onClick={() => mudar({ velocidadeDaMusica: v })}
-                  >
-                    {rotuloDaVelocidade(v)}
-                  </Button>
-                ))}
-              </div>
-            </LinhaDeOpcao>
             <LinhaDeOpcao rotulo="Modo sem falha" dica="O medidor de rock nunca tira você da música" para="sem-falha">
               <Switch id="sem-falha" checked={configuracoes.semFalha} onCheckedChange={(semFalha) => mudar({ semFalha })} />
             </LinhaDeOpcao>

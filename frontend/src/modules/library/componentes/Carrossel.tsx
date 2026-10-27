@@ -82,7 +82,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
               style={{ height: ALTURA_DA_MUSICA }}
               className={cn(
                 "chapa flex w-full items-center gap-4 px-4 text-left transition-colors",
-                selecionada ? "border-destaque bg-destaque/15" : "border-transparent bg-superficie hover:bg-superficie-elevada",
+                selecionada ? "border-destaque bg-destaque/15" : "border-transparent bg-superficie hover:bg-superficie-hover",
                 selecionada && menuDaSelecionada && "pr-16",
               )}
             >
@@ -121,7 +121,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
                       style={{ height: ALTURA_DA_DIFICULDADE }}
                       className={cn(
                         "chapa flex items-center gap-4 py-2 pr-4 pl-2 text-left transition-colors",
-                        escolhida ? "border-destaque bg-destaque/15" : "border-transparent bg-superficie-elevada hover:border-borda",
+                        escolhida ? "border-destaque bg-destaque/15" : "border-transparent bg-superficie hover:bg-superficie-hover",
                       )}
                     >
                       <span className={cn("w-1 self-stretch rounded-sm", COR_DA_DIFICULDADE[d.id])} />

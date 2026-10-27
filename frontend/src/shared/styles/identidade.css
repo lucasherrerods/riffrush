@@ -20,6 +20,8 @@
   --color-fundo: var(--cor-fundo);
   --color-superficie: var(--cor-superficie);
   --color-superficie-elevada: var(--cor-superficie-elevada);
+  /* Hover dos botões e linhas: um passo entre a superfície e a elevada, opaco para o fundo não aparecer. */
+  --color-superficie-hover: color-mix(in oklab, var(--cor-superficie-elevada) 90%, var(--cor-superficie));
   --color-borda: var(--cor-borda);
   --color-texto: var(--cor-texto);
   --color-texto-suave: var(--cor-texto-suave);
