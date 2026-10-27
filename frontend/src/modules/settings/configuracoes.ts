@@ -20,6 +20,8 @@ export interface Configuracoes {
   volumeDoPlayer: number;
   atrasoMs: number;
   semFalha: boolean;
+  /** Desligada, a nota aberta vira verde. A partida continua valendo para ranking, replay e ao vivo. */
+  notaAberta: boolean;
   bot: boolean;
   efeitos: boolean;
   /** Desligado, o personagem 3D some do palco e do HUD (bom para comparar o desempenho). */
@@ -49,6 +51,7 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   volumeDoPlayer: 0.3,
   atrasoMs: 0,
   semFalha: false,
+  notaAberta: true,
   bot: false,
   efeitos: true,
   personagem3d: true,

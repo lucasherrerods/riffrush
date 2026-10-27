@@ -71,6 +71,7 @@ fn o_replay_da_o_mesmo_resultado_que_no_app() {
                 sem_falha: replay.sem_falha,
                 fantasma: replay.fantasma,
                 velocidade: replay.velocidade,
+                sem_aberta: replay.sem_aberta,
             },
         );
         aplicar_entradas(&mut partida, &replay.entradas);

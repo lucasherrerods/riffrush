@@ -93,7 +93,8 @@ const EVENTOS_SEM_VALOR: Evento["tipo"][] = ["acerto", "erro", "sequencia", "fra
 export const velocidadesDaMusica = () => [...velocidades()];
 
 /** `velocidade` é a da música: as notas chegam no tempo da música e a partida roda no tempo real. */
-export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false, velocidade = 1 } = {}): Partida {
+/** `semAberta`: a nota aberta vira verde, decidido no motor para o app e a API darem o mesmo resultado. */
+export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false, velocidade = 1, semAberta = false } = {}): Partida {
   const motor = new MotorDaPartida(
     Float64Array.from(notas, (n) => n.tempo),
     Uint8Array.from(notas, (n) => n.pista),
@@ -102,10 +103,11 @@ export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false
     semFalha,
     fantasma,
     velocidade,
+    semAberta,
   );
   const grade = motor.grade_das_notas();
   const partida: Partida = {
-    notas: notas.map((n, i) => ({ ...n, tempo: grade[i * 2], duracao: grade[i * 2 + 1], acertada: false, perdida: false, segurando: false, solta: false, segurouAte: grade[i * 2] })),
+    notas: notas.map((n, i) => ({ ...n, tempo: grade[i * 3], duracao: grade[i * 3 + 1], pista: grade[i * 3 + 2], acertada: false, perdida: false, segurando: false, solta: false, segurouAte: grade[i * 3] })),
     primeira: 0,
     tempo: null,
     pontos: 0,

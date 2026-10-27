@@ -95,6 +95,8 @@ pub struct OpcoesDaPartida {
     /// real: com a música a 1,5x, uma nota no segundo 3 da música chega no segundo 2. Os pontos são
     /// multiplicados por ela, então a música mais lenta rende menos e a mais rápida, mais.
     pub velocidade: f64,
+    /// A nota aberta vira verde. Não muda quantas notas a música tem, então a partida vale igual.
+    pub sem_aberta: bool,
 }
 
 impl Default for OpcoesDaPartida {
@@ -103,6 +105,7 @@ impl Default for OpcoesDaPartida {
             sem_falha: false,
             fantasma: false,
             velocidade: 1.0,
+            sem_aberta: false,
         }
     }
 }
@@ -179,7 +182,7 @@ pub fn criar_partida(notas: &[Nota], opcoes: OpcoesDaPartida) -> Partida {
                 let tempo = quantizar(n.tempo / opcoes.velocidade);
                 NotaEmJogo {
                     tempo,
-                    pista: n.pista,
+                    pista: if opcoes.sem_aberta && n.pista == PISTA_ABERTA { 0 } else { n.pista },
                     frase: n.frase,
                     duracao: quantizar((n.tempo + n.duracao) / opcoes.velocidade) - tempo,
                     acertada: false,
@@ -490,6 +493,36 @@ mod tests {
             frase: -1,
             duracao: 0.0,
         }
+    }
+
+    #[test]
+    fn sem_aberta_a_nota_aberta_vira_verde_e_sai_com_o_traste_verde() {
+        let aberta = Nota {
+            tempo: 1.0,
+            pista: PISTA_ABERTA,
+            frase: 3,
+            duracao: 0.5,
+        };
+        let notas = [aberta, Nota { pista: 2, ..nota(2.0) }];
+        let opcoes = OpcoesDaPartida {
+            sem_aberta: true,
+            ..OpcoesDaPartida::default()
+        };
+        let mut partida = criar_partida(&notas, opcoes);
+        assert_eq!(partida.notas.iter().map(|n| n.pista).collect::<Vec<_>>(), [0, 2]);
+        assert_eq!((partida.notas[0].frase, partida.notas[0].duracao), (3, 0.5));
+        assert!(!tocar(&mut partida, PISTA_ABERTA, 1.0));
+        assert!(tocar(&mut partida, 0, 1.0));
+    }
+
+    #[test]
+    fn com_a_aberta_ligada_nada_muda() {
+        let aberta = Nota {
+            pista: PISTA_ABERTA,
+            ..nota(1.0)
+        };
+        let partida = criar_partida(&[aberta], OpcoesDaPartida::default());
+        assert_eq!(partida.notas[0].pista, PISTA_ABERTA);
     }
 
     #[test]
