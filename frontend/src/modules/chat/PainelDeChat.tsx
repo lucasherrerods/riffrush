@@ -68,7 +68,7 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
   return (
     <section aria-label={titulo} className={cn("flex min-h-0 flex-col placa p-4", className)}>
       <div className="flex items-center gap-2">
-        <p className="flex flex-1 items-center gap-2 text-base font-bold">
+        <p className="flex flex-1 items-center gap-2 text-sm font-bold">
           <MessageSquare className="size-4 text-primaria opacity-70" aria-hidden /> {titulo}
         </p>
         {!minimizado && extra}
@@ -94,7 +94,7 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
         className={cn("flex min-h-0 flex-col overflow-hidden", !minimizar && "flex-1")}
       >
         <div className={cn("flex min-h-0 flex-1 flex-col gap-2 pt-2", minimizar && "h-64")}>
-          <ol ref={lista} role="log" aria-label={titulo} className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto text-base">
+          <ol ref={lista} role="log" aria-label={titulo} className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto text-sm">
             {mensagens.length === 0 && !bloqueado && <li className="text-texto-suave">Nenhuma mensagem ainda.</li>}
             {mensagens.map((m) => (
               <li key={m.id} className="group flex items-start gap-1 break-words">
@@ -133,7 +133,7 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
                   placeholder="Escreva uma mensagem"
                   onChange={(e) => setTexto(e.target.value)}
                   onKeyDown={segurarTeclas}
-                  className="h-9 min-w-0 flex-1 rounded-md border border-borda bg-fundo px-3 text-base outline-none placeholder:text-texto-suave focus-visible:border-primaria"
+                  className="h-9 min-w-0 flex-1 rounded-md border border-borda bg-fundo px-3 text-sm outline-none placeholder:text-texto-suave focus-visible:border-primaria"
                 />
                 <Button type="submit" size="icon" variant="ghost" aria-label="Enviar">
                   <Send />

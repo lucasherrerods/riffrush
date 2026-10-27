@@ -167,11 +167,11 @@ export function TelaDeSelecao(props: Props) {
         </motion.div>
       </AnimatePresence>
 
-      <header className="flex items-center gap-4 bg-superficie px-8 py-4 max-md:px-4 max-md:py-2">
+      <header className="flex items-center gap-4 bg-superficie px-8 py-2 max-md:px-4">
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
           <ArrowLeft />
         </Button>
-        <h1 className="text-4xl leading-[1.1] text-destaque max-md:text-2xl">Selecione a música</h1>
+        <h1 className="text-2xl leading-[1.1] text-destaque">Selecione a música</h1>
         <div className="flex-1" />
         <Button variant="outline" asChild>
           <label className="">
@@ -248,7 +248,7 @@ export function TelaDeSelecao(props: Props) {
           {precisaReimportar ? (
             <div className="flex flex-col gap-2">
               <p className="text-base text-texto-suave">O áudio não está mais salvo neste aparelho. Escolha o arquivo de novo para tocar.</p>
-              <Button size="lg" className="h-14 font-titulo text-2xl tracking-widest" asChild>
+              <Button size="lg" className="h-11 font-titulo text-xl tracking-widest max-md:h-14 max-md:text-2xl" asChild>
                 <label className="">
                   <RotateCcw className="opacity-70" /> Importar de novo
                   <input ref={reimportar} type="file" accept={TIPOS_IMPORTAVEIS} className="sr-only" onChange={(e) => importarEscolhidos(e.target)} />
@@ -256,7 +256,7 @@ export function TelaDeSelecao(props: Props) {
               </Button>
             </div>
           ) : (
-            <Button size="lg" className="h-14 font-titulo text-2xl tracking-widest" onClick={jogar}>
+            <Button size="lg" className="h-11 font-titulo text-xl tracking-widest max-md:h-14 max-md:text-2xl" onClick={jogar}>
               <Play className="fill-current opacity-70" /> TOCAR
             </Button>
           )}
