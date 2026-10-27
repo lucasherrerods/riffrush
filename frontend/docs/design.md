@@ -64,7 +64,22 @@ Nenhuma regra é obrigatória: quebre qualquer uma quando houver um bom motivo. 
 
 ## Temas e skins
 
-As cores vivem em `src/shared/styles/temas.ts`. Cada tema define as cores da interface (`cores`) e a skin da pista (`pista`). Para criar um tema, copie um existente, troque os valores, registre-o em `TEMAS` e aponte `temaAtivo` para ele. Os testes de `tokens.test.ts` conferem as regras deste documento em todos os temas.
+Toda cor do app mora num arquivo de tema, e o teste `coresSoltas.test.ts` barra cor fora deles:
+
+- `src/shared/styles/temas.ts`: as cores da interface (`cores`) e a skin da pista do Rock (`pista`). Para criar um tema, copie um existente, troque os valores e registre-o em `TEMAS`. Os testes de `tokens.test.ts` conferem as regras deste documento em todos os temas, inclusive o contraste AA (4,5:1) do texto.
+- `src/modules/<modo>/tema.ts`: as cores que só o canvas de cada jogo usa (cenas 3D, instrumentos, personagem, capas).
+
+O tema da interface troca na hora com `definirTema()` (`src/shared/styles/tema.ts`): cada modo de jogo tem o seu, e o App veste a interface com o tema do modo ativo. O Rock usa o Riff Rush; o Mania, o Riff Rush Mania.
+
+### Tema claro (Riff Rush Mania)
+
+Rosa e branco, com neutros quentes tingidos de rosa. As regras de cor valem como no escuro, com as diferenças que o próprio documento prevê:
+
+- container vs. fundo com Δ de brilho de até 7% (regra 6), e a elevação continua mais clara (regra 7);
+- a borda é mais escura que o fundo e as superfícies (regra 9);
+- no claro, sombras suaves são permitidas (regras 10 e 12). Os temas escuros continuam sem sombra.
+
+O brilho neon continua só no canvas da pista.
 
 ## Palco (exceções deliberadas)
 
