@@ -224,13 +224,14 @@ pub enum Classificacao {
     D,
 }
 
+/// As faixas do osu!mania: SS só com 100%, e as outras acima do limite (95% é A).
 pub fn classificacao(precisao: f64) -> Classificacao {
     match precisao {
-        p if p >= 1.0 => Classificacao::SS,
-        p if p >= 0.95 => Classificacao::S,
-        p if p >= 0.9 => Classificacao::A,
-        p if p >= 0.8 => Classificacao::B,
-        p if p >= 0.7 => Classificacao::C,
+        p if p >= 1.0 - 1e-9 => Classificacao::SS,
+        p if p > 0.95 => Classificacao::S,
+        p if p > 0.9 => Classificacao::A,
+        p if p > 0.8 => Classificacao::B,
+        p if p > 0.7 => Classificacao::C,
         _ => Classificacao::D,
     }
 }
@@ -520,11 +521,11 @@ mod tests {
 
     #[test]
     fn classificacao_por_faixa() {
-        assert_eq!(classificacao(0.95), Classificacao::S);
-        assert_eq!(classificacao(0.9499), Classificacao::A);
-        assert_eq!(classificacao(0.8), Classificacao::B);
-        assert_eq!(classificacao(0.7), Classificacao::C);
-        assert_eq!(classificacao(0.69), Classificacao::D);
+        assert_eq!(classificacao(0.9501), Classificacao::S);
+        assert_eq!(classificacao(0.95), Classificacao::A);
+        assert_eq!(classificacao(0.81), Classificacao::B);
+        assert_eq!(classificacao(0.8), Classificacao::C);
+        assert_eq!(classificacao(0.7), Classificacao::D);
     }
 
     #[test]
