@@ -21,20 +21,27 @@ describe("MedidorDeRock", () => {
   });
 
   it.each([
-    [0, 45],
-    [0.5, 102],
-    [1, 159],
+    [0, 200],
+    [0.5, 381],
+    [1, 562],
   ])("com vida %f a barra fica acesa até x = %i, do vermelho ao verde", (vida, x) => {
     render(<MedidorDeRock vida={vida} />);
     expect(screen.getByTestId("barra-apagada")).toHaveAttribute("x", String(x));
   });
 
-  it("os três pinos de cima guardam o star power, um por terço", () => {
-    render(<MedidorDeRock vida={0.5} estrela={0.7} />);
-    expect(screen.getByRole("progressbar", { name: "Star power" })).toHaveAttribute("aria-valuenow", "70");
+  it("os quatro pinos de cima guardam o star power, um por quarto", () => {
+    render(<MedidorDeRock vida={0.5} estrela={0.6} />);
+    expect(screen.getByRole("progressbar", { name: "Star power" })).toHaveAttribute("aria-valuenow", "60");
     const pinos = screen.getAllByTestId("pino");
     expect(pinos).toHaveLength(PINOS_DO_STAR_POWER);
-    expect(pinos.map((p) => p.getAttribute("data-aceso"))).toEqual(["true", "true", "false"]);
+    expect(pinos.map((p) => p.getAttribute("data-aceso"))).toEqual(["true", "true", "false", "false"]);
+  });
+
+  it("com dois pinos ou mais, os acesos ganham o destaque", () => {
+    const { rerender } = render(<MedidorDeRock vida={0.5} estrela={0.3} />);
+    expect(screen.queryAllByTestId("destaque-do-pino")).toHaveLength(0);
+    rerender(<MedidorDeRock vida={0.5} estrela={0.5} />);
+    expect(screen.getAllByTestId("destaque-do-pino")).toHaveLength(2);
   });
 
   it("com o star power ligado, os pinos piscam", () => {
