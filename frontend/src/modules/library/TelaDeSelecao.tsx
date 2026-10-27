@@ -46,7 +46,7 @@ interface Props {
 
 /** Os botões acima da lista têm o recorte do botão principal: vermelhos ligados, da cor do header desligados. */
 const estiloDoFiltro = (ligado: boolean) =>
-  ligado ? { variant: "default" as const } : { variant: "ghost" as const, className: "corte gasto bg-superficie hover:bg-superficie-elevada" };
+  ligado ? { variant: "default" as const } : { variant: "ghost" as const, className: "corte gasto bg-superficie hover:bg-superficie-elevada/40" };
 
 const TIPOS_IMPORTAVEIS = "audio/*,video/*,.sng";
 const formatar = (n: number) => n.toLocaleString("pt-BR");

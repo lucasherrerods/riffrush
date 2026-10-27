@@ -35,7 +35,7 @@ export function GrupoDeOpcoes<T extends string>({ titulo, opcoes, valor, aoEscol
                   ? "size-10 rounded-full border-2"
                   : "rounded-lg border px-3 py-1 text-sm font-semibold max-md:px-4 max-md:py-2 max-md:text-base",
                 opcao.cor && (escolhida ? "border-texto" : "border-borda"),
-                !opcao.cor && (escolhida ? "border-primaria bg-primaria text-texto" : "border-borda bg-superficie text-texto-suave hover:bg-superficie-elevada"),
+                !opcao.cor && (escolhida ? "border-primaria bg-primaria text-texto" : "border-borda bg-superficie text-texto-suave hover:bg-superficie-elevada/40"),
               )}
               style={opcao.cor ? { background: opcao.cor } : undefined}
             >

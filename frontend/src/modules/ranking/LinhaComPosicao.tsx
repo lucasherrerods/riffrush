@@ -55,7 +55,7 @@ export function LinhaComPosicao({ posicao, nome, avatar, semFoto: SemFoto = User
   }
   // A ação fica fora do botão da linha: botão dentro de botão não é permitido.
   return (
-    <li className={cn(classe, "hover:bg-superficie-elevada")}>
+    <li className={cn(classe, "hover:bg-superficie-elevada/40")}>
       <button type="button" aria-label={rotuloDoClique} onClick={aoClicar} className="flex min-w-0 flex-1 items-center gap-2 text-left">
         {conteudo}
       </button>
