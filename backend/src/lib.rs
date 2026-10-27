@@ -12,7 +12,7 @@ use shared::estado::EstadoDoApp;
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida, modules::conta::situacao_da_partida, modules::ranking::ranking, modules::ranking::geral, modules::ranking::musicas, modules::ranking::partida, modules::ranking::replay, modules::perfil::perfil, modules::perfil::recordes, modules::presenca::ficha, modules::moderacao::denunciar, modules::moderacao::denuncias, modules::moderacao::resolver, modules::moderacao::banidos, modules::moderacao::banir, modules::moderacao::desbanir),
+    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida, modules::conta::situacao_da_partida, modules::ranking::ranking, modules::ranking::geral, modules::ranking::musicas, modules::ranking::partida, modules::ranking::replay, modules::perfil::perfil, modules::perfil::recordes, modules::presenca::ficha, modules::moderacao::denunciar, modules::moderacao::denuncias, modules::moderacao::resolver, modules::moderacao::banidos, modules::moderacao::banir, modules::moderacao::desbanir, modules::mania::enviar_partida, modules::mania::situacao_da_partida, modules::mania::ranking, modules::mania::replay),
     components(schemas(
         modules::saude::RespostaDeSaude,
         modules::conta::CorpoDoLogin,
@@ -39,7 +39,13 @@ use shared::estado::EstadoDoApp;
         modules::perfil::PartidaDoPerfil,
         modules::perfil::InstrumentoDoPerfil,
         modules::perfil::MusicaDoPerfil,
-        modules::perfil::DadosDaMusicaNoPerfil
+        modules::perfil::DadosDaMusicaNoPerfil,
+        modules::mania::CorpoDaPartidaDoMania,
+        modules::mania::RespostaDaPartidaDoManiaNaFila,
+        modules::mania::XpDaPartidaDoMania,
+        modules::mania::SituacaoDaPartidaDoMania,
+        modules::mania::RespostaDoRankingDoMania,
+        modules::mania::PosicaoNoRankingDoMania
     )),
     modifiers(&Token)
 )]
@@ -72,6 +78,7 @@ pub fn app(estado: EstadoDoApp, origens_permitidas: &[String]) -> Router {
         .merge(modules::perfil::rotas())
         .merge(modules::presenca::rotas())
         .merge(modules::moderacao::rotas())
+        .merge(modules::mania::rotas())
         .route("/openapi.json", get(|| async { Json(Documentacao::openapi()) }))
         .with_state(estado)
         .layer(cors)

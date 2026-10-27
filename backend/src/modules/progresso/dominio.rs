@@ -185,10 +185,6 @@ fn peso_da_repeticao(repeticoes: u32) -> f64 {
 /// a curva, e a música mais longa rende mais, pela raiz do número de notas. Vaia e fantasma rendem menos,
 /// e o mesmo chart repetido no dia também. Tudo vezes `RITMO_DO_XP`.
 pub fn xp_da_partida(partida: ResumoDaPartida, precisao: f64, repeticoes: u32) -> u64 {
-    if partida.total < MINIMO_DE_NOTAS_PARA_XP {
-        return 0;
-    }
-    let tamanho = (f64::from(partida.total) / NOTAS_DE_REFERENCIA).sqrt().clamp(0.25, 1.5);
     let castigo = if partida.derrota {
         0.25
     } else if partida.fantasma {
@@ -196,7 +192,17 @@ pub fn xp_da_partida(partida: ResumoDaPartida, precisao: f64, repeticoes: u32) -
     } else {
         1.0
     };
-    (partida.dificuldade.base() * curva_da_precisao(precisao) * tamanho * castigo * peso_da_repeticao(repeticoes) * RITMO_DO_XP).round() as u64
+    xp_pelos_numeros(partida.dificuldade.base(), partida.total, precisao, castigo, repeticoes)
+}
+
+/// A mesma fórmula para quem tem os números soltos (o Mania): a base da dificuldade, o número de notas, a precisão,
+/// o castigo (1 sem castigo) e as repetições do dia.
+pub fn xp_pelos_numeros(base: f64, notas: u32, precisao: f64, castigo: f64, repeticoes: u32) -> u64 {
+    if notas < MINIMO_DE_NOTAS_PARA_XP {
+        return 0;
+    }
+    let tamanho = (f64::from(notas) / NOTAS_DE_REFERENCIA).sqrt().clamp(0.25, 1.5);
+    (base * curva_da_precisao(precisao) * tamanho * castigo * peso_da_repeticao(repeticoes) * RITMO_DO_XP).round() as u64
 }
 
 /// XP para sair do nível `nivel` e chegar no seguinte. Cresce a cada nível.
