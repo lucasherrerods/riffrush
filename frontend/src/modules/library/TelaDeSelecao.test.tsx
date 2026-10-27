@@ -9,7 +9,7 @@ import { TelaDeSelecao } from "./TelaDeSelecao";
 import { MUSICAS_DE_TESTE } from "@/test/musicas";
 
 function abrir({ indice = 0, dificuldade = "medio" as Dificuldade, instrumento = "guitarra" as Instrumento, musicas = MUSICAS_DE_TESTE } = {}) {
-  const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoInstrumento: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn() };
+  const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoInstrumento: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn(), aoVelocidadeDaMusica: vi.fn() };
   render(
     <TelaDeSelecao
       musicas={musicas}
@@ -18,6 +18,7 @@ function abrir({ indice = 0, dificuldade = "medio" as Dificuldade, instrumento =
       instrumento={instrumento}
       personagem={PERSONAGEM_PADRAO}
       volumeDosEfeitos={0}
+      velocidadeDaMusica={1}
       {...acoes}
     />,
   );
@@ -93,8 +94,8 @@ describe("TelaDeSelecao", () => {
   });
 
   it("com ranking, abre na aba Ranking e a aba Detalhes mostra a dificuldade e o recorde local", async () => {
-    const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoInstrumento: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn() };
-    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} ranking={<p>top da música</p>} {...acoes} />);
+    const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoInstrumento: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn(), aoVelocidadeDaMusica: vi.fn() };
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} velocidadeDaMusica={1} ranking={<p>top da música</p>} {...acoes} />);
     expect(screen.getByRole("tab", { name: /Ranking/ })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("top da música")).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("tab", { name: /Detalhes/ }));
@@ -379,5 +380,15 @@ describe("TelaDeSelecao removendo músicas", () => {
       await usuario.keyboard("f");
       expect(aoSelecionar).toHaveBeenLastCalledWith(0);
     });
+  });
+
+  it("o botão Modificadores abre a modal, que muda a velocidade sem mexer na seleção", async () => {
+    const { aoVelocidadeDaMusica, aoSelecionar, usuario } = abrir();
+    await usuario.click(screen.getByRole("button", { name: /Modificadores/ }));
+    const modal = screen.getByRole("dialog", { name: "Modificadores" });
+    await usuario.click(within(modal).getByRole("button", { name: /Velocidade/ }));
+    expect(aoVelocidadeDaMusica).toHaveBeenCalledWith(1.25);
+    await usuario.keyboard("{ArrowDown}");
+    expect(aoSelecionar).not.toHaveBeenCalled();
   });
 });
