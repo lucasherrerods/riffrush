@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Heart, Star } from "lucide-react";
 import { recordeDe, type Recordes } from "@/modules/results";
 import { idDoRanking, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
+import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { cn } from "@/shared/lib/utils";
 import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, centroDoGrupoAberto, passosDaRoda, posicoesNoCarrossel, recuoNaCurva } from "../carrossel";
 import { Capa } from "./Capa";
@@ -126,6 +127,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
                       <span className={cn("w-1 self-stretch rounded-sm", COR_DA_DIFICULDADE[d.id])} />
                       <span className={cn("flex-1 font-titulo text-xl tracking-wide uppercase", escolhida && "text-destaque")}>{d.rotulo}</span>
                       {recordeDaDificuldade?.fullCombo && <span className="font-titulo text-xl text-destaque">FC</span>}
+                      {recordeDaDificuldade?.precisao !== undefined && <SeloDaNota precisao={recordeDaDificuldade.precisao} />}
                       <span className="font-mono text-base text-texto-suave">{recordeDaDificuldade ? formatar(recordeDaDificuldade.pontos) : "—"}</span>
                     </motion.button>
                   );

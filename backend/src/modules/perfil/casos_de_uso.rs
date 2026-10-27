@@ -152,6 +152,7 @@ mod tests {
             pontos: 900,
             acertos: 10,
             total: 10,
+            precisao: Some(0.97),
         };
         repositorio.recordes.lock().unwrap().insert(entrada.conta.id, vec![recorde.clone()]);
 

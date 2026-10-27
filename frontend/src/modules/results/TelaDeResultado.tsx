@@ -7,6 +7,7 @@ import { corDaPrecisao, type Resultado } from "@/modules/gameplay";
 import { DIFICULDADES } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
+import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { Button } from "@/shared/ui/button";
 import { estrelasDoResultado } from "./recordes";
 
@@ -69,23 +70,23 @@ export function TelaDeResultado(props: Props) {
   ];
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Com a sala cheia o placar não cabe: o conteúdo rola e os botões ficam fixos embaixo. */}
-      <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto p-8 max-md:p-4">
-        <div className="my-auto flex w-full flex-col items-center gap-8">
+    // Com a sala cheia o placar não cabe: a tela rola e os botões ficam presos embaixo, sem fundo, para não esconder nada.
+    <div className="flex h-full flex-col overflow-y-auto">
+      <div className="flex shrink-0 grow flex-col items-center px-8 pt-6 max-md:px-4 max-md:pt-4">
+        <div className="my-auto flex w-full flex-col items-center gap-5">
           <div className="text-center">
-            <p className="text-base font-semibold tracking-[0.3em] text-texto-suave">RESULTADO</p>
-            <h1 className="mt-2 text-5xl leading-[1.1] font-black tracking-[-0.02em]">{titulo}</h1>
-            <p className="mt-1 text-base text-texto-suave">{artista}</p>
+            <p className="text-sm font-semibold tracking-[0.3em] text-texto-suave">RESULTADO</p>
+            <h1 className="mt-1 text-4xl leading-[1.1] max-md:text-3xl font-black tracking-[-0.02em]">{titulo}</h1>
+            <p className="mt-1 text-sm text-texto-suave">{artista}</p>
             {jogador && (
-              <p className="mt-4 flex items-center justify-center gap-2 text-base font-bold">
+              <p className="mt-3 flex items-center justify-center gap-2 text-sm font-bold">
                 {jogador.avatar && <img src={jogador.avatar} alt="" referrerPolicy="no-referrer" className="size-8 rounded-sm" />}
                 Partida de {jogador.nome}
               </p>
             )}
           </div>
 
-          <div role="img" aria-label={`${estrelas} de 5 estrelas`} className="flex gap-4">
+          <div role="img" aria-label={`${estrelas} de 5 estrelas`} className="flex gap-3">
             {Array.from({ length: 5 }, (_, i) => (
               <motion.div
                 key={i}
@@ -93,18 +94,21 @@ export function TelaDeResultado(props: Props) {
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ delay: 0.4 + i * 0.15, type: "spring", stiffness: 200 }}
               >
-                <Star className={i < estrelas ? "size-16 fill-ouro text-ouro" : "size-16 text-borda"} />
+                <Star className={i < estrelas ? "size-10 fill-ouro text-ouro" : "size-10 text-borda"} />
               </motion.div>
             ))}
           </div>
 
-          <div className="flex flex-col items-center gap-4">
-            <p aria-label={`${formatar(resultado.pontos)} pontos`} className="font-mono text-7xl font-black tabular-nums">
-              {formatar(pontosNaTela)}
-            </p>
-            <p className="text-base font-bold tracking-[0.2em] text-texto-suave">
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-6">
+              <SeloDaNota precisao={precisao} className="text-8xl max-md:text-6xl" />
+              <p aria-label={`${formatar(resultado.pontos)} pontos`} className="font-mono text-6xl font-black tabular-nums max-md:text-5xl">
+                {formatar(pontosNaTela)}
+              </p>
+            </div>
+            <p className="text-sm font-bold tracking-[0.2em] text-texto-suave">
               PRECISÃO{" "}
-              <span aria-label="Precisão" className={cn("font-titulo text-4xl tracking-normal tabular-nums", corDaPrecisao(precisao))}>
+              <span aria-label="Precisão" className={cn("font-titulo text-3xl tracking-normal tabular-nums", corDaPrecisao(precisao))}>
                 {(precisao * 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%
               </span>
             </p>
@@ -124,19 +128,19 @@ export function TelaDeResultado(props: Props) {
 
           <dl className="grid grid-cols-4 gap-4 max-md:grid-cols-2">
             {estatisticas.map((e) => (
-              <div key={e.rotulo} className="chapa w-40 p-4 text-center">
-                <dd className="text-2xl font-black">{e.valor}</dd>
-                <dt className="text-base text-texto-suave">{e.rotulo}</dt>
+              <div key={e.rotulo} className="chapa w-36 px-3 py-2 text-center">
+                <dd className="text-xl font-black">{e.valor}</dd>
+                <dt className="text-sm text-texto-suave">{e.rotulo}</dt>
               </div>
             ))}
           </dl>
 
           {julgamentos && (
-            <dl className="flex gap-8">
+            <dl className="flex gap-6">
               {julgamentos.map((j) => (
                 <div key={j.rotulo} className="text-center">
-                  <dd className="font-titulo text-3xl tabular-nums">{j.valor}</dd>
-                  <dt className="text-base text-texto-suave">{j.rotulo}</dt>
+                  <dd className="font-titulo text-2xl tabular-nums">{j.valor}</dd>
+                  <dt className="text-sm text-texto-suave">{j.rotulo}</dt>
                 </div>
               ))}
             </dl>
@@ -144,7 +148,7 @@ export function TelaDeResultado(props: Props) {
         </div>
       </div>
 
-      <div className="flex justify-center gap-4 px-8 pt-4 pb-8 max-md:px-4 max-md:pb-4">
+      <div className="pointer-events-none sticky bottom-0 flex justify-center gap-4 px-8 pt-4 pb-6 max-md:px-4 max-md:pb-4 [&>*]:pointer-events-auto">
         {podeRepetir && (
           <Button size="lg" variant="outline" onClick={aoRepetir}>
             <RotateCcw className="opacity-70" /> Tocar de novo{dispositivo === "teclado" && " (R)"}

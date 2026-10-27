@@ -69,24 +69,24 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
   });
 
   return (
-    <div className="relative flex h-full flex-col items-center justify-center gap-16">
+    <div className="relative flex h-full flex-col items-center gap-8 overflow-y-auto py-6 max-md:gap-12">
       <motion.div
         initial={{ y: -40, opacity: 0, scale: 0.8 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
         transition={{ type: "spring", stiffness: 120, damping: 12 }}
-        className="flex flex-col items-center gap-2"
+        className="mt-auto flex flex-col items-center gap-2"
       >
-        <h1 aria-label="Riff Rush" className="titulo-do-jogo flex items-center gap-2 text-9xl leading-none tracking-[0.01em] max-md:text-7xl">
+        <h1 aria-label="Riff Rush" className="titulo-do-jogo flex items-center gap-2 text-8xl leading-none tracking-[0.01em] max-md:text-[14vw]">
           Riff
           <motion.span animate={{ rotate: [-6, 6, -6] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}>
-            <Zap className="size-24 fill-primaria text-primaria max-md:size-14" />
+            <Zap className="size-16 fill-primaria text-primaria max-md:size-[10vw]" />
           </motion.span>
           Rush
         </h1>
         <p className="bg-primaria px-4 py-1 text-center text-base font-bold tracking-[0.4em] text-texto -skew-x-12 max-md:tracking-[0.15em]">O PALCO É SEU</p>
       </motion.div>
 
-      <nav className="flex w-80 flex-col gap-2 max-md:w-[85vw]">
+      <nav className="mb-auto flex w-64 flex-col gap-1.5 max-md:w-[85vw] max-md:gap-2">
         {itens.map((item, i) => {
           const ativo = i === selecionado;
           const Icone = item.icone;
@@ -103,11 +103,11 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
               }}
               onClick={() => escolher(item)}
               className={cn(
-                "chapa flex items-center gap-4 px-6 py-3 text-left font-titulo text-3xl tracking-wide uppercase transition-colors",
+                "chapa flex items-center gap-4 px-4 py-1.5 text-left font-titulo text-xl max-md:px-6 max-md:py-3 max-md:text-3xl tracking-wide uppercase transition-colors",
                 ativo ? "gasto border-primaria bg-primaria text-texto" : "border-borda bg-superficie text-texto-suave",
               )}
             >
-              <Icone className="size-6 opacity-70" />
+              <Icone className="size-4 opacity-70 max-md:size-6" />
               {item.rotulo}
             </motion.button>
           );

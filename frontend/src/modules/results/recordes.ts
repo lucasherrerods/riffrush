@@ -6,6 +6,8 @@ export interface Recorde {
   pontos: number;
   estrelas: number;
   fullCombo: boolean;
+  /** De 0 a 1; partidas antigas não têm. */
+  precisao?: number;
 }
 
 export type Recordes = Record<string, Recorde>;
@@ -28,6 +30,7 @@ export interface RecordeDaApi {
   pontos: number;
   acertos: number;
   total: number;
+  precisao: number | null;
 }
 
 export function recordesDaApi(lista: RecordeDaApi[]): Recordes {
@@ -37,6 +40,7 @@ export function recordesDaApi(lista: RecordeDaApi[]): Recordes {
       pontos: r.pontos,
       estrelas: estrelasDoResultado({ derrota: false, pontos: r.pontos, total: r.total }),
       fullCombo: r.total > 0 && r.acertos === r.total,
+      precisao: r.precisao ?? undefined,
     };
   }
   return recordes;
@@ -83,7 +87,7 @@ export function anotarRecorde(resultado: Resultado) {
   if (anterior && anterior.pontos >= resultado.pontos) return false;
   mudar({
     ...atuais,
-    [chave]: { pontos: resultado.pontos, estrelas: estrelasDoResultado(resultado), fullCombo: resultado.acertos === resultado.total },
+    [chave]: { pontos: resultado.pontos, estrelas: estrelasDoResultado(resultado), fullCombo: resultado.acertos === resultado.total, precisao: resultado.precisao },
   });
   return true;
 }
