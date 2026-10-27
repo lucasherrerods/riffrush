@@ -128,6 +128,13 @@ describe("TelaDeSelecao", () => {
     expect(screen.getByText(/Recorde/)).toHaveTextContent("4.321");
   });
 
+  it("mostra a nota do recorde ao lado da pontuação de cada dificuldade", () => {
+    anotarRecorde({ musicaId: "neon-highway", dificuldade: "medio", pontos: 9999, acertos: 10, total: 10, maiorSequencia: 10, derrota: false, precisao: 0.92 });
+    abrir({ indice: 0, dificuldade: "medio" });
+    const medio = screen.getByRole("radio", { name: /Médio/ });
+    expect(within(medio).getByLabelText("Nota A")).toBeInTheDocument();
+  });
+
   it("importa músicas, clipes e .sng", async () => {
     const { aoImportar, usuario } = abrir();
     const arquivo = new File(["x"], "musica.sng");

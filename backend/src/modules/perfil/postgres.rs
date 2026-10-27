@@ -53,11 +53,12 @@ struct LinhaDoRecorde {
     pontos: i64,
     acertos: i32,
     total: i32,
+    precisao: Option<f64>,
 }
 
 /// No empate de pontos, fica a partida mais antiga: quem chegou primeiro.
 const RECORDES: &str = "
-    SELECT DISTINCT ON (musica_id, dificuldade, instrumento) musica_id, dificuldade, instrumento, pontos, acertos, total
+    SELECT DISTINCT ON (musica_id, dificuldade, instrumento) musica_id, dificuldade, instrumento, pontos, acertos, total, precisao
     FROM partidas WHERE conta_id = $1 AND NOT derrota AND NOT fantasma
     ORDER BY musica_id, dificuldade, instrumento, pontos DESC, jogada_em";
 
@@ -210,6 +211,7 @@ impl RepositorioDoPerfil for PerfilPostgres {
                     pontos: positivo(l.pontos),
                     acertos: l.acertos.max(0) as u32,
                     total: l.total.max(0) as u32,
+                    precisao: l.precisao,
                 })
             })
             .collect())

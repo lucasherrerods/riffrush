@@ -101,7 +101,7 @@ export function TelaDeResultado(props: Props) {
 
           <div className="flex flex-col items-center gap-3">
             <div className="flex items-center gap-6">
-              <SeloDaNota precisao={precisao} className="text-7xl max-md:text-5xl" />
+              <SeloDaNota precisao={precisao} className="text-8xl max-md:text-6xl" />
               <p aria-label={`${formatar(resultado.pontos)} pontos`} className="font-mono text-6xl font-black tabular-nums max-md:text-5xl">
                 {formatar(pontosNaTela)}
               </p>

@@ -7,6 +7,7 @@ import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
 import { recordeDe, useRecordes } from "@/modules/results";
 import { DIFICULDADES, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, instrumentosDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
+import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { cn } from "@/shared/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu";
 import { Button } from "@/shared/ui/button";
@@ -144,6 +145,7 @@ export function TelaDeSelecao(props: Props) {
           <p className="flex items-center gap-2 px-4 text-base text-texto-suave">
             <Trophy className="size-4 text-ouro opacity-70" /> Recorde:
             <span className="font-mono font-bold text-texto">{formatar(recordeAtual.pontos)}</span>
+            {recordeAtual.precisao !== undefined && <SeloDaNota precisao={recordeAtual.precisao} />}
           </p>
         )}
       </div>

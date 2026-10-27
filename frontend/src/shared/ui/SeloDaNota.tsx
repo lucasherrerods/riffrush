@@ -11,7 +11,7 @@ export function SeloDaNota({ precisao, className }: { precisao: number; classNam
       aria-label={`Nota ${nota}`}
       data-nota={nota}
       style={{ "--intensidade": estilo.intensidade, "--escala": estilo.escala } as CSSProperties}
-      className={cn("selo-da-nota text-xl", estilo.aro && "selo-da-nota-aro", estilo.brilho && "selo-da-nota-brilho", className)}
+      className={cn("selo-da-nota text-3xl", estilo.aro && "selo-da-nota-aro", estilo.brilho && "selo-da-nota-brilho", className)}
     >
       <span className="selo-da-nota-letra">{nota}</span>
     </span>

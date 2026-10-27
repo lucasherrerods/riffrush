@@ -157,76 +157,78 @@ body {
 
 /* ---------- Nota da partida ---------- */
 
-/* Emblema metálico dourado com contorno escuro, como as notas de estilo de Devil May Cry.
-   --intensidade (0 a 1) e --escala vêm de estiloDaNota: quanto mais alta a nota, mais destaque. */
-.selo-da-nota {
-  position: relative;
-  isolation: isolate;
-  display: inline-grid;
-  place-items: center;
-  flex-shrink: 0;
-  min-width: 1.6em;
-  font-family: var(--font-titulo);
-  font-size: calc(1em * var(--escala, 1));
-  line-height: 1;
-  transform: skewX(-10deg);
-}
-
-.selo-da-nota-letra {
-  background: linear-gradient(
-    175deg,
-    color-mix(in oklab, var(--cor-ouro), white 55%) 0%,
-    var(--cor-ouro) 42%,
-    var(--cor-destaque) 52%,
-    color-mix(in oklab, var(--cor-ouro), black 25%) 100%
-  );
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-stroke: 0.025em var(--cor-fundo);
-  letter-spacing: -0.02em;
-  filter: saturate(calc(0.35 + 0.65 * var(--intensidade, 0)));
-  opacity: calc(0.8 + 0.2 * var(--intensidade, 0));
-}
-
-/* Aro laranja anguloso em volta da letra. */
-.selo-da-nota-aro::before {
-  content: "";
-  position: absolute;
-  inset: -0.12em -0.05em;
-  z-index: -1;
-  border: max(1.5px, 0.06em) solid var(--cor-destaque);
-  border-radius: 50%;
-  clip-path: polygon(0 12%, 30% 0, 100% 0, 100% 88%, 70% 100%, 0 100%);
-  transform: rotate(-14deg);
-  opacity: var(--intensidade, 0);
-}
-
-/* Brilho de fogo atrás do emblema nas notas altas. */
-.selo-da-nota-brilho::after {
-  content: "";
-  position: absolute;
-  inset: -0.35em;
-  z-index: -2;
-  background: radial-gradient(
-    closest-side,
-    color-mix(in oklab, var(--cor-destaque), transparent 45%),
-    transparent
-  );
-  animation: selo-pulsa 1.8s ease-in-out infinite alternate;
-}
-
-@keyframes selo-pulsa {
-  from {
-    opacity: 0.55;
+/* Na camada de componentes, para o tamanho de quem usa (text-*) valer. */
+@layer components {
+  /* Emblema metálico dourado com contorno escuro, como as notas de estilo de Devil May Cry.
+     --intensidade (0 a 1) e --escala vêm de estiloDaNota: quanto mais alta a nota, mais destaque. */
+  .selo-da-nota {
+    position: relative;
+    isolation: isolate;
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    min-width: 1.6em;
+    font-family: var(--font-titulo);
+    line-height: 1;
+    transform: skewX(-10deg) scale(var(--escala, 1));
   }
-  to {
-    opacity: 1;
-  }
-}
 
-@media (prefers-reduced-motion: reduce) {
+  .selo-da-nota-letra {
+    background: linear-gradient(
+      175deg,
+      color-mix(in oklab, var(--cor-ouro), white 55%) 0%,
+      var(--cor-ouro) 42%,
+      var(--cor-destaque) 52%,
+      color-mix(in oklab, var(--cor-ouro), black 25%) 100%
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-stroke: 0.025em var(--cor-fundo);
+    letter-spacing: -0.02em;
+    filter: saturate(calc(0.35 + 0.65 * var(--intensidade, 0)));
+    opacity: calc(0.8 + 0.2 * var(--intensidade, 0));
+  }
+
+  /* Aro laranja anguloso em volta da letra. */
+  .selo-da-nota-aro::before {
+    content: "";
+    position: absolute;
+    inset: -0.12em -0.05em;
+    z-index: -1;
+    border: max(1.5px, 0.06em) solid var(--cor-destaque);
+    border-radius: 50%;
+    clip-path: polygon(0 12%, 30% 0, 100% 0, 100% 88%, 70% 100%, 0 100%);
+    transform: rotate(-14deg);
+    opacity: var(--intensidade, 0);
+  }
+
+  /* Brilho de fogo atrás do emblema nas notas altas. */
   .selo-da-nota-brilho::after {
-    animation: none;
+    content: "";
+    position: absolute;
+    inset: -0.35em;
+    z-index: -2;
+    background: radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--cor-destaque), transparent 45%),
+      transparent
+    );
+    animation: selo-pulsa 1.8s ease-in-out infinite alternate;
+  }
+
+  @keyframes selo-pulsa {
+    from {
+      opacity: 0.55;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .selo-da-nota-brilho::after {
+      animation: none;
+    }
   }
 }

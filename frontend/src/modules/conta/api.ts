@@ -94,6 +94,7 @@ export interface RecordeDaConta {
   pontos: number;
   acertos: number;
   total: number;
+  precisao: number | null;
 }
 
 export interface PerfilDaApi {

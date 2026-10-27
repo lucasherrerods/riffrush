@@ -200,6 +200,8 @@ pub struct RecordeDaConta {
     pontos: u64,
     acertos: u32,
     total: u32,
+    /// Fração de 0 a 1; partidas antigas não têm.
+    precisao: Option<f64>,
 }
 
 impl From<Recorde> for RecordeDaConta {
@@ -211,6 +213,7 @@ impl From<Recorde> for RecordeDaConta {
             pontos: r.pontos,
             acertos: r.acertos,
             total: r.total,
+            precisao: r.precisao,
         }
     }
 }
