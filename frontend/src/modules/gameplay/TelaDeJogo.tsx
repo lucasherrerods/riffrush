@@ -140,7 +140,7 @@ const INTERVALO_DO_ENVIO_MS = 125;
 const nada = () => {};
 /** Em telas mais estreitas os painéis encostam na pista em vez de sair da tela. */
 const LARGURA_DO_PAINEL = 250;
-const LARGURA_DO_HUD_LATERAL = 256;
+const LARGURA_DO_HUD_LATERAL = 320;
 const MARGEM_DO_HUD = 16;
 
 export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar, replay, transmissao, espectadores = 0 }: Props) {
@@ -850,7 +850,7 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
           {!comPalco && avatarDoJogador("mb-2 h-44 w-auto")}
           <div className="flex items-end gap-4">
             <BarraDeEstrelas progresso={hud.estrelas} recorde={hud.estrelasDoRecorde} />
-            <MedidorDeRock vida={hud.vida} estrela={hud.estrela} estrelaAtiva={hud.estrelaAtiva} fantasma={hud.fantasma} className="w-48" />
+            <MedidorDeRock vida={hud.vida} estrela={hud.estrela} estrelaAtiva={hud.estrelaAtiva} fantasma={hud.fantasma} className="w-64" />
           </div>
         </div>
       )}

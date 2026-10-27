@@ -155,6 +155,17 @@ body {
   }
 }
 
+/* O pulso do star power nos pinos do medidor: mais suave que o animate-pulse, sem apagar o azul. */
+.pulso-suave {
+  animation: pulso-suave 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulso-suave {
+  50% {
+    opacity: 0.75;
+  }
+}
+
 /* ---------- Nota da partida ---------- */
 
 /* Na camada de componentes, para o tamanho de quem usa (text-*) valer. */

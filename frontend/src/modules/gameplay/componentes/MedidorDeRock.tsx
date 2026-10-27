@@ -1,29 +1,37 @@
 import { useId } from "react";
 import { Ghost } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
-import { brilhoDosPinos } from "../pinos";
+import { nivelDoLiquido, pinosPulsando, progressoDosPinos as progressoPelaEstrela, type Vidro } from "../pinos";
 import moldura from "./medidor-de-rock.webp";
+import pinosCheios from "./pinos-cheios.webp";
 
-/** Medidas na grade da imagem (212 × 141). */
-const LARGURA = 212;
-const ALTURA = 141;
+/** Medidas na grade da imagem (760 × 547). */
+const LARGURA = 760;
+const ALTURA = 547;
 /** A janela curva da barra, do vermelho (esquerda) ao verde (direita). */
-const JANELA = "M 45 54 Q 107 34 159 51 L 158 82 Q 108 68 46 81 Z";
-const INICIO = 45;
-const FIM = 159;
-/** As luzes dos conectores em cima, da esquerda para a direita: viram o star power. */
-const PINOS = [
-  { x: 35, y: 41 },
-  { x: 51, y: 31 },
-  { x: 67, y: 25 },
-  { x: 87, y: 26 },
+const JANELA = "M 200 262 Q 370 200 566 258 L 560 336 Q 380 266 205 320 Z";
+const INICIO = 200;
+const FIM = 562;
+/**
+ * O vidro dos quatro conectores de cima, da esquerda para a direita, com folga até a tampa e o anel de metal.
+ * Cada pino tem a própria posição, tamanho e inclinação, medidos sobre a imagem; o líquido sobe entre esses lados.
+ */
+const VIDROS: Vidro[] = [
+  [{ x: 114, y: 144 }, { x: 181, y: 136 }, { x: 192, y: 206 }, { x: 124, y: 206 }],
+  [{ x: 204, y: 122 }, { x: 270, y: 117 }, { x: 280, y: 176 }, { x: 215, y: 176 }],
+  [{ x: 269, y: 100 }, { x: 345, y: 98 }, { x: 356, y: 156 }, { x: 284, y: 156 }],
+  [{ x: 369, y: 100 }, { x: 440, y: 98 }, { x: 446, y: 155 }, { x: 377, y: 155 }],
 ];
+/** Onde fica a camada com o vidro azul dos quatro pinos cheios. */
+const CAMADA_CHEIA = { x: 124, y: 104, width: 309, height: 99 };
 
 interface Props {
   vida: number;
   /** De 0 a 1. */
   estrela?: number;
   estrelaAtiva?: boolean;
+  /** De 0 a 1 por pino, para encher cada um por conta própria; sem ele, os pinos seguem a `estrela`. */
+  progressoDosPinos?: readonly number[];
   /** Multijogador: a vida já zerou nesta música. */
   fantasma?: boolean;
   className?: string;
@@ -31,31 +39,39 @@ interface Props {
 
 /**
  * O medidor de rock: a barra do RIFF acende do vermelho (vaia) ao verde (a galera pirando) conforme a vida,
- * e os quatro pinos de cima enchem com o star power.
+ * e o vidro dos quatro pinos de cima enche de azul, de baixo para cima, um a cada quarto do star power.
  */
-export function MedidorDeRock({ vida, estrela = 0, estrelaAtiva = false, fantasma = false, className }: Props) {
+export function MedidorDeRock({ vida, estrela = 0, estrelaAtiva = false, progressoDosPinos, fantasma = false, className }: Props) {
   const recorte = useId();
+  const progressos = progressoDosPinos ?? progressoPelaEstrela(estrela);
+  const pulsando = pinosPulsando(progressos);
   const ponta = Math.round(INICIO + vida * (FIM - INICIO));
   return (
     <div role="meter" aria-label="Vida" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(vida * 100)} className={cn("relative", className)}>
-      <img src={moldura} alt="" draggable={false} className="block w-full select-none" />
-      <svg viewBox={`0 0 ${LARGURA} ${ALTURA}`} className="absolute inset-0 size-full">
+      <svg viewBox={`0 0 ${LARGURA} ${ALTURA}`} className="block h-auto w-full select-none">
+        <image href={moldura} width={LARGURA} height={ALTURA} />
         <clipPath id={recorte}>
           <path d={JANELA} />
         </clipPath>
         <g clipPath={`url(#${recorte})`} aria-hidden>
           {/* O que passa da vida atual fica apagado; a ponta acesa marca onde ela está. */}
           <rect data-testid="barra-apagada" x={ponta} y={0} width={LARGURA - ponta} height={ALTURA} className="fill-fundo" opacity={0.82} />
-          <rect x={ponta - 1.5} y={0} width={3} height={ALTURA} className="fill-texto" />
+          <rect x={ponta - 3} y={0} width={6} height={ALTURA} className="fill-texto" />
         </g>
         <g role="progressbar" aria-label="Star power" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(estrela * 100)} className={cn(estrelaAtiva && "animate-pulse")}>
-          {brilhoDosPinos(estrela).map((brilho, i) => (
-            <g key={i}>
-              {/* A tampa escura apaga a luz verde da imagem; a do star power acende por cima. */}
-              <ellipse cx={PINOS[i].x} cy={PINOS[i].y} rx={3.4} ry={4.2} className="fill-fundo" opacity={0.75} />
-              <ellipse data-testid="pino" cx={PINOS[i].x} cy={PINOS[i].y} rx={3} ry={3.8} className="fill-estrela" opacity={brilho} />
-            </g>
-          ))}
+          {VIDROS.map((vidro, i) => {
+            const progresso = progressos[i] ?? 0;
+            const id = `${recorte}-pino-${i}`;
+            return (
+              <g key={i} data-testid="pino" data-progresso={progresso}>
+                <clipPath id={id}>
+                  <polygon points={nivelDoLiquido(vidro, progresso)} />
+                </clipPath>
+                {/* O vidro azul aparece de baixo para cima, só até o nível do líquido, mais aceso que o da arte. */}
+                <image data-testid="liquido" href={pinosCheios} {...CAMADA_CHEIA} clipPath={`url(#${id})`} className={cn(pulsando && "pulso-suave")} style={{ filter: "brightness(1.5) saturate(1.3)" }} />
+              </g>
+            );
+          })}
         </g>
       </svg>
       {fantasma && <Ghost aria-label="Virou fantasma" className="absolute top-2 right-3 size-5 text-texto opacity-70" />}
