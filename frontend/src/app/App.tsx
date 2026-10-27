@@ -4,7 +4,7 @@ import { IDENTIDADE_DO_ROCK } from "@/modules/rock";
 import { definirTema } from "@/shared/styles/tema";
 import { TEMAS } from "@/shared/styles/tokens";
 import { AppDoRock } from "./AppDoRock";
-import { useModo } from "./modo";
+import { trocarModo, useModo } from "./modo";
 
 const IDENTIDADES = { rock: IDENTIDADE_DO_ROCK, mania: IDENTIDADE_DO_MANIA };
 
@@ -16,5 +16,5 @@ export function App() {
     definirTema(TEMAS[identidade.tema]);
     document.title = identidade.nome;
   }, [identidade]);
-  return modo === "mania" ? <TelaDoMania /> : <AppDoRock />;
+  return modo === "mania" ? <TelaDoMania aoTrocarDeModo={() => trocarModo("rock")} /> : <AppDoRock />;
 }

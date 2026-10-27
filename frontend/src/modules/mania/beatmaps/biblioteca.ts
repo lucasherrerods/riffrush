@@ -1,4 +1,5 @@
 import { openDB, type DBSchema } from "idb";
+import { iniciarMotorDoMania } from "../gameplay/motor";
 import { lerOsz, type Conjunto, type MapaDoPacote, type OszLido } from "./osz";
 
 /** De onde veio o conjunto: só os baixados do osu! (e conferidos pela API) valem XP e ranking. */
@@ -60,7 +61,9 @@ export async function abrirBibliotecaDoMania({ nome = "riffrush-mania", relogio 
 
     async abrir(id) {
       const osz = await banco.get("pacotes", id);
-      return osz && lerOsz(new Uint8Array(await osz.arrayBuffer()));
+      if (!osz) return undefined;
+      await iniciarMotorDoMania();
+      return lerOsz(new Uint8Array(await osz.arrayBuffer()));
     },
 
     async usar(id) {
@@ -85,6 +88,8 @@ export async function importarOsz(
   osz: Blob,
   { origem, status, estrelas }: { origem: OrigemDoConjunto; status?: string; estrelas?: Record<string, number> },
 ): Promise<ConjuntoSalvo> {
+  // O .osu é lido pelo motor em WASM, que só carrega quando o Mania abre.
+  await iniciarMotorDoMania();
   const { conjunto, mapas } = lerOsz(new Uint8Array(await osz.arrayBuffer()));
   const salvo: ConjuntoSalvo = {
     ...conjunto,
