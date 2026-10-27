@@ -20,6 +20,33 @@ function getStringFromWasm0(ptr, len) {
 
 let WASM_VECTOR_LEN = 0;
 
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
+
+function takeFromExternrefTable0(idx) {
+    const value = wasm.__wbindgen_export_0.get(idx);
+    wasm.__externref_table_dealloc(idx);
+    return value;
+}
+
+let cachedInt32ArrayMemory0 = null;
+
+function getInt32ArrayMemory0() {
+    if (cachedInt32ArrayMemory0 === null || cachedInt32ArrayMemory0.byteLength === 0) {
+        cachedInt32ArrayMemory0 = new Int32Array(wasm.memory.buffer);
+    }
+    return cachedInt32ArrayMemory0;
+}
+
+function getArrayI32FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getInt32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
+}
+
 const cachedTextEncoder = (typeof TextEncoder !== 'undefined' ? new TextEncoder('utf-8') : { encode: () => { throw Error('TextEncoder not available') } } );
 
 const encodeString = (typeof cachedTextEncoder.encodeInto === 'function'
@@ -74,26 +101,6 @@ function passStringToWasm0(arg, malloc, realloc) {
     return ptr;
 }
 
-function takeFromExternrefTable0(idx) {
-    const value = wasm.__wbindgen_export_0.get(idx);
-    wasm.__externref_table_dealloc(idx);
-    return value;
-}
-
-let cachedInt32ArrayMemory0 = null;
-
-function getInt32ArrayMemory0() {
-    if (cachedInt32ArrayMemory0 === null || cachedInt32ArrayMemory0.byteLength === 0) {
-        cachedInt32ArrayMemory0 = new Int32Array(wasm.memory.buffer);
-    }
-    return cachedInt32ArrayMemory0;
-}
-
-function getArrayI32FromWasm0(ptr, len) {
-    ptr = ptr >>> 0;
-    return getInt32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
-}
-
 let cachedFloat64ArrayMemory0 = null;
 
 function getFloat64ArrayMemory0() {
@@ -122,36 +129,6 @@ function getArrayU32FromWasm0(ptr, len) {
     return getUint32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
 }
 /**
- * Confere se a combinação de mods é válida; devolve a mensagem do problema, ou `undefined`.
- * @param {number} mods
- * @returns {string | undefined}
- */
-export function problemaDosMods(mods) {
-    const ret = wasm.problemaDosMods(mods);
-    let v1;
-    if (ret[0] !== 0) {
-        v1 = getStringFromWasm0(ret[0], ret[1]).slice();
-        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    }
-    return v1;
-}
-
-/**
- * @param {number} mods
- * @returns {boolean}
- */
-export function modsValemRanking(mods) {
-    const ret = wasm.modsValemRanking(mods);
-    return ret !== 0;
-}
-
-function passArray8ToWasm0(arg, malloc) {
-    const ptr = malloc(arg.length * 1, 1) >>> 0;
-    getUint8ArrayMemory0().set(arg, ptr / 1);
-    WASM_VECTOR_LEN = arg.length;
-    return ptr;
-}
-/**
  * @param {Uint8Array} bytes
  * @returns {string}
  */
@@ -171,6 +148,21 @@ export function hashDoBeatmap(bytes) {
 }
 
 /**
+ * Confere se a combinação de mods é válida; devolve a mensagem do problema, ou `undefined`.
+ * @param {number} mods
+ * @returns {string | undefined}
+ */
+export function problemaDosMods(mods) {
+    const ret = wasm.problemaDosMods(mods);
+    let v1;
+    if (ret[0] !== 0) {
+        v1 = getStringFromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v1;
+}
+
+/**
  * @param {number} mods
  * @returns {number}
  */
@@ -186,6 +178,15 @@ export function velocidadeDosMods(mods) {
 export function multiplicadorDosMods(mods) {
     const ret = wasm.multiplicadorDosMods(mods);
     return ret;
+}
+
+/**
+ * @param {number} mods
+ * @returns {boolean}
+ */
+export function modsValemRanking(mods) {
+    const ret = wasm.modsValemRanking(mods);
+    return ret !== 0;
 }
 
 const InfoDoBeatmapFinalization = (typeof FinalizationRegistry === 'undefined')
@@ -590,6 +591,80 @@ export class MotorDoMania {
     pontuacao() {
         const ret = wasm.motordomania_pontuacao(this.__wbg_ptr);
         return ret >>> 0;
+    }
+}
+
+const ReplayLidoFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_replaylido_free(ptr >>> 0, 1));
+/**
+ * Um replay lido pelo motor: o mesmo código que a API usa para rejulgar. O app usa para conferir o que gravou.
+ */
+export class ReplayLido {
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        ReplayLidoFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_replaylido_free(ptr, 0);
+    }
+    /**
+     * @param {Uint8Array} bytes
+     */
+    constructor(bytes) {
+        const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.replaylido_new(ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        this.__wbg_ptr = ret[0] >>> 0;
+        ReplayLidoFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @returns {string}
+     */
+    get hash() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.replaylido_hash(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {number}
+     */
+    get mods() {
+        const ret = wasm.replaylido_mods(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    get semente() {
+        const ret = wasm.replaylido_semente(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * As entradas em trios [tempo, coluna, 1 = toca / 0 = solta].
+     * @returns {Int32Array}
+     */
+    entradas() {
+        const ret = wasm.replaylido_entradas(this.__wbg_ptr);
+        var v1 = getArrayI32FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v1;
     }
 }
 

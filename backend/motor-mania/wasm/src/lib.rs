@@ -148,6 +148,42 @@ pub fn mods_valem_ranking(mods: u32) -> bool {
     motor::Mods(mods).vale_ranking()
 }
 
+/// Um replay lido pelo motor: o mesmo código que a API usa para rejulgar. O app usa para conferir o que gravou.
+#[wasm_bindgen]
+pub struct ReplayLido {
+    replay: motor::Replay,
+}
+
+#[wasm_bindgen]
+impl ReplayLido {
+    #[wasm_bindgen(constructor)]
+    pub fn new(bytes: &[u8]) -> Result<ReplayLido, JsError> {
+        motor::desempacotar_replay(bytes)
+            .map(|replay| ReplayLido { replay })
+            .map_err(|erro| JsError::new(&format!("Replay inválido: {erro:?}")))
+    }
+    #[wasm_bindgen(getter)]
+    pub fn mods(&self) -> u32 {
+        self.replay.mods.0
+    }
+    #[wasm_bindgen(getter)]
+    pub fn semente(&self) -> u32 {
+        self.replay.semente
+    }
+    #[wasm_bindgen(getter)]
+    pub fn hash(&self) -> String {
+        self.replay.hash.clone()
+    }
+    /// As entradas em trios [tempo, coluna, 1 = toca / 0 = solta].
+    pub fn entradas(&self) -> Vec<i32> {
+        self.replay
+            .entradas
+            .iter()
+            .flat_map(|e| [e.tempo_ms, i32::from(e.coluna), i32::from(e.toca)])
+            .collect()
+    }
+}
+
 #[wasm_bindgen]
 pub struct MotorDoMania {
     partida: motor::Partida,

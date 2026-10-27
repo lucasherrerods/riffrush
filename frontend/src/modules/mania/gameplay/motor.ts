@@ -1,7 +1,7 @@
 import iniciarWasm, { initSync } from "./wasm/motor";
 import urlDoWasm from "./wasm/motor_bg.wasm?url";
 
-export { InfoDoBeatmap, MotorDoMania, hashDoBeatmap, modsValemRanking, multiplicadorDosMods, problemaDosMods, velocidadeDosMods } from "./wasm/motor";
+export { InfoDoBeatmap, MotorDoMania, ReplayLido, hashDoBeatmap, modsValemRanking, multiplicadorDosMods, problemaDosMods, velocidadeDosMods } from "./wasm/motor";
 
 let carregado: Promise<void> | null = null;
 
