@@ -227,13 +227,13 @@ export function TelaDeSelecao(props: Props) {
             </div>
             <Button
               variant="ghost"
-              size="icon"
-              aria-label={favorita ? "Tirar das favoritas" : "Favoritar"}
+              size="sm"
               aria-pressed={favorita}
               title="Favoritar (F)"
               onClick={alternarFavoritaAtual}
+              className={cn("rounded-md bg-superficie hover:bg-superficie-elevada", favorita && "text-primaria")}
             >
-              <Heart className={cn(favorita ? "fill-primaria text-primaria" : "opacity-70")} />
+              {favorita ? "Tirar das favoritas" : "Favoritar"}
             </Button>
           </div>
 
