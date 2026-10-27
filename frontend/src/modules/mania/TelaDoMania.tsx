@@ -7,8 +7,10 @@ import { ResultadoDoMania } from "./gameplay/ResultadoDoMania";
 import { TelaDeJogoMania, type MapaParaJogar, type ResultadoDoMania as Resultado } from "./gameplay/TelaDeJogoMania";
 import { IDENTIDADE_DO_MANIA } from "./identidade";
 import { TelaDeSelecaoMania } from "./selecao/TelaDeSelecaoMania";
+import type { FiltrosDaBusca, MapaDaBusca, baixarOsz } from "./busca/api";
+import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 
-type Tela = { nome: "selecao" } | { nome: "jogo"; mapa: MapaParaJogar } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado };
+type Tela = { nome: "selecao" } | { nome: "busca" } | { nome: "jogo"; mapa: MapaParaJogar } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado };
 
 interface Props {
   /** Volta para o Riff Rush Rock. */
@@ -16,11 +18,13 @@ interface Props {
   /** Para os testes. */
   abrirBiblioteca?: () => Promise<BibliotecaDoMania>;
   decodificar?: (contexto: AudioContext, bytes: Uint8Array) => Promise<AudioBuffer>;
+  buscar?: (filtros: FiltrosDaBusca) => Promise<MapaDaBusca[]>;
+  baixar?: typeof baixarOsz;
 }
 
 /** A raiz do Riff Rush Mania: seleção, partida e resultado. */
-export function TelaDoMania({ aoTrocarDeModo, abrirBiblioteca = abrirBibliotecaDoMania, decodificar }: Props) {
-  const { conjuntos, importar, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
+export function TelaDoMania({ aoTrocarDeModo, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
+  const { conjuntos, importar, guardarBaixado, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
   const [tela, setTela] = useState<Tela>({ nome: "selecao" });
   const [mods, setMods] = useState(0);
   // A semente do Random muda a cada partida; o replay a guarda.
@@ -31,6 +35,17 @@ export function TelaDoMania({ aoTrocarDeModo, abrirBiblioteca = abrirBibliotecaD
     if (importados.length) avisar(importados.length === 1 ? `${importados[0].titulo} importado` : `${importados.length} mapas importados`);
     for (const { arquivo, motivo } of erros) avisar.error(`${arquivo}: ${motivo}`);
   };
+
+  const aoBaixar = async (osz: Blob, mapa: MapaDaBusca) => {
+    const estrelas = Object.fromEntries(mapa.dificuldades.map((d) => [d.hash, d.estrelas]));
+    try {
+      await guardarBaixado(osz, { status: mapa.status, estrelas });
+      avisar(`${mapa.titulo} baixado`);
+    } catch (erro) {
+      avisar.error(`${mapa.titulo}: ${erro instanceof Error ? erro.message : String(erro)}`);
+    }
+  };
+  const baixados = new Set((conjuntos ?? []).flatMap((c) => (c.origem === "osu" && c.beatmapsetId ? [c.beatmapsetId] : [])));
 
   const aoJogar = async (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => {
     const pacote = await abrirPacote(conjunto.id);
@@ -69,13 +84,25 @@ export function TelaDoMania({ aoTrocarDeModo, abrirBiblioteca = abrirBibliotecaD
     <main className="flex h-full flex-col bg-fundo text-texto">
       <header className="flex items-center justify-between border-b border-borda px-6 py-4">
         <h1 className="font-titulo text-4xl tracking-wide">{IDENTIDADE_DO_MANIA.nome}</h1>
+        <nav aria-label="Telas do Mania" className="flex gap-2">
+          <Button variant={tela.nome === "selecao" ? "default" : "secondary"} aria-current={tela.nome === "selecao"} onClick={() => setTela({ nome: "selecao" })}>
+            Biblioteca
+          </Button>
+          <Button variant={tela.nome === "busca" ? "default" : "secondary"} aria-current={tela.nome === "busca"} onClick={() => setTela({ nome: "busca" })}>
+            Buscar mapas
+          </Button>
+        </nav>
         {aoTrocarDeModo && (
           <Button variant="secondary" onClick={aoTrocarDeModo}>
             Ir para o Rock
           </Button>
         )}
       </header>
-      <TelaDeSelecaoMania conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} />
+      {tela.nome === "busca" ? (
+        <TelaDeBuscaMania baixados={baixados} aoBaixar={aoBaixar} buscar={buscar} baixar={baixar} />
+      ) : (
+        <TelaDeSelecaoMania conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} />
+      )}
       <Avisos />
     </main>
   );
