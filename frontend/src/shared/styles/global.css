@@ -17,6 +17,17 @@ body,
 
 body {
   font-family: "Geist Variable", sans-serif;
+  background-color: var(--cor-fundo);
+  /* A alavanca troca o tema inteiro: o fundo e o texto mudam de cor suavemente. */
+  transition:
+    background-color 0.4s ease,
+    color 0.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
 }
 
 /* As cores vêm do tema ativo em temas.ts (aplicarTokens). Aqui só ligamos os nomes ao Tailwind e ao shadcn. */

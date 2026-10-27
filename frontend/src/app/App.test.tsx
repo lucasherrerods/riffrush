@@ -123,7 +123,7 @@ describe("App", () => {
 
   it("começa no menu principal", () => {
     abrir();
-    expect(screen.getByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();
   });
 
   it("na seleção o player segue a música escolhida, e fora dela não", async () => {
@@ -139,7 +139,7 @@ describe("App", () => {
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     expect(await screen.findByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
     await usuario.keyboard("{Escape}");
-    expect(await screen.findByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();
   });
 
   it("Buscar músicas abre a tela de busca e Esc volta ao menu", async () => {
@@ -148,7 +148,7 @@ describe("App", () => {
     await usuario.click(screen.getByRole("button", { name: "Buscar músicas" }));
     expect(await screen.findByRole("heading", { name: "Buscar músicas" })).toBeInTheDocument();
     await usuario.keyboard("{Escape}");
-    expect(await screen.findByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();
   });
 
   it("baixar na Buscar músicas importa, salva e deixa jogar a música", async () => {
@@ -226,7 +226,7 @@ describe("App", () => {
     await usuario.clear(await screen.findByLabelText("Nome"));
     await usuario.type(screen.getByLabelText("Nome"), "Lucas");
     await usuario.click(screen.getByRole("button", { name: /Salvar/ }));
-    expect(await screen.findByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem("riffrush.personagem")!).nome).toBe("Lucas");
   });
 

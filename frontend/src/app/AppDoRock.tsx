@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { IndicadorDeVolume, definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/rock/character";
@@ -31,7 +31,8 @@ interface PartidaEmRede {
   inicio: number;
 }
 
-export function AppDoRock() {
+/** O Riff Rush Rock inteiro. A `alavanca` aparece embaixo da logo, na tela inicial. */
+export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
   const [tela, setTela] = useState<Tela>(() => documentoDoEndereco(location.pathname) ?? "menu");
   /** md5 do chart do Encore aberto na janela de baixar do leaderboard. */
   const [chartDoLeaderboard, setChartDoLeaderboard] = useState<string | null>(null);
@@ -410,6 +411,7 @@ export function AppDoRock() {
               <MenuPrincipal
                 volumeDosEfeitos={configuracoes.volumeDosEfeitos}
                 noCelular={ehClienteWebDaSala()}
+                alavanca={alavanca}
                 aoJogar={() => setTela("selecao")}
                 aoMultijogador={() => setTela("multijogador")}
                 aoPersonagem={() => {
