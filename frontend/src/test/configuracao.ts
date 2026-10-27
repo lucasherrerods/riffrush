@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach } from "vitest";
 import { iniciarMotorComBytes } from "@/modules/rock/gameplay/partida";
+import { iniciarMotorDoManiaComBytes } from "@/modules/mania/gameplay/motor";
 
 afterEach(() => cleanup());
 
@@ -19,3 +20,4 @@ globalThis.ResizeObserver ??= class {
 
 // O motor da partida é WASM: no app ele carrega por fetch; aqui, direto do arquivo.
 iniciarMotorComBytes(readFileSync(resolve(process.cwd(), "src/modules/rock/gameplay/wasm/motor_bg.wasm")));
+iniciarMotorDoManiaComBytes(readFileSync(resolve(process.cwd(), "src/modules/mania/gameplay/wasm/motor_bg.wasm")));
