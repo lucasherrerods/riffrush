@@ -14,6 +14,8 @@ export const EFEITOS = {
   selecionar: { onda: "square", de: 520, para: 1040, duracao: 0.12, volume: 0.1 },
   voltar: { onda: "square", de: 520, para: 260, duracao: 0.1, volume: 0.1 },
   erro: { onda: "sawtooth", de: 140, para: 70, duracao: 0.12, volume: 0.12 },
+  // Um "tunc" abafado e curto, de corda morta, para não confundir com o erro da derrota.
+  notaPerdida: { onda: "square", de: 320, para: 110, duracao: 0.07, volume: 0.07 },
   estrela: { onda: "triangle", de: 880, para: 1760, duracao: 0.35, volume: 0.2 },
 } satisfies Record<string, Efeito>;
 
