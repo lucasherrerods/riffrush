@@ -5,6 +5,12 @@ import { IDBFactory } from "fake-indexeddb";
 import { osu, pacote } from "@/test/beatmaps";
 import { abrirBibliotecaDoMania, importarOsz } from "./biblioteca";
 
+const motor = vi.hoisted(() => ({ iniciado: 0 }));
+vi.mock("../gameplay/motor", async (original) => {
+  const real = await original<typeof import("../gameplay/motor")>();
+  return { ...real, iniciarMotorDoMania: async () => void motor.iniciado++ };
+});
+
 let agora = 0;
 const abrir = () => abrirBibliotecaDoMania({ relogio: () => ++agora });
 const osz = (beatmapsetId = 7, titulo = "Musica") =>
@@ -58,6 +64,16 @@ describe("biblioteca do Mania", () => {
     await biblioteca.remover("osu:7");
     expect(await biblioteca.listar()).toEqual([]);
     expect(await biblioteca.abrir("osu:7")).toBeUndefined();
+  });
+
+  it("carrega o motor antes de ler o pacote, ao importar e ao abrir", async () => {
+    // O .osu é lido pelo WASM do Mania, que no app só carrega quando alguém pede.
+    const biblioteca = await abrir();
+    motor.iniciado = 0;
+    await importarOsz(biblioteca, osz(), { origem: "osu" });
+    expect(motor.iniciado).toBe(1);
+    await biblioteca.abrir("osu:7");
+    expect(motor.iniciado).toBe(2);
   });
 
   it("a biblioteca do Mania não se mistura com a do Rock", async () => {
