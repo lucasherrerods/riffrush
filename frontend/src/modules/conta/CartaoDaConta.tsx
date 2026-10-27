@@ -36,7 +36,7 @@ export function CartaoDaConta({ aoVerPerfil, mod = false }: { aoVerPerfil: () =>
   const progresso = <BarraDeProgresso fracao={xp_no_nivel / xp_para_o_proximo} rotulo={`XP do nível ${nivel}`} className="h-1 flex-1" />;
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="group -my-1 flex w-52 items-center gap-2.5 rounded-md px-2 py-1 text-left transition-colors outline-none hover:bg-superficie-elevada/40 focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-superficie-elevada">
+      <DropdownMenuTrigger className="group -my-1 flex w-52 items-center gap-2.5 rounded-md px-2 py-1 text-left transition-colors outline-none hover:bg-superficie-hover focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-superficie-elevada">
         <FotoDaConta avatar={conta.avatar} className="size-8" />
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="truncate text-base leading-none font-bold">{conta.nome}</span>

@@ -33,7 +33,7 @@ export function ModalDeModificadores({ aberto, aoMudarAberto, velocidadeDaMusica
               evento.preventDefault();
               mudarVelocidade(-1);
             }}
-            className="flex items-center gap-4 rounded-md p-2 text-left transition-colors hover:bg-superficie-elevada/40"
+            className="flex items-center gap-4 rounded-md p-2 text-left transition-colors hover:bg-superficie-hover"
           >
             <IconeDeModificador sigla="VL" ativo={velocidadeAtiva} />
             <span>
