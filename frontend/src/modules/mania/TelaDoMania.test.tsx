@@ -44,9 +44,8 @@ const arquivoOsz = (nome = "musica.osz") => new File([new Uint8Array(pacote({ "a
 
 function abrir() {
   const biblioteca = bibliotecaNaMemoria();
-  const aoTrocarDeModo = vi.fn();
-  render(<TelaDoMania aoTrocarDeModo={aoTrocarDeModo} abrirBiblioteca={async () => biblioteca} decodificar={async () => ({}) as AudioBuffer} />);
-  return { aoTrocarDeModo, usuario: userEvent.setup() };
+  render(<TelaDoMania alavanca={<button type="button">alavanca</button>} abrirBiblioteca={async () => biblioteca} decodificar={async () => ({}) as AudioBuffer} />);
+  return { usuario: userEvent.setup() };
 }
 
 describe("TelaDoMania", () => {
@@ -144,9 +143,9 @@ describe("TelaDoMania", () => {
     }
   });
 
-  it("o botão do cabeçalho volta para o Rock", async () => {
-    const { aoTrocarDeModo, usuario } = abrir();
-    await usuario.click(screen.getByRole("button", { name: "Ir para o Rock" }));
-    expect(aoTrocarDeModo).toHaveBeenCalled();
+  it("a alavanca fica no cabeçalho, junto da logo do Mania", () => {
+    abrir();
+    expect(screen.getByRole("heading", { name: "Riff Rush Mania" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "alavanca" })).toBeInTheDocument();
   });
 });

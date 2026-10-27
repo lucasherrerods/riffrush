@@ -1,12 +1,13 @@
 import { useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
-import { Play, Radio, Search, Settings2, Shirt, Trophy, Users, Zap, type LucideIcon } from "lucide-react";
+import { Play, Radio, Search, Settings2, Shirt, Trophy, Users, type LucideIcon } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Documento } from "@/modules/legal";
 import { abrirLink } from "@/modules/platform";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
 import { IconeGithub } from "@/shared/ui/IconeGithub";
+import { LogoDoJogo } from "./LogoDoJogo";
 
 interface Props {
   volumeDosEfeitos: number;
@@ -24,6 +25,8 @@ interface Props {
   aoAbrirDocumento: (documento: Documento) => void;
   /** O chat global, no canto de baixo à esquerda. */
   chat?: ReactNode;
+  /** A alavanca que troca para o Mania, embaixo da logo. */
+  alavanca?: ReactNode;
 }
 
 interface Item {
@@ -35,7 +38,7 @@ interface Item {
 const URL_DO_PROJETO = "https://github.com/lucasherrerods/riffrush";
 const URL_DA_LANDING = "https://playriffrush.vercel.app";
 
-export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat }: Props) {
+export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca }: Props) {
   const [selecionado, setSelecionado] = useState(0);
   const comuns: Item[] = [
     ...(aoLeaderboard ? [{ rotulo: "Leaderboard", icone: Trophy, acao: aoLeaderboard }] : []),
@@ -76,14 +79,9 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
         transition={{ type: "spring", stiffness: 120, damping: 12 }}
         className="mt-auto flex flex-col items-center gap-2"
       >
-        <h1 aria-label="Riff Rush" className="titulo-do-jogo flex items-center gap-2 text-6xl leading-none tracking-[0.01em] max-md:text-[14vw]">
-          Riff
-          <motion.span animate={{ rotate: [-6, 6, -6] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}>
-            <Zap className="size-10 fill-primaria text-primaria max-md:size-[10vw]" />
-          </motion.span>
-          Rush
-        </h1>
-        <p className="bg-primaria px-3 py-0.5 text-center text-xs font-bold tracking-[0.4em] text-texto -skew-x-12 max-md:tracking-[0.15em]">O PALCO É SEU</p>
+        <LogoDoJogo modo="Rock" />
+        <p className="text-center text-xs font-bold tracking-[0.4em] text-texto-suave max-md:tracking-[0.15em]">O PALCO É SEU</p>
+        {alavanca}
       </motion.div>
 
       <nav className="mb-auto flex w-56 flex-col gap-1 max-md:w-[85vw] max-md:gap-2">

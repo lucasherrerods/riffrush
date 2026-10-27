@@ -26,7 +26,7 @@ beforeEach(() => vi.stubGlobal("AudioContext", AudioContextFalso));
 describe("MenuPrincipal", () => {
   it("mostra o nome do jogo e as opções", () => {
     abrir();
-    expect(screen.getByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();
     expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Multiplayer", "Leaderboard", "Buscar músicas", "Personagem", "Configurações"]);
   });
 

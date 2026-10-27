@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { LogoDoJogo } from "@/modules/menu";
 import { sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
@@ -8,7 +9,6 @@ import { empacotarReplayDoMania } from "./gameplay/replay";
 import { useBibliotecaDoMania } from "./beatmaps/useBibliotecaDoMania";
 import { ResultadoDoMania } from "./gameplay/ResultadoDoMania";
 import { TelaDeJogoMania, type MapaParaJogar, type ResultadoDoMania as Resultado } from "./gameplay/TelaDeJogoMania";
-import { IDENTIDADE_DO_MANIA } from "./identidade";
 import { TelaDeSelecaoMania } from "./selecao/TelaDeSelecaoMania";
 import type { FiltrosDaBusca, MapaDaBusca, baixarOsz } from "./busca/api";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
@@ -16,8 +16,8 @@ import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 type Tela = { nome: "selecao" } | { nome: "busca" } | { nome: "jogo"; mapa: MapaParaJogar } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado };
 
 interface Props {
-  /** Volta para o Riff Rush Rock. */
-  aoTrocarDeModo?: () => void;
+  /** A alavanca que volta para o Rock, no cabeçalho. */
+  alavanca?: ReactNode;
   /** Para os testes. */
   abrirBiblioteca?: () => Promise<BibliotecaDoMania>;
   decodificar?: (contexto: AudioContext, bytes: Uint8Array) => Promise<AudioBuffer>;
@@ -26,7 +26,7 @@ interface Props {
 }
 
 /** A raiz do Riff Rush Mania: seleção, partida e resultado. */
-export function TelaDoMania({ aoTrocarDeModo, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
+export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
   const { conjuntos, importar, guardarBaixado, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
   const [tela, setTela] = useState<Tela>({ nome: "selecao" });
   const [mods, setMods] = useState(0);
@@ -116,7 +116,7 @@ export function TelaDoMania({ aoTrocarDeModo, abrirBiblioteca = abrirBibliotecaD
   return (
     <main className="flex h-full flex-col bg-fundo text-texto">
       <header className="flex items-center justify-between border-b border-borda px-6 py-4">
-        <h1 className="font-titulo text-4xl tracking-wide">{IDENTIDADE_DO_MANIA.nome}</h1>
+        <LogoDoJogo modo="Mania" pequena />
         <nav aria-label="Telas do Mania" className="flex gap-2">
           <Button variant={tela.nome === "selecao" ? "default" : "secondary"} aria-current={tela.nome === "selecao"} onClick={() => setTela({ nome: "selecao" })}>
             Biblioteca
@@ -125,11 +125,7 @@ export function TelaDoMania({ aoTrocarDeModo, abrirBiblioteca = abrirBibliotecaD
             Buscar mapas
           </Button>
         </nav>
-        {aoTrocarDeModo && (
-          <Button variant="secondary" onClick={aoTrocarDeModo}>
-            Ir para o Rock
-          </Button>
-        )}
+        {alavanca}
       </header>
       {tela.nome === "busca" ? (
         <TelaDeBuscaMania baixados={baixados} aoBaixar={aoBaixar} buscar={buscar} baixar={baixar} />
