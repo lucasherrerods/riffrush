@@ -11,7 +11,7 @@ export interface Cena {
   batidas: Batida[];
   apertados: boolean[];
   explosoes: { pista: number; tempo: number }[];
-  /** Notas perdidas: o MISS aparece em cima da tecla delas. */
+  /** Notas perdidas: o ERRO aparece em cima da tecla delas. */
   falhas: { pista: number; tempo: number }[];
   estrelaAtiva: boolean;
   multiplicador: number;
@@ -40,7 +40,7 @@ export const SPRITE_DA_ABERTA = { barra: 600, largura: 640, altura: 80 };
 /** Quantos trastes de largura o rastro do sustain da aberta tem, comparado com o de uma nota. */
 const LARGURA_DO_RASTRO_DA_ABERTA = 4;
 const DURACAO_DA_EXPLOSAO = 0.3;
-const DURACAO_DO_MISS = 0.5;
+const DURACAO_DO_ERRO = 0.5;
 const DURACAO_DO_TROVAO = 0.5;
 const ATRAS_DA_LINHA = -0.12;
 /** Parte final do braço (perto do horizonte) que vai sumindo. */
@@ -330,18 +330,18 @@ export function desenharPista(
   c.fillRect(0, 0, largura, fimDoFade);
   c.globalCompositeOperation = "source-over";
 
-  // O MISS é aviso de jogo, não enfeite: aparece mesmo sem efeitos.
+  // O ERRO é aviso de jogo, não enfeite: aparece mesmo sem efeitos.
   c.textAlign = "center";
   c.textBaseline = "middle";
   c.fillStyle = cores.perigo;
   for (const falha of cena.falhas) {
     const idade = tempo - falha.tempo;
-    if (idade < 0 || idade > DURACAO_DO_MISS) continue;
-    const k = idade / DURACAO_DO_MISS;
+    if (idade < 0 || idade > DURACAO_DO_ERRO) continue;
+    const k = idade / DURACAO_DO_ERRO;
     const x = falha.pista === PISTA_ABERTA ? layout.centro : xDaPista(layout, falha.pista, 1);
     c.globalAlpha = 1 - k * k;
     c.font = `800 ${Math.round(larguraDoTraste * 0.32)}px sans-serif`;
-    c.fillText("MISS", x, linhaDeBatida - larguraDoTraste * 0.2 - k * 30);
+    c.fillText("ERRO", x, linhaDeBatida - larguraDoTraste * 0.2 - k * 30);
   }
   c.globalAlpha = 1;
 
