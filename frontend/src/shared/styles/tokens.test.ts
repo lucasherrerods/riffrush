@@ -1,9 +1,22 @@
 import { aplicarTokens, brilho, comAlfa, croma } from "./tokens";
-import { TEMAS, TEMA_PADRAO } from "./temas";
+import { TEMAS, TEMA_PADRAO, type Tema } from "./temas";
 
 const { cores } = TEMA_PADRAO;
 
-describe.each(Object.values(TEMAS).map((tema) => [tema.nome, tema] as const))("tema %s (regras de docs/design.md)", (_, tema) => {
+/** Contraste WCAG entre duas cores hex. */
+function contraste(a: string, b: string) {
+  const luminancia = (hex: string) => {
+    const [r, g, bl] = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [claro, escuro] = [luminancia(a), luminancia(b)].sort((x, y) => y - x);
+  return (claro + 0.05) / (escuro + 0.05);
+}
+
+describe.each(Object.values(TEMAS as Record<string, Tema>).map((tema) => [tema.nome, tema] as const))("tema %s (regras de docs/design.md)", (_, tema) => {
   const { cores } = tema;
   const neutros = [cores.fundo, cores.superficie, cores.superficieElevada, cores.borda, cores.texto, cores.textoSuave];
   const paleta = [cores.primaria, cores.sucesso, cores.perigo, cores.destaque];
@@ -24,18 +37,26 @@ describe.each(Object.values(TEMAS).map((tema) => [tema.nome, tema] as const))("t
     expect(temperaturas.includes(1) && temperaturas.includes(-1)).toBe(false);
   });
 
-  it("superfícies ficam mais claras conforme a elevação, até 12% acima do fundo", () => {
+  const claro = tema.esquema === "claro";
+
+  it("superfícies ficam mais claras conforme a elevação, até 12% (escuro) ou 7% (claro) acima do fundo", () => {
     expect(brilho(cores.superficie)).toBeGreaterThan(brilho(cores.fundo));
     expect(brilho(cores.superficieElevada)).toBeGreaterThan(brilho(cores.superficie));
-    expect(brilho(cores.superficieElevada) - brilho(cores.fundo)).toBeLessThanOrEqual(0.12);
+    expect(brilho(cores.superficieElevada) - brilho(cores.fundo)).toBeLessThanOrEqual(claro ? 0.07 : 0.12);
   });
 
-  it("a borda é mais clara que o fundo e as superfícies", () => {
-    expect(brilho(cores.borda)).toBeGreaterThan(brilho(cores.superficieElevada));
+  it("a borda contrasta com o fundo e as superfícies: mais clara no escuro, mais escura no claro", () => {
+    if (claro) expect(brilho(cores.borda)).toBeLessThan(brilho(cores.fundo));
+    else expect(brilho(cores.borda)).toBeGreaterThan(brilho(cores.superficieElevada));
   });
 
   it("o texto principal tem alto contraste com o fundo", () => {
-    expect(brilho(cores.texto) - brilho(cores.fundo)).toBeGreaterThanOrEqual(0.8);
+    expect(Math.abs(brilho(cores.texto) - brilho(cores.fundo))).toBeGreaterThanOrEqual(0.8);
+  });
+
+  it("texto e texto suave passam no contraste AA (4,5:1) sobre o fundo e as superfícies", () => {
+    for (const texto of [cores.texto, cores.textoSuave])
+      for (const fundo of [cores.fundo, cores.superficie, cores.superficieElevada]) expect(contraste(texto, fundo)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("as cores da paleta têm brilhos distintos", () => {
