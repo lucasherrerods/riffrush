@@ -154,3 +154,14 @@ body {
     cursor: url("/cursores/palheta-normal.svg") 5 8, not-allowed;
   }
 }
+
+/* O pulso do star power nos pinos do medidor: mais suave que o animate-pulse, sem apagar o azul. */
+.pulso-suave {
+  animation: pulso-suave 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulso-suave {
+  50% {
+    opacity: 0.75;
+  }
+}
