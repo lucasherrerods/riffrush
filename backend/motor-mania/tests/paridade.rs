@@ -28,7 +28,13 @@ struct Resultado {
 
 fn jogar(caso: &Caso) -> Resultado {
     let beatmap = ler_beatmap(&caso.mapa).unwrap();
-    let mut partida = criar_partida(&beatmap, OpcoesDaPartida { mods: Mods(caso.mods), semente: caso.semente });
+    let mut partida = criar_partida(
+        &beatmap,
+        OpcoesDaPartida {
+            mods: Mods(caso.mods),
+            semente: caso.semente,
+        },
+    );
     for &[tempo, coluna, toca] in &caso.entradas {
         let coluna = u8::try_from(coluna).unwrap();
         if toca == 1 {
