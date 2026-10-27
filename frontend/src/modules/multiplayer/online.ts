@@ -1,5 +1,5 @@
-import type { EstadoDoJogador } from "@/modules/gameplay";
-import { MUSICAS_EMBUTIDAS, type Musica } from "@/modules/songs";
+import type { EstadoDoJogador } from "@/modules/rock/gameplay";
+import { MUSICAS_EMBUTIDAS, type Musica } from "@/modules/rock/songs";
 
 /** Endereço do relay (relay/ neste repositório). Sem ele, o modo online fica escondido. */
 export const URL_DO_RELAY: string = import.meta.env.VITE_URL_DO_RELAY ?? "";

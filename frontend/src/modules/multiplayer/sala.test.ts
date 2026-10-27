@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { PERSONAGEM_PADRAO } from "@/modules/character";
-import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
+import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
+import { MUSICAS_EMBUTIDAS } from "@/modules/rock/songs";
 import { WebSocketFalso } from "@/test/websocketFalso";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));

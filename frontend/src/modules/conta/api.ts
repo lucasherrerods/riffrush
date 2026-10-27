@@ -1,4 +1,4 @@
-import type { Dificuldade, Instrumento } from "@/modules/songs";
+import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
 import { ErroDaApi, criarCliente } from "@/shared/lib/api";
 
 /** Os formatos que a API devolve, em snake_case como no JSON. */

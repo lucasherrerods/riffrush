@@ -1,5 +1,5 @@
 import { ArrowLeft, Eye, Loader2, Radio, UserRound } from "lucide-react";
-import { DIFICULDADES, INSTRUMENTOS } from "@/modules/songs";
+import { DIFICULDADES, INSTRUMENTOS } from "@/modules/rock/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";

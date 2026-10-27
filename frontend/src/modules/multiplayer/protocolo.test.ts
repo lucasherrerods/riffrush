@@ -1,6 +1,6 @@
-import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
-import { PERSONAGEM_PADRAO, type Personagem } from "@/modules/character";
-import type { EstadoDoJogador } from "@/modules/gameplay";
+import { MUSICAS_EMBUTIDAS } from "@/modules/rock/songs";
+import { PERSONAGEM_PADRAO, type Personagem } from "@/modules/rock/character";
+import type { EstadoDoJogador } from "@/modules/rock/gameplay";
 import {
   expulsarJogador,
   ATRASO_DO_INICIO_MS,

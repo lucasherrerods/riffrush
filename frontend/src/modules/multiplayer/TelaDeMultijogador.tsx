@@ -1,6 +1,6 @@
 import { ArrowLeft, Download, Loader2, LogOut } from "lucide-react";
-import type { Personagem } from "@/modules/character";
-import type { Musica } from "@/modules/songs";
+import type { Personagem } from "@/modules/rock/character";
+import type { Musica } from "@/modules/rock/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
 import { Lobby } from "./componentes/Lobby";

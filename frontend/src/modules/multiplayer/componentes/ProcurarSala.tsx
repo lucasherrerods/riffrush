@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Crown, Globe, Plus, RefreshCw, Users, Wifi, type LucideIcon } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
-import { Avatar, type Personagem } from "@/modules/character";
+import { Avatar, type Personagem } from "@/modules/rock/character";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";

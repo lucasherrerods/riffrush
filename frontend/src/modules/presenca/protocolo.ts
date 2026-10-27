@@ -1,5 +1,5 @@
-import { codigoDaEntrada, emTicks, entradaDoCodigo, type EntradaDoReplay } from "@/modules/gameplay";
-import type { Dificuldade, Instrumento } from "@/modules/songs";
+import { codigoDaEntrada, emTicks, entradaDoCodigo, type EntradaDoReplay } from "@/modules/rock/gameplay";
+import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
 
 // O mesmo contrato do relay (backend/relay/src/presenca.ts), que é publicado à parte.
 

@@ -1,9 +1,9 @@
 import { useSyncExternalStore } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { Personagem } from "@/modules/character";
+import type { Personagem } from "@/modules/rock/character";
 import { BALDE_CHEIO, gastarDoBalde, limparTexto } from "@/modules/chat";
-import type { EstadoDoJogador } from "@/modules/gameplay";
-import { dificuldadeMaisProxima, dificuldadesDaMusica, instrumentoDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/songs";
+import type { EstadoDoJogador } from "@/modules/rock/gameplay";
+import { dificuldadeMaisProxima, dificuldadesDaMusica, instrumentoDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { paraRede } from "./musicaNaRede";
 import { URL_DO_RELAY, deveEnviarEstado, lerSalasOnline, normalizarCodigo, podeTocarOnline, urlDasSalas, urlParaCriarSala, urlParaEntrarNaSala, type SalaOnline } from "./online";
 import { comecarPartida, escolherMusica, estadoInicial, expulsarJogador, reduzir, todosProntos, transferirHost, type EstadoDaSala, type Mensagem } from "./protocolo";

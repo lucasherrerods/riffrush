@@ -1,4 +1,4 @@
-import type { Resultado } from "@/modules/gameplay";
+import type { Resultado } from "@/modules/rock/gameplay";
 import { ErroDaApi, type ApiDaConta, type ContaDaApi } from "./api";
 import { SessaoDaConta, type Ambiente } from "./sessao";
 
