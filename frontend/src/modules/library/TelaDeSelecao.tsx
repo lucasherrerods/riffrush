@@ -46,7 +46,7 @@ interface Props {
 
 /** Os botões acima da lista têm o recorte do botão principal: vermelhos ligados, da cor do header desligados. */
 const estiloDoFiltro = (ligado: boolean) =>
-  ligado ? { variant: "default" as const } : { variant: "ghost" as const, className: "corte gasto bg-superficie hover:bg-superficie-elevada" };
+  ligado ? { variant: "default" as const } : { variant: "ghost" as const, className: "corte gasto bg-superficie hover:bg-superficie-hover" };
 
 const TIPOS_IMPORTAVEIS = "audio/*,video/*,.sng";
 const formatar = (n: number) => n.toLocaleString("pt-BR");
@@ -227,13 +227,13 @@ export function TelaDeSelecao(props: Props) {
             </div>
             <Button
               variant="ghost"
-              size="icon"
-              aria-label={favorita ? "Tirar das favoritas" : "Favoritar"}
+              size="sm"
               aria-pressed={favorita}
               title="Favoritar (F)"
               onClick={alternarFavoritaAtual}
+              className={cn("rounded-md", favorita ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-superficie")}
             >
-              <Heart className={cn(favorita ? "fill-primaria text-primaria" : "opacity-70")} />
+              {favorita ? "Tirar dos favoritos" : "Favoritar"}
             </Button>
           </div>
 

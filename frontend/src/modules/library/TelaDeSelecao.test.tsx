@@ -319,13 +319,13 @@ describe("TelaDeSelecao removendo músicas", () => {
     expect(aoJogar).not.toHaveBeenCalled();
   });
 
-  it("favorita pelo coração ou pela tecla F, marca no carrossel e lembra depois", async () => {
+  it("favorita pelo botão Favoritar ou pela tecla F, marca no carrossel e lembra depois", async () => {
     const { usuario } = abrir({ indice: 0 });
     const coracao = screen.getByRole("button", { name: "Favoritar" });
     expect(coracao).toHaveAttribute("aria-pressed", "false");
 
     await usuario.click(coracao);
-    expect(screen.getByRole("button", { name: "Tirar das favoritas" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Tirar dos favoritos" })).toHaveAttribute("aria-pressed", "true");
     expect(within(screen.getByRole("list", { name: "Músicas" })).getAllByLabelText("Favorita")).toHaveLength(1);
 
     await usuario.keyboard("f");

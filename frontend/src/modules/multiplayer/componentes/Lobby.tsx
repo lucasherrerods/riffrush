@@ -168,7 +168,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
                           tocarEfeito("mover", volumeDosEfeitos);
                           escolherNaSala(m, sala.dificuldade);
                         }}
-                        className={cn("flex items-center gap-4 rounded-lg px-4 py-2 text-left text-base", escolhida ? "bg-primaria" : "hover:bg-superficie-elevada")}
+                        className={cn("flex items-center gap-4 rounded-lg px-4 py-2 text-left text-base", escolhida ? "bg-primaria" : "hover:bg-superficie-hover")}
                       >
                         <span className="flex-1 truncate font-semibold">{m.titulo}</span>
                         <span className="truncate text-texto-suave">{m.artista}</span>
