@@ -1,13 +1,13 @@
 /* tslint:disable */
 /* eslint-disable */
+export function hashDoBeatmap(bytes: Uint8Array): string;
 /**
  * Confere se a combinação de mods é válida; devolve a mensagem do problema, ou `undefined`.
  */
 export function problemaDosMods(mods: number): string | undefined;
-export function modsValemRanking(mods: number): boolean;
-export function hashDoBeatmap(bytes: Uint8Array): string;
 export function velocidadeDosMods(mods: number): number;
 export function multiplicadorDosMods(mods: number): number;
+export function modsValemRanking(mods: number): boolean;
 /**
  * O que a biblioteca e a seleção mostram de um `.osu`, sem montar a partida.
  */
@@ -78,6 +78,20 @@ export class MotorDoMania {
   readonly teclas: number;
   readonly derrota: boolean;
 }
+/**
+ * Um replay lido pelo motor: o mesmo código que a API usa para rejulgar. O app usa para conferir o que gravou.
+ */
+export class ReplayLido {
+  free(): void;
+  constructor(bytes: Uint8Array);
+  /**
+   * As entradas em trios [tempo, coluna, 1 = toca / 0 = solta].
+   */
+  entradas(): Int32Array;
+  readonly hash: string;
+  readonly mods: number;
+  readonly semente: number;
+}
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
@@ -85,6 +99,7 @@ export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_infodobeatmap_free: (a: number, b: number) => void;
   readonly __wbg_motordomania_free: (a: number, b: number) => void;
+  readonly __wbg_replaylido_free: (a: number, b: number) => void;
   readonly hashDoBeatmap: (a: number, b: number) => [number, number];
   readonly infodobeatmap_arquivoDeAudio: (a: number) => [number, number];
   readonly infodobeatmap_artista: (a: number) => [number, number];
@@ -126,12 +141,17 @@ export interface InitOutput {
   readonly motordomania_vida: (a: number) => number;
   readonly multiplicadorDosMods: (a: number) => number;
   readonly problemaDosMods: (a: number) => [number, number];
+  readonly replaylido_entradas: (a: number) => [number, number];
+  readonly replaylido_hash: (a: number) => [number, number];
+  readonly replaylido_mods: (a: number) => number;
+  readonly replaylido_new: (a: number, b: number) => [number, number, number];
+  readonly replaylido_semente: (a: number) => number;
   readonly velocidadeDosMods: (a: number) => number;
   readonly __wbindgen_export_0: WebAssembly.Table;
-  readonly __wbindgen_free: (a: number, b: number, c: number) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
-  readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __externref_table_dealloc: (a: number) => void;
+  readonly __wbindgen_free: (a: number, b: number, c: number) => void;
+  readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_start: () => void;
 }
 
