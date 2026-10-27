@@ -293,7 +293,7 @@ describe("precisao", () => {
     tocar(partida, 0, 3.1);
     avancar(partida, 5);
     expect(partida.erros).toBe(1);
-    expect(precisao(partida)).toBeCloseTo((300 + 100 + 50 + 0) / (4 * 300));
+    expect(precisao(partida)).toBeCloseTo((300 + 200 + 100 + 0) / (4 * 300));
   });
 
   it("avisa o julgamento junto do acerto", () => {

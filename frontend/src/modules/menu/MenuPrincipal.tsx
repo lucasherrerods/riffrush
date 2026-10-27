@@ -76,14 +76,14 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
         transition={{ type: "spring", stiffness: 120, damping: 12 }}
         className="mt-auto flex flex-col items-center gap-2"
       >
-        <h1 aria-label="Riff Rush" className="titulo-do-jogo flex items-center gap-2 text-6xl leading-none tracking-[0.01em] max-md:text-[14vw]">
+        <h1 aria-label="Riff Rush" className="titulo-do-jogo flex items-center gap-2 text-5xl leading-none tracking-[0.01em] max-md:text-[14vw]">
           Riff
           <motion.span animate={{ rotate: [-6, 6, -6] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}>
-            <Zap className="size-10 fill-primaria text-primaria max-md:size-[10vw]" />
+            <Zap className="size-8 fill-primaria text-primaria max-md:size-[10vw]" />
           </motion.span>
           Rush
         </h1>
-        <p className="bg-primaria px-3 py-0.5 text-center text-xs font-bold tracking-[0.4em] text-texto -skew-x-12 max-md:tracking-[0.15em]">O PALCO É SEU</p>
+        <p className="bg-primaria px-3 py-0.5 text-center text-[10px] font-bold tracking-[0.4em] text-texto -skew-x-12 max-md:tracking-[0.15em]">O PALCO É SEU</p>
       </motion.div>
 
       <nav className="mb-auto flex w-56 flex-col gap-1 max-md:w-[85vw] max-md:gap-2">
@@ -115,12 +115,12 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
       </nav>
 
       {chat && (
-        <aside aria-label="Chat" className="absolute bottom-6 left-6 flex max-h-72 w-96 flex-col justify-end max-lg:hidden">
+        <aside aria-label="Chat" className="absolute bottom-4 left-4 flex max-h-72 w-96 origin-bottom-left scale-[0.8] flex-col justify-end max-lg:hidden">
           {chat}
         </aside>
       )}
 
-      <footer className="absolute right-6 bottom-6 flex items-center gap-3 text-sm text-texto-suave">
+      <footer className="absolute right-4 bottom-4 flex items-center gap-3 text-xs [&_svg]:size-4 text-texto-suave">
         {(
           [
             ["privacidade", "Política de Privacidade"],
