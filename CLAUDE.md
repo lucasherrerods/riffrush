@@ -76,7 +76,7 @@ npm run dev         # só a versão web
 npm test            # roda os testes uma vez
 npm run test:watch  # testes em modo watch
 npm run build       # typecheck + build web (também é a versão servida aos celulares)
-npm run motor       # recompila o motor da partida (backend/motor) para WASM; rode depois de mudar o motor
+npm run motor       # recompila os motores (backend/motor e backend/motor-mania) para WASM; `npm run motor -- mania` só um
 cargo test --manifest-path src-tauri/Cargo.toml   # testes do lado Rust do app
 ```
 

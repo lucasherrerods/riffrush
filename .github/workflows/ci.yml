@@ -125,10 +125,31 @@ jobs:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: backend/motor-mania
+          workspaces: |
+            backend/motor-mania
+            backend/motor-mania/wasm
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
+      - run: cargo fmt --check && cargo clippy -- -D warnings
+        working-directory: backend/motor-mania/wasm
+      # Como no motor do Rock: o .wasm commitado em frontend/src/modules/mania/gameplay/wasm é recompilado e os
+      # testes do Mania no app rodam com ele, conferindo o mesmo tests/paridade.json.
+      - run: rustup target add wasm32-unknown-unknown
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.100
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Testes do Mania no app com o motor recompilado
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run motor -- mania
+          npx vitest run src/modules/mania
 
   backend:
     name: Testes do backend
