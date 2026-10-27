@@ -1,3 +1,4 @@
+import { GanhoDeXp, type RegistroDaPartida } from "@/modules/conta";
 import { Button } from "@/shared/ui/button";
 import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { NOMES_DOS_JULGAMENTOS } from "./desenhar";
@@ -12,9 +13,12 @@ interface Props {
   resultado: ResultadoDoMania;
   aoJogarDeNovo: () => void;
   aoVoltar: () => void;
+  /** Com a conta conectada: o XP da partida (ou a espera por ele). */
+  xp?: RegistroDaPartida;
+  valeXp?: boolean;
 }
 
-export function ResultadoDoMania({ titulo, dificuldade, resultado, aoJogarDeNovo, aoVoltar }: Props) {
+export function ResultadoDoMania({ titulo, dificuldade, resultado, aoJogarDeNovo, aoVoltar, xp, valeXp = false }: Props) {
   const mods = siglasDosMods(resultado.mods);
   return (
     <main className="flex h-full items-center justify-center bg-fundo p-6 text-texto">
@@ -52,6 +56,7 @@ export function ResultadoDoMania({ titulo, dificuldade, resultado, aoJogarDeNovo
             </div>
           ))}
         </dl>
+        {xp && <GanhoDeXp xp={xp} valeXp={valeXp} modo="mania" />}
         <div className="flex justify-end gap-4">
           <Button variant="secondary" onClick={aoVoltar}>
             Voltar

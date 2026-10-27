@@ -41,6 +41,10 @@ export interface ResultadoDoMania {
 export interface MapaParaJogar {
   titulo: string;
   dificuldade: string;
+  /** O id da dificuldade no osu!, para a API conferir a partida. */
+  beatmapId?: number;
+  /** A partida vale XP e ranking: mapa ranked ou loved baixado da busca. */
+  valeXp?: boolean;
   /** O .osu inteiro, que o motor lê. */
   texto: string;
   hash: string;

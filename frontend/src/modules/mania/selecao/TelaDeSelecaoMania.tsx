@@ -4,6 +4,7 @@ import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import type { ConjuntoSalvo, DificuldadeSalva } from "../beatmaps/biblioteca";
 import { faixaDasEstrelas } from "../beatmaps/dificuldades";
+import { PainelDoRankingDoMania } from "../ranking/PainelDoRankingDoMania";
 import { SeletorDeMods } from "./SeletorDeMods";
 
 interface Props {
@@ -117,6 +118,7 @@ export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, a
         </ul>
       )}
 
+      {escolhida?.dificuldade.beatmapId && escolhida.conjunto.origem === "osu" && <PainelDoRankingDoMania beatmapId={escolhida.dificuldade.beatmapId} />}
       <div className="flex justify-end">
         <Button disabled={!escolhida} onClick={() => escolhida && aoJogar(escolhida.conjunto, escolhida.dificuldade)}>
           Jogar
