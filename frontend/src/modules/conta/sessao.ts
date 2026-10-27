@@ -1,7 +1,7 @@
 import { valorDosAcertos, type Resultado } from "@/modules/gameplay";
 import { invoke } from "@tauri-apps/api/core";
 import { URL_DA_API } from "@/shared/lib/api";
-import { ErroDaApi, criarApi, type ApiDaConta, type ClienteDoGoogle, type ContaDaApi, type RegistroDaPartida } from "./api";
+import { ErroDaApi, criarApi, type ApiDaConta, type ClienteDoGoogle, type ContaDaApi, type RegistroDaPartida, type XpDaPartida } from "./api";
 import { desafioDoVerificador, gerarVerificador, lerRetornoDoGoogle, urlDoLoginDoGoogle } from "./pkce";
 
 export interface EstadoDaConta {
@@ -148,9 +148,29 @@ export class SessaoDaConta {
       ...(replay && { replay: emBase64(replay) }),
     });
     if ("pendente" in xp) return xp;
-    const conta = this.estadoAtual.conta;
-    this.mudar({ conta: { ...conta, xp_total: conta.xp_total + xp.xp_ganho, nivel: xp.depois } });
+    this.somarXp(xp);
     return xp;
+  }
+
+  /** Pergunta à API, de tempos em tempos, se a partida da fila já foi rejulgada. Desiste depois das tentativas. */
+  async esperarXp(id: string, { intervalo = 2000, tentativas = 30 } = {}): Promise<RegistroDaPartida> {
+    for (let i = 0; i < tentativas; i++) {
+      const token = this.token();
+      if (!token) break;
+      const situacao = await this.ambiente.api.situacaoDaPartida(token, id);
+      if ("xp_ganho" in situacao) {
+        this.somarXp(situacao);
+        return situacao;
+      }
+      if (situacao.recusada) return { recusada: true };
+      if (i < tentativas - 1) await new Promise((pronto) => setTimeout(pronto, intervalo));
+    }
+    return { pendente: true, id };
+  }
+
+  private somarXp(xp: XpDaPartida) {
+    const conta = this.estadoAtual.conta;
+    if (conta) this.mudar({ conta: { ...conta, xp_total: conta.xp_total + xp.xp_ganho, nivel: xp.depois } });
   }
 
   private async trocarCodigo(codigo: string, verificador: string, redirectUri: string, cliente: ClienteDoGoogle) {

@@ -7,6 +7,7 @@ const nota = (tempo: number, pista = 0, duracao = 0): Nota => ({ tempo, pista, d
 const replay: Replay = {
   semFalha: false,
   fantasma: true,
+  semAberta: true,
   velocidade: 1.25,
   hashDoChart: "00112233445566778899aabbccddeeff",
   entradas: [
@@ -35,6 +36,8 @@ describe("empacotarReplay", () => {
     const comprimido = new Uint8Array(await new Response(new Response(corpo).body!.pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer());
     const lido = await desempacotarReplay(new Uint8Array([1, ...comprimido]));
     expect(lido.velocidade).toBe(1);
+    // Replays de antes da opção não têm o bit: tocam com a nota aberta.
+    expect(lido.semAberta).toBe(false);
     expect(lido.entradas).toEqual([
       { tempo: 0, tipo: "tocar", pista: 0 },
       { tempo: 0.005, tipo: "soltar", pista: 0 },

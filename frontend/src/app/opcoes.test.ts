@@ -23,6 +23,11 @@ describe("opcoesDaPartida", () => {
     expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, qualidadeDoPalco: "leve" }).qualidadeDoPalco).toBe("leve");
   });
 
+  it("com a nota aberta desligada, a partida joga sem ela", () => {
+    expect(opcoesDaPartida(CONFIGURACOES_PADRAO).semAberta).toBe(false);
+    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, notaAberta: false }).semAberta).toBe(true);
+  });
+
   it("leva o modo competitivo", () => {
     expect(opcoesDaPartida(CONFIGURACOES_PADRAO).modoCompetitivo).toBe(false);
     expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, modoCompetitivo: true }).modoCompetitivo).toBe(true);

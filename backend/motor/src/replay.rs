@@ -30,6 +30,8 @@ pub struct Entrada {
 pub struct Replay {
     pub sem_falha: bool,
     pub fantasma: bool,
+    /// Jogou com a nota aberta desligada. Replays antigos não têm o bit e tocam com ela.
+    pub sem_aberta: bool,
     /// Velocidade da música. Os replays de antes da versão 3 são todos a 1x.
     pub velocidade: f64,
     pub hash_do_chart: String,
@@ -93,6 +95,7 @@ pub fn desempacotar_replay(pacote: &[u8]) -> Result<Replay, ErroDoReplay> {
     Ok(Replay {
         sem_falha: opcoes & 1 != 0,
         fantasma: opcoes & 2 != 0,
+        sem_aberta: opcoes & 4 != 0,
         velocidade,
         hash_do_chart,
         entradas,
@@ -105,7 +108,10 @@ pub fn empacotar_replay(replay: &Replay) -> Vec<u8> {
     // A velocidade vai em centésimos: 0,75x é 75.
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let velocidade = (replay.velocidade * 100.0).round().clamp(0.0, 255.0) as u8;
-    let mut bytes = vec![u8::from(replay.sem_falha) | (u8::from(replay.fantasma) << 1), velocidade];
+    let mut bytes = vec![
+        u8::from(replay.sem_falha) | (u8::from(replay.fantasma) << 1) | (u8::from(replay.sem_aberta) << 2),
+        velocidade,
+    ];
     bytes.extend((0..BYTES_DO_HASH).map(|i| u8::from_str_radix(replay.hash_do_chart.get(i * 2..i * 2 + 2).unwrap_or("00"), 16).unwrap_or(0)));
     let em_ticks = |tempo: f64| {
         // Tempos de música: cabem com folga num i64.
@@ -217,6 +223,7 @@ mod tests {
         let replay = Replay {
             sem_falha: true,
             fantasma: false,
+            sem_aberta: false,
             velocidade: 0.75,
             hash_do_chart: "00112233445566778899aabbccddeeff".into(),
             entradas: vec![
@@ -238,6 +245,22 @@ mod tests {
             ],
         };
         assert_eq!(desempacotar_replay(&empacotar_replay(&replay)), Ok(replay));
+    }
+
+    #[test]
+    fn guarda_quem_jogou_sem_a_nota_aberta() {
+        let replay = Replay {
+            sem_falha: false,
+            fantasma: true,
+            sem_aberta: true,
+            velocidade: 1.0,
+            hash_do_chart: "00112233445566778899aabbccddeeff".into(),
+            entradas: vec![],
+        };
+        let lido = desempacotar_replay(&empacotar_replay(&replay)).unwrap();
+        assert!(lido.sem_aberta);
+        assert!(lido.fantasma);
+        assert!(!lido.sem_falha);
     }
 
     #[test]

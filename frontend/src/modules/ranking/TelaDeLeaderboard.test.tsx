@@ -70,29 +70,34 @@ describe("TelaDeLeaderboard: cada música", () => {
     expect(aoAbrirPartida).toHaveBeenCalledWith("p1", { titulo: "Goofy Goober Rock", artista: "Tom Rothrock" });
   });
 
-  it("só música do Encore tem botão de baixar, e só música da biblioteca tem prévia", async () => {
+  it("música do Encore que já está na biblioteca tem prévia e não tem botão de baixar", async () => {
     const aoAbrirMusicaDoEncore = vi.fn();
     const ouvir = vi.fn();
     const previa = (id: string) => (id === "encore:abc" ? ouvir : undefined);
     const { usuario } = await abrirMusica(/Ver o ranking de Shine/, { aoAbrirMusicaDoEncore, previa });
     await usuario.click(screen.getByRole("button", { name: "Ouvir prévia" }));
     expect(ouvir).toHaveBeenCalled();
-    await usuario.click(screen.getByRole("button", { name: "Baixar" }));
-    expect(aoAbrirMusicaDoEncore).toHaveBeenCalledWith("abc");
+    expect(screen.queryByRole("button", { name: "Baixar" })).not.toBeInTheDocument();
+  });
 
-    await usuario.click(screen.getByRole("button", { name: "Voltar às músicas" }));
-    await usuario.click(await screen.findByRole("button", { name: /Ver o ranking de Embutida/ }));
+  it("música do Encore que ainda não foi baixada tem o botão de baixar", async () => {
+    const aoAbrirMusicaDoEncore = vi.fn();
+    const { usuario } = await abrirMusica(/Ver o ranking de Goofy Goober Rock/, { aoAbrirMusicaDoEncore });
+    await usuario.click(screen.getByRole("button", { name: "Baixar" }));
+    expect(aoAbrirMusicaDoEncore).toHaveBeenCalledWith("goofy");
+  });
+
+  it("música que não é do Encore não tem de onde baixar nem prévia", async () => {
+    await abrirMusica(/Ver o ranking de Embutida/, { aoAbrirMusicaDoEncore: vi.fn() });
     expect(screen.queryByRole("button", { name: "Baixar" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ouvir prévia" })).not.toBeInTheDocument();
   });
 
-  it("a lista tem prévia direto na linha das músicas que estão na biblioteca", async () => {
-    const ouvir = vi.fn();
-    const { usuario } = abrir({ previa: (id) => (id === "encore:abc" ? ouvir : undefined) });
+  it("a lista não tem prévia nas linhas", async () => {
+    const { usuario } = abrir({ previa: () => vi.fn() });
     await usuario.click(screen.getByRole("tab", { name: "Músicas" }));
-    await usuario.click(await screen.findByRole("button", { name: "Ouvir prévia de Shine — Spektrem" }));
-    expect(ouvir).toHaveBeenCalled();
-    expect(screen.getAllByRole("button", { name: /Ouvir prévia de/ })).toHaveLength(1);
+    await screen.findByRole("list", { name: "Músicas" });
+    expect(screen.queryByRole("button", { name: /Ouvir prévia de/ })).not.toBeInTheDocument();
   });
 });
 

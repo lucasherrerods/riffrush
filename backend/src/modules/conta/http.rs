@@ -1,4 +1,4 @@
-use axum::extract::{FromRequestParts, State};
+use axum::extract::{FromRequestParts, Path, State};
 use axum::http::request::Parts;
 use axum::http::StatusCode;
 use axum::routing::{get, post};
@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use super::casos_de_uso::{ErroDaConta, PartidaEnviada, Registro, XpDaPartida};
+use super::casos_de_uso::{ErroDaConta, PartidaEnviada, Registro, SituacaoDaPartida, XpDaPartida};
 use super::dominio::Conta;
 use super::portas::{ClienteDoGoogle, PedidoDeLogin};
 use crate::modules::progresso::{Dificuldade, Instrumento, Nivel, ResumoDaPartida};
@@ -21,6 +21,7 @@ impl From<ErroDaConta> for ErroDaApi {
             ErroDaConta::SessaoInvalida | ErroDaConta::LoginRecusado => Self::NaoAutorizado,
             ErroDaConta::PartidaInvalida(_) | ErroDaConta::MusicaInvalida | ErroDaConta::ReplayObrigatorio => Self::Invalido(erro.to_string()),
             ErroDaConta::RapidoDemais => Self::MuitasRequisicoes,
+            ErroDaConta::PartidaNaoEncontrada => Self::NaoEncontrado,
             ErroDaConta::Falha(falha) => Self::Interno(falha.0),
         }
     }
@@ -234,10 +235,44 @@ pub async fn registrar_partida(
     })
 }
 
+/// Partida que ainda está na fila, ou que o rejulgamento recusou e não vale XP.
+#[derive(Serialize, ToSchema)]
+pub struct RespostaDaSituacao {
+    pendente: bool,
+    recusada: bool,
+}
+
+/// Em que pé está uma partida da fila: o XP, quando o servidor terminou de rejulgar (200), ou se ela ainda
+/// espera ou foi recusada (202).
+#[utoipa::path(get, path = "/partidas/{id}/xp", params(("id" = Uuid, Path)), responses((status = 200, body = RespostaDaPartida), (status = 202, body = RespostaDaSituacao), (status = 401), (status = 404)), security(("token" = [])))]
+pub async fn situacao_da_partida(State(estado): State<EstadoDoApp>, Token(token): Token, Path(id): Path<Uuid>) -> Result<axum::response::Response, ErroDaApi> {
+    use axum::response::IntoResponse;
+    Ok(match estado.conta.situacao_da_partida(&token, id).await? {
+        SituacaoDaPartida::Registrada(xp) => Json(RespostaDaPartida::from(xp)).into_response(),
+        SituacaoDaPartida::NaFila => (
+            StatusCode::ACCEPTED,
+            Json(RespostaDaSituacao {
+                pendente: true,
+                recusada: false,
+            }),
+        )
+            .into_response(),
+        SituacaoDaPartida::Recusada => (
+            StatusCode::ACCEPTED,
+            Json(RespostaDaSituacao {
+                pendente: false,
+                recusada: true,
+            }),
+        )
+            .into_response(),
+    })
+}
+
 pub fn rotas() -> Router<EstadoDoApp> {
     Router::new()
         .route("/auth/google", post(entrar))
         .route("/auth/sair", post(sair))
         .route("/eu", get(eu).delete(excluir))
         .route("/partidas", post(registrar_partida))
+        .route("/partidas/{id}/xp", get(situacao_da_partida))
 }

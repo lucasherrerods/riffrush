@@ -169,6 +169,9 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
             <LinhaDeOpcao rotulo="Modo sem falha" dica="O medidor de rock nunca tira você da música" para="sem-falha">
               <Switch id="sem-falha" checked={configuracoes.semFalha} onCheckedChange={(semFalha) => mudar({ semFalha })} />
             </LinhaDeOpcao>
+            <LinhaDeOpcao rotulo="Nota aberta" dica="Desligada, a nota aberta vira verde e sai com a tecla do verde" para="nota-aberta">
+              <Switch id="nota-aberta" checked={configuracoes.notaAberta} onCheckedChange={(notaAberta) => mudar({ notaAberta })} />
+            </LinhaDeOpcao>
             <LinhaDeOpcao rotulo="Bot" dica="O jogo toca sozinho. Recordes não são salvos" para="bot">
               <Switch id="bot" checked={configuracoes.bot} onCheckedChange={(bot) => mudar({ bot })} />
             </LinhaDeOpcao>

@@ -33,8 +33,19 @@ pub struct MotorDaPartida {
 #[wasm_bindgen]
 impl MotorDaPartida {
     /// As notas vêm em quatro listas paralelas, que passam para o WASM sem um objeto por nota.
+    // O wasm-bindgen só aceita argumentos soltos no construtor, sem um struct de opções.
+    #[allow(clippy::too_many_arguments)]
     #[wasm_bindgen(constructor)]
-    pub fn new(tempos: &[f64], pistas: &[u8], frases: &[i32], duracoes: &[f64], sem_falha: bool, fantasma: bool, velocidade: f64) -> MotorDaPartida {
+    pub fn new(
+        tempos: &[f64],
+        pistas: &[u8],
+        frases: &[i32],
+        duracoes: &[f64],
+        sem_falha: bool,
+        fantasma: bool,
+        velocidade: f64,
+        sem_aberta: bool,
+    ) -> MotorDaPartida {
         let notas: Vec<motor::Nota> = tempos
             .iter()
             .zip(pistas)
@@ -48,6 +59,7 @@ impl MotorDaPartida {
                 sem_falha,
                 fantasma,
                 velocidade,
+                sem_aberta,
             },
         );
         let enviadas = partida.notas.iter().map(|n| (bandeiras(n), n.segurou_ate)).collect();
@@ -59,9 +71,9 @@ impl MotorDaPartida {
     }
 
     /// Tempo e duração de cada nota já no tempo real (dividido pela velocidade) e na grade da partida,
-    /// para o espelho começar igual.
+    /// e a pista em que ela de fato cai (sem a aberta, a aberta vira verde), para o espelho começar igual.
     pub fn grade_das_notas(&self) -> Vec<f64> {
-        self.partida.notas.iter().flat_map(|n| [n.tempo, n.duracao]).collect()
+        self.partida.notas.iter().flat_map(|n| [n.tempo, n.duracao, f64::from(n.pista)]).collect()
     }
 
     pub fn tocar(&mut self, pista: u8, tempo: f64) -> bool {

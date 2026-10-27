@@ -53,6 +53,7 @@ export function App() {
   const [assistindo, setAssistindo] = useState<{ replay: Replay; dificuldade: Dificuldade; instrumento: Instrumento } | null>(null);
   const [resultado, setResultado] = useState<{ resultado: Resultado; recordeNovo: boolean } | null>(null);
   const [xpDaPartida, setXpDaPartida] = useState<RegistroDaPartida | null>(null);
+  const partidaAtual = useRef(0);
   const [partida, setPartida] = useState(0);
   /** A entrada com o trovão: `segurando` enquanto a partida ainda não monta por baixo dela. */
   const [entrada, setEntrada] = useState<{ segurando: boolean } | null>(null);
@@ -300,11 +301,20 @@ export function App() {
       const comConta = !!sessaoDaConta.token();
       setResultado({ resultado: r, recordeNovo: !configuracoes.bot && comConta && anotarRecorde({ ...r, musicaId: idDoRanking(musicaDaPartida.current) }) });
       setXpDaPartida(null);
+      const estaPartida = ++partidaAtual.current;
+      // Uma resposta que chega depois da próxima partida não pode trocar o XP dela.
+      const mostrarXp = (xp: RegistroDaPartida | null) => {
+        if (partidaAtual.current === estaPartida) setXpDaPartida(xp);
+      };
       if (!configuracoes.bot) {
         // Sem o replay a partida ainda vale: só não dá para assistir depois.
         (gerarReplay ? gerarReplay().catch(() => undefined) : Promise.resolve(undefined))
           .then((replay) => sessaoDaConta.registrarPartida({ ...r, musicaId: idDoRanking(musicaDaPartida.current) }, replay))
-          .then(setXpDaPartida)
+          .then((xp) => {
+            mostrarXp(xp);
+            // Música do Encore: o XP aparece quando o servidor terminar de rejulgar o replay.
+            if (xp && "pendente" in xp) return sessaoDaConta.esperarXp(xp.id).then(mostrarXp);
+          })
           .catch((erro) => avisar.error(`Não deu para registrar o XP: ${erro instanceof Error ? erro.message : String(erro)}`));
       }
       setTela("resultado");

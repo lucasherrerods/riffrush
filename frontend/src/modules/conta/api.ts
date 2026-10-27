@@ -30,7 +30,18 @@ export interface PartidaNaFila {
   id: string;
 }
 
-export type RegistroDaPartida = XpDaPartida | PartidaNaFila;
+/** O servidor rejulgou a partida e ela não valeu (replay de outro chart, chart sumiu do Encore). */
+export interface PartidaRecusada {
+  recusada: true;
+}
+
+export type RegistroDaPartida = XpDaPartida | PartidaNaFila | PartidaRecusada;
+
+/** O que `GET /partidas/{id}/xp` devolve enquanto a partida não tem XP. */
+interface PartidaSemXp {
+  pendente: boolean;
+  recusada: boolean;
+}
 
 export interface PartidaParaAApi {
   musica_id: string;
@@ -135,7 +146,8 @@ export function criarApi(base: string, buscar?: typeof fetch) {
     recordes: (token: string) => chamar<RecordeDaConta[]>("GET", "/eu/recordes", { token }),
     sair: (token: string) => chamar<void>("POST", "/auth/sair", { token }),
     excluirConta: (token: string) => chamar<void>("DELETE", "/eu", { token }),
-    registrarPartida: (token: string, partida: PartidaParaAApi) => chamar<RegistroDaPartida>("POST", "/partidas", { token, corpo: partida }),
+    registrarPartida: (token: string, partida: PartidaParaAApi) => chamar<XpDaPartida | PartidaNaFila>("POST", "/partidas", { token, corpo: partida }),
+    situacaoDaPartida: (token: string, id: string) => chamar<XpDaPartida | PartidaSemXp>("GET", `/partidas/${encodeURIComponent(id)}/xp`, { token }),
   };
 }
 

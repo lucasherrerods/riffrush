@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { instalarAtalhosDeVolume, obterContextoDeAudio } from "@/modules/audio";
 import { PERSONAGEM_PADRAO } from "@/modules/character";
-import { carregarMusica, type Nota } from "@/modules/songs";
+import { carregarMusica, PISTA_ABERTA, type Nota } from "@/modules/songs";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { OPCOES_PADRAO_DA_PARTIDA, TelaDeJogo, type OpcoesDaPartida } from "./TelaDeJogo";
 import { desempacotarReplay, hashDoChart, type EventoDaTransmissao, type Replay } from "./replay";
@@ -266,6 +266,7 @@ describe("TelaDeJogo", () => {
     const replay: Replay = {
       semFalha: false,
       fantasma: false,
+      semAberta: false,
       velocidade: 1,
       hashDoChart: await hashDoChart([nota(0.5), nota(0.8, 1)]),
       entradas: [{ tempo: 0.5, tipo: "tocar", pista: 0 }],
@@ -282,9 +283,42 @@ describe("TelaDeJogo", () => {
     expect(screen.getByLabelText("Pontos")).toHaveTextContent("50");
   });
 
+  it("sem a nota aberta, ela sai no verde e a opção vai para o replay e para a transmissão", async () => {
+    carregarCom([nota(0.5, PISTA_ABERTA)], 1);
+    const transmissao = vi.fn();
+    const { aoTerminar, usuario } = abrir({ semAberta: true }, undefined, undefined, transmissao);
+    await partidaPronta();
+    await waitFor(() => expect(transmissao).toHaveBeenCalledWith(expect.objectContaining({ tipo: "inicio", semAberta: true })));
+    irPara(0.5);
+    await usuario.keyboard("a");
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
+    irPara(1.2);
+    await waitFor(() => expect(aoTerminar).toHaveBeenCalled());
+    const replay = await desempacotarReplay(await aoTerminar.mock.calls[0][1]());
+    expect(replay.semAberta).toBe(true);
+    // O hash é o do chart original: o replay e o ranking continuam reconhecendo a música.
+    expect(replay.hashDoChart).toBe(await hashDoChart([nota(0.5, PISTA_ABERTA)]));
+  });
+
+  it("o replay sem a nota aberta toca do mesmo jeito, mesmo com a aberta ligada aqui", async () => {
+    carregarCom([nota(0.5, PISTA_ABERTA)]);
+    const replay: Replay = {
+      semFalha: false,
+      fantasma: false,
+      semAberta: true,
+      velocidade: 1,
+      hashDoChart: await hashDoChart([nota(0.5, PISTA_ABERTA)]),
+      entradas: [{ tempo: 0.5, tipo: "tocar", pista: 0 }],
+    };
+    abrir({ semAberta: false }, undefined, replay);
+    await partidaPronta();
+    irPara(0.6);
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
+  });
+
   it("replay gravado em outro chart avisa e não toca", async () => {
     carregarCom([nota(0.5)]);
-    abrir({}, undefined, { semFalha: false, fantasma: false, velocidade: 1, hashDoChart: "0".repeat(32), entradas: [] });
+    abrir({}, undefined, { semFalha: false, fantasma: false, semAberta: false, velocidade: 1, hashDoChart: "0".repeat(32), entradas: [] });
     expect(await screen.findByText(/outra versão do chart/)).toBeInTheDocument();
   });
 
@@ -315,7 +349,7 @@ describe("TelaDeJogo", () => {
 
   it("ao vivo, quem assiste não passa do que já chegou", async () => {
     carregarCom([nota(0.5)]);
-    const replay: Replay = { semFalha: false, fantasma: false, velocidade: 1, hashDoChart: await hashDoChart([nota(0.5)]), entradas: [], ateAgora: 0.2 };
+    const replay: Replay = { semFalha: false, fantasma: false, semAberta: false, velocidade: 1, hashDoChart: await hashDoChart([nota(0.5)]), entradas: [], ateAgora: 0.2 };
     abrir({}, undefined, replay);
     await partidaPronta();
     irPara(1);

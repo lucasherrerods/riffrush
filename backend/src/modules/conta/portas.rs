@@ -41,6 +41,17 @@ pub trait FilaDePartidas: Send + Sync {
     async fn enfileirar(&self, partida: PartidaNaFila) -> Result<(), FalhaExterna>;
 }
 
+/// Uma partida enviada, do jeito que o banco a guarda agora.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PartidaGuardada {
+    Registrada {
+        xp_ganho: u64,
+    },
+    NaFila,
+    /// O rejulgamento desistiu dela (replay de outro chart, chart sumiu do Encore).
+    Recusada,
+}
+
 #[async_trait]
 pub trait RepositorioDeContas: Send + Sync {
     /// Primeiro login cria a conta; os seguintes atualizam nome e foto.
@@ -53,6 +64,8 @@ pub trait RepositorioDeContas: Send + Sync {
     async fn registrar_partida(&self, partida: &PartidaRegistrada) -> Result<Conta, FalhaExterna>;
     /// Quantas partidas a conta registrou no chart desde `desde`, sem contar a `exceto`.
     async fn partidas_no_chart(&self, conta_id: Uuid, musica_id: &str, desde: DateTime<Utc>, exceto: Uuid) -> Result<u32, FalhaExterna>;
+    /// Em que pé está uma partida da conta: registrada (com o XP), ainda na fila ou recusada. `None` se não for dela.
+    async fn situacao_da_partida(&self, conta_id: Uuid, id: Uuid) -> Result<Option<PartidaGuardada>, FalhaExterna>;
     /// Apaga a conta junto com as sessões e as partidas dela.
     async fn excluir(&self, id: Uuid) -> Result<(), FalhaExterna>;
 }

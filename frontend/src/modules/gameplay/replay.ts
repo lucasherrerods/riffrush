@@ -25,6 +25,8 @@ export interface EntradaDoReplay {
 export interface Replay {
   semFalha: boolean;
   fantasma: boolean;
+  /** Jogou com a nota aberta desligada: ela vira verde. Replays de antes da opção não têm o bit e tocam com ela. */
+  semAberta: boolean;
   /** Velocidade da música. Os replays de antes da versão 3 são todos a 1x. */
   velocidade: number;
   /** Identifica o chart: o replay só vale nas mesmas notas. */
@@ -36,7 +38,7 @@ export interface Replay {
 
 /** O que a partida conta para quem assiste ao vivo: quem leva isso à rede é o módulo de presença. */
 export type EventoDaTransmissao =
-  | { tipo: "inicio"; hashDoChart: string; semFalha: boolean; velocidade: number }
+  | { tipo: "inicio"; hashDoChart: string; semFalha: boolean; semAberta: boolean; velocidade: number }
   | { tipo: "lote"; entradas: EntradaDoReplay[]; ate: number }
   | { tipo: "pausa"; pausado: boolean }
   | { tipo: "fim" };
@@ -104,7 +106,7 @@ export async function hashDoChart(notas: Nota[]) {
  */
 export async function empacotarReplay(replay: Replay) {
   // A velocidade vai em centésimos: 0,75x é 75.
-  const bytes: number[] = [(replay.semFalha ? 1 : 0) | (replay.fantasma ? 2 : 0), Math.round(replay.velocidade * 100)];
+  const bytes: number[] = [(replay.semFalha ? 1 : 0) | (replay.fantasma ? 2 : 0) | (replay.semAberta ? 4 : 0), Math.round(replay.velocidade * 100)];
   for (let i = 0; i < BYTES_DO_HASH; i++) bytes.push(parseInt(replay.hashDoChart.slice(i * 2, i * 2 + 2), 16));
   let anterior = replay.entradas.length ? emTicks(replay.entradas[0].tempo) : 0;
   escreverVarint(bytes, anterior < 0 ? -anterior * 2 - 1 : anterior * 2);
@@ -142,7 +144,7 @@ export async function desempacotarReplay(pacote: Uint8Array): Promise<Replay> {
     ticks += (valor - codigo) / codigos;
     entradas.push(entradaDoCodigo(ticks, codigo));
   }
-  return { semFalha: !!(opcoes & 1), fantasma: !!(opcoes & 2), velocidade, hashDoChart: hash, entradas };
+  return { semFalha: !!(opcoes & 1), fantasma: !!(opcoes & 2), semAberta: !!(opcoes & 4), velocidade, hashDoChart: hash, entradas };
 }
 
 export const emTicks = (tempo: number) => Math.round(tempo * TICKS_POR_SEGUNDO);

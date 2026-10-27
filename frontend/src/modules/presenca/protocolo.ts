@@ -24,6 +24,8 @@ export interface PartidaTransmitida {
   instrumento: Instrumento;
   hashDoChart: string;
   semFalha: boolean;
+  /** Quem joga desligou a nota aberta. Relay antigo não manda: aí é com ela. */
+  semAberta?: boolean;
   /** Velocidade da música: o replay de quem assiste toca na mesma. Relay antigo não manda. */
   velocidade?: number;
   /** O .sng no Encore, para quem assiste baixar com um clique. Só confiável depois de `linkDoChartConfere`. */

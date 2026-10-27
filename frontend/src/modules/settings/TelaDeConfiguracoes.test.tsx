@@ -68,6 +68,13 @@ describe("TelaDeConfiguracoes", () => {
     expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ semFalha: true }));
   });
 
+  it("desliga a nota aberta", async () => {
+    const { aoMudar, usuario } = abrir();
+    await usuario.click(screen.getByRole("tab", { name: /Gameplay/ }));
+    await usuario.click(screen.getByRole("switch", { name: "Nota aberta" }));
+    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ notaAberta: false }));
+  });
+
   it("escolhe a qualidade do palco no vídeo", async () => {
     const { aoMudar, usuario } = abrir();
     await usuario.click(screen.getByRole("tab", { name: /Vídeo/ }));

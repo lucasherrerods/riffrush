@@ -43,6 +43,8 @@ export interface OpcoesDaPartida {
   volumeDosEfeitos: number;
   atrasoMs: number;
   semFalha: boolean;
+  /** A nota aberta vira verde. O hash continua o do chart original, então replay, ranking e ao vivo seguem valendo. */
+  semAberta: boolean;
   /** Velocidade da música (1 é a normal). */
   velocidadeDaMusica: number;
   bot: boolean;
@@ -66,6 +68,7 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   volumeDosEfeitos: 0.5,
   atrasoMs: 0,
   semFalha: false,
+  semAberta: false,
   velocidadeDaMusica: 1,
   bot: false,
   efeitos: true,
@@ -250,8 +253,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
 
     // Em rede ninguém sai da música: quem zera a vida vira fantasma e segue pontuando.
     const partida = replay
-      ? criarPartida(carregada.notas, { semFalha: replay.semFalha, fantasma: replay.fantasma, velocidade })
-      : criarPartida(carregada.notas, { semFalha: opcoes.semFalha, fantasma: inicioEmRede !== undefined, velocidade });
+      ? criarPartida(carregada.notas, { semFalha: replay.semFalha, fantasma: replay.fantasma, semAberta: replay.semAberta, velocidade })
+      : criarPartida(carregada.notas, { semFalha: opcoes.semFalha, fantasma: inicioEmRede !== undefined, semAberta: opcoes.semAberta, velocidade });
     const bot = opcoes.bot && !replay ? criarBot() : null;
     const gravador = criarGravador(partida);
     let proximaEntrada = 0;
@@ -274,7 +277,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       void hashDoChart(carregada.notas).then((hash) => {
         if (transmissaoAcabou) return;
         transmitindo = true;
-        transmitir({ tipo: "inicio", hashDoChart: hash, semFalha: opcoes.semFalha, velocidade });
+        transmitir({ tipo: "inicio", hashDoChart: hash, semFalha: opcoes.semFalha, semAberta: opcoes.semAberta, velocidade });
       });
     }
     const sprites = criarSprites();
@@ -338,6 +341,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
           empacotarReplay({
             semFalha: opcoes.semFalha,
             fantasma: inicioEmRede !== undefined,
+            semAberta: opcoes.semAberta,
             velocidade,
             hashDoChart: await hashDoChart(carregada.notas),
             entradas: gravador.entradas,

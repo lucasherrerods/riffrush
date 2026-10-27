@@ -13,7 +13,7 @@ class Memoria {
 
 function montar(api: Partial<ApiDaConta> = {}, busca = "") {
   const ambiente: Ambiente = {
-    api: { entrar: vi.fn(async () => ({ token: "tok", conta })), eu: vi.fn(async () => conta), sair: vi.fn(async () => {}), excluirConta: vi.fn(async () => {}), registrarPartida: vi.fn(), perfil: vi.fn(), recordes: vi.fn(async () => []), ...api },
+    api: { entrar: vi.fn(async () => ({ token: "tok", conta })), eu: vi.fn(async () => conta), sair: vi.fn(async () => {}), excluirConta: vi.fn(async () => {}), registrarPartida: vi.fn(), situacaoDaPartida: vi.fn(), perfil: vi.fn(), recordes: vi.fn(async () => []), ...api },
     clientId: "id",
     local: new Memoria(),
     temporario: new Memoria(),
@@ -140,6 +140,38 @@ describe("SessaoDaConta", () => {
     await sessao.iniciar();
     expect(await sessao.registrarPartida(resultado)).toEqual({ pendente: true, id: "p1" });
     expect(sessao.estado().conta).toMatchObject({ xp_total: conta.xp_total });
+  });
+
+  it("pergunta pela partida da fila até o XP entrar, e soma o XP na conta", async () => {
+    const depois = { nivel: 2, xp_no_nivel: 50, xp_para_o_proximo: 200 };
+    const situacaoDaPartida = vi
+      .fn()
+      .mockResolvedValueOnce({ pendente: true, recusada: false })
+      .mockResolvedValueOnce({ xp_ganho: 150, antes: conta.nivel, depois });
+    const { sessao, ambiente } = montar({ situacaoDaPartida });
+    ambiente.local.setItem("riffrush:token", "tok");
+    await sessao.iniciar();
+    expect(await sessao.esperarXp("p1", { intervalo: 0 })).toMatchObject({ xp_ganho: 150 });
+    expect(situacaoDaPartida).toHaveBeenCalledTimes(2);
+    expect(situacaoDaPartida).toHaveBeenCalledWith("tok", "p1");
+    expect(sessao.estado().conta).toMatchObject({ xp_total: conta.xp_total + 150, nivel: depois });
+  });
+
+  it("partida recusada pelo servidor volta como recusada, sem XP", async () => {
+    const { sessao, ambiente } = montar({ situacaoDaPartida: vi.fn(async () => ({ pendente: false, recusada: true })) });
+    ambiente.local.setItem("riffrush:token", "tok");
+    await sessao.iniciar();
+    expect(await sessao.esperarXp("p1", { intervalo: 0 })).toEqual({ recusada: true });
+    expect(sessao.estado().conta).toMatchObject({ xp_total: conta.xp_total });
+  });
+
+  it("desiste de esperar depois das tentativas e continua pendente", async () => {
+    const situacaoDaPartida = vi.fn(async () => ({ pendente: true, recusada: false }));
+    const { sessao, ambiente } = montar({ situacaoDaPartida });
+    ambiente.local.setItem("riffrush:token", "tok");
+    await sessao.iniciar();
+    expect(await sessao.esperarXp("p1", { intervalo: 0, tentativas: 3 })).toEqual({ pendente: true, id: "p1" });
+    expect(situacaoDaPartida).toHaveBeenCalledTimes(3);
   });
 
   it("sem conta, a partida não vai para a API", async () => {

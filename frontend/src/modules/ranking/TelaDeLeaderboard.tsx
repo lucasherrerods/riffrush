@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Music, Play, Search, Users } from "lucide-react";
+import { ArrowLeft, Music, Search, Users } from "lucide-react";
 import { sessaoDaConta, useConta } from "@/modules/conta";
 import { DIFICULDADES, nomeDaMusica } from "@/modules/songs";
 import { porcentagem } from "@/shared/lib/formatar";
@@ -138,12 +138,14 @@ function AbaDeMusicas({ carregar, tituloDaMusica, aoAbrirMusicaDoEncore, aoAbrir
 
   if (aberta) {
     const md5 = md5DoEncore(aberta.musica_id);
+    // Música que já está na biblioteca não precisa ser baixada de novo.
+    const jaBaixada = tituloDaMusica(aberta.musica_id) !== undefined;
     return (
       <PainelDaMusica
         musica={aberta}
         nome={nome(aberta)}
         aoVoltar={() => setAberta(null)}
-        aoBaixar={md5 && aoAbrirMusicaDoEncore ? () => aoAbrirMusicaDoEncore(md5) : undefined}
+        aoBaixar={md5 && !jaBaixada && aoAbrirMusicaDoEncore ? () => aoAbrirMusicaDoEncore(md5) : undefined}
         aoOuvir={previa?.(aberta.musica_id)}
         aoAbrirPartida={aoAbrirPartida && ((id) => aoAbrirPartida(id, { titulo: aberta.titulo ?? nome(aberta), artista: aberta.artista ?? "" }))}
         api={apiDoRanking}
@@ -176,7 +178,6 @@ function AbaDeMusicas({ carregar, tituloDaMusica, aoAbrirMusicaDoEncore, aoAbrir
               <ol aria-label="Músicas" className={LISTA}>
                 {filtradas.map((m, i) => {
                   const nomeDaLinha = nome(m);
-                  const ouvir = previa?.(m.musica_id);
                   return (
                     <LinhaComPosicao
                       key={m.musica_id}
@@ -196,13 +197,6 @@ function AbaDeMusicas({ carregar, tituloDaMusica, aoAbrirMusicaDoEncore, aoAbrir
                         </>
                       }
                       valor={plural(m.partidas, "partida", "partidas")}
-                      acao={
-                        ouvir && (
-                          <Button variant="ghost" size="icon" onClick={ouvir} aria-label={`Ouvir prévia de ${nomeDaLinha}`}>
-                            <Play className="opacity-70" />
-                          </Button>
-                        )
-                      }
                     />
                   );
                 })}
