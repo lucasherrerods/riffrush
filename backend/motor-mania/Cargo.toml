@@ -1,0 +1,13 @@
+[package]
+name = "riffrush-motor-mania"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# As regras do Riff Rush Mania. Como o motor do Rock, sem rede, banco ou sistema: roda na API e, em WASM, no app.
+[dependencies]
+md-5 = "0.10"
+
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

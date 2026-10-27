@@ -9,6 +9,7 @@ frontend/   o jogo: React + Tauri (desktop) + versão web servida aos celulares
 backend/    a API em Rust (contas, XP, partidas)
   relay/    Worker da Cloudflare do modo online, até ele virar parte da API
   motor/    regras da partida em Rust: a API rejulga replays com elas e o app roda as mesmas em WASM
+  motor-mania/  as mesmas peças para o modo Mania (beatmaps do osu!mania), num crate à parte do Rock
 landing/    site de divulgação do jogo (Vite + React), usa as cores e a identidade do frontend
 .github/    CI (precisa ficar na raiz)
 CLAUDE.md   este arquivo, único para o projeto inteiro
@@ -75,7 +76,7 @@ npm run dev         # só a versão web
 npm test            # roda os testes uma vez
 npm run test:watch  # testes em modo watch
 npm run build       # typecheck + build web (também é a versão servida aos celulares)
-npm run motor       # recompila o motor da partida (backend/motor) para WASM; rode depois de mudar o motor
+npm run motor       # recompila os motores (backend/motor e backend/motor-mania) para WASM; `npm run motor -- mania` só um
 cargo test --manifest-path src-tauri/Cargo.toml   # testes do lado Rust do app
 ```
 
