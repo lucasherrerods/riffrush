@@ -108,7 +108,10 @@ pub fn empacotar_replay(replay: &Replay) -> Vec<u8> {
     // A velocidade vai em centésimos: 0,75x é 75.
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let velocidade = (replay.velocidade * 100.0).round().clamp(0.0, 255.0) as u8;
-    let mut bytes = vec![u8::from(replay.sem_falha) | (u8::from(replay.fantasma) << 1) | (u8::from(replay.sem_aberta) << 2), velocidade];
+    let mut bytes = vec![
+        u8::from(replay.sem_falha) | (u8::from(replay.fantasma) << 1) | (u8::from(replay.sem_aberta) << 2),
+        velocidade,
+    ];
     bytes.extend((0..BYTES_DO_HASH).map(|i| u8::from_str_radix(replay.hash_do_chart.get(i * 2..i * 2 + 2).unwrap_or("00"), 16).unwrap_or(0)));
     let em_ticks = |tempo: f64| {
         // Tempos de música: cabem com folga num i64.

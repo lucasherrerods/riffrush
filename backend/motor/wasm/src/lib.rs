@@ -34,7 +34,16 @@ pub struct MotorDaPartida {
 impl MotorDaPartida {
     /// As notas vêm em quatro listas paralelas, que passam para o WASM sem um objeto por nota.
     #[wasm_bindgen(constructor)]
-    pub fn new(tempos: &[f64], pistas: &[u8], frases: &[i32], duracoes: &[f64], sem_falha: bool, fantasma: bool, velocidade: f64, sem_aberta: bool) -> MotorDaPartida {
+    pub fn new(
+        tempos: &[f64],
+        pistas: &[u8],
+        frases: &[i32],
+        duracoes: &[f64],
+        sem_falha: bool,
+        fantasma: bool,
+        velocidade: f64,
+        sem_aberta: bool,
+    ) -> MotorDaPartida {
         let notas: Vec<motor::Nota> = tempos
             .iter()
             .zip(pistas)
