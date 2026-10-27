@@ -47,6 +47,17 @@ export function useBibliotecaDoMania(abrir: () => Promise<BibliotecaDoMania> = a
     [biblioteca, atualizar],
   );
 
+  /** Um .osz baixado da busca: vem do osu!, com o status e as estrelas de cada dificuldade. */
+  const guardarBaixado = useCallback(
+    async (osz: Blob, { status, estrelas }: { status: string; estrelas: Record<string, number> }) => {
+      if (!biblioteca) throw new Error("A biblioteca ainda não abriu.");
+      const salvo = await importarOsz(biblioteca, osz, { origem: "osu", status, estrelas });
+      await atualizar();
+      return salvo;
+    },
+    [biblioteca, atualizar],
+  );
+
   const remover = useCallback(
     async (id: string) => {
       await biblioteca?.remover(id);
@@ -58,5 +69,5 @@ export function useBibliotecaDoMania(abrir: () => Promise<BibliotecaDoMania> = a
   const usar = useCallback(async (id: string) => biblioteca?.usar(id), [biblioteca]);
   const abrirPacote = useCallback(async (id: string) => biblioteca?.abrir(id), [biblioteca]);
 
-  return { conjuntos, importar, remover, usar, abrirPacote };
+  return { conjuntos, importar, guardarBaixado, remover, usar, abrirPacote };
 }
