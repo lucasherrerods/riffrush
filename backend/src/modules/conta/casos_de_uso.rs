@@ -583,7 +583,7 @@ mod tests {
             .await
             .unwrap();
         let conta = servicos.conta_da_sessao(&entrada.token).await.unwrap();
-        assert_eq!((conta.xp_total, conta.nivel().nivel), (108, 2));
+        assert_eq!((conta.xp_total, conta.nivel().nivel), (180, 2));
         assert_eq!(*banco.ultima_precisao.lock().unwrap(), Some(1.0));
     }
 
@@ -599,13 +599,13 @@ mod tests {
                 .await
                 .unwrap();
         }
-        assert_eq!(xps(&banco), [108, 108, 76]);
+        assert_eq!(xps(&banco), [180, 180, 126]);
         relogio.andar(Duration::hours(25));
         servicos
             .registrar_partida_rejulgada(rejulgada(4, entrada.conta.id, relogio.agora()))
             .await
             .unwrap();
-        assert_eq!(xps(&banco)[3], 108);
+        assert_eq!(xps(&banco)[3], 180);
     }
 
     #[tokio::test]
@@ -681,7 +681,7 @@ mod tests {
             ..rejulgada(1, entrada.conta.id, relogio.agora())
         };
         servicos.registrar_partida_rejulgada(sem_falha).await.unwrap();
-        assert_eq!(servicos.conta_da_sessao(&entrada.token).await.unwrap().xp_total, 108);
+        assert_eq!(servicos.conta_da_sessao(&entrada.token).await.unwrap().xp_total, 180);
         assert_eq!(*banco.ultimo_replay.lock().unwrap(), None);
         assert_eq!(*banco.ultima_precisao.lock().unwrap(), None);
     }
