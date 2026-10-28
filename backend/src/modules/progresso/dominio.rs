@@ -117,7 +117,7 @@ pub const MAXIMO_DE_NOTAS: u32 = 10_000;
 /// Uma música de tamanho comum. Mais curta rende menos, mais longa rende um pouco mais.
 const NOTAS_DE_REFERENCIA: f64 = 400.0;
 /// Ajuste geral do ritmo: a fórmula dava XP demais e os níveis subiam rápido. Vale só para as partidas novas.
-const RITMO_DO_XP: f64 = 0.3;
+const RITMO_DO_XP: f64 = 0.5;
 
 impl ResumoDaPartida {
     pub fn validar(self) -> Result<Self, PartidaInvalida> {
@@ -275,34 +275,34 @@ mod tests {
     #[test]
     fn a_precisao_cresce_mais_que_linear_e_abaixo_de_40_por_cento_nao_rende() {
         let medio = partida(Dificuldade::Medio, 400, 400);
-        assert_eq!(xp_da_partida(medio, 1.0, 0), 45);
-        assert_eq!(xp_da_partida(medio, 0.75, 0), 15);
-        assert_eq!(xp_da_partida(medio, 0.5, 0), 1);
+        assert_eq!(xp_da_partida(medio, 1.0, 0), 75);
+        assert_eq!(xp_da_partida(medio, 0.75, 0), 26);
+        assert_eq!(xp_da_partida(medio, 0.5, 0), 2);
         assert_eq!(xp_da_partida(medio, 0.4, 0), 0);
         assert_eq!(xp_da_partida(medio, 0.3, 0), 0);
     }
 
     #[test]
     fn musica_longa_rende_pela_raiz_das_notas_com_teto_e_curta_demais_nao_rende() {
-        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 100, 100), 1.0, 0), 23);
-        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 1600, 1600), 1.0, 0), 68);
+        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 100, 100), 1.0, 0), 38);
+        assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 1600, 1600), 1.0, 0), 113);
         assert_eq!(xp_da_partida(partida(Dificuldade::Medio, 49, 49), 1.0, 0), 0);
     }
 
     #[test]
     fn repetir_o_chart_no_dia_rende_cada_vez_menos() {
         let medio = partida(Dificuldade::Medio, 400, 400);
-        assert_eq!(xp_da_partida(medio, 1.0, 1), 45);
-        assert_eq!(xp_da_partida(medio, 1.0, 2), 32);
-        assert_eq!(xp_da_partida(medio, 1.0, 3), 23);
-        assert_eq!(xp_da_partida(medio, 1.0, 10), 11);
+        assert_eq!(xp_da_partida(medio, 1.0, 1), 75);
+        assert_eq!(xp_da_partida(medio, 1.0, 2), 53);
+        assert_eq!(xp_da_partida(medio, 1.0, 3), 38);
+        assert_eq!(xp_da_partida(medio, 1.0, 10), 19);
     }
 
     #[test]
     fn vaia_e_fantasma_rendem_menos() {
         let normal = partida(Dificuldade::Medio, 400, 400);
-        assert_eq!(xp_da_partida(ResumoDaPartida { derrota: true, ..normal }, 1.0, 0), 11);
-        assert_eq!(xp_da_partida(ResumoDaPartida { fantasma: true, ..normal }, 1.0, 0), 23);
+        assert_eq!(xp_da_partida(ResumoDaPartida { derrota: true, ..normal }, 1.0, 0), 19);
+        assert_eq!(xp_da_partida(ResumoDaPartida { fantasma: true, ..normal }, 1.0, 0), 38);
     }
 
     #[test]
