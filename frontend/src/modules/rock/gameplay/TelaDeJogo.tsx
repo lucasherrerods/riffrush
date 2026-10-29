@@ -25,7 +25,7 @@ import { avancar, criarPartida, multiplicador, precisao, retirarEventos, type Je
 import { aplicarEntradas, criarGravador, empacotarReplay, hashDoChart, type EventoDaTransmissao, type Replay } from "./replay";
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { forcaDoTrovao } from "./pista/efeitos";
-import { criarContadorDeFps } from "./fps";
+import { criarContadorDeFps, type LeituraDeFps } from "./fps";
 import { layoutDaPista } from "./pista/geometria";
 import { criarSprites } from "./pista/sprites";
 import type { EstadoDoJogador } from "./rede";
@@ -211,7 +211,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   const [derrota, setDerrota] = useState(false);
   const [rodada, setRodada] = useState(0);
   const [aviso, setAviso] = useState<{ id: number; texto: string; estrela: boolean } | null>(null);
-  const [fps, setFps] = useState<number | null>(null);
+  const [fps, setFps] = useState<LeituraDeFps | null>(null);
   const [tamanho, setTamanho] = useState({ largura: window.innerWidth, altura: window.innerHeight });
 
   useEffect(() => {
@@ -518,8 +518,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     const contadorDeFps = criarContadorDeFps();
     const desenhar = () => {
       quadro = requestAnimationFrame(desenhar);
-      const novoFps = contadorDeFps.quadro(performance.now());
-      if (opcoes.mostrarFps && novoFps !== null) setFps(Math.round(novoFps));
+      const leitura = contadorDeFps.quadro(performance.now());
+      if (opcoes.mostrarFps && leitura !== null) setFps(leitura);
       const tempo = tempoDaMusica(agoraNoAudio(audio));
 
       if (!pausadoAgora && !terminou) {
@@ -712,7 +712,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
                 {opcoes.bot && !replay && <span className="ml-2 rounded bg-estrela px-2 font-black text-fundo">BOT</span>}
                 {velocidade !== 1 && <span className="ml-2 rounded bg-superficie-elevada px-2 font-black">{rotuloDaVelocidade(velocidade)}</span>}
                 {replay && <span className="ml-2 rounded bg-primaria px-2 font-black">{replay.ateAgora === undefined ? "REPLAY" : "AO VIVO"}</span>}
-                {opcoes.mostrarFps && <span className="ml-2 font-mono tabular-nums">{fps ?? "–"} FPS</span>}
+                {opcoes.mostrarFps && <span className="ml-2 font-mono tabular-nums">{fps ? Math.round(fps.fps) : "–"} FPS{fps && ` · ${Math.round(fps.piorQuadroMs)} ms`}</span>}
               </p>
             </div>
             <ProgressoDaMusica loja={loja} />

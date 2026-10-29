@@ -8,13 +8,13 @@ describe("carregarConfiguracoes", () => {
   });
 
   it("devolve o que foi salvo", () => {
-    salvarConfiguracoes({ ...CONFIGURACOES_PADRAO, velocidade: 9 });
-    expect(carregarConfiguracoes().velocidade).toBe(9);
+    salvarConfiguracoes({ ...CONFIGURACOES_PADRAO, atrasoMs: 40 });
+    expect(carregarConfiguracoes().atrasoMs).toBe(40);
   });
 
   it("completa com o padrão as opções que não existiam quando foi salvo", () => {
-    localStorage.setItem("riffrush.configuracoes", JSON.stringify({ velocidade: 3 }));
-    expect(carregarConfiguracoes()).toEqual({ ...CONFIGURACOES_PADRAO, velocidade: 3 });
+    localStorage.setItem("riffrush.configuracoes", JSON.stringify({ atrasoMs: 40 }));
+    expect(carregarConfiguracoes()).toEqual({ ...CONFIGURACOES_PADRAO, atrasoMs: 40 });
   });
 
   it("quem salvou antes da nota aberta ganha a tecla e o botão dela, sem perder os trastes escolhidos", () => {
@@ -117,13 +117,13 @@ describe("personagem e FPS", () => {
   it("por padrão o personagem 3D aparece e o FPS fica escondido, inclusive em configurações salvas antes", () => {
     expect(CONFIGURACOES_PADRAO.personagem3d).toBe(true);
     expect(CONFIGURACOES_PADRAO.mostrarFps).toBe(false);
-    localStorage.setItem("riffrush.configuracoes", JSON.stringify({ velocidade: 3 }));
-    expect(carregarConfiguracoes()).toMatchObject({ velocidade: 3, personagem3d: true, mostrarFps: false });
+    localStorage.setItem("riffrush.configuracoes", JSON.stringify({ atrasoMs: 40 }));
+    expect(carregarConfiguracoes()).toMatchObject({ atrasoMs: 40, personagem3d: true, mostrarFps: false });
   });
 
   it("o modo competitivo começa ligado, inclusive para quem já tinha configurações salvas", () => {
     expect(CONFIGURACOES_PADRAO.modoCompetitivo).toBe(true);
-    localStorage.setItem("riffrush.configuracoes", JSON.stringify({ velocidade: 3 }));
+    localStorage.setItem("riffrush.configuracoes", JSON.stringify({ atrasoMs: 40 }));
     expect(carregarConfiguracoes().modoCompetitivo).toBe(true);
   });
 });
