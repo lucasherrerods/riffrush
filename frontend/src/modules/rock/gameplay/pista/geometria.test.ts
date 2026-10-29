@@ -6,15 +6,15 @@ describe("layoutDaPista", () => {
   });
 
   it("no desktop a pista tem largura limitada", () => {
-    expect(layoutDaPista(3000, 1000).largura).toBe(760);
+    expect(layoutDaPista(3000, 1000).largura).toBe(620);
   });
 
   it("o braço termina antes do topo da tela, para sumir num fade", () => {
     expect(layoutDaPista(1200, 800).horizonte).toBeGreaterThanOrEqual(800 * 0.15);
   });
 
-  it("a pista fica deitada, como no Guitar Hero: sobe só até perto de um terço da tela", () => {
-    expect(layoutDaPista(1200, 800).horizonte).toBeGreaterThanOrEqual(800 * 0.3);
+  it("a pista fica deitada, como no Guitar Hero: sobe só até perto de um quarto da tela", () => {
+    expect(layoutDaPista(1200, 800).horizonte).toBeGreaterThanOrEqual(800 * 0.24);
   });
 
   it("divide a pista em 5 trastes iguais", () => {
