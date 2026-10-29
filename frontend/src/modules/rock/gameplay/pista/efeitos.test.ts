@@ -1,4 +1,4 @@
-import { estiloDoJulgamento, forcaDoTrovao, pontosDoRaio, progressoDoMultiplicador, tremor } from "./efeitos";
+import { estiloDoJulgamento, forcaDoTrovao, pontosDoRaio, progressoDoMultiplicador, tremor, pulo } from "./efeitos";
 
 describe("forcaDoTrovao", () => {
   it("não troveja fora dos marcos de combo", () => {
@@ -60,5 +60,20 @@ describe("estiloDoJulgamento", () => {
     const estilos = (["perfeito", "otimo", "bom"] as const).map(estiloDoJulgamento);
     expect(estilos.map((e) => e.texto)).toEqual(["PERFEITO", "ÓTIMO", "BOM"]);
     expect(new Set(estilos.map((e) => e.cor)).size).toBe(3);
+  });
+});
+
+describe("pulo", () => {
+  it("sobe a pista e volta ao lugar", () => {
+    expect(pulo(-0.1)).toBe(0);
+    expect(pulo(0)).toBe(0);
+    expect(pulo(0.15)).toBeLessThan(-5);
+    expect(pulo(0.35)).toBe(0);
+    expect(pulo(2)).toBe(0);
+  });
+
+  it("é leve: no máximo 12 px", () => {
+    const alturas = Array.from({ length: 40 }, (_, i) => pulo(i * 0.01));
+    expect(Math.min(...alturas)).toBeGreaterThanOrEqual(-12);
   });
 });

@@ -1,4 +1,4 @@
-import { nivelDoLiquido, pinosPulsando, progressoDosPinos } from "./pinos";
+import { especialUtilizavel, nivelDoLiquido, pinosPulsando, progressoDosPinos } from "./pinos";
 
 describe("progressoDosPinos", () => {
   it("cada pino é um quarto do star power e enche da esquerda para a direita", () => {
@@ -47,5 +47,17 @@ describe("pinosPulsando", () => {
     expect(pinosPulsando([1, 0.9, 0, 0])).toBe(false);
     expect(pinosPulsando([1, 1, 0, 0])).toBe(true);
     expect(pinosPulsando([1, 1, 1, 1])).toBe(true);
+  });
+});
+
+describe("especialUtilizavel", () => {
+  it("só a partir do segundo pino cheio", () => {
+    expect(especialUtilizavel(0.49, false)).toBe(false);
+    expect(especialUtilizavel(0.5, false)).toBe(true);
+    expect(especialUtilizavel(1, false)).toBe(true);
+  });
+
+  it("não com o especial já ativo", () => {
+    expect(especialUtilizavel(1, true)).toBe(false);
   });
 });

@@ -62,6 +62,15 @@ export function tremor(desdeAtivacao: number) {
   };
 }
 
+const DURACAO_DO_PULO = 0.3;
+const ALTURA_DO_PULO = 10;
+
+/** Deslocamento vertical da pista ao soltar o star power: sobe e volta numa meia senoide em 0,3 s. */
+export function pulo(desdeAtivacao: number) {
+  if (desdeAtivacao <= 0 || desdeAtivacao >= DURACAO_DO_PULO) return 0;
+  return -Math.sin((desdeAtivacao / DURACAO_DO_PULO) * Math.PI) * ALTURA_DO_PULO;
+}
+
 const NOTAS_POR_NIVEL = 10;
 const MULTIPLICADOR_MAXIMO = 4;
 

@@ -25,6 +25,7 @@ import { avancar, criarPartida, multiplicador, precisao, retirarEventos, type Je
 import { aplicarEntradas, criarGravador, empacotarReplay, hashDoChart, type EventoDaTransmissao, type Replay } from "./replay";
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { forcaDoTrovao } from "./pista/efeitos";
+import { especialUtilizavel } from "./pinos";
 import { criarContadorDeFps, type LeituraDeFps } from "./fps";
 import { layoutDaPista } from "./pista/geometria";
 import { criarSprites } from "./pista/sprites";
@@ -371,7 +372,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
           julgamento = { julgamento: evento.julgamento, tempo };
           if (explosoes.length > MAXIMO_DE_EXPLOSOES) explosoes.shift();
           const forca = forcaDoTrovao(partida.sequencia);
-          if (forca) {
+          if (forca && especialUtilizavel(partida.estrela, partida.estrelaAtiva)) {
             ultimoTrovao = tempo;
             trovoes.push({ tempo, forca, semente: partida.sequencia });
             if (trovoes.length > MAXIMO_DE_TROVOES) trovoes.shift();

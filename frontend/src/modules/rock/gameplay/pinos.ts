@@ -30,3 +30,8 @@ export function nivelDoLiquido([topoEsquerdo, topoDireito, baseDireita, baseEsqu
 export function pinosPulsando(progressos: readonly number[]) {
   return progressos.filter((progresso) => progresso >= 1).length >= 2;
 }
+
+/** O star power pode ser solto com dois pinos cheios, a mesma regra do pulso do medidor; já ativo, não. */
+export function especialUtilizavel(estrela: number, ativo: boolean) {
+  return !ativo && pinosPulsando(progressoDosPinos(estrela));
+}
