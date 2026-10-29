@@ -49,6 +49,32 @@ describe("TelaDeConfiguracoes", () => {
     expect(aoVoltar).not.toHaveBeenCalled();
   });
 
+  it("o jeito de jogar fica no topo dos controles, com um só escolhido", async () => {
+    const { aoMudar, usuario } = abrir();
+    const grupo = screen.getByRole("radiogroup", { name: "Jeito de jogar" });
+    expect(screen.getByRole("radio", { name: /Gamepad/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: /Tapping/ })).toHaveAttribute("aria-checked", "false");
+    expect(grupo.compareDocumentPosition(screen.getByLabelText("Tecla do traste Verde")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await usuario.click(screen.getByRole("radio", { name: /Palhetada/ }));
+    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ jeitoDeJogar: "palhetada" }));
+  });
+
+  it("a ajuda de cada jeito abre uma janela explicando como ele funciona", async () => {
+    const { usuario } = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Como funciona o Palhetada" }));
+    const janela = screen.getByRole("dialog");
+    expect(janela).toHaveTextContent("Palhetada");
+    expect(janela).toHaveTextContent("segure A e S e aperte Enter");
+  });
+
+  it("a tecla da palheta só aparece na palhetada", () => {
+    const { unmount } = render(<TelaDeConfiguracoes configuracoes={CONFIGURACOES_PADRAO} aoMudar={vi.fn()} aoVoltar={vi.fn()} />);
+    expect(screen.queryByLabelText("Tecla da palheta")).not.toBeInTheDocument();
+    unmount();
+    render(<TelaDeConfiguracoes configuracoes={{ ...CONFIGURACOES_PADRAO, jeitoDeJogar: "palhetada" }} aoMudar={vi.fn()} aoVoltar={vi.fn()} />);
+    expect(screen.getByLabelText("Tecla da palheta")).toHaveTextContent("Enter");
+  });
+
   it("Esc volta para o menu", async () => {
     const { aoVoltar, usuario } = abrir();
     await usuario.keyboard("{Escape}");
@@ -111,6 +137,13 @@ describe("TelaDeConfiguracoes", () => {
     await usuario.click(screen.getByRole("tab", { name: /Gameplay/ }));
     await usuario.click(screen.getByRole("button", { name: /Calibrar/ }));
     expect(screen.getByText(/junto com o clique/)).toBeInTheDocument();
+  });
+
+  it("velocidade das notas e inclinação da pista são fixas: não aparecem para configurar", async () => {
+    const { usuario } = abrir();
+    await usuario.click(screen.getByRole("tab", { name: /Gameplay/ }));
+    expect(screen.queryByText("Velocidade das notas")).toBeNull();
+    expect(screen.queryByText("Inclinação da pista")).toBeNull();
   });
 
   it("desliga o modo competitivo no vídeo", async () => {

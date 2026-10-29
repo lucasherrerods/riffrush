@@ -13,6 +13,29 @@ describe("layoutDaPista", () => {
     expect(layoutDaPista(1200, 800).horizonte).toBeGreaterThanOrEqual(800 * 0.15);
   });
 
+  it("no padrão a pista fica deitada, como no Guitar Hero: sobe só até perto de um quarto da tela", () => {
+    expect(layoutDaPista(1200, 800).horizonte).toBeGreaterThanOrEqual(800 * 0.24);
+  });
+
+  it("a inclinação 0 deixa a pista em pé, como era antes", () => {
+    const emPe = layoutDaPista(1200, 800, 0);
+    expect(emPe.horizonte).toBeCloseTo(800 * 0.16);
+    expect(emPe.linhaDeBatida).toBeCloseTo(800 * 0.86);
+    expect(projetar(emPe, 1).escala).toBeCloseTo(0.22);
+  });
+
+  it("quanto mais inclinada, mais baixo o horizonte e menos a pista afina no fundo", () => {
+    const pouco = layoutDaPista(1200, 800, 2);
+    const muito = layoutDaPista(1200, 800, 10);
+    expect(muito.horizonte).toBeGreaterThan(pouco.horizonte);
+    expect(projetar(muito, 1).escala).toBeGreaterThan(projetar(pouco, 1).escala);
+  });
+
+  it("valores fora de 0 a 10 ficam no limite", () => {
+    expect(layoutDaPista(1200, 800, 99)).toEqual(layoutDaPista(1200, 800, 10));
+    expect(layoutDaPista(1200, 800, -5)).toEqual(layoutDaPista(1200, 800, 0));
+  });
+
   it("divide a pista em 5 trastes iguais", () => {
     const layout = layoutDaPista(1200, 800);
     expect(layout.larguraDoTraste * 5).toBeCloseTo(layout.largura);
@@ -29,7 +52,7 @@ describe("projetar", () => {
   it("no fundo a nota fica no horizonte e bem menor", () => {
     const fundo = projetar(layout, 1);
     expect(fundo.y).toBeCloseTo(layout.horizonte);
-    expect(fundo.escala).toBeLessThan(0.3);
+    expect(fundo.escala).toBeLessThan(0.35);
   });
 
   it("quanto mais longe, mais alto e menor", () => {

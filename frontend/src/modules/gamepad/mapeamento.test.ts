@@ -5,6 +5,7 @@ import {
   direcoesDoAnalogico,
   juntarAnalogico,
   nomeDoBotao,
+  PALHETA_DO_CONTROLE,
   podeSerEscolhido,
   traduzir,
   type Mapa,
@@ -67,6 +68,18 @@ describe("traduzir no jogo", () => {
       expect(eventos).toContainEqual({ tipo: "keyup", code });
       expect(eventos).toContainEqual({ tipo: "keydown", code });
     }
+  });
+
+  it("na palhetada, o direcional é a palheta e não toca de novo os trastes", () => {
+    const palhetada: Mapa = { ...mapa, jeitoDeJogar: "palhetada" };
+    const segurando = traduzir(solto(), com(BOTOES.LT), vazio(), "jogo", palhetada);
+    const palhetou = traduzir(com(BOTOES.LT), com(BOTOES.LT, BOTOES.BAIXO), segurando.emitidos, "jogo", palhetada);
+    expect(palhetou.eventos).toEqual([{ tipo: "keydown", code: PALHETA_DO_CONTROLE }]);
+    expect(traduzir(com(BOTOES.LT, BOTOES.BAIXO), com(BOTOES.LT), palhetou.emitidos, "jogo", palhetada).eventos).toEqual([{ tipo: "keyup", code: PALHETA_DO_CONTROLE }]);
+  });
+
+  it("nos menus, o direcional da palhetada continua navegando", () => {
+    expect(traduzir(solto(), com(BOTOES.CIMA), vazio(), "menu", { ...mapa, jeitoDeJogar: "palhetada" }).eventos).toEqual([{ tipo: "keydown", code: "ArrowUp" }]);
   });
 
   it("Select ativa o star power e Start pausa", () => {

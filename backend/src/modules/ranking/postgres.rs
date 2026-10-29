@@ -6,7 +6,7 @@ use uuid::Uuid;
 use super::dominio::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, Ordem, PartidaPublica, RecordeDaMusica};
 use super::portas::RepositorioDoRanking;
 use crate::modules::conta::FalhaExterna;
-use crate::modules::progresso::{Dificuldade, Instrumento};
+use crate::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar};
 
 pub struct RankingPostgres(pub PgPool);
 
@@ -24,6 +24,7 @@ struct Linha {
     precisao: f64,
     maior_sequencia: Option<i32>,
     jogada_em: DateTime<Utc>,
+    jeito_de_jogar: Option<String>,
 }
 
 impl From<Linha> for LinhaDoRanking {
@@ -41,13 +42,14 @@ impl From<Linha> for LinhaDoRanking {
             precisao: l.precisao,
             maior_sequencia: l.maior_sequencia.and_then(|s| u32::try_from(s).ok()),
             jogada_em: l.jogada_em,
+            jeito_de_jogar: l.jeito_de_jogar.as_deref().and_then(JeitoDeJogar::do_texto),
         }
     }
 }
 
 /// O recorde de cada jogador (a view ordena por pontos e, no empate, por quem chegou primeiro), com o top e a linha de quem pediu.
 const CONSULTA: &str = "
-    SELECT r.posicao, r.jogadores, r.conta_id, r.partida_id, c.nome, c.avatar, r.pontos, r.acertos, r.total, r.precisao, r.maior_sequencia, r.jogada_em
+    SELECT r.posicao, r.jogadores, r.conta_id, r.partida_id, c.nome, c.avatar, r.pontos, r.acertos, r.total, r.precisao, r.maior_sequencia, r.jogada_em, r.jeito_de_jogar
     FROM recordes_do_ranking r
     JOIN contas c ON c.id = r.conta_id
     WHERE r.musica_id = $1 AND r.dificuldade = $2 AND r.instrumento = $3 AND (r.posicao <= $4 OR r.conta_id = $5)
@@ -57,7 +59,7 @@ const CONSULTA: &str = "
 /// No empate, a maior sequência e depois quem chegou primeiro.
 const CONSULTA_POR_PRECISAO: &str = "
     WITH melhores AS (
-        SELECT DISTINCT ON (conta_id) id AS partida_id, conta_id, pontos, acertos, total, precisao, maior_sequencia, jogada_em
+        SELECT DISTINCT ON (conta_id) id AS partida_id, conta_id, pontos, acertos, total, precisao, maior_sequencia, jogada_em, jeito_de_jogar
         FROM partidas
         WHERE musica_id = $1 AND dificuldade = $2 AND instrumento = $3 AND precisao IS NOT NULL AND NOT derrota AND NOT fantasma
         ORDER BY conta_id, precisao DESC, maior_sequencia DESC NULLS LAST, jogada_em ASC
@@ -68,7 +70,7 @@ const CONSULTA_POR_PRECISAO: &str = "
                COUNT(*) OVER () AS jogadores
         FROM melhores
     )
-    SELECT r.posicao, r.jogadores, r.conta_id, r.partida_id, c.nome, c.avatar, r.pontos, r.acertos, r.total, r.precisao, r.maior_sequencia, r.jogada_em
+    SELECT r.posicao, r.jogadores, r.conta_id, r.partida_id, c.nome, c.avatar, r.pontos, r.acertos, r.total, r.precisao, r.maior_sequencia, r.jogada_em, r.jeito_de_jogar
     FROM numeradas r
     JOIN contas c ON c.id = r.conta_id
     WHERE r.posicao <= $4 OR r.conta_id = $5

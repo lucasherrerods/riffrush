@@ -14,7 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Calibracao } from "./componentes/Calibracao";
 import { LinhaDeOpcao } from "./componentes/LinhaDeOpcao";
 import { LinhaDeSlider } from "./componentes/LinhaDeSlider";
-import { CONFIGURACOES_PADRAO, INDICE_DA_ESTRELA, nomeDaTecla, trocarBotao, trocarTecla, type Configuracoes } from "./configuracoes";
+import { SeletorDeJeitoDeJogar } from "./componentes/SeletorDeJeitoDeJogar";
+import { CONFIGURACOES_PADRAO, INDICE_DA_ESTRELA, INDICE_DA_PALHETA, nomeDaTecla, trocarBotao, trocarTecla, type Configuracoes } from "./configuracoes";
 
 interface Props {
   configuracoes: Configuracoes;
@@ -128,13 +129,23 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
 
         <div className="rolagem-de-toque mt-2 min-h-0 flex-1 placa p-2 max-md:mt-1 max-md:p-1.5">
           <TabsContent value="controles" className="flex flex-col gap-2">
-            {/* No celular não há teclas para trocar: o star power sai arrastando o dedo para cima. */}
+            {/* No celular não há teclas para trocar: o star power sai arrastando o dedo para cima, e sem palheta o jeito é sempre tapping. */}
             {estreita ? (
+              <>
+              <LinhaDeOpcao rotulo="Jeito de jogar" dica="No celular cada toque vale uma nota">
+                <span className="text-sm font-semibold">Tapping</span>
+              </LinhaDeOpcao>
               <LinhaDeOpcao rotulo="Star Power" dica="Ativa o bônus quando a barra passa da metade">
                 <span className="text-sm font-semibold text-estrela">Arraste para cima</span>
               </LinhaDeOpcao>
+              </>
             ) : (
               <>
+            <SeletorDeJeitoDeJogar
+              valor={configuracoes.jeitoDeJogar}
+              aoEscolher={(jeitoDeJogar) => mudar({ jeitoDeJogar })}
+              teclas={{ verde: nomeDaTecla(configuracoes.teclas[0]), vermelho: nomeDaTecla(configuracoes.teclas[1]), palheta: nomeDaTecla(configuracoes.teclaDaPalheta) }}
+            />
             <p className="px-4 py-2 text-base text-texto-suave max-md:px-2 max-md:py-1 max-md:text-sm">
               {comControle
                 ? "Clique numa tecla ou num botão do controle e aperte o novo. Esc cancela. O direcional e o Start ficam fixos."
@@ -151,21 +162,16 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
             <LinhaDeOpcao rotulo="Star Power" dica="Ativa o bônus quando a barra passa da metade">
               {comandos(INDICE_DA_ESTRELA, "do star power", configuracoes.teclaDaEstrela, configuracoes.botaoDaEstrela, COR_DA_ESTRELA)}
             </LinhaDeOpcao>
+            {configuracoes.jeitoDeJogar === "palhetada" && (
+              <LinhaDeOpcao rotulo="Palheta" dica="Toca o acorde dos trastes apertados. No controle é o direcional ▲ ▼">
+                {botaoDeTecla(INDICE_DA_PALHETA, "da palheta", configuracoes.teclaDaPalheta, "var(--cor-borda)")}
+              </LinhaDeOpcao>
+            )}
               </>
             )}
           </TabsContent>
 
           <TabsContent value="gameplay" className="flex flex-col gap-2">
-            <LinhaDeSlider
-              rotulo="Velocidade das notas"
-              dica="Quanto maior, mais rápido as notas descem"
-              valor={configuracoes.velocidade}
-              minimo={1}
-              maximo={10}
-              passo={1}
-              formatar={String}
-              aoMudar={(velocidade) => mudar({ velocidade })}
-            />
             <LinhaDeSlider
               rotulo="Atraso do áudio"
               dica="Ajuste se as notas parecerem fora do ritmo da música"

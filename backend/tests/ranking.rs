@@ -41,6 +41,7 @@ fn linha(posicao: u32, conta_id: Uuid, nome: &str, pontos: u64) -> LinhaDoRankin
         precisao: 0.9,
         maior_sequencia: Some(9),
         jogada_em: DateTime::UNIX_EPOCH,
+        jeito_de_jogar: None,
     }
 }
 

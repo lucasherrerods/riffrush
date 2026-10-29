@@ -45,7 +45,7 @@ const DURACAO_DO_ERRO = 0.5;
 const DURACAO_DO_TROVAO = 0.5;
 const ATRAS_DA_LINHA = -0.12;
 /** Parte final do braço (perto do horizonte) que vai sumindo. */
-const TAMANHO_DO_FADE = 0.35;
+const TAMANHO_DO_FADE = 0.15;
 
 /** Gradientes só mudam com o tamanho da tela ou o star power: criar um a cada quadro pesa no canvas. */
 const gradientes = new Map<string, CanvasGradient>();

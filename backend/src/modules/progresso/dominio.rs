@@ -71,6 +71,31 @@ impl Instrumento {
     }
 }
 
+/// Como as teclas viraram notas na partida. Não muda o XP; aparece no ranking.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum JeitoDeJogar {
+    Tapping,
+    #[default]
+    Gamepad,
+    Palhetada,
+}
+
+impl JeitoDeJogar {
+    /// Como fica guardado no banco: igual ao JSON.
+    pub fn como_texto(self) -> &'static str {
+        match self {
+            Self::Tapping => "tapping",
+            Self::Gamepad => "gamepad",
+            Self::Palhetada => "palhetada",
+        }
+    }
+
+    pub fn do_texto(texto: &str) -> Option<Self> {
+        [Self::Tapping, Self::Gamepad, Self::Palhetada].into_iter().find(|j| j.como_texto() == texto)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ResumoDaPartida {
     pub dificuldade: Dificuldade,
