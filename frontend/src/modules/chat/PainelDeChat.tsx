@@ -119,7 +119,7 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
               </li>
             ))}
           </ol>
-          {aviso && <p className="text-base text-texto-suave">{aviso}</p>}
+          {aviso && <p className="text-base text-texto-suave max-md:text-xs">{aviso}</p>}
           {bloqueado ? (
             <p className="text-base text-texto-suave">{bloqueado}</p>
           ) : (
