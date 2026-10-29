@@ -30,6 +30,14 @@ describe("TelaDeBuscaDeMusicas", () => {
     expect(screen.getByText("2:05")).toBeInTheDocument();
   });
 
+  it("marca as músicas que têm vídeo de fundo", async () => {
+    abrir(vi.fn(async () => ({ total: 2, resultados: [resultado("Com clipe", { temVideo: true }), resultado("Sem clipe")] })));
+    const comClipe = (await screen.findByRole("heading", { name: "Com clipe" })).closest("li")!;
+    const semClipe = screen.getByRole("heading", { name: "Sem clipe" }).closest("li")!;
+    expect(within(comClipe).getByText("Vídeo")).toBeInTheDocument();
+    expect(within(semClipe).queryByText("Vídeo")).not.toBeInTheDocument();
+  });
+
   it("busca pelo texto digitado", async () => {
     const { buscar, usuario } = abrir();
     await usuario.type(screen.getByRole("searchbox", { name: "Buscar músicas" }), "sandman");
@@ -52,6 +60,30 @@ describe("TelaDeBuscaDeMusicas", () => {
     await waitFor(() => expect(ultimaChamada(buscar)[0]).toMatchObject({ instrumento: "baixo", dificuldade: "expert", genero: "metal" }));
     // Com gênero, o texto procura só no nome da música.
     expect(screen.getByRole("searchbox", { name: "Buscar músicas" })).toHaveAttribute("placeholder", "Nome da música");
+  });
+
+  it("a ordem é um select que entra na busca e volta para a primeira página", async () => {
+    const { buscar, usuario } = abrir();
+    await screen.findByRole("heading", { name: "Hit" });
+    await usuario.selectOptions(screen.getByRole("combobox", { name: "Ordem" }), "artista");
+    await waitFor(() => expect(ultimaChamada(buscar)[0]).toMatchObject({ ordem: "artista" }));
+    expect(ultimaChamada(buscar)[1]).toBe(1);
+  });
+
+  it("o check de só com vídeo entra na busca", async () => {
+    const { buscar, usuario } = abrir();
+    await screen.findByRole("heading", { name: "Hit" });
+    await usuario.click(screen.getByRole("switch", { name: "Só com vídeo" }));
+    await waitFor(() => expect(ultimaChamada(buscar)[0]).toMatchObject({ soComVideo: true }));
+    expect(screen.getByRole("searchbox", { name: "Buscar músicas" })).toHaveAttribute("placeholder", "Nome da música");
+  });
+
+  it("o check de oficiais e a ordem de mais jogadas entram na busca", async () => {
+    const { buscar, usuario } = abrir();
+    await screen.findByRole("heading", { name: "Hit" });
+    await usuario.click(screen.getByRole("switch", { name: "Oficiais" }));
+    await usuario.selectOptions(screen.getByRole("combobox", { name: "Ordem" }), "mais-jogadas");
+    await waitFor(() => expect(ultimaChamada(buscar)[0]).toMatchObject({ soOficiais: true, ordem: "mais-jogadas" }));
   });
 
   it("pagina os resultados", async () => {

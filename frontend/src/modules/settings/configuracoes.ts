@@ -31,7 +31,7 @@ export interface Configuracoes {
   personagem3d: boolean;
   mostrarFps: boolean;
   qualidadeDoPalco: QualidadeDoPalco;
-  /** Só a pista e o placar na partida: sem palco, personagem, clipe nem fundo. */
+  /** Só a pista e o placar na partida: sem palco, personagem nem fundo. O clipe da música continua no canto. */
   modoCompetitivo: boolean;
   /** Aparecer na lista de quem está online. `null` enquanto a pessoa não respondeu: nada liga sem ela aceitar. */
   mostrarOnline: boolean | null;

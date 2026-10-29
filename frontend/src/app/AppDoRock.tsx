@@ -12,7 +12,7 @@ import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
 import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { ChatGlobal, TelaDeEspectador, TelaOnline, presenca, presencaDisponivel, transmitirPartida, usePresenca, useSouDaModeracao, type PessoaOnline } from "@/modules/presenca";
-import { JanelaDoChart, TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/rock/search";
+import { JanelaDoChart, TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, sortearChartOficial, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/rock/search";
 import { TelaDeResultado, anotarRecorde, definirRecordes, recordeDe, useRecordes } from "@/modules/rock/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
@@ -344,6 +344,12 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
     return true;
   };
 
+  /** Sorteia um chart oficial que tem a dificuldade e baixa sem vídeo, que é leve; a importação já seleciona. */
+  const sortearOficial = async (dificuldadeDoSorteio: Dificuldade, instrumentoDoSorteio: Instrumento) => {
+    const sorteado = await sortearChartOficial(dificuldadeDoSorteio, instrumentoDoSorteio);
+    await baixarMusica(sorteado, { comVideo: false, aoProgredir: () => {}, confirmarTamanho: async () => true });
+  };
+
   /** Quem assiste baixa o chart que a transmissão mandou. Arquivo grande demais (com vídeo) fica para a busca, onde dá para escolher. */
   const baixarParaAssistir = async (url: string, md5: string) => {
     const nome = espectando?.estado.tipo === "tocando" ? `${espectando.estado.artista} - ${espectando.estado.titulo}.sng` : `${md5}.sng`;
@@ -462,6 +468,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                 aoVoltar={() => setTela("menu")}
                 aoImportar={(arquivos) => void importar(arquivos)}
                 sortearMusica={contasLigadas ? buscarMaisJogadaAleatoria : undefined}
+                sortearOficial={sortearOficial}
                 aoBuscarMusicas={() => {
                   setVoltarDaBuscaPara("selecao");
                   setTela("buscaDeMusicas");

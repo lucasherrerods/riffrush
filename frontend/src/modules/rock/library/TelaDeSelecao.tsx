@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Ellipsis, Gauge, FileAudio, Flame, Heart, Info, ListOrdered, Play, RotateCcw, Search, Shuffle, Trash2, Trophy } from "lucide-react";
+import { ArrowLeft, Dices, Ellipsis, Gauge, FileAudio, Flame, Heart, Info, ListOrdered, LoaderCircle, Play, RotateCcw, Search, Shuffle, Trash2, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/rock/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
@@ -43,6 +43,8 @@ interface Props {
   aoRemover: (musica: Musica) => void;
   /** Sorteia uma das mais jogadas; sem ele (contas desligadas), o botão não aparece. */
   sortearMusica?: (musicas: Musica[]) => Promise<Musica>;
+  /** Baixa um chart oficial sorteado com essa dificuldade e instrumento; a importação já o seleciona. */
+  sortearOficial?: (dificuldade: Dificuldade, instrumento: Instrumento) => Promise<void>;
   /** O ranking online da música, montado pelo App. Sem ele (contas desligadas), só os detalhes aparecem. */
   ranking?: ReactNode;
   /** Velocidade da música, o modificador escolhido na modal (1 é a normal). */
@@ -106,6 +108,19 @@ export function TelaDeSelecao(props: Props) {
       avisar.error(erro instanceof Error ? erro.message : String(erro));
     } finally {
       setSorteando(false);
+    }
+  };
+
+  const [sorteandoOficial, setSorteandoOficial] = useState(false);
+  const sortearOficial = async () => {
+    if (!props.sortearOficial) return;
+    setSorteandoOficial(true);
+    try {
+      await props.sortearOficial(dificuldade, props.instrumento);
+    } catch (erro) {
+      avisar.error(erro instanceof Error ? erro.message : String(erro));
+    } finally {
+      setSorteandoOficial(false);
     }
   };
 
@@ -334,6 +349,12 @@ export function TelaDeSelecao(props: Props) {
           />
         </label>
       </Button>
+      {props.sortearOficial && (
+        <Button variant="outline" disabled={sorteandoOficial} onClick={() => void sortearOficial()} aria-label="Oficial aleatória">
+          {sorteandoOficial ? <LoaderCircle className="animate-spin opacity-70" /> : <Dices className="opacity-70" />}
+          <span className="max-md:sr-only">Oficial aleatória</span>
+        </Button>
+      )}
       {props.aoBuscarMusicas && (
         <Button variant="outline" onClick={props.aoBuscarMusicas}>
           <Search className="opacity-70" />

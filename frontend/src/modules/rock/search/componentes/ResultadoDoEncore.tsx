@@ -1,4 +1,4 @@
-import { Disc3, Download, LoaderCircle, Play } from "lucide-react";
+import { Clapperboard, Disc3, Download, LoaderCircle, Play } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { formatarDuracao, type ResultadoDaBusca } from "../encore";
 
@@ -14,7 +14,15 @@ export function ItemDoResultado({ resultado, children }: { resultado: ResultadoD
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <h2 className="truncate text-lg font-semibold max-md:text-base">{resultado.titulo}</h2>
+        <div className="flex min-w-0 items-center gap-2">
+          <h2 className="truncate text-lg font-semibold max-md:text-base">{resultado.titulo}</h2>
+          {resultado.temVideo && (
+            <span className="flex shrink-0 items-center gap-1 rounded-sm border border-borda px-1.5 text-sm text-texto-suave">
+              <Clapperboard className="size-3.5 opacity-70" aria-hidden />
+              Vídeo
+            </span>
+          )}
+        </div>
         <p className="truncate text-base text-texto-suave max-md:text-sm">
           {resultado.artista}
           {detalhes && ` · ${detalhes}`}

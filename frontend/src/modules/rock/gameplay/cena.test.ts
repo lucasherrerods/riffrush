@@ -7,8 +7,8 @@ describe("cenaDaPartida", () => {
     expect(cenaDaPartida(normal)).toEqual({ palco: true, personagem: true, video: true });
   });
 
-  it("no modo competitivo fica só a pista e o placar", () => {
-    expect(cenaDaPartida({ ...normal, modoCompetitivo: true })).toEqual({ palco: false, personagem: false, video: false });
+  it("no modo competitivo sai o palco e o personagem, mas o clipe baixado continua no canto", () => {
+    expect(cenaDaPartida({ ...normal, modoCompetitivo: true })).toEqual({ palco: false, personagem: false, video: true });
   });
 
   it("sem WebGL ou sem efeitos, o palco sai mas o personagem fica no HUD", () => {

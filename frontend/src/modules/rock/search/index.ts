@@ -4,3 +4,4 @@ export type { OpcoesDeBaixar } from "./useBaixarDoEncore";
 export { baixarDoEncore, baixarSng } from "./download";
 export { linkDoChartConfere, montarUrlDoChart } from "./encore";
 export type { ResultadoDaBusca } from "./encore";
+export { sortearChartOficial } from "./encore";
