@@ -69,8 +69,14 @@ function Conteudo({ perfil, tituloDaMusica, mod }: { perfil: PerfilDaApi; titulo
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <h2 className="truncate text-2xl leading-[1.1] font-bold max-md:text-lg">{perfil.nome}</h2>
           {mod && <SeloMod />}
-          <p className="truncate text-base text-texto-suave max-md:text-xs">
-            {perfil.email && <>{perfil.email} · </>}Jogando desde {mesEAno(perfil.criada_em)}
+          <p className="truncate text-base text-texto-suave max-md:whitespace-normal max-md:text-xs">
+            {perfil.email && (
+              <>
+                <span className="max-md:block max-md:truncate">{perfil.email}</span>
+                <span className="max-md:hidden"> · </span>
+              </>
+            )}
+            <span className="max-md:block">Jogando desde {mesEAno(perfil.criada_em)}</span>
           </p>
           <div className="flex items-center gap-4 max-md:gap-2">
             <span className="font-titulo text-3xl leading-none text-destaque max-md:text-xl">Nv {nivel}</span>
