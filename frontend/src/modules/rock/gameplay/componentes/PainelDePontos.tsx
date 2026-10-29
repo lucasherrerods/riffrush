@@ -16,6 +16,8 @@ interface Props {
   compacto?: boolean;
   /** O PERFEITO / ÓTIMO / BOM do último acerto, logo acima da precisão. */
   aviso?: ReactNode;
+  /** No modo compacto, o que fica à direita de combo e precisão (ex.: o medidor de rock). */
+  lateral?: ReactNode;
 }
 
 const RAIO_DO_ANEL = 44;
@@ -30,7 +32,7 @@ const DIGITOS_DO_VISOR = 6;
  * Números da partida feitos para ler de relance, num painel de amplificador como no Guitar Hero:
  * o visor digital com os pontos, o anel do multiplicador mostrando quanto falta para o próximo e o combo.
  */
-export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, estrelaAtiva, compacto = false, aviso }: Props) {
+export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, estrelaAtiva, compacto = false, aviso, lateral }: Props) {
   const cor = estrelaAtiva ? COR_DA_ESTRELA : CORES_DO_MULTIPLICADOR[Math.min(3, Math.max(0, multiplicador - 1))];
   const progresso = progressoDoMultiplicador(sequencia);
   const porcentagem = `${Math.round(precisao * 100)}%`;
@@ -40,36 +42,36 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
       key={multiplicador}
       initial={{ scale: 1.4 }}
       animate={{ scale: 1 }}
-      className={cn("relative grid shrink-0 place-items-center", compacto ? "size-14" : "size-28")}
+      className={cn("relative grid shrink-0 place-items-center", compacto ? "size-10" : "size-28")}
     >
       <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90" role="progressbar" aria-label="Próximo multiplicador" aria-valuenow={Math.round(progresso * 100)} aria-valuemin={0} aria-valuemax={100}>
         <circle cx="50" cy="50" r={RAIO_DO_ANEL} fill="none" strokeWidth="8" className="stroke-superficie-elevada" />
         <circle cx="50" cy="50" r={RAIO_DO_ANEL} fill="none" strokeWidth="8" stroke={cor} strokeDasharray={VOLTA} strokeDashoffset={VOLTA * (1 - progresso)} className="transition-[stroke-dashoffset] duration-150" />
       </svg>
-      <span aria-label="Multiplicador" className={cn("font-titulo leading-none tabular-nums", compacto ? "text-2xl" : "text-5xl")} style={{ color: cor }}>
+      <span aria-label="Multiplicador" className={cn("font-titulo leading-none tabular-nums", compacto ? "text-lg" : "text-5xl")} style={{ color: cor }}>
         x{multiplicador}
       </span>
     </motion.div>
   );
 
   const combo = (
-    <div className="flex flex-col leading-none">
+    <div className={cn("flex leading-none", compacto ? "items-baseline gap-2" : "flex-col")}>
       <motion.span
         key={sequencia}
         initial={{ scale: sequencia > 0 ? 1.15 : 1 }}
         animate={{ scale: 1 }}
         transition={{ duration: 0.12 }}
         aria-label="Sequência"
-        className={cn("origin-left font-titulo tabular-nums", compacto ? "text-3xl" : "text-5xl", sequencia >= 25 ? "text-ouro" : "text-texto")}
+        className={cn("origin-left font-titulo tabular-nums", compacto ? "text-xl" : "text-5xl", sequencia >= 25 ? "text-ouro" : "text-texto")}
       >
         {sequencia}
       </motion.span>
-      <span className="text-base font-bold tracking-[0.2em] text-texto-suave">COMBO</span>
+      <span className={cn("font-bold tracking-[0.2em] text-texto-suave", compacto ? "text-xs" : "text-base")}>COMBO</span>
     </div>
   );
 
   const pontuacao = (
-    <div className={cn("relative rounded-sm bg-fundo font-mono leading-none tracking-[0.15em] tabular-nums", compacto ? "px-2 py-1 text-xl" : "px-4 py-2 text-4xl")}>
+    <div className={cn("relative rounded-sm bg-fundo font-mono leading-none tracking-[0.15em] tabular-nums", compacto ? "px-2 py-0.5 text-base" : "px-4 py-2 text-4xl")}>
       {/* Os segmentos apagados ficam atrás dos acesos, como num display de 7 segmentos. */}
       <span data-testid="segmentos-apagados" aria-hidden className="absolute text-sucesso/10">
         {"8".repeat(Math.max(DIGITOS_DO_VISOR, String(Math.round(pontos)).length))}
@@ -83,10 +85,10 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
   const acerto = (
     <div className="flex flex-col items-start">
       {/* Altura reservada: a linha não pula quando o aviso aparece e some. */}
-      <div className="h-7 text-2xl">{aviso}</div>
-      <p className="text-base font-bold tracking-[0.1em] text-texto-suave">
+      <div className={cn("texto-aviso-da-partida", compacto ? "h-5" : "h-7")}>{aviso}</div>
+      <p className={cn("font-bold tracking-[0.1em] text-texto-suave", compacto ? "text-xs" : "text-base")}>
         PRECISÃO{" "}
-        <span aria-label="Precisão" className={cn("font-titulo text-2xl tracking-normal tabular-nums", corDaPrecisao(precisao))}>
+        <span aria-label="Precisão" className={cn("font-titulo tracking-normal tabular-nums", compacto ? "text-base" : "text-2xl", corDaPrecisao(precisao))}>
           {porcentagem}
         </span>
       </p>
@@ -95,12 +97,16 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
 
   if (compacto) {
     return (
-      <div className="flex items-center gap-4">
-        {anel}
-        {combo}
-        <div className="flex flex-col gap-1">
-          {pontuacao}
-          {acerto}
+      // Celular: a pontuação centralizada logo abaixo do título; combo, precisão e o anel empilhados à esquerda.
+      <div className="flex flex-col gap-1">
+        <div className="flex justify-center">{pontuacao}</div>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-col items-start gap-1">
+            {combo}
+            {acerto}
+            {anel}
+          </div>
+          {lateral}
         </div>
       </div>
     );

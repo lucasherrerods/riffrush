@@ -140,4 +140,16 @@ describe("TelaDeConfiguracoes", () => {
     expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ botoesDoControle: [2, 4, 5, 7, 0, 6], teclas: CONFIGURACOES_PADRAO.teclas }));
     vi.mocked(useControleConectado).mockReturnValue(false);
   });
+
+describe("no celular", () => {
+  beforeEach(() => Object.defineProperty(window, "innerWidth", { value: 375, configurable: true }));
+  afterEach(() => Object.defineProperty(window, "innerWidth", { value: 1024, configurable: true }));
+
+  it("troca a troca de teclas pela dica de arrastar para cima e esconde os atalhos de teclado", () => {
+    render(<TelaDeConfiguracoes configuracoes={CONFIGURACOES_PADRAO} aoMudar={vi.fn()} aoVoltar={vi.fn()} />);
+    expect(screen.getByText("Arraste para cima")).toBeInTheDocument();
+    expect(screen.queryByText("Traste Verde")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Atalho|Alt \+|Esc cancela/)).not.toBeInTheDocument();
+  });
+});
 });

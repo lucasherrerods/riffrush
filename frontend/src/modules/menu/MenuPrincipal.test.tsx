@@ -27,7 +27,7 @@ describe("MenuPrincipal", () => {
   it("mostra o nome do jogo e as opções", () => {
     abrir();
     expect(screen.getByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Multiplayer", "Leaderboard", "Buscar músicas", "Personagem", "Configurações"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Multiplayer", "Buscar músicas", "Leaderboard", "Personagem", "Configurações"]);
   });
 
   it("Enter abre a opção selecionada, que começa em Jogar", async () => {
@@ -114,7 +114,7 @@ describe("MenuPrincipal rodapé", () => {
 describe("MenuPrincipal no celular que entrou pelo QR code", () => {
   it("começa por entrar na sala", () => {
     abrir({ noCelular: true });
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Entrar na sala", "Jogar sozinho", "Leaderboard", "Buscar músicas", "Personagem", "Configurações"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Entrar na sala", "Jogar sozinho", "Buscar músicas", "Leaderboard", "Personagem", "Configurações"]);
   });
 
   it("Enter já leva para a sala", async () => {

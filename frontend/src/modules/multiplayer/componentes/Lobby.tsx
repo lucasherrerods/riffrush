@@ -73,63 +73,63 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
   };
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1">
-      <div className="col-span-8 flex min-h-0 flex-col gap-4 max-md:col-span-1">
-        <ul className="grid grid-cols-4 gap-4 max-md:grid-cols-2">
+    <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:flex-none max-md:grid-cols-1 max-md:gap-2">
+      <div className="col-span-8 flex min-h-0 flex-col gap-4 max-md:col-span-1 max-md:min-h-fit max-md:gap-2">
+        <ul className="grid grid-cols-4 gap-4 max-md:grid-cols-2 max-md:gap-2">
           {Array.from({ length: MAXIMO_DE_JOGADORES }, (_, i) => {
             const jogador = sala.jogadores[i];
             return (
               <li
                 key={jogador?.id ?? `vaga-${i}`}
                 className={cn(
-                  "chapa relative flex flex-col items-center p-4",
+                  "chapa relative flex flex-col items-center p-4 max-md:items-start max-md:p-2",
                   jogador ? "border-borda bg-superficie" : "border-dashed border-borda bg-fundo",
                 )}
               >
                 {jogador ? (
                   <>
                     {sala.souHost && jogador.id !== sala.meuId && (
-                      <div className="absolute top-2 right-2 flex flex-col">
+                      <div className="absolute top-2 right-2 flex flex-col max-md:top-1 max-md:right-1">
                         {/* Só no online: na LAN a sala e a música importada moram no PC de quem criou. */}
                         {codigo && (
                           <Button
                             variant="ghost"
                             size="icon"
                             aria-label={`Passar a liderança para ${jogador.personagem.nome}`}
-                            className="size-12 text-ouro"
+                            className="size-12 text-ouro max-md:size-7"
                             onClick={() => setNovoLider({ id: jogador.id, nome: jogador.personagem.nome })}
                           >
-                            <Crown className="size-8" />
+                            <Crown className="size-8 max-md:size-5" />
                           </Button>
                         )}
                         <Button
                           variant="ghost"
                           size="icon"
                           aria-label={`Expulsar ${jogador.personagem.nome}`}
-                          className="size-12 text-texto-suave hover:text-perigo"
+                          className="size-12 text-texto-suave hover:text-perigo max-md:size-7"
                           onClick={() => expulsar(jogador.id)}
                         >
-                          <IconeDeChute className="size-8" />
+                          <IconeDeChute className="size-8 max-md:size-5" />
                         </Button>
                       </div>
                     )}
-                    <Avatar personagem={jogador.personagem} className="h-24 w-auto" />
-                    <p className="mt-2 truncate text-base font-bold">{jogador.personagem.nome}</p>
-                    {jogador.personagem.nivel && <p className="font-titulo text-base leading-none text-destaque">Nv {jogador.personagem.nivel}</p>}
-                    <div className="flex gap-1">
-                      {jogador.id === sala.hostId && <span className="rounded-full bg-ouro px-2 text-base font-bold text-fundo">Host</span>}
-                      {jogador.id === sala.meuId && <span className="rounded-full bg-superficie-elevada px-2 text-base">Você</span>}
+                    <Avatar personagem={jogador.personagem} className="h-24 w-auto max-md:hidden" />
+                    <p className={cn("mt-2 max-w-full truncate text-base font-bold max-md:mt-0 max-md:text-sm", sala.souHost && jogador.id !== sala.meuId && "max-md:pr-8")}>{jogador.personagem.nome}</p>
+                    {jogador.personagem.nivel && <p className="font-titulo text-base leading-none text-destaque max-md:text-sm">Nv {jogador.personagem.nivel}</p>}
+                    <div className="flex flex-wrap gap-1 max-md:mt-1">
+                      {jogador.id === sala.hostId && <span className="rounded-full bg-ouro px-2 text-base font-bold text-fundo max-md:text-xs">Host</span>}
+                      {jogador.id === sala.meuId && <span className="rounded-full bg-superficie-elevada px-2 text-base max-md:text-xs">Você</span>}
                       {sala.prontos.includes(jogador.id) && (
-                        <span className="flex items-center gap-1 rounded-full bg-sucesso px-2 text-base font-bold text-fundo">
+                        <span className="flex items-center gap-1 rounded-full bg-sucesso px-2 text-base font-bold text-fundo max-md:text-xs">
                           <Check className="size-4 opacity-70" aria-hidden /> Pronto
                         </span>
                       )}
                     </div>
                   </>
                 ) : (
-                  <div className="flex h-32 flex-col items-center justify-center gap-2 text-texto-suave">
+                  <div className="flex h-32 w-full flex-col items-center justify-center gap-2 text-texto-suave max-md:h-14 max-md:gap-1">
                     <Users className="opacity-50" aria-hidden />
-                    <p className="text-base">Esperando...</p>
+                    <p className="text-base max-md:text-sm">Esperando...</p>
                   </div>
                 )}
               </li>
@@ -138,7 +138,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
         </ul>
 
         {/* Música à esquerda, dificuldade e largada à direita. A lista de músicas ocupa a altura livre e rola. */}
-        <section className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-6 placa p-6 max-md:grid-cols-1 max-md:grid-rows-none">
+        <section className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-6 placa p-6 max-md:flex-none max-md:grid-cols-1 max-md:grid-rows-none max-md:gap-3 max-md:p-3">
           <div className="flex min-h-0 min-w-0 flex-col gap-2">
             <p className="text-base font-semibold text-texto-suave">Música</p>
             {sala.souHost ? (
@@ -154,7 +154,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
                     <ChevronDown />
                   </Button>
                 </div>
-                <div role="radiogroup" aria-label="Música" className="flex min-h-48 flex-1 flex-col gap-1 overflow-y-auto max-md:max-h-72">
+                <div role="radiogroup" aria-label="Música" className="rolagem-de-toque flex min-h-48 flex-1 flex-col gap-1 max-md:max-h-48 max-md:min-h-0 max-md:flex-none max-md:overscroll-auto">
                   {musicas.map((m) => {
                     const escolhida = m.id === sala.musica.id;
                     return (
@@ -168,7 +168,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
                           tocarEfeito("mover", volumeDosEfeitos);
                           escolherNaSala(m, sala.dificuldade);
                         }}
-                        className={cn("flex items-center gap-4 rounded-lg px-4 py-2 text-left text-base", escolhida ? "bg-primaria" : "hover:bg-superficie-hover")}
+                        className={cn("flex items-center gap-4 rounded-lg px-4 py-2 text-left text-base max-md:gap-2 max-md:px-2 max-md:py-1.5 max-md:text-sm", escolhida ? "bg-primaria" : "hover:bg-superficie-hover")}
                       >
                         <span className="flex-1 truncate font-semibold">{m.titulo}</span>
                         <span className="truncate text-texto-suave">{m.artista}</span>
@@ -178,11 +178,11 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
                 </div>
               </>
             ) : (
-              <p className="text-2xl font-black">{tituloDaMusica}</p>
+              <p className="text-2xl font-black max-md:text-lg">{tituloDaMusica}</p>
             )}
           </div>
 
-          <div className="flex min-w-0 flex-col justify-end gap-4">
+          <div className="flex min-w-0 flex-col justify-end gap-4 max-md:gap-3">
             {/* Só o host escolhe: todos tocam no mesmo instrumento, para a pontuação ser comparável. */}
             {sala.souHost ? (
               <>
@@ -210,11 +210,11 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
 
             {sala.souHost ? (
               <div className="flex flex-col gap-2">
-                <Button size="lg" disabled={comecando || !musica || !todosProntos(sala)} className="h-14 text-lg font-black" onClick={() => void darLargada()}>
+                <Button size="lg" disabled={comecando || !musica || !todosProntos(sala)} className="h-14 text-lg font-black max-md:h-10 max-md:text-base" onClick={() => void darLargada()}>
                   {comecando ? <Loader2 className="animate-spin" /> : <Play className="fill-current opacity-70" />} Começar partida
                 </Button>
                 {!todosProntos(sala) && (
-                  <p className="text-center text-base text-texto-suave">
+                  <p className="text-center text-base text-texto-suave max-md:text-sm">
                     Esperando todos ficarem prontos ({prontos} de {convidados.length})
                   </p>
                 )}
@@ -239,7 +239,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
             ) : (
               <Button
                 size="lg"
-                className="h-14 text-lg font-black"
+                className="h-14 text-lg font-black max-md:h-10 max-md:text-base"
                 onClick={() => {
                   tocarEfeito("selecionar", volumeDosEfeitos);
                   marcarPronto(true);
@@ -253,14 +253,14 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
       </div>
 
       {/* O código ou o QR em cima, o chat da sala ocupando o resto da coluna. */}
-      <div className="col-span-4 flex min-h-0 flex-col gap-6 max-md:col-span-1">
+      <div className="col-span-4 flex min-h-0 flex-col gap-6 max-md:col-span-1 max-md:gap-2">
         {codigo && (
-          <section className="flex shrink-0 flex-col items-center gap-4 placa p-6 text-center">
-            <Globe className="text-primaria opacity-70" aria-hidden />
+          <section className="flex shrink-0 flex-col items-center gap-4 placa p-6 text-center max-md:gap-1 max-md:p-3">
+            <Globe className="text-primaria opacity-70 max-md:hidden" aria-hidden />
             <p className="text-base font-bold">Sala online</p>
-            <p className="text-base text-texto-suave">Passe o código para os amigos:</p>
-            <p className="font-mono text-5xl font-bold tracking-[0.2em] text-destaque">{codigo}</p>
-            <p className="text-base text-texto-suave">Eles entram em Multijogador, no campo &quot;Código da sala online&quot;.</p>
+            <p className="text-base text-texto-suave max-md:text-sm">Passe o código para os amigos:</p>
+            <p className="font-mono text-5xl font-bold tracking-[0.2em] text-destaque max-md:text-3xl">{codigo}</p>
+            <p className="text-base text-texto-suave max-md:text-xs">Eles entram em Multijogador, no campo &quot;Código da sala online&quot;.</p>
           </section>
         )}
         {info && (

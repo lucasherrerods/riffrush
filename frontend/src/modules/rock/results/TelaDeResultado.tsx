@@ -1,3 +1,4 @@
+import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { useEffect, useState } from "react";
 import { animate, motion } from "framer-motion";
 import { ListMusic, RotateCcw, Star, Trophy } from "lucide-react";
@@ -35,6 +36,8 @@ export function TelaDeResultado(props: Props) {
   const podeRepetir = rotuloDeContinuar === undefined;
   const [pontosNaTela, setPontosNaTela] = useState(0);
   const dispositivo = useDispositivo();
+  // No celular não há teclado: os botões não mostram atalhos.
+  const estreita = useTelaEstreita();
   const estrelas = estrelasDoResultado(resultado);
   const precisao = resultado.precisao ?? (resultado.total ? resultado.acertos / resultado.total : 0);
   const fullCombo = resultado.total > 0 && resultado.acertos === resultado.total;
@@ -76,7 +79,7 @@ export function TelaDeResultado(props: Props) {
         <div className="my-auto flex w-full flex-col items-center gap-5">
           <div className="text-center">
             <p className="text-sm font-semibold tracking-[0.3em] text-texto-suave">RESULTADO</p>
-            <h1 className="mt-1 text-4xl leading-[1.1] max-md:text-3xl font-black tracking-[-0.02em]">{titulo}</h1>
+            <h1 className="titulo-de-tela mt-1">{titulo}</h1>
             <p className="mt-1 text-sm text-texto-suave">{artista}</p>
             {jogador && (
               <p className="mt-3 flex items-center justify-center gap-2 text-sm font-bold">
@@ -151,11 +154,11 @@ export function TelaDeResultado(props: Props) {
       <div className="pointer-events-none sticky bottom-0 flex justify-center gap-4 px-8 pt-4 pb-6 max-md:px-4 max-md:pb-4 [&>*]:pointer-events-auto">
         {podeRepetir && (
           <Button size="lg" variant="outline" onClick={aoRepetir}>
-            <RotateCcw className="opacity-70" /> Tocar de novo{dispositivo === "teclado" && " (R)"}
+            <RotateCcw className="opacity-70" /> Tocar de novo{dispositivo === "teclado" && !estreita && " (R)"}
           </Button>
         )}
         <Button size="lg" onClick={aoContinuar}>
-          <ListMusic className="opacity-70" /> {rotuloDeContinuar ?? "Escolher outra"} ({rotuloDoComando("confirmar", dispositivo)})
+          <ListMusic className="opacity-70" /> {rotuloDeContinuar ?? "Escolher outra"}{!estreita && ` (${rotuloDoComando("confirmar", dispositivo)})`}
         </Button>
       </div>
     </div>

@@ -17,14 +17,14 @@ export function LinhaDeSlider({ rotulo, dica, valor, minimo, maximo, passo, form
     <LinhaDeOpcao rotulo={rotulo} dica={dica}>
       <Slider
         aria-label={rotulo}
-        className="w-48"
+        className="w-48 max-md:w-24"
         value={[valor]}
         min={minimo}
         max={maximo}
         step={passo}
         onValueChange={([novo]) => aoMudar(novo)}
       />
-      <span className="w-16 text-right font-mono text-base tabular-nums">{formatar(valor)}</span>
+      <span className="w-16 text-right font-mono text-base tabular-nums max-md:w-12 max-md:text-sm">{formatar(valor)}</span>
     </LinhaDeOpcao>
   );
 }

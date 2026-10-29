@@ -4,8 +4,9 @@ import { Heart, Star } from "lucide-react";
 import { recordeDe, type Recordes } from "@/modules/rock/results";
 import { idDoRanking, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { SeloDaNota } from "@/shared/ui/SeloDaNota";
+import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
-import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, centroDoGrupoAberto, passosDaRoda, posicoesNoCarrossel, recuoNaCurva } from "../carrossel";
+import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, centroDoGrupoAberto, passosDaRoda, passosDoArraste, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "../carrossel";
 import { Capa } from "./Capa";
 
 interface Props {
@@ -42,13 +43,26 @@ const COR_DA_DIFICULDADE: Record<Dificuldade, string> = {
   expert: "bg-primaria",
 };
 
+const ESCALA_NO_CELULAR = 0.7;
+/** Quantos px o dedo anda antes de o toque deixar de ser um clique. */
+const LIMITE_DO_TOQUE = 8;
+/** Toque mais longo que isso (ms) é segurar, não clicar. */
+const TEMPO_DO_TOQUE = 250;
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 /** Lista de músicas em roda, como no osu!lazer: a selecionada fica no meio, com as dificuldades abertas embaixo. */
 export function Carrossel({ musicas, indice, dificuldade, instrumento, dificuldades, recordes, favoritas, aoEscolherMusica, aoEscolherDificuldade, aoJogar, aoGirar, menuDaSelecionada, className }: Props) {
   const giro = useRef(0);
+  // No celular a roda gira arrastando o dedo: guarda a última altura do toque e o que sobrou do arraste.
+  const toque = useRef<{ y: number; resto: number } | null>(null);
+  // O toque que arrastou não é clique: sem isso, soltar o dedo escolhe a música onde ele começou.
+  const inicioDoToque = useRef(0);
+  const arrastou = useRef(false);
+  const momentoDoToque = useRef(0);
   const posicoes = posicoesNoCarrossel(musicas.length, indice, dificuldades.length);
   const centro = centroDoGrupoAberto(dificuldades.length);
+  // No celular a roda inteira encolhe, para caberem mais músicas e dar para ver que a lista continua.
+  const escala = useTelaEstreita() ? ESCALA_NO_CELULAR : 1;
 
   return (
     <ul
@@ -58,7 +72,33 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
         giro.current = resto;
         if (passos) aoGirar(passos);
       }}
-      className={cn("relative col-span-7 min-h-0 min-w-0 overflow-hidden max-md:col-span-1 max-md:min-h-80", className)}
+      onTouchStart={(evento) => {
+        toque.current = { y: evento.touches[0].clientY, resto: 0 };
+        inicioDoToque.current = evento.touches[0].clientY;
+        arrastou.current = false;
+        momentoDoToque.current = Date.now();
+      }}
+      onTouchMove={(evento) => {
+        if (!toque.current) return;
+        const y = evento.touches[0].clientY;
+        if (Math.abs(y - inicioDoToque.current) > LIMITE_DO_TOQUE) arrastou.current = true;
+        const { passos, resto } = passosDoArraste(toque.current.resto + toque.current.y - y);
+        toque.current = { y, resto };
+        const permitidos = passosSemDarAVolta(indice, passos, musicas.length);
+        if (permitidos) aoGirar(permitidos);
+      }}
+      onTouchEnd={() => {
+        toque.current = null;
+        // Segurar o dedo é o começo de um arraste, não um clique.
+        if (Date.now() - momentoDoToque.current > TEMPO_DO_TOQUE) arrastou.current = true;
+      }}
+      onClickCapture={(evento) => {
+        if (!arrastou.current) return;
+        arrastou.current = false;
+        evento.preventDefault();
+        evento.stopPropagation();
+      }}
+      className={cn("relative col-span-7 min-h-0 min-w-0 touch-none overflow-hidden max-md:col-span-1 max-md:min-h-40", className)}
     >
       {musicas.map((m, i) => {
         const posicao = posicoes[i];
@@ -71,28 +111,28 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
             key={m.id}
             data-indice={i}
             initial={false}
-            animate={{ y: posicao - centro, x }}
+            animate={{ y: (posicao - centro) * escala, x: x * escala }}
             transition={MOLA}
-            className="absolute top-1/2 right-0 left-8"
+            className="absolute top-1/2 right-0 left-8 max-md:left-4"
           >
             <div className="relative">
             <button
               aria-current={selecionada}
               onClick={() => (selecionada ? aoJogar() : aoEscolherMusica(i))}
-              style={{ height: ALTURA_DA_MUSICA }}
+              style={{ height: ALTURA_DA_MUSICA * escala }}
               className={cn(
-                "chapa flex w-full items-center gap-4 px-4 text-left transition-colors",
+                "chapa flex w-full items-center gap-4 px-4 text-left transition-colors max-md:gap-2 max-md:px-2",
                 selecionada ? "border-destaque bg-destaque/15" : "border-transparent bg-superficie hover:bg-superficie-hover",
                 selecionada && menuDaSelecionada && "pr-16",
               )}
             >
-              <Capa musica={m} decorativa className="size-14 rounded-sm" />
+              <Capa musica={m} decorativa className="size-14 rounded-sm max-md:size-9" />
               <span className="min-w-0 flex-1">
-                <span className={cn("flex items-center gap-2 font-titulo text-2xl leading-[1.1] tracking-wide", selecionada && "text-destaque")}>
+                <span className={cn("flex items-center gap-2 font-titulo text-2xl leading-[1.1] tracking-wide max-md:text-lg", selecionada && "text-destaque")}>
                   {favoritas?.has(m.id) && <Heart className="size-4 shrink-0 fill-primaria text-primaria" aria-label="Favorita" />}
                   <span className="truncate">{m.titulo}</span>
                 </span>
-                <span className="block truncate text-base text-texto-suave">{m.artista}</span>
+                <span className="block truncate text-base text-texto-suave max-md:text-xs">{m.artista}</span>
               </span>
               {recorde && (
                 <span className="flex gap-1" aria-label={`${recorde.estrelas} estrelas`}>
@@ -106,7 +146,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
             </div>
 
             {selecionada && (
-              <div role="radiogroup" aria-label="Dificuldade" className="mt-2 flex flex-col gap-2 pl-12">
+              <div role="radiogroup" aria-label="Dificuldade" style={{ marginTop: ESPACO * escala, gap: ESPACO * escala }} className="flex flex-col pl-12 max-md:pl-8">
                 {dificuldades.map((d) => {
                   const escolhida = d.id === dificuldade;
                   const recordeDaDificuldade = recordeDe(recordes, idDoRanking(m), d.id, instrumento);
@@ -118,17 +158,17 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
                       initial={{ opacity: 0, x: 24 }}
                       animate={{ opacity: 1, x: 0 }}
                       onClick={() => (escolhida ? aoJogar() : aoEscolherDificuldade(d.id))}
-                      style={{ height: ALTURA_DA_DIFICULDADE }}
+                      style={{ height: ALTURA_DA_DIFICULDADE * escala }}
                       className={cn(
-                        "chapa flex items-center gap-4 py-2 pr-4 pl-2 text-left transition-colors",
+                        "chapa flex items-center gap-4 py-2 pr-4 pl-2 text-left transition-colors max-md:gap-2 max-md:py-1 max-md:pr-2",
                         escolhida ? "border-destaque bg-destaque/15" : "border-transparent bg-superficie hover:bg-superficie-hover",
                       )}
                     >
                       <span className={cn("w-1 self-stretch rounded-sm", COR_DA_DIFICULDADE[d.id])} />
-                      <span className={cn("flex-1 font-titulo text-xl tracking-wide uppercase", escolhida && "text-destaque")}>{d.rotulo}</span>
+                      <span className={cn("flex-1 font-titulo text-xl tracking-wide uppercase max-md:text-base", escolhida && "text-destaque")}>{d.rotulo}</span>
                       {recordeDaDificuldade?.fullCombo && <span className="font-titulo text-xl text-destaque">FC</span>}
                       {recordeDaDificuldade?.precisao !== undefined && <SeloDaNota precisao={recordeDaDificuldade.precisao} />}
-                      <span className="font-mono text-base text-texto-suave">{recordeDaDificuldade ? formatar(recordeDaDificuldade.pontos) : "—"}</span>
+                      <span className="font-mono text-base text-texto-suave max-md:text-xs">{recordeDaDificuldade ? formatar(recordeDaDificuldade.pontos) : "—"}</span>
                     </motion.button>
                   );
                 })}

@@ -9,6 +9,7 @@ import { ModalDeModificadores } from "@/modules/modifiers";
 import { recordeDe, useRecordes } from "@/modules/rock/results";
 import { DIFICULDADES, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, instrumentosDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
+import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { cn } from "@/shared/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu";
@@ -122,9 +123,13 @@ export function TelaDeSelecao(props: Props) {
     aoRemover(musica);
   };
 
+  const estreita = useTelaEstreita();
+  // No celular, Detalhes e Ranking abrem em janelas em vez de abas.
+  const [janela, setJanela] = useState<"detalhes" | "ranking" | null>(null);
+
   useTeclado((evento) => {
     // Com o modal ou o menu de opções aberto, as teclas são dele: Esc o fecha, sem voltar ao menu.
-    if (removendo || menuAberto || modificadoresAbertos) return;
+    if (removendo || menuAberto || modificadoresAbertos || janela) return;
     if (evento.code === "Delete" && podeRemover) return setRemovendo(true);
     if (evento.code === "KeyF") return alternarFavoritaAtual();
     // Shift+Tab é do modo competitivo; o Tab sozinho troca o instrumento.
@@ -178,6 +183,181 @@ export function TelaDeSelecao(props: Props) {
     </div>
   );
 
+  const favoritar = (
+    <Button
+      variant="ghost"
+      size="sm"
+      aria-pressed={favorita}
+      title="Favoritar (F)"
+      onClick={alternarFavoritaAtual}
+      className={cn("rounded-md", favorita ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-superficie")}
+    >
+      {favorita ? "Tirar dos favoritos" : "Favoritar"}
+    </Button>
+  );
+
+  const tocar = precisaReimportar ? (
+    <div className="flex flex-col gap-2">
+      <p className="text-base text-texto-suave">O áudio não está mais salvo neste aparelho. Escolha o arquivo de novo para tocar.</p>
+      <Button size="lg" className="h-11 font-titulo text-xl tracking-widest max-md:h-10 max-md:text-lg" asChild>
+        <label className="">
+          <RotateCcw className="opacity-70" /> Importar de novo
+          <input ref={reimportar} type="file" accept={TIPOS_IMPORTAVEIS} className="sr-only" onChange={(e) => importarEscolhidos(e.target)} />
+        </label>
+      </Button>
+    </div>
+  ) : (
+    <Button size="lg" className="h-11 font-titulo text-xl tracking-widest max-md:h-10 max-md:text-lg" onClick={jogar}>
+      <Play className="fill-current opacity-70" /> TOCAR
+    </Button>
+  );
+
+  const filtros = (
+    <>
+    <Button {...estiloDoFiltro(velocidadeDaMusica !== 1)} onClick={() => setModificadoresAbertos(true)}>
+      <Gauge className="opacity-70" /> Modificadores
+      {velocidadeDaMusica !== 1 && <span className="font-mono">{rotuloDaVelocidade(velocidadeDaMusica)}</span>}
+    </Button>
+    <Button {...estiloDoFiltro(soFavoritas)} aria-pressed={soFavoritas} onClick={alternarFiltro}>
+      <Heart className={cn(soFavoritas ? "fill-current" : "opacity-70")} /> Favoritos
+    </Button>
+    </>
+  );
+
+  const lista = visiveis.length ? (
+    <Carrossel
+      className="flex-1"
+      musicas={visiveis.map((i) => musicas[i])}
+      indice={visiveis.indexOf(indice)}
+      dificuldade={dificuldade}
+      instrumento={instrumento}
+      dificuldades={dificuldades}
+      recordes={recordes}
+      favoritas={favoritas}
+      aoEscolherMusica={(i) => {
+        efeito("mover");
+        aoSelecionar(visiveis[i]);
+      }}
+      aoEscolherDificuldade={escolherDificuldade}
+      aoJogar={jogar}
+      aoGirar={andar}
+      menuDaSelecionada={
+        podeRemover && (
+          <DropdownMenu open={menuAberto} onOpenChange={setMenuAberto}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label={`Opções de ${musica.titulo}`}>
+                <Ellipsis />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem variant="perigo" onSelect={() => setRemovendo(true)}>
+                <Trash2 /> Apagar música
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      }
+    />
+  ) : (
+    <p className="placa p-4 text-base text-texto-suave">Nenhuma música favorita ainda. {estreita ? "Favorite com o botão Favoritar." : "Favorite com o coração ou a tecla F."}</p>
+  );
+
+  const modais = (
+    <>
+      <ModalDeModificadores
+        aberto={modificadoresAbertos}
+        aoMudarAberto={setModificadoresAbertos}
+        velocidadeDaMusica={velocidadeDaMusica}
+        aoMudarVelocidade={aoVelocidadeDaMusica}
+      />
+      <Dialog open={removendo} onOpenChange={setRemovendo}>
+        <DialogContent>
+          <DialogTitle>Remover {musica.titulo}?</DialogTitle>
+          <DialogDescription>A música e o arquivo salvo serão apagados deste aparelho. Os recordes continuam guardados. Isso não pode ser desfeito.</DialogDescription>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost">Cancelar</Button>
+            </DialogClose>
+            <Button variant="destructive" onClick={confirmarRemocao}>
+              <Trash2 className="opacity-70" /> Remover
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+
+  const cabecalho = (
+    <header className="flex items-center gap-4 bg-superficie px-8 py-2 max-md:gap-2 max-md:px-2">
+      <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
+        <ArrowLeft />
+      </Button>
+      <h1 className="titulo-de-tela min-w-0 truncate text-destaque max-md:text-lg">Selecione a música</h1>
+      <div className="flex-1" />
+      <Button variant="outline" asChild>
+        <label className="">
+          <FileAudio className="opacity-70" />
+          <span className="max-md:sr-only">Importar música, clipe ou .sng</span>
+          <input
+            type="file"
+            accept={TIPOS_IMPORTAVEIS}
+            multiple
+            className="sr-only"
+            onChange={(e) => importarEscolhidos(e.target)}
+          />
+        </label>
+      </Button>
+    </header>
+  );
+
+  if (estreita) {
+    return (
+      <div className="relative isolate flex h-full flex-col">
+        {cabecalho}
+        <div className="flex min-h-0 flex-1 flex-col gap-2 p-2">
+          <section aria-label="Informações da música" className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-2xl leading-[1.1]">{musica.titulo}</h2>
+                <p className="truncate text-base text-texto-suave">{musica.artista}</p>
+              </div>
+              {favoritar}
+            </div>
+            <div className="flex flex-wrap gap-1.5 [&_button]:h-8 [&_button]:gap-1 [&_button]:px-2 [&_button]:text-xs">
+              <Button variant="outline" size="sm" onClick={() => setJanela("detalhes")}>
+                <Info className="opacity-70" /> Detalhes
+              </Button>
+              {ranking && (
+                <Button variant="outline" size="sm" onClick={() => setJanela("ranking")}>
+                  <ListOrdered className="opacity-70" /> Ranking
+                </Button>
+              )}
+              {filtros}
+            </div>
+            {instrumentos.length > 1 && <GrupoDeOpcoes titulo="Instrumento" opcoes={instrumentos.map((i) => ({ id: i.id, rotulo: i.rotulo }))} valor={instrumento} aoEscolher={escolherInstrumento} />}
+          </section>
+          {lista}
+        </div>
+        <footer className="flex flex-col bg-superficie p-2">{tocar}</footer>
+        {modais}
+        <Dialog open={janela !== null} onOpenChange={(aberto) => !aberto && setJanela(null)}>
+          {/* O Esc só fecha a janela: sem passar adiante, a tela não volta ao menu. */}
+          <DialogContent aria-describedby={undefined} onEscapeKeyDown={(evento) => evento.stopPropagation()}>
+            <DialogTitle>{janela === "ranking" ? "Ranking" : "Detalhes"}</DialogTitle>
+            {janela === "ranking" ? (
+              <div className="flex max-h-[60vh] min-h-0 flex-col">{ranking}</div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {dados}
+                {detalhes}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
   return (
     <div className="relative isolate flex h-full flex-col">
       {/* A capa da música, borrada, pinta o fundo da tela e troca junto com a seleção. */}
@@ -195,26 +375,7 @@ export function TelaDeSelecao(props: Props) {
         </motion.div>
       </AnimatePresence>
 
-      <header className="flex items-center gap-4 bg-superficie px-8 py-2 max-md:px-4">
-        <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
-          <ArrowLeft />
-        </Button>
-        <h1 className="text-2xl leading-[1.1] text-destaque">Selecione a música</h1>
-        <div className="flex-1" />
-        <Button variant="outline" asChild>
-          <label className="">
-            <FileAudio className="opacity-70" />
-            <span className="max-md:sr-only">Importar música, clipe ou .sng</span>
-            <input
-              type="file"
-              accept={TIPOS_IMPORTAVEIS}
-              multiple
-              className="sr-only"
-              onChange={(e) => importarEscolhidos(e.target)}
-            />
-          </label>
-        </Button>
-      </header>
+      {cabecalho}
 
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-8 p-8 max-md:grid-cols-1 max-md:gap-4 max-md:p-4">
         <section aria-label="Informações da música" className="col-span-5 flex min-h-0 min-w-0 flex-col gap-4 max-md:col-span-1">
@@ -225,16 +386,7 @@ export function TelaDeSelecao(props: Props) {
               <h2 className="truncate text-4xl leading-[1.1] max-md:text-2xl">{musica.titulo}</h2>
               <p className="truncate text-lg text-texto-suave">{musica.artista}</p>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-pressed={favorita}
-              title="Favoritar (F)"
-              onClick={alternarFavoritaAtual}
-              className={cn("rounded-md", favorita ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-superficie")}
-            >
-              {favorita ? "Tirar dos favoritos" : "Favoritar"}
-            </Button>
+            {favoritar}
           </div>
 
           {instrumentos.length > 1 && (
@@ -273,70 +425,14 @@ export function TelaDeSelecao(props: Props) {
               <div className="flex-1" />
             </>
           )}
-          {precisaReimportar ? (
-            <div className="flex flex-col gap-2">
-              <p className="text-base text-texto-suave">O áudio não está mais salvo neste aparelho. Escolha o arquivo de novo para tocar.</p>
-              <Button size="lg" className="h-11 font-titulo text-xl tracking-widest max-md:h-14 max-md:text-2xl" asChild>
-                <label className="">
-                  <RotateCcw className="opacity-70" /> Importar de novo
-                  <input ref={reimportar} type="file" accept={TIPOS_IMPORTAVEIS} className="sr-only" onChange={(e) => importarEscolhidos(e.target)} />
-                </label>
-              </Button>
-            </div>
-          ) : (
-            <Button size="lg" className="h-11 font-titulo text-xl tracking-widest max-md:h-14 max-md:text-2xl" onClick={jogar}>
-              <Play className="fill-current opacity-70" /> TOCAR
-            </Button>
-          )}
+          {tocar}
         </section>
 
         <div className="col-span-7 flex min-h-0 min-w-0 flex-col gap-4 max-md:col-span-1">
           <div className="flex justify-end gap-2">
-            <Button {...estiloDoFiltro(velocidadeDaMusica !== 1)} onClick={() => setModificadoresAbertos(true)}>
-              <Gauge className="opacity-70" /> Modificadores
-              {velocidadeDaMusica !== 1 && <span className="font-mono">{rotuloDaVelocidade(velocidadeDaMusica)}</span>}
-            </Button>
-            <Button {...estiloDoFiltro(soFavoritas)} aria-pressed={soFavoritas} onClick={alternarFiltro}>
-              <Heart className={cn(soFavoritas ? "fill-current" : "opacity-70")} /> Favoritos
-            </Button>
+            {filtros}
           </div>
-          {visiveis.length ? (
-            <Carrossel
-              className="flex-1"
-              musicas={visiveis.map((i) => musicas[i])}
-              indice={visiveis.indexOf(indice)}
-              dificuldade={dificuldade}
-              instrumento={instrumento}
-              dificuldades={dificuldades}
-              recordes={recordes}
-              favoritas={favoritas}
-              aoEscolherMusica={(i) => {
-                efeito("mover");
-                aoSelecionar(visiveis[i]);
-              }}
-              aoEscolherDificuldade={escolherDificuldade}
-              aoJogar={jogar}
-              aoGirar={andar}
-              menuDaSelecionada={
-                podeRemover && (
-                  <DropdownMenu open={menuAberto} onOpenChange={setMenuAberto}>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" aria-label={`Opções de ${musica.titulo}`}>
-                        <Ellipsis />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem variant="perigo" onSelect={() => setRemovendo(true)}>
-                        <Trash2 /> Apagar música
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )
-              }
-            />
-          ) : (
-            <p className="placa p-4 text-base text-texto-suave">Nenhuma música favorita ainda. Favorite com o coração ou a tecla F.</p>
-          )}
+          {lista}
         </div>
       </div>
 
@@ -348,26 +444,7 @@ export function TelaDeSelecao(props: Props) {
         {dispositivo === "teclado" && <Comando teclas="F">Favoritar</Comando>}
         <Comando teclas={rotuloDoComando("voltar", dispositivo)}>Voltar</Comando>
       </footer>
-      <ModalDeModificadores
-        aberto={modificadoresAbertos}
-        aoMudarAberto={setModificadoresAbertos}
-        velocidadeDaMusica={velocidadeDaMusica}
-        aoMudarVelocidade={aoVelocidadeDaMusica}
-      />
-      <Dialog open={removendo} onOpenChange={setRemovendo}>
-        <DialogContent>
-          <DialogTitle>Remover {musica.titulo}?</DialogTitle>
-          <DialogDescription>A música e o arquivo salvo serão apagados deste aparelho. Os recordes continuam guardados. Isso não pode ser desfeito.</DialogDescription>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="ghost">Cancelar</Button>
-            </DialogClose>
-            <Button variant="destructive" onClick={confirmarRemocao}>
-              <Trash2 className="opacity-70" /> Remover
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {modais}
     </div>
   );
 }

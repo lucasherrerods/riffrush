@@ -41,17 +41,17 @@ const carregarMusicasPadrao = (sinal: AbortSignal) => apiPadrao.musicas({ sinal 
 const nomeDaDificuldade = (id: string) => DIFICULDADES.find((d) => d.id === id)?.rotulo ?? id;
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 const plural = (n: number, um: string, varios: string) => `${formatar(n)} ${n === 1 ? um : varios}`;
-const LISTA = "sem-barra-de-rolagem flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto";
+const LISTA = "sem-barra-de-rolagem rolagem-de-toque flex min-h-0 flex-1 flex-col gap-1";
 
 /** O leaderboard: os jogadores com mais XP numa aba e as músicas mais jogadas na outra. */
 export function TelaDeLeaderboard({ aoVoltar, carregarPlayers = carregarPlayersPadrao, carregarMusicas = carregarMusicasPadrao, ...daMusica }: Props) {
   return (
-    <div className="flex h-full flex-col gap-4 p-6">
-      <header className="flex items-center gap-4">
+    <div className="respiro-de-tela flex h-full flex-col">
+      <header className="flex items-center gap-4 max-md:gap-2">
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
           <ArrowLeft />
         </Button>
-        <h1 className="text-4xl leading-[1.1] font-black tracking-[-0.02em]">Leaderboard</h1>
+        <h1 className="titulo-de-tela">Leaderboard</h1>
       </header>
 
       <Tabs defaultValue={daMusica.musicaAberta ? "musicas" : "players"} className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
@@ -64,10 +64,10 @@ export function TelaDeLeaderboard({ aoVoltar, carregarPlayers = carregarPlayersP
           </TabsTrigger>
         </TabsList>
         {/* Cada aba só monta (e só pede à API) quando é aberta. */}
-        <TabsContent value="players" className="mt-2 flex min-h-0 flex-1 flex-col gap-2 placa p-4">
+        <TabsContent value="players" className="mt-2 flex min-h-0 flex-1 flex-col gap-2 placa p-4 max-md:p-2">
           <AbaDePlayers carregar={carregarPlayers} />
         </TabsContent>
-        <TabsContent value="musicas" className="mt-2 flex min-h-0 flex-1 flex-col gap-2 placa p-4">
+        <TabsContent value="musicas" className="mt-2 flex min-h-0 flex-1 flex-col gap-2 placa p-4 max-md:p-2">
           <AbaDeMusicas carregar={carregarMusicas} {...daMusica} />
         </TabsContent>
       </Tabs>
@@ -160,8 +160,8 @@ function AbaDeMusicas({ carregar, tituloDaMusica, aoAbrirMusicaDoEncore, aoAbrir
         const filtradas = filtrarMusicas(musicas, filtro, nome);
         return (
           <>
-            <div className="flex flex-wrap items-end gap-4 px-2">
-              <div className="relative min-w-48 flex-1">
+            <div className="flex flex-wrap items-end gap-4 px-2 max-md:gap-2 max-md:px-0">
+              <div className="relative min-w-48 flex-1 max-md:w-full max-md:flex-none">
                 <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-texto-suave opacity-70" aria-hidden />
                 <Input
                   type="search"
@@ -172,7 +172,7 @@ function AbaDeMusicas({ carregar, tituloDaMusica, aoAbrirMusicaDoEncore, aoAbrir
                   className="h-10 border-borda bg-superficie pl-10 text-base"
                 />
               </div>
-              <CampoDeSelecao titulo="Ordenar por" opcoes={ORDENS_DAS_MUSICAS} valor={filtro.ordem} aoEscolher={(ordem) => setFiltro({ ...filtro, ordem })} />
+              <CampoDeSelecao className="max-md:w-full" titulo="Ordenar por" opcoes={ORDENS_DAS_MUSICAS} valor={filtro.ordem} aoEscolher={(ordem) => setFiltro({ ...filtro, ordem })} />
             </div>
             {filtradas.length ? (
               <ol aria-label="Músicas" className={LISTA}>

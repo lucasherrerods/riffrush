@@ -32,29 +32,29 @@ export function PainelDaMusica({ musica, nome, aoVoltar, aoBaixar, aoOuvir, aoAb
   const [ordem, setOrdem] = useState<OrdemDoRanking>("pontos");
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 max-md:gap-2">
       <header className="flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar às músicas">
           <ArrowLeft />
         </Button>
-        {musica.capa ? <img src={musica.capa} alt="" referrerPolicy="no-referrer" className="size-12 shrink-0 rounded-sm" /> : <Music className="size-12 shrink-0 text-texto-suave opacity-70" aria-hidden />}
-        <h2 className="min-w-0 flex-1 truncate font-titulo text-2xl">{nome}</h2>
+        {musica.capa ? <img src={musica.capa} alt="" referrerPolicy="no-referrer" className="size-12 shrink-0 rounded-sm max-md:size-9" /> : <Music className="size-12 shrink-0 text-texto-suave opacity-70" aria-hidden />}
+        <h2 className="min-w-0 flex-1 truncate font-titulo text-2xl max-md:text-lg">{nome}</h2>
         {aoOuvir && (
           <Button variant="outline" onClick={aoOuvir}>
-            <Play className="opacity-70" /> Ouvir prévia
+            <Play className="opacity-70" /> <span className="max-md:sr-only">Ouvir prévia</span>
           </Button>
         )}
         {aoBaixar && (
           <Button variant="outline" onClick={aoBaixar}>
-            <Download className="opacity-70" /> Baixar
+            <Download className="opacity-70" /> <span className="max-md:sr-only">Baixar</span>
           </Button>
         )}
       </header>
 
-      <div className="flex flex-wrap items-end gap-4">
+      <div className="flex flex-wrap items-end gap-4 max-md:grid max-md:grid-cols-2 max-md:gap-2">
         <CampoDeSelecao titulo="Dificuldade" opcoes={DIFICULDADES} valor={dificuldade} aoEscolher={setDificuldade} />
         <CampoDeSelecao titulo="Instrumento" opcoes={INSTRUMENTOS} valor={instrumento} aoEscolher={setInstrumento} />
-        <GrupoDeOpcoes titulo="Ordenar por" opcoes={ORDENS} valor={ordem} aoEscolher={setOrdem} />
+        <GrupoDeOpcoes className="max-md:col-span-2" titulo="Ordenar por" opcoes={ORDENS} valor={ordem} aoEscolher={setOrdem} />
       </div>
 
       <PainelDeRanking musicaId={musica.musica_id} dificuldade={dificuldade} instrumento={instrumento} ordem={ordem} aoAbrirPartida={aoAbrirPartida} api={api} />

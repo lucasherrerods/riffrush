@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Eye, Loader2, Pause, Skull, Zap } from "lucide-react";
+import { ChevronsUp, Eye, Loader2, Pause, Skull } from "lucide-react";
 import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
 import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "@/modules/rock/character";
 import { cenaDaPartida } from "./cena";
 import { Palco, opacidadeDaPista, type EstadoDoPalco, type QualidadeDoPalco } from "@/modules/rock/stage";
 import { DIFICULDADES, INSTRUMENTOS, PISTA_ABERTA, carregarMusica, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada } from "@/modules/rock/songs";
-import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
+import { ehTelaEstreita, useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { criarBot, jogarSozinho } from "./bot";
 import { AvisoDeAcerto } from "./componentes/AvisoDeAcerto";
 import { MedidorDeRock } from "./componentes/MedidorDeRock";
-import { MedidorDeVida } from "./componentes/MedidorDeVida";
+import { MedidorCompacto } from "./componentes/MedidorCompacto";
+import { ehArrasteParaCima } from "./gesto";
 import { MenuDePausa } from "./componentes/MenuDePausa";
 import { PainelDePontos } from "./componentes/PainelDePontos";
 import { BarraDeEstrelas } from "./componentes/BarraDeEstrelas";
@@ -162,6 +163,10 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     estrela: nada,
   });
   const estreita = useTelaEstreita();
+  const inicioDoArraste = useRef<{ x: number; y: number } | null>(null);
+  // A faixa de toque acende enquanto o dedo segura o traste; muda direto no DOM para não re-renderizar a tela a cada toque.
+  const faixas = useRef<(HTMLSpanElement | null)[]>([]);
+  const marcarFaixa = (pista: number, apertada: boolean) => faixas.current[pista]?.toggleAttribute("data-apertada", apertada);
   const [comWebGL] = useState(suportaWebGL);
   const cena = cenaDaPartida({ modoCompetitivo: opcoes.modoCompetitivo, efeitos: opcoes.efeitos, personagem: opcoes.personagem, comWebGL, estreita });
   const comPalco = cena.palco;
@@ -372,7 +377,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         } else if (evento.tipo === "fraseCompleta") {
           tocarEfeito("estrela", opcoes.volumeDosEfeitos * 0.6);
         } else if (evento.tipo === "estrelaPronta") {
-          avisar(`Star Power pronto! [${opcoes.rotuloDaTeclaDaEstrela}]`, true);
+          avisar(ehTelaEstreita() ? "Star power!" : `Star Power pronto! [${opcoes.rotuloDaTeclaDaEstrela}]`, true);
         } else if (evento.tipo === "estrelaAtivada") {
           estrelaDesde = tempo;
           reagir("nitro");
@@ -638,7 +643,18 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
 
 
   return (
-    <div className="relative h-full w-full touch-none overflow-hidden select-none">
+    <div
+      className="relative h-full w-full touch-none overflow-hidden select-none"
+      // No celular, arrastar o dedo para cima em qualquer lugar solta o star power.
+      onPointerDown={(e) => {
+        if (estreita) inicioDoArraste.current = { x: e.clientX, y: e.clientY };
+      }}
+      onPointerUp={(e) => {
+        const inicio = inicioDoArraste.current;
+        inicioDoArraste.current = null;
+        if (inicio && ehArrasteParaCima(inicio, { x: e.clientX, y: e.clientY })) controles.current.estrela();
+      }}
+    >
       {comPalco && carregada && <Palco lerEstado={() => estadoDoPalco.current} comPersonagem={cena.personagem} qualidade={opcoes.qualidadeDoPalco} />}
       <canvas ref={canvas} className="absolute inset-0 h-full w-full" />
       {/* Vinheta: as bordas escurecem e a luz fica no braço, como num palco. */}
@@ -660,10 +676,10 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
 
       {carregada && (
         <>
-          <header className="absolute top-0 right-0 left-0 flex items-center gap-4 px-6 pt-4">
+          <header className={cn("absolute top-0 right-0 left-0 flex items-center", estreita ? "gap-2 px-3 pt-1" : "gap-4 px-6 pt-4")}>
             <div className="min-w-0">
-              <h1 className="truncate text-lg font-bold">{musica.titulo}</h1>
-              <p className="truncate text-base text-texto-suave">
+              <h1 className="texto-titulo-da-partida truncate font-bold">{musica.titulo}</h1>
+              <p className={cn("truncate text-texto-suave", estreita ? "text-xs" : "text-base")}>
                 {musica.artista} · {rotuloDaDificuldade}
                 {opcoes.bot && !replay && <span className="ml-2 rounded bg-estrela px-2 font-black text-fundo">BOT</span>}
                 {velocidade !== 1 && <span className="ml-2 rounded bg-superficie-elevada px-2 font-black">{rotuloDaVelocidade(velocidade)}</span>}
@@ -691,8 +707,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
           <div
             className="absolute flex"
             style={{
-              left: layout.centro - layout.largura / 2,
-              width: layout.largura,
+              left: estreita ? 0 : layout.centro - layout.largura / 2,
+              width: estreita ? "100%" : layout.largura,
               top: layout.linhaDeBatida - layout.larguraDoTraste * 0.45,
               bottom: temAberta ? ALTURA_DA_FAIXA_ABERTA : 0,
             }}
@@ -706,9 +722,16 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
                 onPointerDown={(e) => {
                   e.currentTarget.setPointerCapture?.(e.pointerId);
                   controles.current.apertar(pista, e.nativeEvent);
+                  marcarFaixa(pista, true);
                 }}
-                onPointerUp={() => controles.current.largar(pista)}
-                onPointerCancel={() => controles.current.largar(pista)}
+                onPointerUp={() => {
+                  controles.current.largar(pista);
+                  marcarFaixa(pista, false);
+                }}
+                onPointerCancel={() => {
+                  controles.current.largar(pista);
+                  marcarFaixa(pista, false);
+                }}
               >
                 {opcoes.rotulosDosTrastes && (
                   <span className="mb-2 rounded-sm bg-superficie-elevada px-2 font-titulo text-lg tracking-wide text-texto-suave">{opcoes.rotulosDosTrastes[pista]}</span>
@@ -716,6 +739,29 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
               </div>
             ))}
           </div>
+
+          {/* No celular, faixas como teclas de piano marcam, logo abaixo dos trastes, onde o dedo pode tocar. */}
+          {estreita && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 flex border-t border-texto/40"
+              style={{
+                top: layout.linhaDeBatida + layout.larguraDoTraste * 0.45,
+                bottom: temAberta ? ALTURA_DA_FAIXA_ABERTA : 0,
+              }}
+            >
+              {NOMES_DAS_PISTAS.map((nome, pista) => (
+                <span
+                  key={nome}
+                  ref={(elemento) => {
+                    faixas.current[pista] = elemento;
+                  }}
+                  data-parte="alvo-do-toque"
+                  className="flex-1 border-r border-texto/40 bg-texto/5 transition-colors duration-75 last:border-r-0 data-[apertada]:bg-texto/25"
+                />
+              ))}
+            </div>
+          )}
 
           {/* A nota aberta não tem traste: no toque, ela tem uma faixa própria no pé da tela. */}
           {temAberta && (
@@ -760,7 +806,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
                 exit={{ y: -16, opacity: 0 }}
                 transition={{ duration: 0.25 }}
                 onAnimationComplete={() => setTimeout(() => setAviso((a) => (a?.id === aviso.id ? null : a)), 1200)}
-                className={cn("pointer-events-none absolute top-24 left-1/2 -translate-x-1/2 text-3xl font-black", aviso.estrela ? "text-estrela" : "text-ouro")}
+                className={cn("pointer-events-none absolute top-24 left-1/2 -translate-x-1/2 texto-aviso-da-partida font-black", aviso.estrela ? "text-estrela" : "text-ouro")}
               >
                 {aviso.texto}
               </motion.p>
@@ -821,7 +867,8 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
     <>
       {/* Os números ficam colados à esquerda da pista; no celular a pista ocupa a largura toda e eles sobem para o topo. */}
       <div
-        className={cn("absolute", estreita ? "top-20 left-4" : "bottom-10 -translate-x-full")}
+        data-parte={estreita ? "hud-compacto" : undefined}
+        className={cn("absolute", estreita ? "top-12 right-3 left-3" : "bottom-10 -translate-x-full")}
         style={estreita ? undefined : { left: Math.max(layout.centro - layout.largura / 2 - 24, LARGURA_DO_PAINEL + MARGEM_DO_HUD) }}
       >
         {/* O aviso fica no painel, acima da precisão, e não em cima da pista: não tapa as notas que vêm chegando. */}
@@ -833,22 +880,25 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
           estrelaAtiva={hud.estrelaAtiva}
           compacto={estreita}
           aviso={<AvisoDeAcerto julgamento={hud.julgamento} />}
+          lateral={
+            estreita && (
+              <div className="flex items-start gap-2">
+                {avatarDoJogador("h-14 w-auto")}
+                {/* Os pinos do star power e a barra de vida: tocar neles ativa o star power. */}
+                <button aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`} onClick={aoEstrela} className="-mr-2 flex w-32 flex-col items-center">
+                  <MedidorCompacto vida={hud.vida} estrela={hud.estrela} estrelaAtiva={hud.estrelaAtiva} className="w-full" />
+                  {/* Com o star power pronto, a seta lembra que arrastar para cima o solta. */}
+                  {hud.estrela >= 0.5 && !hud.estrelaAtiva && (
+                    <ChevronsUp data-parte="seta-do-star-power" aria-label="Arraste para cima para soltar o star power" className="mt-6 size-10 animate-bounce text-estrela" />
+                  )}
+                </button>
+              </div>
+            )
+          }
         />
       </div>
 
-      {estreita ? (
-        <div data-parte="hud-compacto" className="absolute top-20 right-4 flex flex-col items-end gap-2">
-          {avatarDoJogador("h-20 w-auto")}
-          <MedidorDeVida vida={hud.vida} fantasma={hud.fantasma} horizontal className="h-2.5 w-24" />
-          <button
-            aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`}
-            onClick={aoEstrela}
-            className={cn("flex items-center gap-1 rounded-full px-3 py-1 text-base font-bold", hud.estrela >= 0.5 ? "bg-estrela text-fundo" : "bg-superficie-elevada text-texto-suave")}
-          >
-            <Zap className="size-4 opacity-70" aria-hidden /> {Math.round(hud.estrela * 100)}%
-          </button>
-        </div>
-      ) : (
+      {!estreita && (
         <div data-parte="hud-lateral" className="absolute bottom-10 flex flex-col items-center" style={{ left: Math.min(layout.centro + layout.largura / 2 + 24, layout.centro * 2 - LARGURA_DO_HUD_LATERAL - MARGEM_DO_HUD) }}>
           {/* Com o palco, o personagem já está em cena atrás da pista. */}
           {!comPalco && avatarDoJogador("mb-2 h-44 w-auto")}

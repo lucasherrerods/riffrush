@@ -256,3 +256,77 @@ body {
     }
   }
 }
+
+/* ---------- Medidas padrão das telas ---------- */
+
+/* Título de cada tela: grande no desktop, menor no celular para sobrar espaço ao conteúdo. */
+@utility titulo-de-tela {
+  font-size: var(--text-4xl);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  @media (width < 48rem) {
+    font-size: var(--text-2xl);
+  }
+}
+
+/* Respiro das telas: padding e gap menores no celular, para os containers quase encostarem na borda. */
+@utility respiro-de-tela {
+  padding: --spacing(6);
+  gap: --spacing(4);
+  @media (width < 48rem) {
+    padding: --spacing(2);
+    gap: --spacing(2);
+  }
+}
+
+/* Rolagem que aceita o arraste do dedo e não puxa a página inteira junto. */
+@utility rolagem-de-toque {
+  overflow-y: auto;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fileira de abas que não cabe no celular: rola de lado com o dedo, em vez de cortar. */
+@utility abas-rolaveis {
+  @media (width < 48rem) {
+    justify-content: flex-start !important;
+    overflow-x: auto;
+    touch-action: pan-x;
+    scrollbar-width: none;
+  }
+}
+
+/* ---------- Textos da partida ---------- */
+
+/* Um tamanho só para o celular: o nome da música e todos os avisos que surgem durante a música mudam juntos aqui. */
+:root {
+  --texto-da-partida-no-celular: var(--text-sm);
+}
+
+/* Nome da música no topo da partida. */
+@utility texto-titulo-da-partida {
+  font-size: var(--text-lg);
+  line-height: 1.25;
+  @media (width < 48rem) {
+    font-size: var(--texto-da-partida-no-celular);
+  }
+}
+
+/* Avisos que aparecem jogando (star power, notas seguidas, acertos): grandes no desktop, do tamanho do nome da música no celular. */
+@utility texto-aviso-da-partida {
+  font-size: var(--text-3xl);
+  line-height: 1.1;
+  @media (width < 48rem) {
+    font-size: var(--texto-da-partida-no-celular);
+  }
+}
+
+/* Título de cada bloco dentro de uma tela (ex.: "Últimas partidas"): um degrau abaixo do título da tela. */
+@utility titulo-de-secao {
+  font-size: var(--text-2xl);
+  line-height: 1;
+  @media (width < 48rem) {
+    font-size: var(--text-lg);
+  }
+}

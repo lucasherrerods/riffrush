@@ -7,6 +7,7 @@ import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
 import { QUALIDADES_DO_PALCO } from "@/modules/rock/stage";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { useTeclado } from "@/shared/hooks/useTeclado";
+import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Button } from "@/shared/ui/button";
 import { Switch } from "@/shared/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
@@ -25,6 +26,7 @@ const porcentagem = (valor: number) => `${Math.round(valor * 100)}%`;
 
 export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props) {
   /** Qual tecla está esperando a nova: 0 a 4 são os trastes, 5 é o star power. */
+  const estreita = useTelaEstreita();
   const [trocando, setTrocando] = useState<number | null>(null);
   /** Qual botão do controle está esperando o novo, com os mesmos índices. */
   const [trocandoNoControle, setTrocandoNoControle] = useState<number | null>(null);
@@ -69,7 +71,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
     <button
       aria-label={`Tecla ${nome}`}
       onClick={() => setTrocando(indice)}
-      className="min-w-28 rounded-lg border-2 bg-superficie px-4 py-2 font-mono text-base font-bold transition-colors hover:bg-superficie-hover"
+      className="min-w-28 rounded-lg border-2 bg-superficie px-4 py-2 font-mono text-base font-bold max-md:min-w-16 max-md:px-2 max-md:py-1 max-md:text-sm transition-colors hover:bg-superficie-hover"
       style={{ borderColor: trocando === indice ? "var(--cor-texto)" : cor }}
     >
       {trocando === indice ? "Aperte..." : nomeDaTecla(codigo)}
@@ -80,7 +82,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
     <button
       aria-label={`Botão do controle ${nome}`}
       onClick={() => setTrocandoNoControle(trocandoNoControle === indice ? null : indice)}
-      className="min-w-28 rounded-lg border-2 bg-superficie px-4 py-2 font-mono text-base font-bold transition-colors hover:bg-superficie-hover"
+      className="min-w-28 rounded-lg border-2 bg-superficie px-4 py-2 font-mono text-base font-bold max-md:min-w-16 max-md:px-2 max-md:py-1 max-md:text-sm transition-colors hover:bg-superficie-hover"
       style={{ borderColor: trocandoNoControle === indice ? "var(--cor-texto)" : cor }}
     >
       {trocandoNoControle === indice ? "Aperte..." : nomeDoBotao(botao)}
@@ -96,20 +98,20 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
   );
 
   return (
-    <div className="flex h-full flex-col gap-4 p-6">
-      <header className="flex items-center gap-4">
+    <div className="respiro-de-tela flex h-full flex-col">
+      <header className="flex items-center gap-4 max-md:gap-2">
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
           <ArrowLeft />
         </Button>
-        <h1 className="text-4xl leading-[1.1] font-black tracking-[-0.02em]">Configurações</h1>
+        <h1 className="titulo-de-tela">Configurações</h1>
         <div className="flex-1" />
-        <Button variant="ghost" onClick={() => aoMudar(CONFIGURACOES_PADRAO)}>
-          <RotateCcw className="opacity-70" /> Restaurar padrão
+        <Button variant="ghost" aria-label="Restaurar padrão" onClick={() => aoMudar(CONFIGURACOES_PADRAO)}>
+          <RotateCcw className="opacity-70" /> <span className="max-md:sr-only">Restaurar padrão</span>
         </Button>
       </header>
 
       <Tabs defaultValue="controles" className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
-        <TabsList className="w-full">
+        <TabsList className="abas-rolaveis w-full">
           <TabsTrigger value="controles">
             <Keyboard className="opacity-70" /> Controles
           </TabsTrigger>
@@ -124,9 +126,16 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
           </TabsTrigger>
         </TabsList>
 
-        <div className="mt-2 min-h-0 flex-1 placa p-2">
+        <div className="rolagem-de-toque mt-2 min-h-0 flex-1 placa p-2 max-md:mt-1 max-md:p-1.5">
           <TabsContent value="controles" className="flex flex-col gap-2">
-            <p className="px-4 py-2 text-base text-texto-suave">
+            {/* No celular não há teclas para trocar: o star power sai arrastando o dedo para cima. */}
+            {estreita ? (
+              <LinhaDeOpcao rotulo="Star Power" dica="Ativa o bônus quando a barra passa da metade">
+                <span className="text-sm font-semibold text-estrela">Arraste para cima</span>
+              </LinhaDeOpcao>
+            ) : (
+              <>
+            <p className="px-4 py-2 text-base text-texto-suave max-md:px-2 max-md:py-1 max-md:text-sm">
               {comControle
                 ? "Clique numa tecla ou num botão do controle e aperte o novo. Esc cancela. O direcional e o Start ficam fixos."
                 : "Clique numa tecla e aperte a nova. Esc cancela. Conecte um controle e aperte um botão dele para trocar os botões também."}
@@ -142,6 +151,8 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
             <LinhaDeOpcao rotulo="Star Power" dica="Ativa o bônus quando a barra passa da metade">
               {comandos(INDICE_DA_ESTRELA, "do star power", configuracoes.teclaDaEstrela, configuracoes.botaoDaEstrela, COR_DA_ESTRELA)}
             </LinhaDeOpcao>
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="gameplay" className="flex flex-col gap-2">
@@ -169,7 +180,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
             <LinhaDeOpcao rotulo="Modo sem falha" dica="O medidor de rock nunca tira você da música" para="sem-falha">
               <Switch id="sem-falha" checked={configuracoes.semFalha} onCheckedChange={(semFalha) => mudar({ semFalha })} />
             </LinhaDeOpcao>
-            <LinhaDeOpcao rotulo="Nota aberta" dica="Desligada, a nota aberta vira verde e sai com a tecla do verde" para="nota-aberta">
+            <LinhaDeOpcao rotulo="Nota aberta" dica={estreita ? "Desligada, a nota aberta vira verde e sai no traste verde" : "Desligada, a nota aberta vira verde e sai com a tecla do verde"} para="nota-aberta">
               <Switch id="nota-aberta" checked={configuracoes.notaAberta} onCheckedChange={(notaAberta) => mudar({ notaAberta })} />
             </LinhaDeOpcao>
             <LinhaDeOpcao rotulo="Bot" dica="O jogo toca sozinho. Recordes não são salvos" para="bot">
@@ -187,7 +198,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
               formatar={porcentagem}
               aoMudar={(volumeGeral) => mudar({ volumeGeral })}
             />
-            <p className="px-2 text-base text-texto-suave">Em qualquer tela: Alt + roda do mouse.</p>
+            {!estreita && <p className="px-2 text-base text-texto-suave">Em qualquer tela: Alt + roda do mouse.</p>}
             <LinhaDeSlider
               rotulo="Volume da música"
               valor={configuracoes.volumeDaMusica}
@@ -218,10 +229,10 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
           </TabsContent>
 
           <TabsContent value="video" className="flex flex-col gap-2">
-            <LinhaDeOpcao rotulo="Tela cheia" dica="Atalho: F11" para="tela-cheia">
+            <LinhaDeOpcao rotulo="Tela cheia" dica={estreita ? undefined : "Atalho: F11"} para="tela-cheia">
               <Switch id="tela-cheia" checked={telaCheia} onCheckedChange={(ligada) => void alternarTelaCheia(ligada)} />
             </LinhaDeOpcao>
-            <LinhaDeOpcao rotulo="Modo competitivo" dica="Só a pista e o placar na partida. Atalho: Shift+Tab" para="modo-competitivo">
+            <LinhaDeOpcao rotulo="Modo competitivo" dica={estreita ? "Só a pista e o placar na partida" : "Só a pista e o placar na partida. Atalho: Shift+Tab"} para="modo-competitivo">
               <Switch id="modo-competitivo" checked={configuracoes.modoCompetitivo} onCheckedChange={(modoCompetitivo) => mudar({ modoCompetitivo })} />
             </LinhaDeOpcao>
             <LinhaDeOpcao rotulo="Efeitos de brilho" dica="Desligue se o jogo estiver travando" para="efeitos">

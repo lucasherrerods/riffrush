@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { instalarAtalhosDeVolume, obterContextoDeAudio } from "@/modules/audio";
 import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
@@ -597,10 +597,39 @@ describe("TelaDeJogo no celular", () => {
     expect(document.querySelector('[data-parte="hud-lateral"]')).toBeNull();
   });
 
+  it("no topo, o medidor de rock mostra a vida e os pinos do star power", async () => {
+    carregarCom([nota(5)]);
+    abrir();
+    await partidaPronta();
+    const hud = document.querySelector('[data-parte="hud-compacto"]') as HTMLElement;
+    expect(within(hud).getByRole("meter", { name: "Vida" })).toBeInTheDocument();
+    expect(within(hud).getByRole("progressbar", { name: "Star power" })).toBeInTheDocument();
+  });
+
+  it("a faixa de toque fica apertada enquanto o dedo segura o traste", async () => {
+    carregarCom([nota(5)]);
+    abrir();
+    await partidaPronta();
+    const traste = screen.getByRole("button", { name: "Traste Verde" });
+    const faixa = document.querySelectorAll('[data-parte="alvo-do-toque"]')[0] as HTMLElement;
+    fireEvent.pointerDown(traste, { pointerId: 1 });
+    expect(faixa).toHaveAttribute("data-apertada");
+    fireEvent.pointerUp(traste, { pointerId: 1 });
+    expect(faixa).not.toHaveAttribute("data-apertada");
+  });
+
+  it("mostra um alvo de toque embaixo de cada traste", async () => {
+    carregarCom([nota(5)]);
+    abrir();
+    await partidaPronta();
+    expect(document.querySelectorAll('[data-parte="alvo-do-toque"]')).toHaveLength(5);
+  });
+
   it("o star power vira um botão para tocar com o dedo", async () => {
     carregarCom([nota(5)]);
     abrir();
-    expect(await screen.findByRole("button", { name: /Ativar star power/ })).toHaveTextContent("0%");
+    expect(await screen.findByRole("button", { name: /Ativar star power/ })).not.toHaveTextContent("%");
+    expect(document.querySelector('[data-parte="seta-do-star-power"]')).toBeNull();
   });
 
   it("o personagem continua aparecendo", async () => {
