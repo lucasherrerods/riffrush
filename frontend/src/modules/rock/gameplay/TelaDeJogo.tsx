@@ -516,9 +516,12 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     window.addEventListener("blur", aoPerderFoco);
 
     const contadorDeFps = criarContadorDeFps();
-    const desenhar = () => {
+    const aoMudarVisibilidade = () => contadorDeFps.reiniciar();
+    document.addEventListener("visibilitychange", aoMudarVisibilidade);
+    // O carimbo do rAF é a hora do quadro; performance.now() ali dentro soma o atraso de quem rodou antes no mesmo quadro.
+    const desenhar = (agora: number) => {
       quadro = requestAnimationFrame(desenhar);
-      const leitura = contadorDeFps.quadro(performance.now());
+      const leitura = contadorDeFps.quadro(agora);
       if (opcoes.mostrarFps && leitura !== null) setFps(leitura);
       const tempo = tempoDaMusica(agoraNoAudio(audio));
 
@@ -629,6 +632,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       cancelarRetomada();
       encerrarTransmissao();
       cancelAnimationFrame(quadro);
+      document.removeEventListener("visibilitychange", aoMudarVisibilidade);
       observador?.disconnect();
       window.removeEventListener("keydown", aoApertar);
       window.removeEventListener("keyup", aoSoltar);

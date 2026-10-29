@@ -8,7 +8,8 @@ export interface LeituraDeFps {
 
 /**
  * Conta quadros por segundo numa janela de meio segundo.
- * `quadro(agora)` só devolve uma leitura quando a janela fecha; nos outros quadros, null.
+ * `quadro(agora)` recebe o carimbo do requestAnimationFrame e só devolve uma leitura quando a janela fecha; nos outros quadros, null.
+ * `reiniciar()` descarta a janela aberta, para o tempo com a aba escondida não virar um quadro lento.
  */
 export function criarContadorDeFps() {
   let inicio: number | null = null;
@@ -16,6 +17,11 @@ export function criarContadorDeFps() {
   let quadros = 0;
   let pior = 0;
   return {
+    reiniciar() {
+      inicio = null;
+      quadros = 0;
+      pior = 0;
+    },
     quadro(agora: number): LeituraDeFps | null {
       if (inicio === null) {
         inicio = anterior = agora;
