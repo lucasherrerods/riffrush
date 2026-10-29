@@ -52,6 +52,11 @@ pub enum ErroDoReplay {
 }
 
 /// Quantos códigos de tecla cada versão tem: a 2 ganhou os da nota aberta.
+/// Se o motor sabe ler o replay dessa versão. A API confere por aqui, para nunca recusar o formato que o app grava.
+pub fn versao_do_replay_conhecida(versao: u8) -> bool {
+    codigos_da_versao(versao).is_some()
+}
+
 fn codigos_da_versao(versao: u8) -> Option<u64> {
     match versao {
         1 => Some(11),
