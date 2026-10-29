@@ -28,9 +28,9 @@ const mesEAno = (data: string) => new Date(data).toLocaleDateString("pt-BR", { m
 
 function Numero({ rotulo, valor, detalhe }: { rotulo: string; valor: string; detalhe?: string }) {
   return (
-    <div className="chapa flex flex-col gap-1 bg-superficie p-4 max-md:p-2.5">
+    <div className="chapa flex flex-col gap-1 bg-superficie p-4 max-md:gap-0.5 max-md:p-2">
       <span className="text-sm text-texto-suave max-md:text-xs">{rotulo}</span>
-      <span className="font-titulo text-4xl leading-none tracking-wide max-md:text-2xl">{valor}</span>
+      <span className="font-titulo text-4xl leading-none tracking-wide max-md:text-xl">{valor}</span>
       {detalhe && <span className="text-sm text-texto-suave max-md:text-xs">{detalhe}</span>}
     </div>
   );
@@ -92,20 +92,20 @@ function Conteudo({ perfil, tituloDaMusica, mod }: { perfil: PerfilDaApi; titulo
       {perfil.partidas === 0 ? (
         <p className="placa p-6 text-center text-base text-texto-suave">Nenhuma partida ainda. Jogue uma música para começar a encher o perfil.</p>
       ) : (
-        <div className="grid gap-4 max-md:gap-2 md:grid-cols-12">
-          <div className="flex flex-col gap-4 max-md:gap-2 md:col-span-5">
+        <div className="grid grid-cols-1 gap-4 max-md:gap-2 md:grid-cols-12">
+          <div className="flex min-w-0 flex-col gap-4 max-md:gap-2 md:col-span-5">
             <section className="placa flex flex-col gap-4 p-6 max-md:gap-3 max-md:p-3">
               <h3 className="titulo-de-secao font-titulo tracking-wide">Por dificuldade</h3>
               {perfil.por_dificuldade.map((d) => (
-                <div key={d.dificuldade} className={cn("flex flex-col gap-2", d.partidas === 0 && "opacity-50")}>
+                <div key={d.dificuldade} className={cn("flex flex-col gap-2 max-md:gap-1", d.partidas === 0 && "opacity-50")}>
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-base font-bold">{rotuloDa(d.dificuldade)}</span>
-                    <span className="text-sm text-texto-suave tabular-nums">
+                    <span className="text-base font-bold max-md:text-sm">{rotuloDa(d.dificuldade)}</span>
+                    <span className="text-sm text-texto-suave tabular-nums max-md:text-xs">
                       {formatar(d.partidas)} {d.partidas === 1 ? "partida" : "partidas"}
                     </span>
                   </div>
                   <BarraDeProgresso fracao={d.precisao} rotulo={`Precisão no ${rotuloDa(d.dificuldade)}`} className="h-1" />
-                  <div className="flex justify-between text-sm text-texto-suave tabular-nums">
+                  <div className="flex justify-between text-sm text-texto-suave tabular-nums max-md:text-xs">
                     <span>{porcentagem(d.precisao)}</span>
                     <span>Melhor {formatar(d.melhor_pontuacao)}</span>
                   </div>
@@ -117,10 +117,10 @@ function Conteudo({ perfil, tituloDaMusica, mod }: { perfil: PerfilDaApi; titulo
               <section className="placa flex flex-col gap-4 p-6 max-md:gap-3 max-md:p-3">
                 <h3 className="titulo-de-secao font-titulo tracking-wide">Por instrumento</h3>
                 {perfil.por_instrumento.map((i) => (
-                  <div key={i.instrumento} className="flex flex-col gap-2">
+                  <div key={i.instrumento} className="flex flex-col gap-2 max-md:gap-1">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-base font-bold">{rotuloDoInstrumento(i.instrumento)}</span>
-                      <span className="text-sm text-texto-suave tabular-nums">{porcentagem(i.partidas / perfil.partidas, 0)}</span>
+                      <span className="text-base font-bold max-md:text-sm">{rotuloDoInstrumento(i.instrumento)}</span>
+                      <span className="text-sm text-texto-suave tabular-nums max-md:text-xs">{porcentagem(i.partidas / perfil.partidas, 0)}</span>
                     </div>
                     <BarraDeProgresso fracao={i.partidas / perfil.partidas} rotulo={`Partidas de ${rotuloDoInstrumento(i.instrumento)}`} className="h-1" />
                   </div>
@@ -136,7 +136,7 @@ function Conteudo({ perfil, tituloDaMusica, mod }: { perfil: PerfilDaApi; titulo
                     <li key={m.musica_id} className="flex items-center gap-4 max-md:gap-2">
                       <span className="w-6 font-titulo text-2xl leading-none text-destaque max-md:w-4 max-md:text-lg">{posicao + 1}</span>
                       <CapaPequena capa={m.capa} />
-                      <span className="min-w-0 flex-1 truncate text-base font-bold">{nomeDaMusica(m, tituloDaMusica)}</span>
+                      <span className="min-w-0 flex-1 truncate text-base font-bold max-md:text-sm">{nomeDaMusica(m, tituloDaMusica)}</span>
                       <span className="text-sm whitespace-nowrap text-texto-suave tabular-nums">{vezes(m.partidas)}</span>
                     </li>
                   ))}
@@ -145,21 +145,21 @@ function Conteudo({ perfil, tituloDaMusica, mod }: { perfil: PerfilDaApi; titulo
             )}
           </div>
 
-          <section className="placa flex flex-col gap-2 p-6 max-md:p-3 md:col-span-7">
+          <section className="placa flex min-w-0 flex-col gap-2 p-6 max-md:p-3 md:col-span-7">
             <h3 className="mb-2 max-md:mb-1 titulo-de-secao font-titulo tracking-wide">Últimas partidas</h3>
             {perfil.recentes.map((p) => (
               <div key={`${p.musica_id}-${p.jogada_em}`} className="chapa flex items-center gap-4 bg-superficie px-4 py-2 max-md:gap-2 max-md:px-2">
                 <CapaPequena capa={p.capa} />
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-base font-bold">{nomeDaMusica(p, tituloDaMusica)}</span>
-                  <span className="text-sm text-texto-suave">
+                  <span className="truncate text-base font-bold max-md:text-sm">{nomeDaMusica(p, tituloDaMusica)}</span>
+                  <span className="text-sm text-texto-suave max-md:text-xs">
                     {rotuloDa(p.dificuldade)} · {haQuantoTempo(p.jogada_em)}
                     {p.derrota && <span className="ml-2 text-perigo">Vaiada</span>}
                   </span>
                 </div>
                 <div className="flex flex-col items-end tabular-nums">
-                  <span className="font-titulo text-xl leading-none">{formatar(p.pontos)}</span>
-                  <span className="text-sm text-texto-suave">{porcentagem(p.precisao)}</span>
+                  <span className="font-titulo text-xl leading-none max-md:text-base">{formatar(p.pontos)}</span>
+                  <span className="text-sm text-texto-suave max-md:text-xs">{porcentagem(p.precisao)}</span>
                 </div>
               </div>
             ))}
