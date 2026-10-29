@@ -180,7 +180,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos,
                   </Button>
                   {sortearMusica && (
                     <Button variant="outline" size="sm" disabled={sorteando} onClick={() => void sortear()}>
-                      <Shuffle className="opacity-70" /> Aleatória do top 50
+                      <Shuffle className="opacity-70" /> Aleatório
                     </Button>
                   )}
                 </div>

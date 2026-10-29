@@ -54,13 +54,13 @@ describe("TelaDeSelecao", () => {
         sortearMusica={sortearMusica}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: /Aleatória do top 50/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Aleatório/ }));
     expect(aoSelecionar).toHaveBeenCalledWith(2);
   });
 
   it("sem contas, não mostra a aleatória do top 50", () => {
     abrir();
-    expect(screen.queryByRole("button", { name: /Aleatória do top 50/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Aleatório/ })).toBeNull();
   });
 
   it("o botão Buscar músicas, ao lado do de importar, abre a busca", async () => {

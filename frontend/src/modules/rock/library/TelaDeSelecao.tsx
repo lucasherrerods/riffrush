@@ -245,7 +245,7 @@ export function TelaDeSelecao(props: Props) {
     </Button>
     {props.sortearMusica && (
       <Button {...estiloDoFiltro(false)} disabled={sorteando} onClick={() => void sortear()}>
-        <Shuffle className="opacity-70" /> Aleatória do top 50
+        <Shuffle className="opacity-70" /> Aleatório
       </Button>
     )}
     </>

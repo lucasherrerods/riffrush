@@ -113,7 +113,7 @@ describe("Lobby", () => {
   it("a aleatória do top 50 escolhe a sorteada para a sala", async () => {
     const sortearMusica = vi.fn(() => Promise.resolve(segunda));
     render(<Lobby sala={sala(primeira.id)} endereco="" musicas={MUSICAS_DE_TESTE} volumeDosEfeitos={0} sortearMusica={sortearMusica} />);
-    await userEvent.click(screen.getByRole("button", { name: /Aleatória do top 50/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Aleatório/ }));
     expect(sortearMusica).toHaveBeenCalledWith(MUSICAS_DE_TESTE);
     expect(escolher).toHaveBeenCalledWith(segunda, expect.anything(), expect.anything());
   });
