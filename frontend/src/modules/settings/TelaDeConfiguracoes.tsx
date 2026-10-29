@@ -238,7 +238,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
             <LinhaDeOpcao rotulo="Tela cheia" dica={estreita ? undefined : "Atalho: F11"} para="tela-cheia">
               <Switch id="tela-cheia" checked={telaCheia} onCheckedChange={(ligada) => void alternarTelaCheia(ligada)} />
             </LinhaDeOpcao>
-            <LinhaDeOpcao rotulo="Modo competitivo" dica={estreita ? "Só a pista e o placar na partida" : "Só a pista e o placar na partida. Atalho: Shift+Tab"} para="modo-competitivo">
+            <LinhaDeOpcao rotulo="Modo competitivo" dica={estreita ? "Só a pista, o placar e o clipe na partida" : "Só a pista, o placar e o clipe na partida. Atalho: Shift+Tab"} para="modo-competitivo">
               <Switch id="modo-competitivo" checked={configuracoes.modoCompetitivo} onCheckedChange={(modoCompetitivo) => mudar({ modoCompetitivo })} />
             </LinhaDeOpcao>
             <LinhaDeOpcao rotulo="Efeitos de brilho" dica="Desligue se o jogo estiver travando" para="efeitos">

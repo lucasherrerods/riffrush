@@ -17,7 +17,8 @@ export interface CenaDaPartida {
 }
 
 export function cenaDaPartida({ modoCompetitivo, efeitos, personagem, comWebGL, estreita }: Ambiente): CenaDaPartida {
-  if (modoCompetitivo) return { palco: false, personagem: false, video: false };
+  // O clipe fica no canto, fora da pista, e o jogador escolheu baixá-lo: continua mesmo no modo competitivo.
+  if (modoCompetitivo) return { palco: false, personagem: false, video: true };
   // No celular a GPU fica toda para a pista, sem palco nem personagem; sem efeitos, o palco também sai.
   return { palco: comWebGL && !estreita && efeitos, personagem: personagem && !estreita, video: true };
 }
