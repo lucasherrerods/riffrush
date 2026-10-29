@@ -20,8 +20,8 @@ const SERVIDOR = 0;
  */
 export type MusicaNaRede =
   | { tipo: "embutida"; id: string }
-  | { tipo: "importada"; id: string; titulo: string; artista: string; nomeDoArquivo: string }
-  | { tipo: "encore"; id: string; titulo: string; artista: string; nomeDoArquivo: string; url: string };
+  | { tipo: "importada"; id: string; titulo: string; artista: string; nomeDoArquivo: string; md5DoEncore?: string }
+  | { tipo: "encore"; id: string; titulo: string; artista: string; nomeDoArquivo: string; url: string; md5DoEncore?: string };
 
 /** O personagem como viaja na sala: com o nível da conta, quando o jogador está logado. */
 export type PersonagemNaSala = Personagem & { nivel?: number };

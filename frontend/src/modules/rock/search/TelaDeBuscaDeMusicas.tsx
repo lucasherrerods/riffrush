@@ -8,13 +8,17 @@ import { Input } from "@/shared/ui/input";
 import { Switch } from "@/shared/ui/switch";
 import { ConfirmacaoDeTamanho } from "./componentes/ConfirmacaoDeTamanho";
 import { AcaoDoResultado, ItemDoResultado } from "./componentes/ResultadoDoEncore";
+import { buscarMd5sMaisJogados } from "@/modules/ranking";
 import { useBaixarDoEncore, type AoBaixar } from "./useBaixarDoEncore";
 import {
   FILTROS_PADRAO,
+  usaBuscaAvancada,
   TAMANHO_DA_PAGINA,
+  buscarEntreOsCharts,
   buscarNoEncore,
   type DificuldadeDaBusca,
   type Genero,
+  type Ordem,
   type FiltrosDaBusca,
   type Instrumento,
   type RespostaDaBusca,
@@ -67,9 +71,33 @@ const OPCOES_DE_GENERO: { id: Genero | "todos"; rotulo: string }[] = [
   { id: "reggae", rotulo: "Reggae" },
 ];
 
+const OPCOES_DE_ORDEM: { id: Ordem; rotulo: string }[] = [
+  { id: "recentes", rotulo: "Mais recentes" },
+  { id: "mais-jogadas", rotulo: "Mais jogadas no Riff Rush" },
+  { id: "artista", rotulo: "Artista (A-Z)" },
+  { id: "nome", rotulo: "Música (A-Z)" },
+  { id: "ano-mais-novo", rotulo: "Ano: mais novas" },
+  { id: "ano-mais-antigo", rotulo: "Ano: mais antigas" },
+  { id: "mais-curtas", rotulo: "Mais curtas" },
+  { id: "mais-longas", rotulo: "Mais longas" },
+];
+
+function Chave({ rotulo, ligada, aoMudar }: { rotulo: string; ligada: boolean; aoMudar: (ligada: boolean) => void }) {
+  return (
+    <label className="flex items-center gap-2 self-end py-2 text-base text-texto-suave max-md:col-span-2 max-md:py-0 max-md:text-sm">
+      <Switch aria-label={rotulo} checked={ligada} onCheckedChange={aoMudar} />
+      {rotulo}
+    </label>
+  );
+}
+
+/** "Mais jogadas" não é ordem do Encore: a lista vem do nosso ranking e o Encore só completa os dados. */
+const buscarPadrao: NonNullable<Props["buscar"]> = async (filtros, pagina, { sinal }) =>
+  filtros.ordem === "mais-jogadas" ? buscarEntreOsCharts(await buscarMd5sMaisJogados({ sinal }), filtros, pagina, { sinal }) : buscarNoEncore(filtros, pagina, { sinal });
+
 type Estado = { tipo: "carregando" } | { tipo: "pronto"; resposta: RespostaDaBusca } | { tipo: "erro"; mensagem: string };
 
-export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atrasoMs = 500, aoBaixar, baixadas = new Set(), aoJogar }: Props) {
+export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarPadrao, atrasoMs = 500, aoBaixar, baixadas = new Set(), aoJogar }: Props) {
   const [comVideo, setComVideo] = useState(false);
   const { baixando, pergunta, baixar, responder } = useBaixarDoEncore(aoBaixar, comVideo);
   const [texto, setTexto] = useState(FILTROS_PADRAO.texto);
@@ -120,23 +148,21 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
           <Input
             type="search"
             aria-label="Buscar músicas"
-            placeholder={filtros.genero === "todos" ? "Nome da música, artista, álbum ou charter" : "Nome da música"}
+            placeholder={!usaBuscaAvancada({ texto, ...filtros }) ? "Nome da música, artista, álbum ou charter" : "Nome da música"}
             value={texto}
             onChange={(evento) => setTexto(evento.target.value)}
             className="h-12 pl-12 text-base md:text-base max-md:h-10"
             autoFocus
           />
         </div>
-        <div className="flex flex-wrap gap-8 max-md:grid max-md:grid-cols-3 max-md:gap-2">
+        <div className="flex flex-wrap gap-8 max-md:grid max-md:grid-cols-2 max-md:gap-2">
           <CampoDeSelecao titulo="Instrumento" opcoes={OPCOES_DE_INSTRUMENTO} valor={filtros.instrumento} aoEscolher={(instrumento) => mudarFiltros({ instrumento })} />
           <CampoDeSelecao titulo="Dificuldade" opcoes={OPCOES_DE_DIFICULDADE} valor={filtros.dificuldade} aoEscolher={(dificuldade) => mudarFiltros({ dificuldade })} />
           <CampoDeSelecao titulo="Gênero" opcoes={OPCOES_DE_GENERO} valor={filtros.genero} aoEscolher={(genero) => mudarFiltros({ genero })} />
-          {aoBaixar && (
-            <label className="flex items-center gap-2 self-end py-2 text-base text-texto-suave max-md:col-span-3 max-md:py-0 max-md:text-sm">
-              <Switch aria-label="Baixar com vídeo de fundo" checked={comVideo} onCheckedChange={setComVideo} />
-              Baixar com vídeo de fundo
-            </label>
-          )}
+          <CampoDeSelecao titulo="Ordem" opcoes={OPCOES_DE_ORDEM} valor={filtros.ordem} aoEscolher={(ordem) => mudarFiltros({ ordem })} />
+          <Chave rotulo="Só com vídeo" ligada={filtros.soComVideo} aoMudar={(soComVideo) => mudarFiltros({ soComVideo })} />
+          <Chave rotulo="Oficiais" ligada={filtros.soOficiais} aoMudar={(soOficiais) => mudarFiltros({ soOficiais })} />
+          {aoBaixar && <Chave rotulo="Baixar com vídeo de fundo" ligada={comVideo} aoMudar={setComVideo} />}
         </div>
 
         <nav aria-label="Paginação" className="chapa flex items-center justify-between gap-2 bg-superficie px-3 py-1 text-base text-texto-suave max-md:text-sm">

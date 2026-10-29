@@ -1,4 +1,4 @@
-import { FILTROS_PADRAO, buscarChartPeloMd5, buscarNoEncore, montarCorpoDaBuscaAvancada, formatarDuracao, lerRespostaDaBusca, montarCorpoDaBusca, montarUrlDoChart, nomeDoArquivo, urlDaCapa, ehUrlDoEncore, linkDoChartConfere, type ResultadoDaBusca } from "./encore";
+import { FILTROS_PADRAO, usaBuscaAvancada, buscarEntreOsCharts, sortearChartOficial, buscarChartPeloMd5, buscarNoEncore, montarCorpoDaBuscaAvancada, formatarDuracao, lerRespostaDaBusca, montarCorpoDaBusca, montarUrlDoChart, nomeDoArquivo, urlDaCapa, ehUrlDoEncore, linkDoChartConfere, type ResultadoDaBusca } from "./encore";
 
 const itemDaApi = {
   name: "Enter Sandman",
@@ -18,7 +18,7 @@ const itemDaApi = {
 
 describe("montarCorpoDaBusca", () => {
   it("traduz os filtros para o formato da API", () => {
-    expect(montarCorpoDaBusca({ texto: " sandman ", instrumento: "bateria", dificuldade: "expert", genero: "todos" }, 2)).toEqual({
+    expect(montarCorpoDaBusca({ texto: " sandman ", instrumento: "bateria", dificuldade: "expert", genero: "todos", ordem: "recentes", soComVideo: false, soOficiais: false }, 2)).toEqual({
       search: "sandman",
       page: 2,
       instrument: "drums",
@@ -27,6 +27,15 @@ describe("montarCorpoDaBusca", () => {
       drumsReviewed: false,
       source: "api",
     });
+  });
+
+  it("sem ordem escolhida não manda sort, e a API usa os envios mais recentes", () => {
+    expect(montarCorpoDaBusca(FILTROS_PADRAO, 1)).not.toHaveProperty("sort");
+  });
+
+  it("a ordem escolhida vira o sort da API, também na busca avançada", () => {
+    expect(montarCorpoDaBusca({ ...FILTROS_PADRAO, ordem: "artista" }, 1).sort).toEqual({ type: "artist", direction: "asc" });
+    expect(montarCorpoDaBuscaAvancada({ ...FILTROS_PADRAO, genero: "rock", ordem: "ano-mais-novo" }, 1).sort).toEqual({ type: "year", direction: "desc" });
   });
 
   it("sem filtro manda null para instrumento e dificuldade", () => {
@@ -38,7 +47,7 @@ describe("montarCorpoDaBusca", () => {
 
 describe("montarCorpoDaBuscaAvancada", () => {
   it("leva o gênero e o texto como pedaço do nome da música, além dos outros filtros", () => {
-    expect(montarCorpoDaBuscaAvancada({ texto: " master ", instrumento: "baixo", dificuldade: "expert", genero: "metal" }, 3)).toEqual({
+    expect(montarCorpoDaBuscaAvancada({ texto: " master ", instrumento: "baixo", dificuldade: "expert", genero: "metal", ordem: "recentes", soComVideo: false, soOficiais: false }, 3)).toEqual({
       page: 3,
       instrument: "bass",
       difficulty: "expert",
@@ -222,5 +231,86 @@ describe("linkDoChartConfere", () => {
 
     await buscarNoEncore(FILTROS_PADRAO, 1, { buscar });
     expect((buscar.mock.calls[1] as unknown as [string])[0]).toBe("https://api.enchor.us/search");
+  });
+});
+
+describe("só com vídeo", () => {
+  it("vai para a busca avançada, a única que filtra por vídeo", () => {
+    expect(usaBuscaAvancada(FILTROS_PADRAO)).toBe(false);
+    expect(usaBuscaAvancada({ ...FILTROS_PADRAO, soComVideo: true })).toBe(true);
+    expect(usaBuscaAvancada({ ...FILTROS_PADRAO, genero: "rock" })).toBe(true);
+  });
+
+  it("pede à API só os charts com vídeo de fundo", () => {
+    expect(montarCorpoDaBuscaAvancada({ ...FILTROS_PADRAO, soComVideo: true }, 1)).toMatchObject({ hasVideoBackground: true });
+    expect(montarCorpoDaBuscaAvancada(FILTROS_PADRAO, 1)).not.toHaveProperty("hasVideoBackground");
+  });
+});
+
+describe("só oficiais", () => {
+  it("procura os charts da Harmonix, pela busca avançada", () => {
+    const filtros = { ...FILTROS_PADRAO, soOficiais: true };
+    expect(usaBuscaAvancada(filtros)).toBe(true);
+    expect(montarCorpoDaBuscaAvancada(filtros, 1)).toMatchObject({ charter: { value: "Harmonix", exact: false, exclude: false } });
+    expect(montarCorpoDaBuscaAvancada(FILTROS_PADRAO, 1)).not.toHaveProperty("charter");
+  });
+});
+
+describe("buscarEntreOsCharts", () => {
+  const md5s = Array.from({ length: 12 }, (_, i) => i.toString(16).padStart(32, "a"));
+  const item = (hash: string) => ({ ...itemDaApi, md5: hash, name: hash });
+  // O Encore devolve os pedidos fora da ordem de partidas e 10 por página.
+  const encore = (encontrados: string[]) =>
+    vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const corpo = JSON.parse(String(init?.body));
+      const pagina = encontrados.slice((corpo.page - 1) * 10, corpo.page * 10);
+      return new Response(JSON.stringify({ found: encontrados.length, data: pagina.map(item) }), { status: 200 });
+    });
+
+  it("pede todos de uma vez pelo hash e devolve na ordem da lista, paginando aqui", async () => {
+    const buscar = encore([...md5s].reverse());
+    const pagina1 = await buscarEntreOsCharts(md5s, FILTROS_PADRAO, 1, { buscar });
+    expect(JSON.parse(String(buscar.mock.calls[0][1]?.body)).hash).toBe(md5s.join(","));
+    expect(pagina1.total).toBe(12);
+    expect(pagina1.resultados.map((r) => r.md5)).toEqual(md5s.slice(0, 10));
+    const pagina2 = await buscarEntreOsCharts(md5s, FILTROS_PADRAO, 2, { buscar });
+    expect(pagina2.resultados.map((r) => r.md5)).toEqual(md5s.slice(10));
+  });
+
+  it("os filtros valem entre os charts da lista", async () => {
+    const buscar = encore(md5s.slice(0, 2));
+    const resposta = await buscarEntreOsCharts(md5s, { ...FILTROS_PADRAO, soComVideo: true }, 1, { buscar });
+    expect(JSON.parse(String(buscar.mock.calls[0][1]?.body))).toMatchObject({ hasVideoBackground: true });
+    expect(resposta.total).toBe(2);
+  });
+
+  it("sem charts na lista nem chama o Encore", async () => {
+    const buscar = encore([]);
+    expect(await buscarEntreOsCharts([], FILTROS_PADRAO, 1, { buscar })).toEqual({ total: 0, resultados: [] });
+    expect(buscar).not.toHaveBeenCalled();
+  });
+});
+
+describe("sortearChartOficial", () => {
+  const respostaCom = (found: number, md5s: string[]) => new Response(JSON.stringify({ found, data: md5s.map((m) => ({ ...itemDaApi, md5: m })) }), { status: 200 });
+  const md5De = (n: number) => String(n).padStart(32, "b");
+
+  it("procura oficiais com a dificuldade e o instrumento pedidos e sorteia página e chart", async () => {
+    const buscar = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const { page } = JSON.parse(String(init?.body));
+      return page === 1 ? respostaCom(35, [md5De(1)]) : respostaCom(35, [md5De(40), md5De(41), md5De(42)]);
+    });
+    // 0.99 cai na última página (4) e 0.5 no chart do meio.
+    const valores = [0.99, 0.5];
+    const sorteado = await sortearChartOficial("dificil", "ritmica", { buscar, aleatorio: () => valores.shift()! });
+    const corpos = buscar.mock.calls.map((c) => JSON.parse(String(c[1]?.body)));
+    expect(corpos[0]).toMatchObject({ page: 1, instrument: "rhythm", difficulty: "hard", charter: { value: "Harmonix" } });
+    expect(corpos[1].page).toBe(4);
+    expect(sorteado.md5).toBe(md5De(41));
+  });
+
+  it("sem nenhum oficial nessa dificuldade, avisa", async () => {
+    const buscar = vi.fn(async () => respostaCom(0, []));
+    await expect(sortearChartOficial("facil", "teclado", { buscar })).rejects.toThrow(/Nenhuma música oficial/);
   });
 });
