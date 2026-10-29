@@ -123,15 +123,13 @@ pub enum PartidaInvalida {
     ReplayInvalido,
 }
 
-/// O app manda a versão do formato no primeiro byte, fora da compressão.
-/// A 2 trouxe a nota aberta e a 3, a velocidade da música; os replays antigos continuam guardados e valendo.
-pub const VERSOES_DO_REPLAY: [u8; 3] = [1, 2, 3];
 /// Uma música inteira fica com menos de 10 KB; o limite deixa folga sem abrir espaço para abuso.
 pub const TAMANHO_MAXIMO_DO_REPLAY: usize = 64 * 1024;
 
-/// A API não abre o replay: confere só o tamanho e a versão.
+/// A API não abre o replay: confere só o tamanho e a versão, que o app manda no primeiro byte, fora da compressão.
+/// As versões aceitas são as que o motor sabe rejulgar; os replays antigos continuam guardados e valendo.
 pub fn validar_replay(bytes: &[u8]) -> Result<(), PartidaInvalida> {
-    if bytes.len() < 2 || bytes.len() > TAMANHO_MAXIMO_DO_REPLAY || !VERSOES_DO_REPLAY.contains(&bytes[0]) {
+    if bytes.len() < 2 || bytes.len() > TAMANHO_MAXIMO_DO_REPLAY || !riffrush_motor::versao_do_replay_conhecida(bytes[0]) {
         return Err(PartidaInvalida::ReplayInvalido);
     }
     Ok(())
@@ -442,10 +440,27 @@ mod tests {
         assert!(validar_replay(&[1, 0, 1]).is_ok());
         assert!(validar_replay(&[2, 0, 1]).is_ok());
         assert!(validar_replay(&[3, 0, 1]).is_ok());
-        assert_eq!(validar_replay(&[4, 0, 1]), Err(PartidaInvalida::ReplayInvalido));
+        assert!(validar_replay(&[4, 0, 1]).is_ok());
+        assert!(validar_replay(&[5, 0, 1]).is_ok());
+        assert_eq!(validar_replay(&[6, 0, 1]), Err(PartidaInvalida::ReplayInvalido));
         assert_eq!(validar_replay(&[2]), Err(PartidaInvalida::ReplayInvalido));
         assert_eq!(validar_replay(&[9, 0, 1]), Err(PartidaInvalida::ReplayInvalido));
         let grande = vec![2; TAMANHO_MAXIMO_DO_REPLAY + 1];
         assert_eq!(validar_replay(&grande), Err(PartidaInvalida::ReplayInvalido));
+    }
+
+    #[test]
+    fn aceita_o_replay_no_formato_atual_do_motor() {
+        let replay = riffrush_motor::Replay {
+            sem_falha: false,
+            fantasma: false,
+            sem_aberta: false,
+            velocidade: 1.0,
+            jeito: riffrush_motor::JeitoDeJogar::Palhetada,
+            pune_toque_em_vazio: true,
+            hash_do_chart: "00112233445566778899aabbccddeeff".into(),
+            entradas: vec![],
+        };
+        assert!(validar_replay(&riffrush_motor::empacotar_replay(&replay)).is_ok());
     }
 }
