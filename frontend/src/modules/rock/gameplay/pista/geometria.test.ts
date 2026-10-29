@@ -6,7 +6,7 @@ describe("layoutDaPista", () => {
   });
 
   it("no desktop a pista tem largura limitada", () => {
-    expect(layoutDaPista(3000, 1000).largura).toBe(620);
+    expect(layoutDaPista(3000, 1000).largura).toBe(760);
   });
 
   it("o braço termina antes do topo da tela, para sumir num fade", () => {

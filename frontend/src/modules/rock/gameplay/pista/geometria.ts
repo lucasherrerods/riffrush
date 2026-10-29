@@ -2,7 +2,7 @@ import { ehTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 
 /** Escala das notas no horizonte, comparada com a linha de batida. */
 const ESCALA_NO_HORIZONTE = 0.32;
-const LARGURA_MAXIMA = 620;
+const LARGURA_MAXIMA = 760;
 
 export interface LayoutDaPista {
   centro: number;
@@ -15,7 +15,7 @@ export interface LayoutDaPista {
 /** Medidas da pista na tela. As áreas de toque do celular usam as mesmas contas. */
 export function layoutDaPista(largura: number, altura: number): LayoutDaPista {
   const estreita = ehTelaEstreita(largura);
-  const larguraDaPista = estreita ? largura * 0.94 : Math.min(largura * 0.52, LARGURA_MAXIMA);
+  const larguraDaPista = estreita ? largura * 0.94 : Math.min(largura * 0.62, LARGURA_MAXIMA);
   return {
     centro: largura / 2,
     linhaDeBatida: altura * (estreita ? 0.8 : 0.86),
