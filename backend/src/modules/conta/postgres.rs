@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 use super::dominio::{Conta, PerfilDoGoogle};
 use super::portas::{FalhaExterna, PartidaGuardada, PartidaRegistrada, RepositorioDeContas, RepositorioDeSessoes};
+use crate::modules::progresso::JeitoDeJogar;
 use crate::modules::ranking::TAMANHO_DO_TOP_DA_MUSICA;
 
 pub struct ContasPostgres(pub PgPool);
@@ -90,8 +91,8 @@ impl RepositorioDeContas for ContasPostgres {
                 .map_err(falha)?;
         }
         let inserida = sqlx::query(
-            "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, instrumento, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em, maior_sequencia, replay, precisao, valor_dos_acertos)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, instrumento, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em, maior_sequencia, replay, precisao, valor_dos_acertos, jeito_de_jogar)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
              ON CONFLICT (id) DO NOTHING",
         )
         .bind(partida.id)
@@ -110,6 +111,7 @@ impl RepositorioDeContas for ContasPostgres {
         .bind(partida.replay.as_deref())
         .bind(partida.precisao)
         .bind(resumo.valor_dos_acertos.map(|v| i32::try_from(v).unwrap_or(i32::MAX)))
+        .bind(partida.jeito_de_jogar.map(JeitoDeJogar::como_texto))
         .execute(&mut *transacao)
         .await
         .map_err(falha)?;

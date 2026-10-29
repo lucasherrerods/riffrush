@@ -1,24 +1,25 @@
 import { PISTA_ABERTA, type Nota } from "@/modules/rock/songs";
-import { ativarEstrela, avancar, quantizar, soltar, tocar, type Partida } from "./partida";
+import { ativarEstrela, avancar, JEITOS_DE_JOGAR, palhetar, quantizar, soltar, tocar, type JeitoDeJogar, type Partida } from "./partida";
 
 /**
  * Um replay guarda só as entradas do jogador (como o .osr do osu!), não vídeo: a partida é
  * determinística, então reaplicar as entradas sobre o mesmo chart reproduz tudo, ponto por ponto.
  */
-export const VERSAO_DO_REPLAY = 3;
+export const VERSAO_DO_REPLAY = 4;
 const TICKS_POR_SEGUNDO = 1000;
-/** Quantos códigos de tecla cada versão tem: a 2 ganhou os da nota aberta. A 3 só acrescentou a velocidade. */
-const CODIGOS_DA_VERSAO: Record<number, number> = { 1: 11, 2: 13, 3: 13 };
+/** Quantos códigos de tecla cada versão tem: a 2 ganhou os da nota aberta, a 3 só acrescentou a velocidade e a 4 ganhou a palheta. */
+const CODIGOS_DA_VERSAO: Record<number, number> = { 1: 11, 2: 13, 3: 13, 4: 14 };
 const CODIGOS = CODIGOS_DA_VERSAO[VERSAO_DO_REPLAY];
 const ESTRELA = 10;
 const APERTA_A_ABERTA = 11;
 const SOLTA_A_ABERTA = 12;
+const PALHETA = 13;
 const BYTES_DO_HASH = 16;
 
 export interface EntradaDoReplay {
   /** Segundos da música, já na grade da partida. */
   tempo: number;
-  tipo: "tocar" | "soltar" | "estrela";
+  tipo: "tocar" | "soltar" | "estrela" | "palhetar";
   pista: number;
 }
 
@@ -29,6 +30,8 @@ export interface Replay {
   semAberta: boolean;
   /** Velocidade da música. Os replays de antes da versão 3 são todos a 1x. */
   velocidade: number;
+  /** Os replays de antes da versão 4 são todos do gamepad. */
+  jeito: JeitoDeJogar;
   /** Identifica o chart: o replay só vale nas mesmas notas. */
   hashDoChart: string;
   entradas: EntradaDoReplay[];
@@ -38,7 +41,7 @@ export interface Replay {
 
 /** O que a partida conta para quem assiste ao vivo: quem leva isso à rede é o módulo de presença. */
 export type EventoDaTransmissao =
-  | { tipo: "inicio"; hashDoChart: string; semFalha: boolean; semAberta: boolean; velocidade: number }
+  | { tipo: "inicio"; hashDoChart: string; semFalha: boolean; semAberta: boolean; velocidade: number; jeito: JeitoDeJogar }
   | { tipo: "lote"; entradas: EntradaDoReplay[]; ate: number }
   | { tipo: "pausa"; pausado: boolean }
   | { tipo: "fim" };
@@ -67,6 +70,13 @@ export function criarGravador(partida: Partida) {
       soltar(partida, pista, tempo);
       anotar("soltar", pista, usado);
     },
+    palhetar(tempo: number) {
+      if (partida.derrota) return false;
+      const usado = tempoUsado(tempo);
+      const acertou = palhetar(partida, tempo);
+      anotar("palhetar", 0, usado);
+      return acertou;
+    },
     ativarEstrela() {
       const ativou = ativarEstrela(partida);
       if (ativou && partida.tempo !== null) anotar("estrela", 0, partida.tempo);
@@ -85,6 +95,8 @@ export function aplicarEntradas(partida: Partida, entradas: EntradaDoReplay[], i
     } else if (entrada.tipo === "soltar") {
       apertados[entrada.pista] = false;
       soltar(partida, entrada.pista, entrada.tempo);
+    } else if (entrada.tipo === "palhetar") {
+      palhetar(partida, entrada.tempo);
     } else {
       avancar(partida, entrada.tempo);
       ativarEstrela(partida);
@@ -106,7 +118,7 @@ export async function hashDoChart(notas: Nota[]) {
  */
 export async function empacotarReplay(replay: Replay) {
   // A velocidade vai em centésimos: 0,75x é 75.
-  const bytes: number[] = [(replay.semFalha ? 1 : 0) | (replay.fantasma ? 2 : 0) | (replay.semAberta ? 4 : 0), Math.round(replay.velocidade * 100)];
+  const bytes: number[] = [(replay.semFalha ? 1 : 0) | (replay.fantasma ? 2 : 0) | (replay.semAberta ? 4 : 0) | (JEITOS_DE_JOGAR.indexOf(replay.jeito) << 3), Math.round(replay.velocidade * 100)];
   for (let i = 0; i < BYTES_DO_HASH; i++) bytes.push(parseInt(replay.hashDoChart.slice(i * 2, i * 2 + 2), 16));
   let anterior = replay.entradas.length ? emTicks(replay.entradas[0].tempo) : 0;
   escreverVarint(bytes, anterior < 0 ? -anterior * 2 - 1 : anterior * 2);
@@ -144,17 +156,20 @@ export async function desempacotarReplay(pacote: Uint8Array): Promise<Replay> {
     ticks += (valor - codigo) / codigos;
     entradas.push(entradaDoCodigo(ticks, codigo));
   }
-  return { semFalha: !!(opcoes & 1), fantasma: !!(opcoes & 2), semAberta: !!(opcoes & 4), velocidade, hashDoChart: hash, entradas };
+  const jeito = JEITOS_DE_JOGAR[(opcoes >> 3) & 3];
+  if (!jeito) throw new Error("Replay com um jeito de jogar que este app não conhece.");
+  return { semFalha: !!(opcoes & 1), fantasma: !!(opcoes & 2), semAberta: !!(opcoes & 4), velocidade, jeito, hashDoChart: hash, entradas };
 }
 
 export const emTicks = (tempo: number) => Math.round(tempo * TICKS_POR_SEGUNDO);
 
 /**
- * 0 a 4 aperta a pista, 5 a 9 solta, 10 ativa o star power, 11 aperta e 12 solta a nota aberta.
+ * 0 a 4 aperta a pista, 5 a 9 solta, 10 ativa o star power, 11 aperta e 12 solta a nota aberta, 13 palheta.
  * O mesmo código vai no replay e na transmissão ao vivo; a aberta entrou no fim para os antigos não mudarem.
  */
 export function codigoDaEntrada(e: EntradaDoReplay) {
   if (e.tipo === "estrela") return ESTRELA;
+  if (e.tipo === "palhetar") return PALHETA;
   if (e.pista === PISTA_ABERTA) return e.tipo === "tocar" ? APERTA_A_ABERTA : SOLTA_A_ABERTA;
   return e.tipo === "tocar" ? e.pista : 5 + e.pista;
 }
@@ -162,6 +177,7 @@ export function codigoDaEntrada(e: EntradaDoReplay) {
 export function entradaDoCodigo(ticks: number, codigo: number): EntradaDoReplay {
   const tempo = ticks / TICKS_POR_SEGUNDO;
   if (codigo === ESTRELA) return { tempo, tipo: "estrela", pista: 0 };
+  if (codigo === PALHETA) return { tempo, tipo: "palhetar", pista: 0 };
   if (codigo === APERTA_A_ABERTA || codigo === SOLTA_A_ABERTA) return { tempo, tipo: codigo === APERTA_A_ABERTA ? "tocar" : "soltar", pista: PISTA_ABERTA };
   return { tempo, tipo: codigo < 5 ? "tocar" : "soltar", pista: codigo % 5 };
 }

@@ -9,11 +9,13 @@ const replay: Replay = {
   fantasma: true,
   semAberta: true,
   velocidade: 1.25,
+  jeito: "palhetada",
   hashDoChart: "00112233445566778899aabbccddeeff",
   entradas: [
     { tempo: -0.5, tipo: "tocar", pista: 2 },
     { tempo: -0.5, tipo: "soltar", pista: 2 },
     { tempo: 1.001, tipo: "tocar", pista: 4 },
+    { tempo: 1.002, tipo: "palhetar", pista: 0 },
     { tempo: 3.25, tipo: "estrela", pista: 0 },
     { tempo: 300.5, tipo: "soltar", pista: 4 },
     { tempo: 301, tipo: "tocar", pista: 5 },
@@ -38,6 +40,8 @@ describe("empacotarReplay", () => {
     expect(lido.velocidade).toBe(1);
     // Replays de antes da opção não têm o bit: tocam com a nota aberta.
     expect(lido.semAberta).toBe(false);
+    // E todos são do gamepad, o único jeito de jogar que existia.
+    expect(lido.jeito).toBe("gamepad");
     expect(lido.entradas).toEqual([
       { tempo: 0, tipo: "tocar", pista: 0 },
       { tempo: 0.005, tipo: "soltar", pista: 0 },
@@ -51,6 +55,8 @@ describe("empacotarReplay", () => {
     expect(codigoDaEntrada({ tempo: 0, tipo: "tocar", pista: 5 })).toBe(11);
     expect(codigoDaEntrada({ tempo: 0, tipo: "soltar", pista: 5 })).toBe(12);
     expect(entradaDoCodigo(0, 12)).toEqual({ tempo: 0, tipo: "soltar", pista: 5 });
+    expect(codigoDaEntrada({ tempo: 0, tipo: "palhetar", pista: 0 })).toBe(13);
+    expect(entradaDoCodigo(0, 13)).toEqual({ tempo: 0, tipo: "palhetar", pista: 0 });
   });
 
   it("recusa versão desconhecida", async () => {

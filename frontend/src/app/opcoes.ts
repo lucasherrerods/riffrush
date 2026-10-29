@@ -1,8 +1,9 @@
 import type { OpcoesDaPartida } from "@/modules/rock/gameplay";
 import { antecedenciaDasNotas, nomeDaTecla, type Configuracoes } from "@/modules/settings";
+import { ehTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 
-/** A partida não conhece as configurações: o App traduz o que ela precisa. */
-export function opcoesDaPartida(c: Configuracoes): OpcoesDaPartida {
+/** A partida não conhece as configurações: o App traduz o que ela precisa. No celular não há palheta: é sempre tapping. */
+export function opcoesDaPartida(c: Configuracoes, celular = ehTelaEstreita()): OpcoesDaPartida {
   return {
     teclas: c.teclas,
     teclaDaEstrela: c.teclaDaEstrela,
@@ -14,6 +15,8 @@ export function opcoesDaPartida(c: Configuracoes): OpcoesDaPartida {
     semFalha: c.semFalha,
     semAberta: !c.notaAberta,
     velocidadeDaMusica: c.velocidadeDaMusica,
+    jeitoDeJogar: celular ? "tapping" : c.jeitoDeJogar,
+    teclaDaPalheta: c.teclaDaPalheta,
     bot: c.bot,
     efeitos: c.efeitos,
     personagem: c.personagem3d,

@@ -1,4 +1,4 @@
-import { codigoDaEntrada, emTicks, entradaDoCodigo, type EntradaDoReplay } from "@/modules/rock/gameplay";
+import { codigoDaEntrada, emTicks, entradaDoCodigo, type EntradaDoReplay, type JeitoDeJogar } from "@/modules/rock/gameplay";
 import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
 
 // O mesmo contrato do relay (backend/relay/src/presenca.ts), que é publicado à parte.
@@ -28,6 +28,8 @@ export interface PartidaTransmitida {
   semAberta?: boolean;
   /** Velocidade da música: o replay de quem assiste toca na mesma. Relay antigo não manda. */
   velocidade?: number;
+  /** Como quem joga toca as notas. Relay antigo não manda: aí é o gamepad. */
+  jeito?: JeitoDeJogar;
   /** O .sng no Encore, para quem assiste baixar com um clique. Só confiável depois de `linkDoChartConfere`. */
   urlDoEncore?: string;
 }

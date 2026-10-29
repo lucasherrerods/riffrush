@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use super::dominio::{Conta, PerfilDoGoogle};
-use crate::modules::progresso::{Dificuldade, Instrumento, ResumoDaPartida};
+use crate::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar, ResumoDaPartida};
 
 /// Algo de fora (banco, Google) falhou. O detalhe vai só para o log.
 #[derive(Debug, thiserror::Error)]
@@ -23,6 +23,8 @@ pub struct PartidaRegistrada {
     pub replay: Option<Vec<u8>>,
     /// Só as partidas que o servidor rejulgou têm, e só elas entram no ranking.
     pub precisao: Option<f64>,
+    /// Só as partidas que o servidor rejulgou sabem: vem do replay.
+    pub jeito_de_jogar: Option<JeitoDeJogar>,
 }
 
 /// Uma partida de chart do Encore à espera do servidor rejulgar o replay.

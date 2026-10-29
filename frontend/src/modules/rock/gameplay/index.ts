@@ -2,6 +2,7 @@ export { criarBot, jogarSozinho, type Bot } from "./bot";
 export { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ABERTA, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "./cores";
 export {
   JANELA_DE_ACERTO,
+  JEITOS_DE_JOGAR,
   ativarEstrela,
   avancar,
   criarPartida,
@@ -12,6 +13,7 @@ export {
   soltar,
   tocar,
   type Evento,
+  type JeitoDeJogar,
   type NotaEmJogo,
   type Partida,
 } from "./partida";
@@ -22,6 +24,7 @@ export { codigoDaEntrada, desempacotarReplay, emTicks, entradaDoCodigo, hashDoCh
 export type { EstadoDoJogador } from "./rede";
 export { OPCOES_PADRAO_DA_PARTIDA, TelaDeJogo, type OpcoesDaPartida } from "./TelaDeJogo";
 export { EntradaDaPartida } from "./componentes/EntradaDaPartida";
+export { IconeDoJeito, NOMES_DOS_JEITOS } from "./componentes/IconeDoJeito";
 export { MedidorDeVida } from "./componentes/MedidorDeVida";
 export { corDaPrecisao } from "./componentes/PainelDePontos";
 export { estrelasPorPontos, progressoDasEstrelas } from "./estrelas";

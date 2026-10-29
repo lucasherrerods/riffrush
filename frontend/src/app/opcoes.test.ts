@@ -23,6 +23,14 @@ describe("opcoesDaPartida", () => {
     expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, qualidadeDoPalco: "leve" }).qualidadeDoPalco).toBe("leve");
   });
 
+  it("leva o jeito de jogar e a tecla da palheta", () => {
+    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, jeitoDeJogar: "palhetada", teclaDaPalheta: "KeyP" }, false)).toMatchObject({ jeitoDeJogar: "palhetada", teclaDaPalheta: "KeyP" });
+  });
+
+  it("no celular é sempre tapping: não há palheta na tela de toque", () => {
+    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, jeitoDeJogar: "palhetada" }, true).jeitoDeJogar).toBe("tapping");
+  });
+
   it("com a nota aberta desligada, a partida joga sem ela", () => {
     expect(opcoesDaPartida(CONFIGURACOES_PADRAO).semAberta).toBe(false);
     expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, notaAberta: false }).semAberta).toBe(true);

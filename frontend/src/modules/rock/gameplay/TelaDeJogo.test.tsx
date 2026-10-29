@@ -267,6 +267,7 @@ describe("TelaDeJogo", () => {
       semFalha: false,
       fantasma: false,
       semAberta: false,
+      jeito: "gamepad",
       velocidade: 1,
       hashDoChart: await hashDoChart([nota(0.5), nota(0.8, 1)]),
       entradas: [{ tempo: 0.5, tipo: "tocar", pista: 0 }],
@@ -281,6 +282,23 @@ describe("TelaDeJogo", () => {
     irPara(0.85);
     await new Promise((fim) => setTimeout(fim, 50));
     expect(screen.getByLabelText("Pontos")).toHaveTextContent("50");
+  });
+
+  it("na palhetada, o traste só acende e o Enter toca a nota; o jeito vai para o replay", async () => {
+    carregarCom([nota(0.5)], 1);
+    const { aoTerminar, usuario } = abrir({ jeitoDeJogar: "palhetada" });
+    await partidaPronta();
+    irPara(0.5);
+    await usuario.keyboard("{a>}");
+    expect(screen.getByLabelText("Pontos")).toHaveTextContent("0");
+    await usuario.keyboard("{Enter}");
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
+    await usuario.keyboard("{/a}");
+    irPara(1.2);
+    await waitFor(() => expect(aoTerminar).toHaveBeenCalled());
+    const replay = await desempacotarReplay(await aoTerminar.mock.calls[0][1]());
+    expect(replay.jeito).toBe("palhetada");
+    expect(replay.entradas.map((e) => e.tipo)).toEqual(["tocar", "palhetar", "soltar"]);
   });
 
   it("sem a nota aberta, ela sai no verde e a opção vai para o replay e para a transmissão", async () => {
@@ -306,6 +324,7 @@ describe("TelaDeJogo", () => {
       semFalha: false,
       fantasma: false,
       semAberta: true,
+      jeito: "gamepad",
       velocidade: 1,
       hashDoChart: await hashDoChart([nota(0.5, PISTA_ABERTA)]),
       entradas: [{ tempo: 0.5, tipo: "tocar", pista: 0 }],
@@ -318,7 +337,7 @@ describe("TelaDeJogo", () => {
 
   it("replay gravado em outro chart avisa e não toca", async () => {
     carregarCom([nota(0.5)]);
-    abrir({}, undefined, { semFalha: false, fantasma: false, semAberta: false, velocidade: 1, hashDoChart: "0".repeat(32), entradas: [] });
+    abrir({}, undefined, { semFalha: false, fantasma: false, semAberta: false, jeito: "gamepad", velocidade: 1, hashDoChart: "0".repeat(32), entradas: [] });
     expect(await screen.findByText(/outra versão do chart/)).toBeInTheDocument();
   });
 
@@ -349,7 +368,7 @@ describe("TelaDeJogo", () => {
 
   it("ao vivo, quem assiste não passa do que já chegou", async () => {
     carregarCom([nota(0.5)]);
-    const replay: Replay = { semFalha: false, fantasma: false, semAberta: false, velocidade: 1, hashDoChart: await hashDoChart([nota(0.5)]), entradas: [], ateAgora: 0.2 };
+    const replay: Replay = { semFalha: false, fantasma: false, semAberta: false, jeito: "gamepad", velocidade: 1, hashDoChart: await hashDoChart([nota(0.5)]), entradas: [], ateAgora: 0.2 };
     abrir({}, undefined, replay);
     await partidaPronta();
     irPara(1);

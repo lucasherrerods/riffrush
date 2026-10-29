@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use crate::modules::catalogo::DadosDaMusica;
-use crate::modules::progresso::{Dificuldade, Instrumento};
+use crate::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar};
 
 /// O ranking geral e o das músicas mais jogadas, sem rolar uma lista infinita.
 pub const TAMANHO_DO_TOP: u32 = 50;
@@ -28,6 +28,8 @@ pub struct LinhaDoRanking {
     /// O desempate depois da precisão.
     pub maior_sequencia: Option<u32>,
     pub jogada_em: DateTime<Utc>,
+    /// Partidas de antes do jeito de jogar ficam sem.
+    pub jeito_de_jogar: Option<JeitoDeJogar>,
 }
 
 /// Um jogador no ranking geral: a ordem é pelo XP total da conta.
@@ -222,6 +224,7 @@ mod tests {
             precisao: 1.0,
             maior_sequencia: Some(10),
             jogada_em: DateTime::UNIX_EPOCH,
+            jeito_de_jogar: None,
         }
     }
 

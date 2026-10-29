@@ -1,10 +1,15 @@
 import { BOTAO_DA_ESTRELA_PADRAO, BOTOES_DOS_TRASTES_PADRAO } from "@/modules/gamepad";
+import type { JeitoDeJogar } from "@/modules/rock/gameplay";
 import type { QualidadeDoPalco } from "@/modules/rock/stage";
 
 export interface Configuracoes {
   /** Códigos das teclas dos 5 trastes e da nota aberta, nesta ordem (KeyboardEvent.code). */
   teclas: string[];
   teclaDaEstrela: string;
+  /** Na palhetada, a tecla que toca o acorde dos trastes apertados. No controle é o direcional. */
+  teclaDaPalheta: string;
+  /** Como as teclas viram notas: tapping, gamepad ou palhetada. No celular é sempre tapping. */
+  jeitoDeJogar: JeitoDeJogar;
   /** Índices (Gamepad API) dos botões do controle de cada traste e da aberta, na mesma ordem das teclas. */
   botoesDoControle: number[];
   botaoDaEstrela: number;
@@ -41,6 +46,8 @@ export interface Configuracoes {
 export const CONFIGURACOES_PADRAO: Configuracoes = {
   teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL", "KeyD"],
   teclaDaEstrela: "Space",
+  teclaDaPalheta: "Enter",
+  jeitoDeJogar: "gamepad",
   botoesDoControle: BOTOES_DOS_TRASTES_PADRAO,
   botaoDaEstrela: BOTAO_DA_ESTRELA_PADRAO,
   velocidade: 6,
@@ -65,6 +72,7 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
 
 const CHAVE = "riffrush.configuracoes";
 export const INDICE_DA_ESTRELA = 6;
+export const INDICE_DA_PALHETA = 7;
 
 /** Configurações salvas antes da nota aberta têm só os 5 trastes: a aberta entra com o padrão. */
 const completar = <T>(salvos: T[], padrao: T[]) => [...salvos, ...padrao.slice(salvos.length)];
@@ -86,9 +94,10 @@ export function salvarConfiguracoes(configuracoes: Configuracoes) {
   }
 }
 
-/** Troca a tecla de um traste (0 a 4), da nota aberta (5) ou do star power (6). Uma tecla já usada troca de lugar com a antiga. */
+/** Troca a tecla de um traste (0 a 4), da nota aberta (5), do star power (6) ou da palheta (7). Uma tecla já usada troca de lugar com a antiga. */
 export function trocarTecla(configuracoes: Configuracoes, indice: number, codigo: string): Configuracoes {
   if (indice === INDICE_DA_ESTRELA) return { ...configuracoes, teclaDaEstrela: codigo };
+  if (indice === INDICE_DA_PALHETA) return { ...configuracoes, teclaDaPalheta: codigo };
   const teclas = [...configuracoes.teclas];
   const ocupada = teclas.indexOf(codigo);
   if (ocupada >= 0) teclas[ocupada] = teclas[indice];

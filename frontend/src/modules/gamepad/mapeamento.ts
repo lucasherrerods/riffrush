@@ -39,7 +39,9 @@ const NOMES_DOS_BOTOES: Record<number, string> = {
 /** O nome que aparece na tela. Controles fora do padrão têm botões sem nome conhecido. */
 export const nomeDoBotao = (botao: number) => NOMES_DOS_BOTOES[botao] ?? `Botão ${botao + 1}`;
 
-const PALHETADAS = [BOTOES.CIMA, BOTOES.BAIXO];
+const PALHETADAS: number[] = [BOTOES.CIMA, BOTOES.BAIXO];
+/** A tecla que o direcional aperta no jogo quando o jeito é a palhetada. Não existe no teclado, então não se confunde com o Enter do A. */
+export const PALHETA_DO_CONTROLE = "Palheta";
 const SETAS: Record<number, string> = {
   [BOTOES.CIMA]: "ArrowUp",
   [BOTOES.BAIXO]: "ArrowDown",
@@ -79,6 +81,8 @@ export interface Mapa {
   /** Índices dos botões do controle de cada traste, na mesma ordem das teclas. */
   botoesDoControle: number[];
   botaoDaEstrela: number;
+  /** Na palhetada, o direcional vira a palheta em vez de tocar de novo os trastes segurados. */
+  jeitoDeJogar?: string;
 }
 
 export interface EventoDeTecla {
@@ -87,6 +91,7 @@ export interface EventoDeTecla {
 }
 
 function teclasDoBotao(botao: number, modo: Modo, mapa: Mapa): string[] {
+  if (modo === "jogo" && mapa.jeitoDeJogar === "palhetada" && PALHETADAS.includes(botao)) return [PALHETA_DO_CONTROLE];
   if (SETAS[botao]) return [SETAS[botao]];
   if (modo === "menu") {
     if (botao === BOTOES.A || botao === BOTOES.START) return ["Enter"];
@@ -123,7 +128,7 @@ export function traduzir(antes: boolean[], agora: boolean[], emitidos: string[][
     }
   });
 
-  const palhetou = modo === "jogo" && PALHETADAS.some((b) => agora[b] && !antes[b]);
+  const palhetou = modo === "jogo" && mapa.jeitoDeJogar !== "palhetada" && PALHETADAS.some((b) => agora[b] && !antes[b]);
   if (palhetou) {
     mapa.botoesDoControle.forEach((botao, pista) => {
       if (!antes[botao] || !agora[botao]) return;

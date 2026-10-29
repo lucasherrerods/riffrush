@@ -45,6 +45,7 @@ impl MotorDaPartida {
         fantasma: bool,
         velocidade: f64,
         sem_aberta: bool,
+        jeito: u8,
     ) -> MotorDaPartida {
         let notas: Vec<motor::Nota> = tempos
             .iter()
@@ -60,6 +61,12 @@ impl MotorDaPartida {
                 fantasma,
                 velocidade,
                 sem_aberta,
+                // A mesma ordem dos bits do replay.
+                jeito: match jeito {
+                    1 => motor::JeitoDeJogar::Tapping,
+                    2 => motor::JeitoDeJogar::Palhetada,
+                    _ => motor::JeitoDeJogar::Gamepad,
+                },
             },
         );
         let enviadas = partida.notas.iter().map(|n| (bandeiras(n), n.segurou_ate)).collect();
@@ -82,6 +89,10 @@ impl MotorDaPartida {
 
     pub fn soltar(&mut self, pista: u8, tempo: f64) {
         motor::soltar(&mut self.partida, pista, tempo);
+    }
+
+    pub fn palhetar(&mut self, tempo: f64) -> bool {
+        motor::palhetar(&mut self.partida, tempo)
     }
 
     pub fn avancar(&mut self, tempo: f64) {

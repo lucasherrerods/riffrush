@@ -1,7 +1,7 @@
 use chrono::{DateTime, Duration, Utc};
 use riffrush_motor as motor;
 
-use crate::modules::progresso::{Dificuldade, Instrumento, ResumoDaPartida};
+use crate::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar, ResumoDaPartida};
 
 pub use motor::ChartGuardado;
 
@@ -17,6 +17,7 @@ pub struct Rejulgada {
     pub precisao: f64,
     /// Jogou com o modificador sem falha: a vida não acaba, então a partida não vale para o ranking.
     pub sem_falha: bool,
+    pub jeito_de_jogar: JeitoDeJogar,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
@@ -72,6 +73,7 @@ pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Di
             fantasma: replay.fantasma,
             velocidade: replay.velocidade,
             sem_aberta: replay.sem_aberta,
+            jeito: replay.jeito,
         },
     );
     motor::aplicar_entradas(&mut partida, &replay.entradas);
@@ -97,6 +99,11 @@ pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Di
         bons: partida.bons,
         precisao: f64::from(partida.valor_dos_acertos) / (f64::from(total) * 300.0),
         sem_falha: replay.sem_falha,
+        jeito_de_jogar: match replay.jeito {
+            motor::JeitoDeJogar::Tapping => JeitoDeJogar::Tapping,
+            motor::JeitoDeJogar::Gamepad => JeitoDeJogar::Gamepad,
+            motor::JeitoDeJogar::Palhetada => JeitoDeJogar::Palhetada,
+        },
     })
 }
 
@@ -170,6 +177,7 @@ pub mod testes {
             fantasma: false,
             sem_aberta: false,
             velocidade,
+            jeito: motor::JeitoDeJogar::Gamepad,
             hash_do_chart: motor::hash_do_chart(&notas),
             entradas,
         })
@@ -240,6 +248,7 @@ mod tests {
                 fantasma: false,
                 sem_aberta,
                 velocidade: 1.0,
+                jeito: motor::JeitoDeJogar::Gamepad,
                 // O hash é sempre o do chart original, com a aberta.
                 hash_do_chart: motor::hash_do_chart(&notas),
                 entradas: toques(pista_da_aberta).collect(),
@@ -249,6 +258,17 @@ mod tests {
         let com_aberta = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &replay(false, motor::PISTA_ABERTA)).unwrap();
         assert_eq!((sem_aberta.resumo.acertos, sem_aberta.resumo.total), (2, 2));
         assert_eq!(sem_aberta.pontos, com_aberta.pontos);
+    }
+
+    #[test]
+    fn rejulga_com_o_jeito_de_jogar_do_replay() {
+        let chart = chart();
+        let toques = replay(&chart, &[(0, 0.0), (1, 0.0)]);
+        let mut na_palhetada = motor::desempacotar_replay(&toques).unwrap();
+        na_palhetada.jeito = motor::JeitoDeJogar::Palhetada;
+        let rejulgada = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &motor::empacotar_replay(&na_palhetada)).unwrap();
+        assert_eq!(rejulgada.resumo.acertos, 0);
+        assert_eq!(rejulgada.jeito_de_jogar, JeitoDeJogar::Palhetada);
     }
 
     #[test]

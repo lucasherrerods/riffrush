@@ -12,7 +12,7 @@ use super::casos_de_uso::ErroDoRanking;
 use super::dominio::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, Ordem, PartidaPublica, Ranking, RecordeDaMusica};
 use crate::modules::catalogo::DadosDaMusica;
 use crate::modules::conta::{NivelDaConta, TokenOpcional};
-use crate::modules::progresso::{nivel_do_xp, Dificuldade, Instrumento};
+use crate::modules::progresso::{nivel_do_xp, Dificuldade, Instrumento, JeitoDeJogar};
 use crate::shared::erro::ErroDaApi;
 use crate::shared::estado::EstadoDoApp;
 
@@ -54,6 +54,9 @@ pub struct PosicaoNoRanking {
     precisao: f64,
     maior_sequencia: Option<u32>,
     jogada_em: DateTime<Utc>,
+    /// Tapping, gamepad ou palhetada. Partidas de antes da opção vêm sem.
+    #[schema(value_type = Option<String>, example = "gamepad")]
+    jeito_de_jogar: Option<JeitoDeJogar>,
 }
 
 impl From<LinhaDoRanking> for PosicaoNoRanking {
@@ -69,6 +72,7 @@ impl From<LinhaDoRanking> for PosicaoNoRanking {
             precisao: l.precisao,
             maior_sequencia: l.maior_sequencia,
             jogada_em: l.jogada_em,
+            jeito_de_jogar: l.jeito_de_jogar,
         }
     }
 }

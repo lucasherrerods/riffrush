@@ -92,9 +92,17 @@ const EVENTOS_SEM_VALOR: Evento["tipo"][] = ["acerto", "erro", "sequencia", "fra
 /** As velocidades da música que o jogo oferece. Vêm do motor, que recusa qualquer outra. */
 export const velocidadesDaMusica = () => [...velocidades()];
 
+/**
+ * Como as teclas viram notas. No tapping cada aperto vale uma nota; no gamepad soltar a tecla também acerta a
+ * próxima nota da pista; na palhetada os trastes só ficam apertados e a palheta toca o acorde.
+ * A posição na lista é o código que vai para o motor e para o replay.
+ */
+export const JEITOS_DE_JOGAR = ["gamepad", "tapping", "palhetada"] as const;
+export type JeitoDeJogar = (typeof JEITOS_DE_JOGAR)[number];
+
 /** `velocidade` é a da música: as notas chegam no tempo da música e a partida roda no tempo real. */
 /** `semAberta`: a nota aberta vira verde, decidido no motor para o app e a API darem o mesmo resultado. */
-export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false, velocidade = 1, semAberta = false } = {}): Partida {
+export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false, velocidade = 1, semAberta = false, jeito = "gamepad" as JeitoDeJogar } = {}): Partida {
   const motor = new MotorDaPartida(
     Float64Array.from(notas, (n) => n.tempo),
     Uint8Array.from(notas, (n) => n.pista),
@@ -104,6 +112,7 @@ export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false
     fantasma,
     velocidade,
     semAberta,
+    JEITOS_DE_JOGAR.indexOf(jeito),
   );
   const grade = motor.grade_das_notas();
   const partida: Partida = {
@@ -204,6 +213,13 @@ export function tocar(partida: Partida, pista: number, tempo: number) {
 export function soltar(partida: Partida, pista: number, tempo: number) {
   partida.motor.soltar(pista, tempo);
   sincronizar(partida);
+}
+
+/** Na palhetada, toca o acorde dos trastes apertados. Devolve se acertou. */
+export function palhetar(partida: Partida, tempo: number) {
+  const acertou = partida.motor.palhetar(tempo);
+  sincronizar(partida);
+  return acertou;
 }
 
 export function ativarEstrela(partida: Partida) {

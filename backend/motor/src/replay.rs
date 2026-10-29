@@ -1,12 +1,13 @@
 //! Lê o replay que o app grava (`replay.ts`) e reaplica as entradas sobre a partida.
 
-use crate::partida::{ativar_estrela, avancar, soltar, tocar, Partida, PISTA_ABERTA};
+use crate::partida::{ativar_estrela, avancar, palhetar, soltar, tocar, JeitoDeJogar, Partida, PISTA_ABERTA};
 
 const TICKS_POR_SEGUNDO: f64 = 1000.0;
 const BYTES_DO_HASH: usize = 16;
 const ESTRELA: u64 = 10;
 const APERTA_A_ABERTA: u64 = 11;
 const SOLTA_A_ABERTA: u64 = 12;
+const PALHETA: u64 = 13;
 /// Uma música inteira tem poucos milhares de entradas; o teto barra um replay feito para travar o servidor.
 const MAXIMO_DE_ENTRADAS: u64 = 200_000;
 const MAXIMO_DESCOMPRIMIDO: usize = 4 * 1024 * 1024;
@@ -16,6 +17,8 @@ pub enum TipoDaEntrada {
     Tocar,
     Soltar,
     Estrela,
+    /// Só vale na palhetada: toca o acorde dos trastes apertados.
+    Palhetar,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -34,6 +37,8 @@ pub struct Replay {
     pub sem_aberta: bool,
     /// Velocidade da música. Os replays de antes da versão 3 são todos a 1x.
     pub velocidade: f64,
+    /// Os replays de antes da versão 4 são todos do gamepad.
+    pub jeito: JeitoDeJogar,
     pub hash_do_chart: String,
     pub entradas: Vec<Entrada>,
 }
@@ -49,6 +54,7 @@ fn codigos_da_versao(versao: u8) -> Option<u64> {
     match versao {
         1 => Some(11),
         2 | 3 => Some(13),
+        4 => Some(14),
         _ => None,
     }
 }
@@ -97,6 +103,12 @@ pub fn desempacotar_replay(pacote: &[u8]) -> Result<Replay, ErroDoReplay> {
         fantasma: opcoes & 2 != 0,
         sem_aberta: opcoes & 4 != 0,
         velocidade,
+        jeito: match (opcoes >> 3) & 3 {
+            0 => JeitoDeJogar::Gamepad,
+            1 => JeitoDeJogar::Tapping,
+            2 => JeitoDeJogar::Palhetada,
+            _ => return Err(ErroDoReplay::Corrompido),
+        },
         hash_do_chart,
         entradas,
     })
@@ -104,12 +116,12 @@ pub fn desempacotar_replay(pacote: &[u8]) -> Result<Replay, ErroDoReplay> {
 
 /// O inverso de `desempacotar_replay`, no formato da versão atual. A API não grava replays; serve aos testes dela.
 pub fn empacotar_replay(replay: &Replay) -> Vec<u8> {
-    const CODIGOS: i64 = 13;
+    const CODIGOS: i64 = 14;
     // A velocidade vai em centésimos: 0,75x é 75.
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let velocidade = (replay.velocidade * 100.0).round().clamp(0.0, 255.0) as u8;
     let mut bytes = vec![
-        u8::from(replay.sem_falha) | (u8::from(replay.fantasma) << 1) | (u8::from(replay.sem_aberta) << 2),
+        u8::from(replay.sem_falha) | (u8::from(replay.fantasma) << 1) | (u8::from(replay.sem_aberta) << 2) | (bits_do_jeito(replay.jeito) << 3),
         velocidade,
     ];
     bytes.extend((0..BYTES_DO_HASH).map(|i| u8::from_str_radix(replay.hash_do_chart.get(i * 2..i * 2 + 2).unwrap_or("00"), 16).unwrap_or(0)));
@@ -133,6 +145,7 @@ pub fn empacotar_replay(replay: &Replay) -> Vec<u8> {
         let ticks = em_ticks(entrada.tempo);
         let codigo = match (entrada.tipo, entrada.pista) {
             (TipoDaEntrada::Estrela, _) => 10,
+            (TipoDaEntrada::Palhetar, _) => 13,
             (TipoDaEntrada::Tocar, PISTA_ABERTA) => 11,
             (TipoDaEntrada::Soltar, PISTA_ABERTA) => 12,
             (TipoDaEntrada::Tocar, pista) => i64::from(pista),
@@ -141,9 +154,17 @@ pub fn empacotar_replay(replay: &Replay) -> Vec<u8> {
         escrever_varint(&mut bytes, ((ticks - anterior) * CODIGOS + codigo).unsigned_abs());
         anterior = ticks;
     }
-    let mut pacote = vec![3];
+    let mut pacote = vec![4];
     pacote.extend(miniz_oxide::deflate::compress_to_vec(&bytes, 6));
     pacote
+}
+
+fn bits_do_jeito(jeito: JeitoDeJogar) -> u8 {
+    match jeito {
+        JeitoDeJogar::Gamepad => 0,
+        JeitoDeJogar::Tapping => 1,
+        JeitoDeJogar::Palhetada => 2,
+    }
 }
 
 fn escrever_varint(bytes: &mut Vec<u8>, mut valor: u64) {
@@ -154,7 +175,7 @@ fn escrever_varint(bytes: &mut Vec<u8>, mut valor: u64) {
     bytes.push(valor as u8);
 }
 
-/// 0 a 4 aperta a pista, 5 a 9 solta, 10 ativa o star power, 11 aperta e 12 solta a nota aberta.
+/// 0 a 4 aperta a pista, 5 a 9 solta, 10 ativa o star power, 11 aperta e 12 solta a nota aberta, 13 palheta.
 fn entrada_do_codigo(ticks: i64, codigo: u64) -> Entrada {
     // Os ticks de uma música cabem com folga nos 53 bits exatos do f64.
     #[allow(clippy::cast_precision_loss)]
@@ -163,6 +184,7 @@ fn entrada_do_codigo(ticks: i64, codigo: u64) -> Entrada {
         ESTRELA => (TipoDaEntrada::Estrela, 0),
         APERTA_A_ABERTA => (TipoDaEntrada::Tocar, PISTA_ABERTA),
         SOLTA_A_ABERTA => (TipoDaEntrada::Soltar, PISTA_ABERTA),
+        PALHETA => (TipoDaEntrada::Palhetar, 0),
         0..=4 => (TipoDaEntrada::Tocar, codigo as u8),
         _ => (TipoDaEntrada::Soltar, (codigo % 5) as u8),
     };
@@ -199,6 +221,9 @@ pub fn aplicar_entradas(partida: &mut Partida, entradas: &[Entrada]) {
                 tocar(partida, entrada.pista, entrada.tempo);
             }
             TipoDaEntrada::Soltar => soltar(partida, entrada.pista, entrada.tempo),
+            TipoDaEntrada::Palhetar => {
+                palhetar(partida, entrada.tempo);
+            }
             TipoDaEntrada::Estrela => {
                 avancar(partida, entrada.tempo);
                 ativar_estrela(partida);
@@ -225,6 +250,7 @@ mod tests {
             fantasma: false,
             sem_aberta: false,
             velocidade: 0.75,
+            jeito: JeitoDeJogar::Palhetada,
             hash_do_chart: "00112233445566778899aabbccddeeff".into(),
             entradas: vec![
                 Entrada {
@@ -236,6 +262,11 @@ mod tests {
                     tempo: 1.5,
                     tipo: TipoDaEntrada::Soltar,
                     pista: PISTA_ABERTA,
+                },
+                Entrada {
+                    tempo: 1.75,
+                    tipo: TipoDaEntrada::Palhetar,
+                    pista: 0,
                 },
                 Entrada {
                     tempo: 2.0,
@@ -254,6 +285,7 @@ mod tests {
             fantasma: true,
             sem_aberta: true,
             velocidade: 1.0,
+            jeito: JeitoDeJogar::Gamepad,
             hash_do_chart: "00112233445566778899aabbccddeeff".into(),
             entradas: vec![],
         };
@@ -269,5 +301,26 @@ mod tests {
         assert_eq!(entrada_do_codigo(1500, 8).pista, 3);
         assert_eq!(entrada_do_codigo(1500, 12).pista, PISTA_ABERTA);
         assert_eq!(entrada_do_codigo(1500, 10).tempo, 1.5);
+        assert_eq!(entrada_do_codigo(1500, 13).tipo, TipoDaEntrada::Palhetar);
+    }
+
+    #[test]
+    fn o_replay_da_versao_3_e_do_gamepad() {
+        let mut pacote = vec![3];
+        let mut bytes = vec![0, 100];
+        bytes.extend([0; BYTES_DO_HASH]);
+        bytes.extend([0, 0]);
+        pacote.extend(miniz_oxide::deflate::compress_to_vec(&bytes, 6));
+        assert_eq!(desempacotar_replay(&pacote).unwrap().jeito, JeitoDeJogar::Gamepad);
+    }
+
+    #[test]
+    fn recusa_jeito_desconhecido() {
+        let mut pacote = vec![4];
+        let mut bytes = vec![3 << 3, 100];
+        bytes.extend([0; BYTES_DO_HASH]);
+        bytes.extend([0, 0]);
+        pacote.extend(miniz_oxide::deflate::compress_to_vec(&bytes, 6));
+        assert_eq!(desempacotar_replay(&pacote), Err(ErroDoReplay::Corrompido));
     }
 }
