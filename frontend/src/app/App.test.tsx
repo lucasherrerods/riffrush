@@ -2,13 +2,13 @@ import { useEffect } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { definirTelaCheia } from "@/modules/platform";
-import { anotarRecorde, definirRecordes, recordesAtuais } from "@/modules/results";
+import { anotarRecorde, definirRecordes, recordesAtuais } from "@/modules/rock/results";
 import { escolherNaSala, useConexao, voltarParaASala } from "@/modules/multiplayer";
-import { PERSONAGEM_PADRAO } from "@/modules/character";
+import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { iniciarControle } from "@/modules/gamepad";
-import { MUSICAS_EMBUTIDAS } from "@/modules/songs";
-import { useSeguirMusica } from "@/modules/player";
+import { MUSICAS_EMBUTIDAS } from "@/modules/rock/songs";
+import { useSeguirMusica } from "@/modules/rock/player";
 import { sessaoDaConta } from "@/modules/conta";
 import { avisar } from "@/shared/ui/avisos";
 import { definirVolumeGeral, lerVolumeGeral } from "@/modules/audio";
@@ -21,14 +21,14 @@ const biblioteca = vi.hoisted(() => ({
   remover: vi.fn(async () => {}),
   prepararParaTocar: vi.fn(async (musica: object) => musica),
 }));
-vi.mock("@/modules/library", async (original) => ({
-  ...(await original<typeof import("@/modules/library")>()),
+vi.mock("@/modules/rock/library", async (original) => ({
+  ...(await original<typeof import("@/modules/rock/library")>()),
   useBiblioteca: () => biblioteca,
 }));
 
 // O download de verdade é testado no módulo search; aqui chega um arquivo de áudio comum.
-vi.mock("@/modules/search", async (original) => ({
-  ...(await original<typeof import("@/modules/search")>()),
+vi.mock("@/modules/rock/search", async (original) => ({
+  ...(await original<typeof import("@/modules/rock/search")>()),
   baixarDoEncore: vi.fn(async () => new File(["x"], "Banda - Do Encore.wav", { type: "audio/wav" })),
 }));
 
@@ -40,8 +40,8 @@ vi.mock("@/modules/platform", () => ({
 
 // A partida de verdade é testada no módulo de gameplay; aqui só importa a ligação entre as telas.
 const opcoesRecebidas: unknown[] = [];
-vi.mock("@/modules/gameplay", async (original) => ({
-  ...(await original<typeof import("@/modules/gameplay")>()),
+vi.mock("@/modules/rock/gameplay", async (original) => ({
+  ...(await original<typeof import("@/modules/rock/gameplay")>()),
   // A entrada com trovão abre na hora: os testes do App olham a partida, não a animação.
   EntradaDaPartida: ({ aoAbrir, aoTerminar }: { aoAbrir: () => void; aoTerminar: () => void }) => {
     useEffect(() => {
@@ -84,7 +84,7 @@ vi.mock("@/modules/conta", async (original) => ({
 }));
 
 // Sem isso o player sintetizaria a primeira música a cada teste.
-vi.mock("@/modules/player", () => ({
+vi.mock("@/modules/rock/player", () => ({
   CabecalhoDoPlayerDeMusica: () => null,
   indiceVizinho: vi.fn(),
   useSeguirMusica: vi.fn(),
@@ -123,7 +123,7 @@ describe("App", () => {
 
   it("começa no menu principal", () => {
     abrir();
-    expect(screen.getByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();
   });
 
   it("na seleção o player segue a música escolhida, e fora dela não", async () => {
@@ -139,7 +139,7 @@ describe("App", () => {
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     expect(await screen.findByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
     await usuario.keyboard("{Escape}");
-    expect(await screen.findByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();
   });
 
   it("Buscar músicas abre a tela de busca e Esc volta ao menu", async () => {
@@ -148,7 +148,7 @@ describe("App", () => {
     await usuario.click(screen.getByRole("button", { name: "Buscar músicas" }));
     expect(await screen.findByRole("heading", { name: "Buscar músicas" })).toBeInTheDocument();
     await usuario.keyboard("{Escape}");
-    expect(await screen.findByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();
   });
 
   it("baixar na Buscar músicas importa, salva e deixa jogar a música", async () => {
@@ -226,7 +226,7 @@ describe("App", () => {
     await usuario.clear(await screen.findByLabelText("Nome"));
     await usuario.type(screen.getByLabelText("Nome"), "Lucas");
     await usuario.click(screen.getByRole("button", { name: /Salvar/ }));
-    expect(await screen.findByRole("heading", { name: "Riff Rush" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem("riffrush.personagem")!).nome).toBe("Lucas");
   });
 

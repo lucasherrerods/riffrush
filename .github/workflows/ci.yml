@@ -92,7 +92,7 @@ jobs:
       - run: cargo test
       - run: cargo fmt --check && cargo clippy -- -D warnings
         working-directory: backend/motor/wasm
-      # O app roda este motor em WASM, com o .wasm commitado em frontend/src/modules/gameplay/wasm (o job web
+      # O app roda este motor em WASM, com o .wasm commitado em frontend/src/modules/rock/gameplay/wasm (o job web
       # testa esse). Aqui o motor é recompilado e os testes de jogo do app rodam com o .wasm novo. Os dois
       # conferem o mesmo tests/paridade.json, então um .wasm commitado que ficou para trás do código falha lá.
       - run: rustup target add wasm32-unknown-unknown
@@ -109,7 +109,47 @@ jobs:
         run: |
           npm ci
           npm run motor
-          npx vitest run src/modules/gameplay
+          npx vitest run src/modules/rock/gameplay
+
+  motor-mania:
+    name: Testes do motor do Mania
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend/motor-mania
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            backend/motor-mania
+            backend/motor-mania/wasm
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      - run: cargo fmt --check && cargo clippy -- -D warnings
+        working-directory: backend/motor-mania/wasm
+      # Como no motor do Rock: o .wasm commitado em frontend/src/modules/mania/gameplay/wasm é recompilado e os
+      # testes do Mania no app rodam com ele, conferindo o mesmo tests/paridade.json.
+      - run: rustup target add wasm32-unknown-unknown
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.100
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Testes do Mania no app com o motor recompilado
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run motor -- mania
+          npx vitest run src/modules/mania
 
   backend:
     name: Testes do backend

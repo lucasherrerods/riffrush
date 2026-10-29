@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "framer-motion";
-import { temaAtivo } from "@jogo/src/shared/styles/tokens";
+import { TEMA_PADRAO } from "@jogo/src/shared/styles/tokens";
 
 const INSTRUMENTOS = [
   { nome: "Teclado", texto: "Nada para comprar. Cada tecla no lugar que a sua mão pedir." },
@@ -40,7 +40,7 @@ export function Manifesto() {
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
   const barra = useTransform(scrollYProgress, [0, 1], [0, 1]);
   const contador = useTransform(scrollYProgress, (p) => `0${Math.min(TOTAL, Math.floor(p * TOTAL) + 1)}`);
-  const trastes = temaAtivo.pista.trastes;
+  const trastes = TEMA_PADRAO.pista.trastes;
 
   if (parado) {
     return (

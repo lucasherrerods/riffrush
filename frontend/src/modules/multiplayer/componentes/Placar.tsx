@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Crown, Ghost, Loader2 } from "lucide-react";
-import { Avatar } from "@/modules/character";
+import { Avatar } from "@/modules/rock/character";
 import { cn } from "@/shared/lib/utils";
 import type { EstadoDaSala } from "../protocolo";
 

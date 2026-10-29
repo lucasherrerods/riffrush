@@ -1,3 +1,4 @@
+import { ehTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { useEffect, useState } from "react";
 import { Crosshair } from "lucide-react";
 import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, saidaDeAudio } from "@/modules/audio";
@@ -64,10 +65,10 @@ export function Calibracao({ aoMedir }: { aoMedir: (atrasoMs: number) => void })
   }, [rodando]);
 
   const dica = rodando
-    ? `Aperte qualquer tecla junto com o clique. Batida ${Math.min(batida, BATIDAS_DA_CALIBRACAO)}/${BATIDAS_DA_CALIBRACAO}`
+    ? `${ehTelaEstreita() ? "Toque na tela" : "Aperte qualquer tecla"} junto com o clique. Batida ${Math.min(batida, BATIDAS_DA_CALIBRACAO)}/${BATIDAS_DA_CALIBRACAO}`
     : ultimaMedida !== null
       ? `Calibrado: ${ultimaMedida > 0 ? "+" : ""}${ultimaMedida} ms`
-      : "Toca um metrônomo e mede o atraso do seu fone e teclado";
+      : ehTelaEstreita() ? "Toca um metrônomo e mede o atraso do seu fone e da tela" : "Toca um metrônomo e mede o atraso do seu fone e teclado";
 
   return (
     <LinhaDeOpcao rotulo="Calibrar atraso" dica={dica}>

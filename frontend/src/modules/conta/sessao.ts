@@ -1,4 +1,4 @@
-import { valorDosAcertos, type Resultado } from "@/modules/gameplay";
+import { valorDosAcertos, type Resultado } from "@/modules/rock/gameplay";
 import { invoke } from "@tauri-apps/api/core";
 import { URL_DA_API } from "@/shared/lib/api";
 import { ErroDaApi, criarApi, type ApiDaConta, type ClienteDoGoogle, type ContaDaApi, type RegistroDaPartida, type XpDaPartida } from "./api";
@@ -152,12 +152,19 @@ export class SessaoDaConta {
     return xp;
   }
 
+  /** Manda o replay de uma partida do Mania. O XP vem depois, por `esperarXp(id, { modo: "mania" })`. Sem conta, não manda nada. */
+  async registrarPartidaDoMania(beatmapId: number, replay: Uint8Array): Promise<RegistroDaPartida | null> {
+    const token = this.ambiente.local.getItem(CHAVE_DO_TOKEN);
+    if (!token || !this.estadoAtual.conta) return null;
+    return this.ambiente.api.registrarPartidaDoMania(token, { beatmap_id: beatmapId, replay: emBase64(replay) });
+  }
+
   /** Pergunta à API, de tempos em tempos, se a partida da fila já foi rejulgada. Desiste depois das tentativas. */
-  async esperarXp(id: string, { intervalo = 2000, tentativas = 30 } = {}): Promise<RegistroDaPartida> {
+  async esperarXp(id: string, { intervalo = 2000, tentativas = 30, modo = "rock" as "rock" | "mania" } = {}): Promise<RegistroDaPartida> {
     for (let i = 0; i < tentativas; i++) {
       const token = this.token();
       if (!token) break;
-      const situacao = await this.ambiente.api.situacaoDaPartida(token, id);
+      const situacao = await (modo === "mania" ? this.ambiente.api.situacaoDaPartidaDoMania(token, id) : this.ambiente.api.situacaoDaPartida(token, id));
       if ("xp_ganho" in situacao) {
         this.somarXp(situacao);
         return situacao;

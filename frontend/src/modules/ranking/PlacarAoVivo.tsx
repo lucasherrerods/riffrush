@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { motion } from "framer-motion";
 import { useConta } from "@/modules/conta";
-import type { Dificuldade, Instrumento } from "@/modules/songs";
+import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
 import { cn } from "@/shared/lib/utils";
 import { montarPlacar, pontuacoesAcima } from "./placar";
 import { useRanking, type OpcoesDoRanking } from "./useRanking";

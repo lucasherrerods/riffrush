@@ -64,7 +64,22 @@ Nenhuma regra é obrigatória: quebre qualquer uma quando houver um bom motivo. 
 
 ## Temas e skins
 
-As cores vivem em `src/shared/styles/temas.ts`. Cada tema define as cores da interface (`cores`) e a skin da pista (`pista`). Para criar um tema, copie um existente, troque os valores, registre-o em `TEMAS` e aponte `temaAtivo` para ele. Os testes de `tokens.test.ts` conferem as regras deste documento em todos os temas.
+Toda cor do app mora num arquivo de tema, e o teste `coresSoltas.test.ts` barra cor fora deles:
+
+- `src/shared/styles/temas.ts`: as cores da interface (`cores`) e a skin da pista do Rock (`pista`). Para criar um tema, copie um existente, troque os valores e registre-o em `TEMAS`. Os testes de `tokens.test.ts` conferem as regras deste documento em todos os temas, inclusive o contraste AA (4,5:1) do texto.
+- `src/modules/<modo>/tema.ts`: as cores que só o canvas de cada jogo usa (cenas 3D, instrumentos, personagem, capas).
+
+O tema da interface troca na hora com `definirTema()` (`src/shared/styles/tema.ts`): cada modo de jogo tem o seu, e o App veste a interface com o tema do modo ativo. O Rock usa o Riff Rush; o Mania, o Riff Rush Mania.
+
+### Tema claro (Riff Rush Mania)
+
+Rosa e branco, com neutros quentes tingidos de rosa. As regras de cor valem como no escuro, com as diferenças que o próprio documento prevê:
+
+- container vs. fundo com Δ de brilho de até 7% (regra 6), e a elevação continua mais clara (regra 7);
+- a borda é mais escura que o fundo e as superfícies (regra 9);
+- no claro, sombras suaves são permitidas (regras 10 e 12). Os temas escuros continuam sem sombra.
+
+O brilho neon continua só no canvas da pista.
 
 ## Palco (exceções deliberadas)
 
@@ -73,3 +88,12 @@ O visual do jogo é um show de rock. Estas regras quebram as de cima de propósi
 - **Iluminação de palco:** feixes de holofote (`.holofote`) e luz no chão só no **fundo** das telas, atrás de tudo. Componentes continuam sem sombra (regra 11): a elevação segue vindo do brilho.
 - **Três fontes (regra 27):** `--font-letreiro` (Rubik Dirt) só no título de cada tela (`h1`); `--font-titulo` (Bebas Neue) em subtítulos e números de jogo; Geist no texto corrido. Fonte suja nunca em texto longo ou em número que precisa ser lido rápido.
 - **Texturas:** painéis usam `.placa` (painel principal: metal escovado, rebites, quinas de 16px) e `.chapa` (itens e cartões: metal escovado, quinas de 8px). Áreas pintadas de cor cheia usam `.gasto`. Não empilhe textura sobre textura (regra 23).
+
+## Celular (responsivo)
+
+O app precisa funcionar inteiro no celular, a partir de 375px de largura.
+
+- **Toda mudança visual tem a versão de celular.** Ao criar ou alterar uma tela, um componente ou uma funcionalidade visual, monte também o layout de celular dela na mesma mudança. Confira em 375x812: nada cortado, nada sobreposto e sem rolagem lateral.
+- **Use as medidas compartilhadas** de `src/shared/styles/global.css`: `titulo-de-tela`, `respiro-de-tela`, `rolagem-de-toque` e `abas-rolaveis`. Não crie tamanhos soltos por tela.
+- **Tudo que rola aceita o arraste do dedo**, e alvos de toque têm tamanho confortável para o dedo.
+- **Na dúvida, pergunte.** Se algo não tiver uma forma clara ou boa de funcionar no celular (um atalho de teclado, um painel grande, um gesto), pergunte ao usuário como ele quer antes de decidir.

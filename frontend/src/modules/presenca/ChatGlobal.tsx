@@ -192,7 +192,7 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
                   void moderacao.recarregar();
                 }}
               >
-                <ShieldAlert className="opacity-70" /> Moderação ({mensagensDenunciadas})
+                <ShieldAlert className="opacity-70" /> <span className="max-md:sr-only">Moderação</span> ({mensagensDenunciadas})
               </Button>
             )}
           </>

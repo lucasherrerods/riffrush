@@ -1,4 +1,4 @@
-import type { Dificuldade, Instrumento } from "@/modules/songs";
+import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
 import { URL_DA_API, criarCliente } from "@/shared/lib/api";
 
 /** Como a API devolve, em snake_case. */

@@ -1,5 +1,5 @@
-import { baixarSng } from "@/modules/search";
-import { MUSICAS_EMBUTIDAS, importarArquivo, type Musica } from "@/modules/songs";
+import { baixarSng } from "@/modules/rock/search";
+import { MUSICAS_EMBUTIDAS, importarArquivo, type Musica } from "@/modules/rock/songs";
 import type { MusicaNaRede } from "./protocolo";
 
 export function paraRede(musica: Musica, { online = false } = {}): MusicaNaRede {

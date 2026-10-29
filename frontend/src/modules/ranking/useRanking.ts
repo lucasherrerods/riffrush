@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { sessaoDaConta, useConta } from "@/modules/conta";
-import type { Dificuldade, Instrumento } from "@/modules/songs";
+import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
 import { useValorAtrasado } from "@/shared/hooks/useValorAtrasado";
 import { apiDoRanking, type ApiDoRanking, type OrdemDoRanking, type RespostaDoRanking } from "./api";
 

@@ -29,7 +29,7 @@ Os dois produzem o mesmo tipo de arquivo, então o resto do jogo não muda.
    ```
 
    O arquivo sai em `public/modelos/personagens/<id>.vrm`, e o script mostra triângulos e tamanho.
-3. Registre em `BASES` em `src/modules/character/catalogo.ts`:
+3. Registre em `BASES` em `src/modules/rock/character/catalogo.ts`:
 
    ```ts
    { id: "<id>", rotulo: "Nome no menu", arquivo: "/modelos/personagens/<id>.vrm" },

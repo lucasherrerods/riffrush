@@ -83,6 +83,13 @@ describe("PainelDeChat", () => {
     expect(screen.getByText("A moderação nunca pede senha.")).toBeInTheDocument();
   });
 
+  it("com minimizar, tocar no título também abre e fecha o chat", async () => {
+    const aoAlternar = vi.fn();
+    render(<PainelDeChat titulo="Chat global" mensagens={[]} aoEnviar={vi.fn()} minimizar={{ minimizado: true, aoAlternar }} />);
+    await userEvent.setup().click(screen.getByText("Chat global"));
+    expect(aoAlternar).toHaveBeenCalledWith(false);
+  });
+
   it("com minimizar, a setinha esconde as mensagens e o campo, e mostra de novo", async () => {
     const aoAlternar = vi.fn();
     const { rerender } = render(<PainelDeChat titulo="Chat global" mensagens={[{ id: "1", autor: "Ana", texto: "oi" }]} aoEnviar={vi.fn()} minimizar={{ minimizado: false, aoAlternar }} />);

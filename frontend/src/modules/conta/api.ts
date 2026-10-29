@@ -1,4 +1,4 @@
-import type { Dificuldade, Instrumento } from "@/modules/songs";
+import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
 import { ErroDaApi, criarCliente } from "@/shared/lib/api";
 
 /** Os formatos que a API devolve, em snake_case como no JSON. */
@@ -148,6 +148,11 @@ export function criarApi(base: string, buscar?: typeof fetch) {
     excluirConta: (token: string) => chamar<void>("DELETE", "/eu", { token }),
     registrarPartida: (token: string, partida: PartidaParaAApi) => chamar<XpDaPartida | PartidaNaFila>("POST", "/partidas", { token, corpo: partida }),
     situacaoDaPartida: (token: string, id: string) => chamar<XpDaPartida | PartidaSemXp>("GET", `/partidas/${encodeURIComponent(id)}/xp`, { token }),
+    /** O Mania: a partida vai sempre para a fila, e o servidor confere o replay contra o .osu do osu!. */
+    registrarPartidaDoMania: (token: string, partida: { beatmap_id: number; replay: string }) =>
+      chamar<PartidaNaFila>("POST", "/mania/partidas", { token, corpo: partida }),
+    situacaoDaPartidaDoMania: (token: string, id: string) =>
+      chamar<XpDaPartida | PartidaSemXp>("GET", `/mania/partidas/${encodeURIComponent(id)}/xp`, { token }),
   };
 }
 

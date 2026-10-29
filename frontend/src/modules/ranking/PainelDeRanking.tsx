@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import type { Dificuldade, Instrumento } from "@/modules/songs";
+import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
 import type { PosicaoNoRanking } from "./api";
 import { haQuantoTempo, porcentagem } from "@/shared/lib/formatar";
 import { LinhaComPosicao } from "./LinhaComPosicao";
@@ -41,7 +41,7 @@ export function PainelDeRanking({ musicaId, dificuldade, instrumento = "guitarra
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       {top.length ? (
-        <ol aria-label="Ranking" className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1">
+        <ol aria-label="Ranking" className="flex min-h-0 flex-1 flex-col gap-1 pr-1 rolagem-de-toque">
           {top.map((linha) => (
             <LinhaDoRanking key={linha.posicao} linha={linha} minha={!!meu && meu.posicao === linha.posicao} aoAbrir={aoAbrirPartida} />
           ))}

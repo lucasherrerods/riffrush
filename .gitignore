@@ -10,6 +10,8 @@ frontend/src-tauri/gen/schemas/
 backend/target/
 backend/motor/target/
 backend/motor/wasm/target/
+backend/motor-mania/target/
+backend/motor-mania/wasm/target/
 
 .vscode/*
 !.vscode/extensions.json

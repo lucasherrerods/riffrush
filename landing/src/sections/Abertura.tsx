@@ -1,12 +1,12 @@
 import { useRef } from "react";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
-import { temaAtivo } from "@jogo/src/shared/styles/tokens";
+import { TEMA_PADRAO } from "@jogo/src/shared/styles/tokens";
 import { PistaDoPalco } from "@/demo/PistaDoPalco";
 import { Chamadas } from "./comuns";
 
 const HOLOFOTES = [
-  { esquerda: "10%", cor: temaAtivo.cores.primaria, de: "-24deg", ate: "10deg", duracao: "7s" },
-  { esquerda: "90%", cor: temaAtivo.cores.destaque, de: "-10deg", ate: "24deg", duracao: "8s" },
+  { esquerda: "10%", cor: TEMA_PADRAO.cores.primaria, de: "-24deg", ate: "10deg", duracao: "7s" },
+  { esquerda: "90%", cor: TEMA_PADRAO.cores.destaque, de: "-10deg", ate: "24deg", duracao: "8s" },
 ];
 
 const ENTRADA = [0.2, 0.8, 0.2, 1] as const;

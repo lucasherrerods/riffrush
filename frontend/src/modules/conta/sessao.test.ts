@@ -1,4 +1,4 @@
-import type { Resultado } from "@/modules/gameplay";
+import type { Resultado } from "@/modules/rock/gameplay";
 import { ErroDaApi, type ApiDaConta, type ContaDaApi } from "./api";
 import { SessaoDaConta, type Ambiente } from "./sessao";
 
@@ -13,7 +13,7 @@ class Memoria {
 
 function montar(api: Partial<ApiDaConta> = {}, busca = "") {
   const ambiente: Ambiente = {
-    api: { entrar: vi.fn(async () => ({ token: "tok", conta })), eu: vi.fn(async () => conta), sair: vi.fn(async () => {}), excluirConta: vi.fn(async () => {}), registrarPartida: vi.fn(), situacaoDaPartida: vi.fn(), perfil: vi.fn(), recordes: vi.fn(async () => []), ...api },
+    api: { entrar: vi.fn(async () => ({ token: "tok", conta })), eu: vi.fn(async () => conta), sair: vi.fn(async () => {}), excluirConta: vi.fn(async () => {}), registrarPartida: vi.fn(), situacaoDaPartida: vi.fn(), registrarPartidaDoMania: vi.fn(), situacaoDaPartidaDoMania: vi.fn(), perfil: vi.fn(), recordes: vi.fn(async () => []), ...api },
     clientId: "id",
     local: new Memoria(),
     temporario: new Memoria(),
@@ -172,6 +172,27 @@ describe("SessaoDaConta", () => {
     await sessao.iniciar();
     expect(await sessao.esperarXp("p1", { intervalo: 0, tentativas: 3 })).toEqual({ pendente: true, id: "p1" });
     expect(situacaoDaPartida).toHaveBeenCalledTimes(3);
+  });
+
+  it("partida do Mania vai com o mapa e o replay em base64, e o XP vem pela rota do Mania", async () => {
+    const depois = { nivel: 6, xp_no_nivel: 10, xp_para_o_proximo: 400 };
+    const registrarPartidaDoMania = vi.fn(async () => ({ pendente: true as const, id: "m1" }));
+    const situacaoDaPartidaDoMania = vi.fn(async () => ({ xp_ganho: 80, antes: conta.nivel, depois }));
+    const { sessao, ambiente } = montar({ registrarPartidaDoMania, situacaoDaPartidaDoMania });
+    ambiente.local.setItem("riffrush:token", "tok");
+    await sessao.iniciar();
+    expect(await sessao.registrarPartidaDoMania(42, new Uint8Array([1, 2, 3]))).toEqual({ pendente: true, id: "m1" });
+    expect(registrarPartidaDoMania).toHaveBeenCalledWith("tok", { beatmap_id: 42, replay: "AQID" });
+    expect(await sessao.esperarXp("m1", { intervalo: 0, modo: "mania" })).toMatchObject({ xp_ganho: 80 });
+    expect(situacaoDaPartidaDoMania).toHaveBeenCalledWith("tok", "m1");
+    expect(ambiente.api.situacaoDaPartida).not.toHaveBeenCalled();
+    expect(sessao.estado().conta).toMatchObject({ xp_total: conta.xp_total + 80 });
+  });
+
+  it("sem conta, a partida do Mania não vai para a API", async () => {
+    const { sessao, ambiente } = montar();
+    expect(await sessao.registrarPartidaDoMania(42, new Uint8Array([1]))).toBeNull();
+    expect(ambiente.api.registrarPartidaDoMania).not.toHaveBeenCalled();
   });
 
   it("sem conta, a partida não vai para a API", async () => {

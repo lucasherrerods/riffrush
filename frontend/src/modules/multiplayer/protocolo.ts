@@ -1,7 +1,7 @@
-import type { Personagem } from "@/modules/character";
-import type { EstadoDoJogador } from "@/modules/gameplay";
+import type { Personagem } from "@/modules/rock/character";
+import type { EstadoDoJogador } from "@/modules/rock/gameplay";
 import { BALDE_CHEIO, adicionarMensagem, gastarDoBalde, limparTexto, type Balde } from "@/modules/chat";
-import { MUSICAS_EMBUTIDAS, type Dificuldade, type Instrumento } from "@/modules/songs";
+import { MUSICAS_EMBUTIDAS, type Dificuldade, type Instrumento } from "@/modules/rock/songs";
 
 /*
  * A sala em rede como função pura: recebe o estado e uma mensagem, devolve o estado novo

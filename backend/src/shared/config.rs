@@ -14,6 +14,8 @@ pub struct Config {
     pub segredo_do_relay: Option<String>,
     /// O endereço do relay (`wss://...`), para a API avisar banimentos na hora.
     pub url_do_relay: Option<String>,
+    /// Client da API do osu! (osu.ppy.sh/home/account/edit, "OAuth"); sem ele, as partidas do Mania esperam na fila.
+    pub osu: Option<(String, String)>,
 }
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -48,7 +50,11 @@ impl Config {
         let google_desktop = variavel("GOOGLE_DESKTOP_CLIENT_ID").zip(variavel("GOOGLE_DESKTOP_CLIENT_SECRET"));
         let segredo_do_relay = variavel("SEGREDO_DO_RELAY").filter(|s| !s.is_empty());
         let url_do_relay = variavel("URL_DO_RELAY").filter(|s| !s.is_empty());
+        let osu = variavel("OSU_CLIENT_ID")
+            .filter(|s| !s.is_empty())
+            .zip(variavel("OSU_CLIENT_SECRET").filter(|s| !s.is_empty()));
         Ok(Self {
+            osu,
             segredo_do_relay,
             url_do_relay,
             endereco,

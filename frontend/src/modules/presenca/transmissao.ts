@@ -1,5 +1,5 @@
-import type { EventoDaTransmissao } from "@/modules/gameplay";
-import type { Dificuldade, Instrumento } from "@/modules/songs";
+import type { EventoDaTransmissao } from "@/modules/rock/gameplay";
+import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
 import { entradasParaOLote, lerAvisoDeEspectadores, protocolosComFicha, urlDaTransmissao, type MensagemDaTransmissao } from "./protocolo";
 
 interface SocketMinimo {

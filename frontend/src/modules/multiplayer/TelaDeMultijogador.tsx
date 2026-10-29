@@ -1,6 +1,6 @@
 import { ArrowLeft, Download, Loader2, LogOut } from "lucide-react";
-import type { Personagem } from "@/modules/character";
-import type { Musica } from "@/modules/songs";
+import type { Personagem } from "@/modules/rock/character";
+import type { Musica } from "@/modules/rock/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
 import { Lobby } from "./componentes/Lobby";
@@ -27,12 +27,12 @@ export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVo
   });
 
   return (
-    <div className="flex h-full flex-col gap-6 p-8 max-md:p-4">
-      <header className="flex items-center gap-4">
+    <div className="respiro-de-tela flex h-full flex-col max-md:rolagem-de-toque">
+      <header className="flex items-center gap-4 max-md:gap-2">
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
           <ArrowLeft />
         </Button>
-        <h1 className="text-4xl leading-[1.1] font-black tracking-[-0.02em] max-md:text-2xl">Multiplayer</h1>
+        <h1 className="titulo-de-tela">Multiplayer</h1>
         <div className="flex-1" />
         {sala && (
           <Button variant="ghost" aria-label="Baixar músicas" onClick={aoBuscarMusicas}>
@@ -40,8 +40,8 @@ export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVo
           </Button>
         )}
         {sala && (
-          <Button variant="ghost" onClick={() => sairDaSala()}>
-            <LogOut className="opacity-70" /> Sair da sala
+          <Button variant="ghost" aria-label="Sair da sala" onClick={() => sairDaSala()}>
+            <LogOut className="opacity-70" /> <span className="max-md:sr-only">Sair da sala</span>
           </Button>
         )}
       </header>
