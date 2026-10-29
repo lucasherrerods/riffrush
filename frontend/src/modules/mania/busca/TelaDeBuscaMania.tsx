@@ -64,7 +64,7 @@ export function TelaDeBuscaMania({ baixados, aoBaixar, buscar = buscarMapas, bai
     cn("rounded-md border px-3 py-1 text-sm transition-colors", ligado ? "border-primaria bg-primaria text-texto" : "border-borda bg-superficie-elevada text-texto-suave hover:text-texto");
 
   return (
-    <section aria-label="Busca de mapas" className="flex h-full flex-col gap-4 p-6">
+    <section aria-label="Busca de mapas" className="respiro-de-tela flex h-full flex-col">
       <Input type="search" placeholder="Música, artista ou mapper" aria-label="Buscar mapas" value={texto} onChange={(e) => setTexto(e.target.value)} />
       <div className="flex flex-wrap gap-6">
         <div role="radiogroup" aria-label="Status" className="flex flex-wrap gap-2">

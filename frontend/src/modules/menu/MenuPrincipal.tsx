@@ -72,7 +72,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
   });
 
   return (
-    <div className="relative flex h-full flex-col items-center gap-6 overflow-y-auto py-6 max-md:gap-12">
+    <div className="rolagem-de-toque relative flex h-full flex-col items-center gap-6 py-6 max-md:px-4">
       <motion.div
         initial={{ y: -40, opacity: 0, scale: 0.8 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -84,7 +84,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
         {alavanca}
       </motion.div>
 
-      <nav className="mb-auto flex w-56 flex-col gap-1 max-md:w-[85vw] max-md:gap-2">
+      <nav className="mb-auto flex w-56 flex-col gap-1 max-md:w-full max-md:max-w-sm max-md:gap-2">
         {itens.map((item, i) => {
           const ativo = i === selecionado;
           const Icone = item.icone;
@@ -101,11 +101,11 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
               }}
               onClick={() => escolher(item)}
               className={cn(
-                "chapa flex items-center gap-3 px-3 py-1 text-left font-titulo text-lg max-md:px-6 max-md:py-3 max-md:text-3xl tracking-wide uppercase transition-colors",
+                "chapa flex items-center gap-3 px-3 py-1 text-left font-titulo text-lg max-md:px-4 max-md:py-2 max-md:text-xl tracking-wide uppercase transition-colors",
                 ativo ? "gasto border-primaria bg-primaria text-texto" : "border-borda bg-superficie text-texto-suave",
               )}
             >
-              <Icone className="size-3.5 opacity-70 max-md:size-6" />
+              <Icone className="size-3.5 opacity-70 max-md:size-5" />
               {item.rotulo}
             </motion.button>
           );
@@ -118,7 +118,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
         </aside>
       )}
 
-      <footer className="absolute right-4 bottom-4 flex items-center gap-3 text-xs [&_svg]:size-4 text-texto-suave">
+      <footer className="flex flex-wrap items-center justify-center gap-3 text-xs [&_svg]:size-4 text-texto-suave md:absolute md:right-4 md:bottom-4">
         {(
           [
             ["privacidade", "Política de Privacidade"],

@@ -392,3 +392,51 @@ describe("TelaDeSelecao removendo músicas", () => {
     expect(aoSelecionar).not.toHaveBeenCalled();
   });
 });
+
+describe("no celular", () => {
+  beforeEach(() => Object.defineProperty(window, "innerWidth", { value: 375, configurable: true }));
+  afterEach(() => Object.defineProperty(window, "innerWidth", { value: 1024, configurable: true }));
+
+  const acoes = () => ({ aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoInstrumento: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn(), aoVelocidadeDaMusica: vi.fn() });
+
+  it("troca as abas por botões que abrem Detalhes e Ranking em modais", async () => {
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} velocidadeDaMusica={1} ranking={<p>top da música</p>} {...acoes()} />);
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(screen.queryByText("top da música")).not.toBeInTheDocument();
+    const usuario = userEvent.setup();
+
+    await usuario.click(screen.getByRole("button", { name: /Ranking/ }));
+    expect(within(screen.getByRole("dialog")).getByText("top da música")).toBeInTheDocument();
+    await usuario.keyboard("{Escape}");
+
+    await usuario.click(screen.getByRole("button", { name: /Detalhes/ }));
+    expect(within(screen.getByRole("dialog")).getByText("Médio")).toBeInTheDocument();
+  });
+
+  it("Esc fecha o modal sem voltar ao menu", async () => {
+    const a = acoes();
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} velocidadeDaMusica={1} ranking={<p>top da música</p>} {...a} />);
+    const usuario = userEvent.setup();
+    await usuario.click(screen.getByRole("button", { name: /Ranking/ }));
+    await usuario.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(a.aoVoltar).not.toHaveBeenCalled();
+  });
+
+  it("deixa o TOCAR fixo no rodapé, depois da lista", async () => {
+    const a = acoes();
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} velocidadeDaMusica={1} {...a} />);
+    const rodape = screen.getByRole("contentinfo");
+    await userEvent.setup().click(within(rodape).getByRole("button", { name: /TOCAR/ }));
+    expect(a.aoJogar).toHaveBeenCalled();
+  });
+
+  it("arrastar o dedo na lista troca a música", () => {
+    const a = acoes();
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} velocidadeDaMusica={1} {...a} />);
+    const lista = screen.getByRole("list", { name: "Músicas" });
+    fireEvent.touchStart(lista, { touches: [{ clientY: 300 }] });
+    fireEvent.touchMove(lista, { touches: [{ clientY: 200 }] });
+    expect(a.aoSelecionar).toHaveBeenCalledWith(1);
+  });
+});

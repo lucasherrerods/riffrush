@@ -41,12 +41,12 @@ export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar =
   const { estado, tentarDeNovo } = useCarregamento(carregar);
 
   return (
-    <div className="flex h-full flex-col gap-4 p-6">
-      <header className="flex items-center gap-4">
+    <div className="respiro-de-tela flex h-full flex-col">
+      <header className="flex items-center gap-4 max-md:gap-2">
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
           <ArrowLeft />
         </Button>
-        <h1 className="text-4xl leading-[1.1] font-black tracking-[-0.02em]">Perfil</h1>
+        <h1 className="titulo-de-tela">Perfil</h1>
       </header>
 
       <div className="sem-barra-de-rolagem mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-4 overflow-y-auto">

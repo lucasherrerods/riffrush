@@ -67,12 +67,12 @@ export function TelaDePersonagem({ personagem, aoSalvar, aoVoltar, nomeDaConta }
   });
 
   return (
-    <div className="flex h-full flex-col gap-6 p-8 max-md:p-4">
-      <header className="flex items-center gap-4">
+    <div className="respiro-de-tela flex h-full flex-col max-md:rolagem-de-toque">
+      <header className="flex flex-wrap items-center gap-4 max-md:gap-2">
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
           <ArrowLeft />
         </Button>
-        <h1 className="text-4xl leading-[1.1]">Seu personagem</h1>
+        <h1 className="titulo-de-tela">Seu personagem</h1>
         <div className="flex-1" />
         <Button variant="outline" onClick={() => setRascunho(personagemAleatorio(rascunho.nome))}>
           <Dices className="opacity-70" /> Aleatório
@@ -82,14 +82,14 @@ export function TelaDePersonagem({ personagem, aoSalvar, aoVoltar, nomeDaConta }
         </Button>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1">
-        <section className="col-span-5 flex min-h-0 flex-col items-center justify-center gap-2 placa p-6">
-          <Avatar personagem={rascunho} tocando pulso={pulso} className="h-[min(60vh,480px)] w-auto" />
-          <p className="font-titulo text-3xl uppercase">{nomeNaTela || "Sem nome"}</p>
+      <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:flex-none max-md:grid-cols-1 max-md:gap-2">
+        <section className="col-span-5 flex min-h-0 flex-col items-center justify-center gap-2 placa p-6 max-md:p-3">
+          <Avatar personagem={rascunho} tocando pulso={pulso} className="h-[min(60vh,480px)] w-auto max-md:h-[36vh]" />
+          <p className="font-titulo text-3xl uppercase max-md:text-2xl">{nomeNaTela || "Sem nome"}</p>
           <p className="text-base text-texto-suave">{INSTRUMENTOS.find((i) => i.id === rascunho.instrumento)?.rotulo}</p>
         </section>
 
-        <section className="col-span-7 flex min-h-0 flex-col gap-6 placa p-6">
+        <section className="col-span-7 flex min-h-0 flex-col gap-6 placa p-6 max-md:gap-4 max-md:p-3">
           <div>
             <Label htmlFor="nome-do-personagem" className="mb-2 text-base font-semibold text-texto-suave">
               Nome
@@ -104,7 +104,7 @@ export function TelaDePersonagem({ personagem, aoSalvar, aoVoltar, nomeDaConta }
           </div>
 
           <Tabs defaultValue="corpo" className="flex min-h-0 flex-1 flex-col">
-            <TabsList className="w-full">
+            <TabsList className="abas-rolaveis w-full">
               {ABAS.map(({ id, rotulo, icone: Icone }) => (
                 <TabsTrigger key={id} value={id}>
                   <Icone className="opacity-70" /> {rotulo}
@@ -112,7 +112,7 @@ export function TelaDePersonagem({ personagem, aoSalvar, aoVoltar, nomeDaConta }
               ))}
             </TabsList>
 
-            <div className="min-h-0 flex-1 pt-4">
+            <div className="min-h-0 flex-1 pt-4 md:rolagem-de-toque">
               <TabsContent value="corpo" className="flex flex-col gap-6">
                 {BASES.length > 1 && (
                   <GrupoDeOpcoes titulo="Modelo" opcoes={BASES} valor={rascunho.base} aoEscolher={(base) => mudar({ base })} />

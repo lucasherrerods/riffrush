@@ -111,10 +111,10 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
           <ArrowLeft />
         </Button>
-        <h1 className="text-4xl leading-[1.1] text-destaque max-md:text-2xl">Buscar músicas</h1>
+        <h1 className="titulo-de-tela text-destaque">Buscar músicas</h1>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 p-8 max-md:p-4">
+      <div className="respiro-de-tela flex min-h-0 flex-1 flex-col">
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 opacity-70" aria-hidden />
           <Input
@@ -123,23 +123,38 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
             placeholder={filtros.genero === "todos" ? "Nome da música, artista, álbum ou charter" : "Nome da música"}
             value={texto}
             onChange={(evento) => setTexto(evento.target.value)}
-            className="h-12 pl-12 text-base md:text-base"
+            className="h-12 pl-12 text-base md:text-base max-md:h-10"
             autoFocus
           />
         </div>
-        <div className="flex flex-wrap gap-8 max-md:gap-4">
+        <div className="flex flex-wrap gap-8 max-md:grid max-md:grid-cols-3 max-md:gap-2">
           <CampoDeSelecao titulo="Instrumento" opcoes={OPCOES_DE_INSTRUMENTO} valor={filtros.instrumento} aoEscolher={(instrumento) => mudarFiltros({ instrumento })} />
           <CampoDeSelecao titulo="Dificuldade" opcoes={OPCOES_DE_DIFICULDADE} valor={filtros.dificuldade} aoEscolher={(dificuldade) => mudarFiltros({ dificuldade })} />
           <CampoDeSelecao titulo="Gênero" opcoes={OPCOES_DE_GENERO} valor={filtros.genero} aoEscolher={(genero) => mudarFiltros({ genero })} />
           {aoBaixar && (
-            <label className="flex items-center gap-2 self-end py-2 text-base text-texto-suave">
+            <label className="flex items-center gap-2 self-end py-2 text-base text-texto-suave max-md:col-span-3 max-md:py-0 max-md:text-sm">
               <Switch aria-label="Baixar com vídeo de fundo" checked={comVideo} onCheckedChange={setComVideo} />
               Baixar com vídeo de fundo
             </label>
           )}
         </div>
 
-        <section aria-label="Resultados" aria-busy={estado.tipo === "carregando"} className="min-h-0 flex-1 overflow-y-auto">
+        <nav aria-label="Paginação" className="chapa flex items-center justify-between gap-2 bg-superficie px-3 py-1 text-base text-texto-suave max-md:text-sm">
+          <span className="truncate">Resultados do Chorus Encore (enchor.us).</span>
+          <div className="flex shrink-0 items-center gap-1">
+            <Button variant="ghost" size="icon" aria-label="Página anterior" disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)}>
+              <ChevronLeft />
+            </Button>
+            <span>
+              Página {pagina} de {totalDePaginas}
+            </span>
+            <Button variant="ghost" size="icon" aria-label="Próxima página" disabled={pagina >= totalDePaginas} onClick={() => setPagina((p) => p + 1)}>
+              <ChevronRight />
+            </Button>
+          </div>
+        </nav>
+
+        <section aria-label="Resultados" aria-busy={estado.tipo === "carregando"} className="rolagem-de-toque min-h-0 flex-1">
           {estado.tipo === "carregando" && (
             <p className="flex items-center gap-2 py-8 text-base text-texto-suave">
               <LoaderCircle className="size-4 animate-spin opacity-70" aria-hidden />
@@ -174,20 +189,6 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
           )}
         </section>
 
-        <footer className="flex items-center justify-between gap-4 text-base text-texto-suave">
-          <span>Resultados do Chorus Encore (enchor.us).</span>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" aria-label="Página anterior" disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)}>
-              <ChevronLeft />
-            </Button>
-            <span>
-              Página {pagina} de {totalDePaginas}
-            </span>
-            <Button variant="ghost" size="icon" aria-label="Próxima página" disabled={pagina >= totalDePaginas} onClick={() => setPagina((p) => p + 1)}>
-              <ChevronRight />
-            </Button>
-          </div>
-        </footer>
       </div>
       {pergunta && <ConfirmacaoDeTamanho titulo={pergunta.titulo} bytes={pergunta.bytes} aoResponder={responder} />}
     </div>

@@ -96,20 +96,20 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
   );
 
   return (
-    <div className="flex h-full flex-col gap-4 p-6">
-      <header className="flex items-center gap-4">
+    <div className="respiro-de-tela flex h-full flex-col">
+      <header className="flex items-center gap-4 max-md:gap-2">
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
           <ArrowLeft />
         </Button>
-        <h1 className="text-4xl leading-[1.1] font-black tracking-[-0.02em]">Configurações</h1>
+        <h1 className="titulo-de-tela">Configurações</h1>
         <div className="flex-1" />
-        <Button variant="ghost" onClick={() => aoMudar(CONFIGURACOES_PADRAO)}>
-          <RotateCcw className="opacity-70" /> Restaurar padrão
+        <Button variant="ghost" aria-label="Restaurar padrão" onClick={() => aoMudar(CONFIGURACOES_PADRAO)}>
+          <RotateCcw className="opacity-70" /> <span className="max-md:sr-only">Restaurar padrão</span>
         </Button>
       </header>
 
       <Tabs defaultValue="controles" className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
-        <TabsList className="w-full">
+        <TabsList className="abas-rolaveis w-full">
           <TabsTrigger value="controles">
             <Keyboard className="opacity-70" /> Controles
           </TabsTrigger>

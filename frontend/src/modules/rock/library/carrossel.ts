@@ -31,3 +31,9 @@ export function passosDaRoda(acumulado: number) {
   const passos = Math.trunc(acumulado / GIRO_POR_MUSICA);
   return { passos, resto: acumulado - passos * GIRO_POR_MUSICA };
 }
+
+/** Arraste do dedo (em px, para cima positivo) em músicas a andar: uma música por altura de música arrastada. */
+export function passosDoArraste(acumulado: number) {
+  const passos = Math.trunc(acumulado / ALTURA_DA_MUSICA);
+  return { passos, resto: acumulado - passos * ALTURA_DA_MUSICA };
+}

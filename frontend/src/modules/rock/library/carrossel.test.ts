@@ -1,4 +1,4 @@
-import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, RAIO_DA_CURVA, centroDoGrupoAberto, passosDaRoda, posicoesNoCarrossel, recuoNaCurva } from "./carrossel";
+import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, RAIO_DA_CURVA, centroDoGrupoAberto, passosDaRoda, passosDoArraste, posicoesNoCarrossel, recuoNaCurva } from "./carrossel";
 
 describe("posicoesNoCarrossel", () => {
   it("põe a selecionada no zero, as de cima antes e as de baixo depois", () => {
@@ -48,5 +48,15 @@ describe("passosDaRoda", () => {
 
   it("um toque leve no touchpad não anda nada ainda", () => {
     expect(passosDaRoda(40)).toEqual({ passos: 0, resto: 40 });
+  });
+});
+
+describe("passosDoArraste", () => {
+  it("arrastar o dedo para cima a altura de uma música anda uma para frente", () => {
+    expect(passosDoArraste(ALTURA_DA_MUSICA)).toEqual({ passos: 1, resto: 0 });
+  });
+
+  it("arrastar para baixo volta, e o que não completa uma música fica guardado", () => {
+    expect(passosDoArraste(-ALTURA_DA_MUSICA * 2 - 10)).toEqual({ passos: -2, resto: -10 });
   });
 });

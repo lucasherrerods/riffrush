@@ -5,7 +5,7 @@ import { recordeDe, type Recordes } from "@/modules/rock/results";
 import { idDoRanking, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { cn } from "@/shared/lib/utils";
-import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, centroDoGrupoAberto, passosDaRoda, posicoesNoCarrossel, recuoNaCurva } from "../carrossel";
+import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, centroDoGrupoAberto, passosDaRoda, passosDoArraste, posicoesNoCarrossel, recuoNaCurva } from "../carrossel";
 import { Capa } from "./Capa";
 
 interface Props {
@@ -47,6 +47,8 @@ const formatar = (n: number) => n.toLocaleString("pt-BR");
 /** Lista de músicas em roda, como no osu!lazer: a selecionada fica no meio, com as dificuldades abertas embaixo. */
 export function Carrossel({ musicas, indice, dificuldade, instrumento, dificuldades, recordes, favoritas, aoEscolherMusica, aoEscolherDificuldade, aoJogar, aoGirar, menuDaSelecionada, className }: Props) {
   const giro = useRef(0);
+  // No celular a roda gira arrastando o dedo: guarda a última altura do toque e o que sobrou do arraste.
+  const toque = useRef<{ y: number; resto: number } | null>(null);
   const posicoes = posicoesNoCarrossel(musicas.length, indice, dificuldades.length);
   const centro = centroDoGrupoAberto(dificuldades.length);
 
@@ -58,7 +60,20 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
         giro.current = resto;
         if (passos) aoGirar(passos);
       }}
-      className={cn("relative col-span-7 min-h-0 min-w-0 overflow-hidden max-md:col-span-1 max-md:min-h-80", className)}
+      onTouchStart={(evento) => {
+        toque.current = { y: evento.touches[0].clientY, resto: 0 };
+      }}
+      onTouchMove={(evento) => {
+        if (!toque.current) return;
+        const y = evento.touches[0].clientY;
+        const { passos, resto } = passosDoArraste(toque.current.resto + toque.current.y - y);
+        toque.current = { y, resto };
+        if (passos) aoGirar(passos);
+      }}
+      onTouchEnd={() => {
+        toque.current = null;
+      }}
+      className={cn("relative col-span-7 min-h-0 min-w-0 touch-none overflow-hidden max-md:col-span-1 max-md:min-h-40", className)}
     >
       {musicas.map((m, i) => {
         const posicao = posicoes[i];

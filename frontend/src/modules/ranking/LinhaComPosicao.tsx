@@ -26,23 +26,23 @@ interface Props {
 export function LinhaComPosicao({ posicao, nome, avatar, semFoto: SemFoto = UserRound, minha, detalhe, valor, aoClicar, rotuloDoClique = `Ver a partida de ${nome}`, selo }: Props) {
   const conteudo = (
     <>
-      <span className={cn("w-12 shrink-0 text-center font-titulo text-xl", posicao <= 3 ? "text-ouro" : "text-texto-suave")}>#{posicao}</span>
+      <span className={cn("w-12 shrink-0 text-center font-titulo text-xl max-md:w-8 max-md:text-lg", posicao <= 3 ? "text-ouro" : "text-texto-suave")}>#{posicao}</span>
       {selo}
       {avatar ? (
         <img src={avatar} alt="" referrerPolicy="no-referrer" className="size-8 shrink-0 rounded-sm" />
       ) : (
         avatar === null && <SemFoto className="size-8 shrink-0 text-texto-suave opacity-70" aria-hidden />
       )}
-      <span className="flex min-w-0 flex-1 items-baseline gap-2">
-        <span className="truncate text-base font-bold">{nome}</span>
-        <span className="shrink-0 text-base text-texto-suave">{detalhe}</span>
+      <span className="flex min-w-0 flex-1 items-baseline gap-2 max-md:flex-col max-md:gap-0">
+        <span className="max-w-full truncate text-base font-bold max-md:text-sm">{nome}</span>
+        <span className="shrink-0 text-base text-texto-suave max-md:max-w-full max-md:truncate max-md:text-xs">{detalhe}</span>
       </span>
       {posicao === 1 && <Trophy className="size-4 shrink-0 text-ouro opacity-70" aria-label="Primeiro lugar" />}
-      <span className="shrink-0 font-mono text-xl font-black tabular-nums">{valor}</span>
+      <span className="shrink-0 font-mono text-xl font-black tabular-nums max-md:text-sm">{valor}</span>
     </>
   );
   // Compacta: a 720p cabem várias linhas no espaço que sobra ao lado da roda.
-  const classe = cn("chapa flex items-center gap-2 px-2 py-1 pr-4", minha ? "border-primaria bg-superficie-elevada" : "border-borda bg-superficie");
+  const classe = cn("chapa flex items-center gap-2 px-2 py-1 pr-4 max-md:gap-1.5 max-md:pr-2", minha ? "border-primaria bg-superficie-elevada" : "border-borda bg-superficie");
   if (!aoClicar) {
     return <li className={classe}>{conteudo}</li>;
   }

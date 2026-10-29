@@ -20,7 +20,7 @@ export function CampoDeSelecao<T extends string>({ titulo, opcoes, valor, aoEsco
   const id = useId();
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <label htmlFor={id} className="text-base font-semibold text-texto-suave">
+      <label htmlFor={id} className="text-base font-semibold text-texto-suave max-md:text-sm">
         {titulo}
       </label>
       <div className="relative">
@@ -28,7 +28,7 @@ export function CampoDeSelecao<T extends string>({ titulo, opcoes, valor, aoEsco
           id={id}
           value={valor}
           onChange={(evento) => aoEscolher(evento.target.value as T)}
-          className="h-10 w-full min-w-40 appearance-none rounded-md border border-borda bg-superficie pr-10 pl-3 text-base text-texto outline-none hover:bg-superficie-hover focus-visible:border-primaria"
+          className="h-10 w-full min-w-40 appearance-none max-md:min-w-0 max-md:pr-7 max-md:pl-2 rounded-md border border-borda bg-superficie pr-10 pl-3 text-base text-texto outline-none hover:bg-superficie-hover focus-visible:border-primaria"
         >
           {opcoes.map((opcao) => (
             <option key={opcao.id} value={opcao.id} className="bg-superficie text-texto">
@@ -36,7 +36,7 @@ export function CampoDeSelecao<T extends string>({ titulo, opcoes, valor, aoEsco
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-texto-suave opacity-70" aria-hidden />
+        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 max-md:right-2 text-texto-suave opacity-70" aria-hidden />
       </div>
     </div>
   );

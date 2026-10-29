@@ -8,11 +8,11 @@ export function LogoDoJogo({ modo, pequena = false }: { modo: string; pequena?: 
     <div className="flex flex-col items-center gap-2">
       <h1
         aria-label={`Riff Rush ${modo}`}
-        className={cn("titulo-do-jogo flex items-center gap-2 leading-none tracking-[0.01em]", pequena ? "text-3xl" : "text-5xl max-md:text-[14vw]")}
+        className={cn("titulo-do-jogo flex items-center gap-2 leading-none tracking-[0.01em]", pequena ? "text-3xl" : "text-5xl max-md:text-[12vw]")}
       >
         Riff
         <motion.span animate={{ rotate: [-6, 6, -6] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}>
-          <Zap className={cn("fill-primaria text-primaria", pequena ? "size-6" : "size-8 max-md:size-[10vw]")} />
+          <Zap className={cn("fill-primaria text-primaria", pequena ? "size-6" : "size-8 max-md:size-[8vw]")} />
         </motion.span>
         Rush
       </h1>
