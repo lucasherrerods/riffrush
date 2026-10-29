@@ -27,7 +27,7 @@ export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVo
   });
 
   return (
-    <div className="flex h-full flex-col gap-6 p-8 max-md:p-4">
+    <div className="respiro-de-tela flex h-full flex-col max-md:rolagem-de-toque">
       <header className="flex items-center gap-4 max-md:gap-2">
         <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
           <ArrowLeft />
@@ -40,8 +40,8 @@ export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVo
           </Button>
         )}
         {sala && (
-          <Button variant="ghost" onClick={() => sairDaSala()}>
-            <LogOut className="opacity-70" /> Sair da sala
+          <Button variant="ghost" aria-label="Sair da sala" onClick={() => sairDaSala()}>
+            <LogOut className="opacity-70" /> <span className="max-md:sr-only">Sair da sala</span>
           </Button>
         )}
       </header>

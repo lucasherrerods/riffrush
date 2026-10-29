@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Eye, Loader2, Pause, Skull, Zap } from "lucide-react";
+import { Eye, Loader2, Pause, Skull } from "lucide-react";
 import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
 import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "@/modules/rock/character";
 import { cenaDaPartida } from "./cena";
@@ -12,7 +12,6 @@ import { Button } from "@/shared/ui/button";
 import { criarBot, jogarSozinho } from "./bot";
 import { AvisoDeAcerto } from "./componentes/AvisoDeAcerto";
 import { MedidorDeRock } from "./componentes/MedidorDeRock";
-import { MedidorDeVida } from "./componentes/MedidorDeVida";
 import { MenuDePausa } from "./componentes/MenuDePausa";
 import { PainelDePontos } from "./componentes/PainelDePontos";
 import { BarraDeEstrelas } from "./componentes/BarraDeEstrelas";
@@ -660,10 +659,10 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
 
       {carregada && (
         <>
-          <header className="absolute top-0 right-0 left-0 flex items-center gap-4 px-6 pt-4">
+          <header className={cn("absolute top-0 right-0 left-0 flex items-center", estreita ? "gap-2 px-3 pt-1" : "gap-4 px-6 pt-4")}>
             <div className="min-w-0">
-              <h1 className="truncate text-lg font-bold">{musica.titulo}</h1>
-              <p className="truncate text-base text-texto-suave">
+              <h1 className={cn("truncate font-bold", estreita ? "text-sm leading-tight" : "text-lg")}>{musica.titulo}</h1>
+              <p className={cn("truncate text-texto-suave", estreita ? "text-xs" : "text-base")}>
                 {musica.artista} · {rotuloDaDificuldade}
                 {opcoes.bot && !replay && <span className="ml-2 rounded bg-estrela px-2 font-black text-fundo">BOT</span>}
                 {velocidade !== 1 && <span className="ml-2 rounded bg-superficie-elevada px-2 font-black">{rotuloDaVelocidade(velocidade)}</span>}
@@ -710,6 +709,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
                 onPointerUp={() => controles.current.largar(pista)}
                 onPointerCancel={() => controles.current.largar(pista)}
               >
+                {/* No celular, um quadrado marca onde o dedo pode tocar sem mirar no traste. */}
+                {estreita && <span data-parte="alvo-do-toque" aria-hidden className="mb-2 aspect-square w-3/4 rounded-md border border-texto/25 bg-texto/5" />}
                 {opcoes.rotulosDosTrastes && (
                   <span className="mb-2 rounded-sm bg-superficie-elevada px-2 font-titulo text-lg tracking-wide text-texto-suave">{opcoes.rotulosDosTrastes[pista]}</span>
                 )}
@@ -821,7 +822,8 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
     <>
       {/* Os números ficam colados à esquerda da pista; no celular a pista ocupa a largura toda e eles sobem para o topo. */}
       <div
-        className={cn("absolute", estreita ? "top-20 left-4" : "bottom-10 -translate-x-full")}
+        data-parte={estreita ? "hud-compacto" : undefined}
+        className={cn("absolute", estreita ? "top-12 right-3 left-3" : "bottom-10 -translate-x-full")}
         style={estreita ? undefined : { left: Math.max(layout.centro - layout.largura / 2 - 24, LARGURA_DO_PAINEL + MARGEM_DO_HUD) }}
       >
         {/* O aviso fica no painel, acima da precisão, e não em cima da pista: não tapa as notas que vêm chegando. */}
@@ -833,22 +835,22 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
           estrelaAtiva={hud.estrelaAtiva}
           compacto={estreita}
           aviso={<AvisoDeAcerto julgamento={hud.julgamento} />}
+          lateral={
+            estreita && (
+              <div className="flex items-start gap-2">
+                {avatarDoJogador("h-14 w-auto")}
+                {/* A caixa do medidor guarda a vida e, em cima, os quatro pinos do star power: tocar nela ativa o star power. */}
+                <button aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`} onClick={aoEstrela} className="flex w-32 flex-col items-center">
+                  <MedidorDeRock vida={hud.vida} estrela={hud.estrela} estrelaAtiva={hud.estrelaAtiva} fantasma={hud.fantasma} className="w-full" />
+                  <span className={cn("font-mono text-xs font-bold", hud.estrela >= 0.5 ? "text-estrela" : "text-texto-suave")}>{Math.round(hud.estrela * 100)}%</span>
+                </button>
+              </div>
+            )
+          }
         />
       </div>
 
-      {estreita ? (
-        <div data-parte="hud-compacto" className="absolute top-20 right-4 flex flex-col items-end gap-2">
-          {avatarDoJogador("h-20 w-auto")}
-          <MedidorDeVida vida={hud.vida} fantasma={hud.fantasma} horizontal className="h-2.5 w-24" />
-          <button
-            aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`}
-            onClick={aoEstrela}
-            className={cn("flex items-center gap-1 rounded-full px-3 py-1 text-base font-bold", hud.estrela >= 0.5 ? "bg-estrela text-fundo" : "bg-superficie-elevada text-texto-suave")}
-          >
-            <Zap className="size-4 opacity-70" aria-hidden /> {Math.round(hud.estrela * 100)}%
-          </button>
-        </div>
-      ) : (
+      {!estreita && (
         <div data-parte="hud-lateral" className="absolute bottom-10 flex flex-col items-center" style={{ left: Math.min(layout.centro + layout.largura / 2 + 24, layout.centro * 2 - LARGURA_DO_HUD_LATERAL - MARGEM_DO_HUD) }}>
           {/* Com o palco, o personagem já está em cena atrás da pista. */}
           {!comPalco && avatarDoJogador("mb-2 h-44 w-auto")}

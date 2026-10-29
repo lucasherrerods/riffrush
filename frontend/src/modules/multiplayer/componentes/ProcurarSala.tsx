@@ -56,11 +56,11 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
   };
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1">
-      <section className="col-span-4 flex flex-col items-center gap-4 placa p-6">
-        <Avatar personagem={personagem} className="h-48 w-auto" />
-        <p className="text-xl font-black">{personagem.nome}</p>
-        <Button variant="outline" onClick={aoEditarPersonagem}>
+    <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:flex max-md:flex-col max-md:gap-2">
+      <section className="col-span-4 flex flex-col items-center gap-4 placa p-6 max-md:order-2 max-md:gap-2 max-md:p-3">
+        <Avatar personagem={personagem} className="h-48 w-auto max-md:hidden" />
+        <p className="text-xl font-black max-md:hidden">{personagem.nome}</p>
+        <Button variant="outline" className="max-md:hidden" onClick={aoEditarPersonagem}>
           Editar personagem
         </Button>
         <div className="flex-1" />
@@ -105,10 +105,10 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
       </section>
 
       {!noCelular && (
-        <section className="col-span-8 flex min-h-0 flex-col gap-4 placa p-6">
+        <section className="col-span-8 flex min-h-0 flex-col gap-4 placa p-6 max-md:order-1 max-md:flex-none max-md:gap-2 max-md:p-3">
           <div className="flex items-center gap-4">
             <Wifi className="text-primaria opacity-70" aria-hidden />
-            <h2 className="text-xl font-bold">{online ? "Salas abertas" : "Salas na sua rede"}</h2>
+            <h2 className="text-xl font-bold max-md:text-base">{online ? "Salas abertas" : "Salas na sua rede"}</h2>
             <div className="flex-1" />
             <Button variant="ghost" onClick={() => void procurar()} disabled={procurando}>
               <RefreshCw className={procurando ? "animate-spin opacity-70" : "opacity-70"} /> Procurar
@@ -137,7 +137,7 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
               />
             ))}
           </ul>
-          <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1 max-md:gap-2">
             {online && (
               <form
                 className="flex items-end gap-2"
@@ -207,7 +207,7 @@ function ItemDeSala({ icone: Icone, nome, detalhe, jogadores, aoEntrar }: PropsD
       <button
         onClick={aoEntrar}
         disabled={cheia}
-        className="chapa flex w-full items-center gap-4 bg-superficie-elevada p-4 text-left transition-colors hover:border-primaria disabled:opacity-50 disabled:hover:border-borda"
+        className="chapa flex w-full items-center gap-4 bg-superficie-elevada p-4 text-left max-md:gap-2 max-md:p-2 transition-colors hover:border-primaria disabled:opacity-50 disabled:hover:border-borda"
       >
         <Icone className="text-ouro opacity-70" aria-hidden />
         <span className="flex-1">

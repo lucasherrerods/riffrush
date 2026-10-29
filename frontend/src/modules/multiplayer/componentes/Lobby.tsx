@@ -73,16 +73,16 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
   };
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1">
-      <div className="col-span-8 flex min-h-0 flex-col gap-4 max-md:col-span-1">
-        <ul className="grid grid-cols-4 gap-4 max-md:grid-cols-2">
+    <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1 max-md:gap-2">
+      <div className="col-span-8 flex min-h-0 flex-col gap-4 max-md:col-span-1 max-md:gap-2">
+        <ul className="grid grid-cols-4 gap-4 max-md:grid-cols-2 max-md:gap-2">
           {Array.from({ length: MAXIMO_DE_JOGADORES }, (_, i) => {
             const jogador = sala.jogadores[i];
             return (
               <li
                 key={jogador?.id ?? `vaga-${i}`}
                 className={cn(
-                  "chapa relative flex flex-col items-center p-4",
+                  "chapa relative flex flex-col items-center p-4 max-md:p-2",
                   jogador ? "border-borda bg-superficie" : "border-dashed border-borda bg-fundo",
                 )}
               >
@@ -96,7 +96,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
                             variant="ghost"
                             size="icon"
                             aria-label={`Passar a liderança para ${jogador.personagem.nome}`}
-                            className="size-12 text-ouro"
+                            className="size-12 text-ouro max-md:size-8"
                             onClick={() => setNovoLider({ id: jogador.id, nome: jogador.personagem.nome })}
                           >
                             <Crown className="size-8" />
@@ -106,14 +106,14 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
                           variant="ghost"
                           size="icon"
                           aria-label={`Expulsar ${jogador.personagem.nome}`}
-                          className="size-12 text-texto-suave hover:text-perigo"
+                          className="size-12 text-texto-suave hover:text-perigo max-md:size-8"
                           onClick={() => expulsar(jogador.id)}
                         >
                           <IconeDeChute className="size-8" />
                         </Button>
                       </div>
                     )}
-                    <Avatar personagem={jogador.personagem} className="h-24 w-auto" />
+                    <Avatar personagem={jogador.personagem} className="h-24 w-auto max-md:hidden" />
                     <p className="mt-2 truncate text-base font-bold">{jogador.personagem.nome}</p>
                     {jogador.personagem.nivel && <p className="font-titulo text-base leading-none text-destaque">Nv {jogador.personagem.nivel}</p>}
                     <div className="flex gap-1">
@@ -127,7 +127,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
                     </div>
                   </>
                 ) : (
-                  <div className="flex h-32 flex-col items-center justify-center gap-2 text-texto-suave">
+                  <div className="flex h-32 flex-col items-center justify-center gap-2 text-texto-suave max-md:h-16">
                     <Users className="opacity-50" aria-hidden />
                     <p className="text-base">Esperando...</p>
                   </div>
@@ -138,7 +138,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
         </ul>
 
         {/* Música à esquerda, dificuldade e largada à direita. A lista de músicas ocupa a altura livre e rola. */}
-        <section className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-6 placa p-6 max-md:grid-cols-1 max-md:grid-rows-none">
+        <section className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-6 placa p-6 max-md:grid-cols-1 max-md:grid-rows-none max-md:gap-3 max-md:p-3">
           <div className="flex min-h-0 min-w-0 flex-col gap-2">
             <p className="text-base font-semibold text-texto-suave">Música</p>
             {sala.souHost ? (
@@ -178,7 +178,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
                 </div>
               </>
             ) : (
-              <p className="text-2xl font-black">{tituloDaMusica}</p>
+              <p className="text-2xl font-black max-md:text-lg">{tituloDaMusica}</p>
             )}
           </div>
 
@@ -210,7 +210,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
 
             {sala.souHost ? (
               <div className="flex flex-col gap-2">
-                <Button size="lg" disabled={comecando || !musica || !todosProntos(sala)} className="h-14 text-lg font-black" onClick={() => void darLargada()}>
+                <Button size="lg" disabled={comecando || !musica || !todosProntos(sala)} className="h-14 text-lg font-black max-md:h-10 max-md:text-base" onClick={() => void darLargada()}>
                   {comecando ? <Loader2 className="animate-spin" /> : <Play className="fill-current opacity-70" />} Começar partida
                 </Button>
                 {!todosProntos(sala) && (
@@ -239,7 +239,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
             ) : (
               <Button
                 size="lg"
-                className="h-14 text-lg font-black"
+                className="h-14 text-lg font-black max-md:h-10 max-md:text-base"
                 onClick={() => {
                   tocarEfeito("selecionar", volumeDosEfeitos);
                   marcarPronto(true);
