@@ -28,10 +28,10 @@ const mesEAno = (data: string) => new Date(data).toLocaleDateString("pt-BR", { m
 
 function Numero({ rotulo, valor, detalhe }: { rotulo: string; valor: string; detalhe?: string }) {
   return (
-    <div className="chapa flex flex-col gap-1 bg-superficie p-4">
-      <span className="text-sm text-texto-suave">{rotulo}</span>
-      <span className="font-titulo text-4xl leading-none tracking-wide">{valor}</span>
-      {detalhe && <span className="text-sm text-texto-suave">{detalhe}</span>}
+    <div className="chapa flex flex-col gap-1 bg-superficie p-4 max-md:p-2.5">
+      <span className="text-sm text-texto-suave max-md:text-xs">{rotulo}</span>
+      <span className="font-titulo text-4xl leading-none tracking-wide max-md:text-2xl">{valor}</span>
+      {detalhe && <span className="text-sm text-texto-suave max-md:text-xs">{detalhe}</span>}
     </div>
   );
 }
@@ -49,7 +49,7 @@ export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar =
         <h1 className="titulo-de-tela">Perfil</h1>
       </header>
 
-      <div className="sem-barra-de-rolagem mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-4 overflow-y-auto">
+      <div className="sem-barra-de-rolagem rolagem-de-toque mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-4 max-md:gap-2">
         <ComCarregamento estado={estado} tentarDeNovo={tentarDeNovo} oQue="o perfil">
           {(perfil) => <Conteudo perfil={perfil} tituloDaMusica={tituloDaMusica} mod={mod} />}
         </ComCarregamento>
@@ -64,25 +64,25 @@ function Conteudo({ perfil, tituloDaMusica, mod }: { perfil: PerfilDaApi; titulo
 
   return (
     <>
-      <section className="placa flex items-center gap-6 p-6">
-        <FotoDaConta avatar={perfil.avatar} className="size-20" />
+      <section className="placa flex items-center gap-6 p-6 max-md:gap-3 max-md:p-3">
+        <FotoDaConta avatar={perfil.avatar} className="size-20 max-md:size-14" />
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <h2 className="truncate text-2xl leading-[1.1] font-bold">{perfil.nome}</h2>
+          <h2 className="truncate text-2xl leading-[1.1] font-bold max-md:text-lg">{perfil.nome}</h2>
           {mod && <SeloMod />}
-          <p className="truncate text-base text-texto-suave">
+          <p className="truncate text-base text-texto-suave max-md:text-xs">
             {perfil.email && <>{perfil.email} · </>}Jogando desde {mesEAno(perfil.criada_em)}
           </p>
-          <div className="flex items-center gap-4">
-            <span className="font-titulo text-3xl leading-none text-destaque">Nv {nivel}</span>
+          <div className="flex items-center gap-4 max-md:gap-2">
+            <span className="font-titulo text-3xl leading-none text-destaque max-md:text-xl">Nv {nivel}</span>
             <BarraDeProgresso fracao={xp_no_nivel / xp_para_o_proximo} rotulo={`XP do nível ${nivel}`} className="flex-1" />
-            <span className="text-sm whitespace-nowrap text-texto-suave tabular-nums">
+            <span className="text-sm whitespace-nowrap max-md:text-xs text-texto-suave tabular-nums">
               {formatar(xp_no_nivel)} / {formatar(xp_para_o_proximo)} XP
             </span>
           </div>
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <section className="grid grid-cols-2 gap-4 max-md:gap-2 md:grid-cols-4">
         <Numero rotulo="Partidas" valor={formatar(perfil.partidas)} detalhe={`${porcentagem(concluidas, 0)} concluídas`} />
         <Numero rotulo="Precisão" valor={porcentagem(perfil.precisao)} detalhe="de todas as notas" />
         <Numero rotulo="Melhor pontuação" valor={formatar(perfil.melhor_pontuacao)} />
@@ -92,10 +92,10 @@ function Conteudo({ perfil, tituloDaMusica, mod }: { perfil: PerfilDaApi; titulo
       {perfil.partidas === 0 ? (
         <p className="placa p-6 text-center text-base text-texto-suave">Nenhuma partida ainda. Jogue uma música para começar a encher o perfil.</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-12">
-          <div className="flex flex-col gap-4 md:col-span-5">
-            <section className="placa flex flex-col gap-4 p-6">
-              <h3 className="font-titulo text-2xl leading-none tracking-wide">Por dificuldade</h3>
+        <div className="grid gap-4 max-md:gap-2 md:grid-cols-12">
+          <div className="flex flex-col gap-4 max-md:gap-2 md:col-span-5">
+            <section className="placa flex flex-col gap-4 p-6 max-md:gap-3 max-md:p-3">
+              <h3 className="titulo-de-secao font-titulo tracking-wide">Por dificuldade</h3>
               {perfil.por_dificuldade.map((d) => (
                 <div key={d.dificuldade} className={cn("flex flex-col gap-2", d.partidas === 0 && "opacity-50")}>
                   <div className="flex items-baseline justify-between gap-2">
@@ -114,8 +114,8 @@ function Conteudo({ perfil, tituloDaMusica, mod }: { perfil: PerfilDaApi; titulo
             </section>
 
             {perfil.por_instrumento.length > 0 && (
-              <section className="placa flex flex-col gap-4 p-6">
-                <h3 className="font-titulo text-2xl leading-none tracking-wide">Por instrumento</h3>
+              <section className="placa flex flex-col gap-4 p-6 max-md:gap-3 max-md:p-3">
+                <h3 className="titulo-de-secao font-titulo tracking-wide">Por instrumento</h3>
                 {perfil.por_instrumento.map((i) => (
                   <div key={i.instrumento} className="flex flex-col gap-2">
                     <div className="flex items-baseline justify-between gap-2">
@@ -129,12 +129,12 @@ function Conteudo({ perfil, tituloDaMusica, mod }: { perfil: PerfilDaApi; titulo
             )}
 
             {perfil.mais_tocadas.length > 0 && (
-              <section className="placa flex flex-col gap-4 p-6">
-                <h3 className="font-titulo text-2xl leading-none tracking-wide">Mais tocadas</h3>
+              <section className="placa flex flex-col gap-4 p-6 max-md:gap-3 max-md:p-3">
+                <h3 className="titulo-de-secao font-titulo tracking-wide">Mais tocadas</h3>
                 <ol className="flex flex-col gap-2">
                   {perfil.mais_tocadas.map((m, posicao) => (
-                    <li key={m.musica_id} className="flex items-center gap-4">
-                      <span className="w-6 font-titulo text-2xl leading-none text-destaque">{posicao + 1}</span>
+                    <li key={m.musica_id} className="flex items-center gap-4 max-md:gap-2">
+                      <span className="w-6 font-titulo text-2xl leading-none text-destaque max-md:w-4 max-md:text-lg">{posicao + 1}</span>
                       <CapaPequena capa={m.capa} />
                       <span className="min-w-0 flex-1 truncate text-base font-bold">{nomeDaMusica(m, tituloDaMusica)}</span>
                       <span className="text-sm whitespace-nowrap text-texto-suave tabular-nums">{vezes(m.partidas)}</span>
@@ -145,10 +145,10 @@ function Conteudo({ perfil, tituloDaMusica, mod }: { perfil: PerfilDaApi; titulo
             )}
           </div>
 
-          <section className="placa flex flex-col gap-2 p-6 md:col-span-7">
-            <h3 className="mb-2 font-titulo text-2xl leading-none tracking-wide">Últimas partidas</h3>
+          <section className="placa flex flex-col gap-2 p-6 max-md:p-3 md:col-span-7">
+            <h3 className="mb-2 max-md:mb-1 titulo-de-secao font-titulo tracking-wide">Últimas partidas</h3>
             {perfil.recentes.map((p) => (
-              <div key={`${p.musica_id}-${p.jogada_em}`} className="chapa flex items-center gap-4 bg-superficie px-4 py-2">
+              <div key={`${p.musica_id}-${p.jogada_em}`} className="chapa flex items-center gap-4 bg-superficie px-4 py-2 max-md:gap-2 max-md:px-2">
                 <CapaPequena capa={p.capa} />
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-base font-bold">{nomeDaMusica(p, tituloDaMusica)}</span>
