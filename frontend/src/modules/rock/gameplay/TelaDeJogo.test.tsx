@@ -616,7 +616,8 @@ describe("TelaDeJogo no celular", () => {
   it("o star power vira um botão para tocar com o dedo", async () => {
     carregarCom([nota(5)]);
     abrir();
-    expect(await screen.findByRole("button", { name: /Ativar star power/ })).toHaveTextContent("0%");
+    expect(await screen.findByRole("button", { name: /Ativar star power/ })).not.toHaveTextContent("%");
+    expect(document.querySelector('[data-parte="seta-do-star-power"]')).toBeNull();
   });
 
   it("o personagem continua aparecendo", async () => {

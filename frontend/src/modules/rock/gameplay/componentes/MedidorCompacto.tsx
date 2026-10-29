@@ -9,7 +9,7 @@ interface Props {
 
 const PINOS = 4;
 
-/** Medidor do celular: quatro pinos do star power em cima e a vida numa barra de metal com a ponta em seta. */
+/** Medidor do celular: quatro pinos do star power em cima e a vida numa barra com as quinas cortadas. */
 export function MedidorCompacto({ vida, estrela, estrelaAtiva = false, className }: Props) {
   const apagada = `${Math.round((1 - vida) * 100)}%`;
   return (
@@ -24,16 +24,9 @@ export function MedidorCompacto({ vida, estrela, estrelaAtiva = false, className
           );
         })}
       </div>
-      {/* A moldura de metal tem a ponta em seta; o degradê fica parado e a parte apagada cobre o que falta. */}
-      <div
-        role="meter"
-        aria-label="Vida"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(vida * 100)}
-        className="bg-borda p-[2px] [clip-path:polygon(0_0,calc(100%-8px)_0,100%_50%,calc(100%-8px)_100%,0_100%)]"
-      >
-        <div className="relative h-2.5 overflow-hidden bg-fundo [clip-path:polygon(0_0,calc(100%-7px)_0,100%_50%,calc(100%-7px)_100%,0_100%)]">
+      {/* A moldura tem as quinas cortadas do botão principal; o degradê fica parado e a parte apagada cobre o que falta. */}
+      <div role="meter" aria-label="Vida" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(vida * 100)} className="bg-borda p-[2px] [clip-path:polygon(7px_0,100%_0,100%_calc(100%-7px),calc(100%-7px)_100%,0_100%,0_7px)]">
+        <div className="relative h-3.5 overflow-hidden bg-fundo [clip-path:polygon(6px_0,100%_0,100%_calc(100%-6px),calc(100%-6px)_100%,0_100%,0_6px)]">
           <div className="absolute inset-0 bg-[linear-gradient(90deg,var(--cor-perigo),var(--cor-destaque),var(--cor-ouro),var(--cor-sucesso))]" />
           <div className="absolute inset-y-0 right-0 bg-fundo transition-[width] duration-200" style={{ width: apagada }} />
         </div>

@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Eye, Loader2, Pause, Skull } from "lucide-react";
+import { ChevronsUp, Eye, Loader2, Pause, Skull } from "lucide-react";
 import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
 import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "@/modules/rock/character";
 import { cenaDaPartida } from "./cena";
 import { Palco, opacidadeDaPista, type EstadoDoPalco, type QualidadeDoPalco } from "@/modules/rock/stage";
 import { DIFICULDADES, INSTRUMENTOS, PISTA_ABERTA, carregarMusica, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada } from "@/modules/rock/songs";
-import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
+import { ehTelaEstreita, useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { criarBot, jogarSozinho } from "./bot";
 import { AvisoDeAcerto } from "./componentes/AvisoDeAcerto";
 import { MedidorDeRock } from "./componentes/MedidorDeRock";
 import { MedidorCompacto } from "./componentes/MedidorCompacto";
+import { ehArrasteParaCima } from "./gesto";
 import { MenuDePausa } from "./componentes/MenuDePausa";
 import { PainelDePontos } from "./componentes/PainelDePontos";
 import { BarraDeEstrelas } from "./componentes/BarraDeEstrelas";
@@ -162,6 +163,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     estrela: nada,
   });
   const estreita = useTelaEstreita();
+  const inicioDoArraste = useRef<{ x: number; y: number } | null>(null);
   const [comWebGL] = useState(suportaWebGL);
   const cena = cenaDaPartida({ modoCompetitivo: opcoes.modoCompetitivo, efeitos: opcoes.efeitos, personagem: opcoes.personagem, comWebGL, estreita });
   const comPalco = cena.palco;
@@ -372,7 +374,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         } else if (evento.tipo === "fraseCompleta") {
           tocarEfeito("estrela", opcoes.volumeDosEfeitos * 0.6);
         } else if (evento.tipo === "estrelaPronta") {
-          avisar(`Star Power pronto! [${opcoes.rotuloDaTeclaDaEstrela}]`, true);
+          avisar(ehTelaEstreita() ? "Star power!" : `Star Power pronto! [${opcoes.rotuloDaTeclaDaEstrela}]`, true);
         } else if (evento.tipo === "estrelaAtivada") {
           estrelaDesde = tempo;
           reagir("nitro");
@@ -638,7 +640,18 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
 
 
   return (
-    <div className="relative h-full w-full touch-none overflow-hidden select-none">
+    <div
+      className="relative h-full w-full touch-none overflow-hidden select-none"
+      // No celular, arrastar o dedo para cima em qualquer lugar solta o star power.
+      onPointerDown={(e) => {
+        if (estreita) inicioDoArraste.current = { x: e.clientX, y: e.clientY };
+      }}
+      onPointerUp={(e) => {
+        const inicio = inicioDoArraste.current;
+        inicioDoArraste.current = null;
+        if (inicio && ehArrasteParaCima(inicio, { x: e.clientX, y: e.clientY })) controles.current.estrela();
+      }}
+    >
       {comPalco && carregada && <Palco lerEstado={() => estadoDoPalco.current} comPersonagem={cena.personagem} qualidade={opcoes.qualidadeDoPalco} />}
       <canvas ref={canvas} className="absolute inset-0 h-full w-full" />
       {/* Vinheta: as bordas escurecem e a luz fica no braço, como num palco. */}
@@ -857,7 +870,10 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
                 {/* Os pinos do star power e a barra de vida: tocar neles ativa o star power. */}
                 <button aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`} onClick={aoEstrela} className="-mr-2 flex w-32 flex-col items-center">
                   <MedidorCompacto vida={hud.vida} estrela={hud.estrela} estrelaAtiva={hud.estrelaAtiva} className="w-full" />
-                  <span className={cn("font-mono text-xs font-bold", hud.estrela >= 0.5 ? "text-estrela" : "text-texto-suave")}>{Math.round(hud.estrela * 100)}%</span>
+                  {/* Com o star power pronto, a seta lembra que arrastar para cima o solta. */}
+                  {hud.estrela >= 0.5 && !hud.estrelaAtiva && (
+                    <ChevronsUp data-parte="seta-do-star-power" aria-label="Arraste para cima para soltar o star power" className="mt-6 size-10 animate-bounce text-estrela" />
+                  )}
                 </button>
               </div>
             )
