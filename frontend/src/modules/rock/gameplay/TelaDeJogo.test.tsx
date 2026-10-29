@@ -632,10 +632,11 @@ describe("TelaDeJogo no celular", () => {
     expect(document.querySelector('[data-parte="seta-do-star-power"]')).toBeNull();
   });
 
-  it("o personagem continua aparecendo", async () => {
+  it("o personagem não aparece", async () => {
     carregarCom([nota(5)]);
     abrir();
-    expect(await screen.findByRole("img", { name: "Personagem Rockstar" })).toBeInTheDocument();
+    await partidaPronta();
+    expect(screen.queryByRole("img", { name: "Personagem Rockstar" })).toBeNull();
   });
 });
 

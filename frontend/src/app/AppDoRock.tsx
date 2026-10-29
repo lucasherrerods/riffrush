@@ -16,7 +16,7 @@ import { JanelaDoChart, TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarU
 import { TelaDeResultado, anotarRecorde, definirRecordes, recordeDe, useRecordes } from "@/modules/rock/results";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
-import { PainelDeRanking, PlacarAoVivo, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
+import { PainelDeRanking, PlacarAoVivo, buscarMaisJogadaAleatoria, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -461,6 +461,11 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                 aoJogar={jogar}
                 aoVoltar={() => setTela("menu")}
                 aoImportar={(arquivos) => void importar(arquivos)}
+                sortearMusica={contasLigadas ? buscarMaisJogadaAleatoria : undefined}
+                aoBuscarMusicas={() => {
+                  setVoltarDaBuscaPara("selecao");
+                  setTela("buscaDeMusicas");
+                }}
                 aoRemover={(removida) => {
                   void biblioteca.remover(removida);
                   setMusicas((atuais) => {
@@ -586,6 +591,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                 personagem={personagemEmJogo}
                 musicas={musicas}
                 volumeDosEfeitos={configuracoes.volumeDosEfeitos}
+                sortearMusica={contasLigadas ? buscarMaisJogadaAleatoria : undefined}
                 aoVoltar={() => setTela("menu")}
                 aoEditarPersonagem={() => {
                   setVoltarDoPersonagemPara("multijogador");

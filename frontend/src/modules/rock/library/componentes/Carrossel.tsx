@@ -44,6 +44,7 @@ const COR_DA_DIFICULDADE: Record<Dificuldade, string> = {
 };
 
 const ESCALA_NO_CELULAR = 0.7;
+const AFASTAMENTO_NO_CELULAR = 1.12;
 /** Quantos px o dedo anda antes de o toque deixar de ser um clique. */
 const LIMITE_DO_TOQUE = 8;
 /** Toque mais longo que isso (ms) é segurar, não clicar. */
@@ -62,7 +63,10 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
   const posicoes = posicoesNoCarrossel(musicas.length, indice, dificuldades.length);
   const centro = centroDoGrupoAberto(dificuldades.length);
   // No celular a roda inteira encolhe, para caberem mais músicas e dar para ver que a lista continua.
-  const escala = useTelaEstreita() ? ESCALA_NO_CELULAR : 1;
+  const estreita = useTelaEstreita();
+  const escala = estreita ? ESCALA_NO_CELULAR : 1;
+  // No toque as músicas ficam um pouco mais afastadas, sem crescer, para o dedo não acertar a vizinha.
+  const passo = escala * (estreita ? AFASTAMENTO_NO_CELULAR : 1);
 
   return (
     <ul
@@ -111,7 +115,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
             key={m.id}
             data-indice={i}
             initial={false}
-            animate={{ y: (posicao - centro) * escala, x: x * escala }}
+            animate={{ y: (posicao - centro) * passo, x: x * escala }}
             transition={MOLA}
             className="absolute top-1/2 right-0 left-8 max-md:left-4"
           >
