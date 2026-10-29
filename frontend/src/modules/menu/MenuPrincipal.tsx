@@ -51,8 +51,8 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
     ? [{ rotulo: "Entrar na sala", icone: Users, acao: aoMultijogador }, { rotulo: "Jogar sozinho", icone: Play, acao: aoJogar }, buscar, ...comuns]
     : [
         { rotulo: "Jogar", icone: Play, acao: aoJogar },
-        buscar,
         { rotulo: "Multiplayer", icone: Users, acao: aoMultijogador },
+        buscar,
         ...comuns,
       ];
 

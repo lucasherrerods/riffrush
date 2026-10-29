@@ -27,7 +27,7 @@ describe("MenuPrincipal", () => {
   it("mostra o nome do jogo e as opções", () => {
     abrir();
     expect(screen.getByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Buscar músicas", "Multiplayer", "Leaderboard", "Personagem", "Configurações"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Multiplayer", "Buscar músicas", "Leaderboard", "Personagem", "Configurações"]);
   });
 
   it("Enter abre a opção selecionada, que começa em Jogar", async () => {
@@ -45,7 +45,7 @@ describe("MenuPrincipal", () => {
   it("marca a opção selecionada para leitores de tela", async () => {
     const { usuario } = abrir();
     await usuario.keyboard("{ArrowDown}");
-    expect(screen.getByRole("button", { name: "Buscar músicas" })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByRole("button", { name: "Multiplayer" })).toHaveAttribute("aria-current", "true");
   });
 
   it("Multiplayer abre a tela da sala", async () => {
