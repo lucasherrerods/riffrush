@@ -40,16 +40,22 @@ describe("resolverMusica", () => {
     expect(musica.arquivo?.name).toBe("hit.wav");
   });
 
+  it("quem baixa do host a música do Encore fica com o md5, para a partida valer XP", async () => {
+    const baixar = vi.fn(async () => new Response(new Blob(["abc"], { type: "audio/wav" })));
+    const musica = await resolverMusica(paraRede({ ...importada, id: "arquivo:encore.sng:5", md5DoEncore: "abc123" }), [], "http://h", baixar);
+    expect(musica.md5DoEncore).toBe("abc123");
+  });
+
   it("avisa quando o host ainda não compartilhou a música", async () => {
     const baixar = vi.fn(async () => new Response("", { status: 404 }));
     await expect(resolverMusica({ ...paraRede(importada), id: "outra" } as never, [], "http://h", baixar)).rejects.toThrow(/ainda não compartilhou/);
   });
 
   describe("online", () => {
-    const doEncore: Musica = { ...importada, id: "arquivo:Banda - Hit.sng:99", arquivo: new File(["x"], "Banda - Hit.sng"), urlDoEncore: "https://files.enchor.us/abc.sng" };
+    const doEncore: Musica = { ...importada, id: "arquivo:Banda - Hit.sng:99", arquivo: new File(["x"], "Banda - Hit.sng"), urlDoEncore: "https://files.enchor.us/abc.sng", md5DoEncore: "abc123" };
 
     it("a música do Encore vai pela URL, para cada um baixar direto", () => {
-      expect(paraRede(doEncore, { online: true })).toEqual({ tipo: "encore", id: doEncore.id, titulo: "Hit", artista: "Banda", nomeDoArquivo: "Banda - Hit.sng", url: "https://files.enchor.us/abc.sng" });
+      expect(paraRede(doEncore, { online: true })).toEqual({ tipo: "encore", id: doEncore.id, titulo: "Hit", artista: "Banda", nomeDoArquivo: "Banda - Hit.sng", url: "https://files.enchor.us/abc.sng", md5DoEncore: "abc123" });
     });
 
     it("na LAN a mesma música continua indo pelo host", () => {
@@ -60,7 +66,7 @@ describe("resolverMusica", () => {
       vi.mocked(baixarSng).mockResolvedValueOnce(new File(["x"], "Banda - Hit.wav", { type: "audio/wav" }));
       const musica = await resolverMusica(paraRede(doEncore, { online: true }), [], "");
       expect(baixarSng).toHaveBeenCalledWith("https://files.enchor.us/abc.sng", "Banda - Hit.sng", expect.anything());
-      expect(musica).toMatchObject({ id: doEncore.id, titulo: "Hit", urlDoEncore: "https://files.enchor.us/abc.sng" });
+      expect(musica).toMatchObject({ id: doEncore.id, titulo: "Hit", urlDoEncore: "https://files.enchor.us/abc.sng", md5DoEncore: "abc123" });
     });
 
     it("quem já baixou a mesma música usa a dela", async () => {

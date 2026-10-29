@@ -3,12 +3,14 @@ import { MUSICAS_EMBUTIDAS, importarArquivo, type Musica } from "@/modules/rock/
 import type { MusicaNaRede } from "./protocolo";
 
 export function paraRede(musica: Musica, { online = false } = {}): MusicaNaRede {
+  // Sem o md5 quem baixa fica com uma música importada, que não vale XP.
+  const md5 = musica.md5DoEncore ? { md5DoEncore: musica.md5DoEncore } : {};
   if (online && musica.urlDoEncore) {
     const nomeDoArquivo = musica.arquivo?.name ?? `${musica.artista} - ${musica.titulo}.sng`;
-    return { tipo: "encore", id: musica.id, titulo: musica.titulo, artista: musica.artista, nomeDoArquivo, url: musica.urlDoEncore };
+    return { tipo: "encore", id: musica.id, titulo: musica.titulo, artista: musica.artista, nomeDoArquivo, url: musica.urlDoEncore, ...md5 };
   }
   if (!musica.arquivo) return { tipo: "embutida", id: musica.id };
-  return { tipo: "importada", id: musica.id, titulo: musica.titulo, artista: musica.artista, nomeDoArquivo: musica.arquivo.name };
+  return { tipo: "importada", id: musica.id, titulo: musica.titulo, artista: musica.artista, nomeDoArquivo: musica.arquivo.name, ...md5 };
 }
 
 const baixadas = new Map<string, Musica>();
@@ -42,6 +44,7 @@ export async function resolverMusica(rede: MusicaNaRede, locais: Musica[], ender
     titulo: rede.titulo,
     artista: rede.artista,
     ...(rede.tipo === "encore" && { urlDoEncore: rede.url }),
+    ...(rede.md5DoEncore && { md5DoEncore: rede.md5DoEncore }),
   };
   baixadas.set(rede.id, musica);
   return musica;

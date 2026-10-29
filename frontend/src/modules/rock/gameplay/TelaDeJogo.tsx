@@ -396,11 +396,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
           reagir("derrota");
           terminar();
         } else if (evento.tipo === "toqueEmVazio") {
+          // Pune como erro, mas sem o "ERRO" na pista: não havia nota ali para errar.
           reagir("errou");
-          if (evento.pista !== null) {
-            falhas.push({ pista: evento.pista, tempo });
-            if (falhas.length > MAXIMO_DE_EXPLOSOES) falhas.shift();
-          }
           tocarEfeito("erro", opcoes.volumeDosEfeitos);
         } else if (evento.tipo === "virouFantasma") {
           tocarEfeito("erro", opcoes.volumeDosEfeitos);
