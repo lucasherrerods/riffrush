@@ -296,3 +296,28 @@ body {
     scrollbar-width: none;
   }
 }
+
+/* ---------- Textos da partida ---------- */
+
+/* Um tamanho só para o celular: o nome da música e todos os avisos que surgem durante a música mudam juntos aqui. */
+:root {
+  --texto-da-partida-no-celular: var(--text-sm);
+}
+
+/* Nome da música no topo da partida. */
+@utility texto-titulo-da-partida {
+  font-size: var(--text-lg);
+  line-height: 1.25;
+  @media (width < 48rem) {
+    font-size: var(--texto-da-partida-no-celular);
+  }
+}
+
+/* Avisos que aparecem jogando (star power, notas seguidas, acertos): grandes no desktop, do tamanho do nome da música no celular. */
+@utility texto-aviso-da-partida {
+  font-size: var(--text-3xl);
+  line-height: 1.1;
+  @media (width < 48rem) {
+    font-size: var(--texto-da-partida-no-celular);
+  }
+}

@@ -675,7 +675,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         <>
           <header className={cn("absolute top-0 right-0 left-0 flex items-center", estreita ? "gap-2 px-3 pt-1" : "gap-4 px-6 pt-4")}>
             <div className="min-w-0">
-              <h1 className={cn("truncate font-bold", estreita ? "text-sm leading-tight" : "text-lg")}>{musica.titulo}</h1>
+              <h1 className="texto-titulo-da-partida truncate font-bold">{musica.titulo}</h1>
               <p className={cn("truncate text-texto-suave", estreita ? "text-xs" : "text-base")}>
                 {musica.artista} · {rotuloDaDificuldade}
                 {opcoes.bot && !replay && <span className="ml-2 rounded bg-estrela px-2 font-black text-fundo">BOT</span>}
@@ -789,7 +789,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
                 exit={{ y: -16, opacity: 0 }}
                 transition={{ duration: 0.25 }}
                 onAnimationComplete={() => setTimeout(() => setAviso((a) => (a?.id === aviso.id ? null : a)), 1200)}
-                className={cn("pointer-events-none absolute top-24 left-1/2 -translate-x-1/2 text-3xl font-black", aviso.estrela ? "text-estrela" : "text-ouro")}
+                className={cn("pointer-events-none absolute top-24 left-1/2 -translate-x-1/2 texto-aviso-da-partida font-black", aviso.estrela ? "text-estrela" : "text-ouro")}
               >
                 {aviso.texto}
               </motion.p>

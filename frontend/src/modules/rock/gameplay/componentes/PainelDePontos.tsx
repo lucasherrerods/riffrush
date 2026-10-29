@@ -85,7 +85,7 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
   const acerto = (
     <div className="flex flex-col items-start">
       {/* Altura reservada: a linha não pula quando o aviso aparece e some. */}
-      <div className={compacto ? "h-5 text-base" : "h-7 text-2xl"}>{aviso}</div>
+      <div className={cn("texto-aviso-da-partida", compacto ? "h-5" : "h-7")}>{aviso}</div>
       <p className={cn("font-bold tracking-[0.1em] text-texto-suave", compacto ? "text-xs" : "text-base")}>
         PRECISÃO{" "}
         <span aria-label="Precisão" className={cn("font-titulo tracking-normal tabular-nums", compacto ? "text-base" : "text-2xl", corDaPrecisao(precisao))}>
