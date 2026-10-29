@@ -30,6 +30,14 @@ describe("TelaDeBuscaDeMusicas", () => {
     expect(screen.getByText("2:05")).toBeInTheDocument();
   });
 
+  it("marca as músicas que têm vídeo de fundo", async () => {
+    abrir(vi.fn(async () => ({ total: 2, resultados: [resultado("Com clipe", { temVideo: true }), resultado("Sem clipe")] })));
+    const comClipe = (await screen.findByRole("heading", { name: "Com clipe" })).closest("li")!;
+    const semClipe = screen.getByRole("heading", { name: "Sem clipe" }).closest("li")!;
+    expect(within(comClipe).getByText("Vídeo")).toBeInTheDocument();
+    expect(within(semClipe).queryByText("Vídeo")).not.toBeInTheDocument();
+  });
+
   it("busca pelo texto digitado", async () => {
     const { buscar, usuario } = abrir();
     await usuario.type(screen.getByRole("searchbox", { name: "Buscar músicas" }), "sandman");
