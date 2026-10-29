@@ -154,7 +154,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
                     <ChevronDown />
                   </Button>
                 </div>
-                <div role="radiogroup" aria-label="Música" className="rolagem-de-toque flex min-h-48 flex-1 flex-col gap-1 max-md:h-48 max-md:min-h-0 max-md:flex-none">
+                <div role="radiogroup" aria-label="Música" className="rolagem-de-toque flex min-h-48 flex-1 flex-col gap-1 max-md:max-h-48 max-md:min-h-0 max-md:flex-none max-md:overscroll-auto">
                   {musicas.map((m) => {
                     const escolhida = m.id === sala.musica.id;
                     return (
