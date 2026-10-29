@@ -37,3 +37,8 @@ export function passosDoArraste(acumulado: number) {
   const passos = Math.trunc(acumulado / ALTURA_DA_MUSICA);
   return { passos, resto: acumulado - passos * ALTURA_DA_MUSICA };
 }
+
+/** Limita os passos para o arraste parar na primeira e na última música, sem dar a volta. */
+export function passosSemDarAVolta(indice: number, passos: number, quantidade: number) {
+  return Math.min(Math.max(indice + passos, 0), quantidade - 1) - indice;
+}

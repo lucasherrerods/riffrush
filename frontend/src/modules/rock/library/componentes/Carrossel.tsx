@@ -6,7 +6,7 @@ import { idDoRanking, type Dificuldade, type Instrumento, type Musica } from "@/
 import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
-import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, centroDoGrupoAberto, passosDaRoda, passosDoArraste, posicoesNoCarrossel, recuoNaCurva } from "../carrossel";
+import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, centroDoGrupoAberto, passosDaRoda, passosDoArraste, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "../carrossel";
 import { Capa } from "./Capa";
 
 interface Props {
@@ -84,7 +84,8 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
         if (Math.abs(y - inicioDoToque.current) > LIMITE_DO_TOQUE) arrastou.current = true;
         const { passos, resto } = passosDoArraste(toque.current.resto + toque.current.y - y);
         toque.current = { y, resto };
-        if (passos) aoGirar(passos);
+        const permitidos = passosSemDarAVolta(indice, passos, musicas.length);
+        if (permitidos) aoGirar(permitidos);
       }}
       onTouchEnd={() => {
         toque.current = null;

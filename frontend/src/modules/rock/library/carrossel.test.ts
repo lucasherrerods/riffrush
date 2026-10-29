@@ -1,4 +1,4 @@
-import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, RAIO_DA_CURVA, centroDoGrupoAberto, passosDaRoda, passosDoArraste, posicoesNoCarrossel, recuoNaCurva } from "./carrossel";
+import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, RAIO_DA_CURVA, centroDoGrupoAberto, passosDaRoda, passosDoArraste, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "./carrossel";
 
 describe("posicoesNoCarrossel", () => {
   it("põe a selecionada no zero, as de cima antes e as de baixo depois", () => {
@@ -58,5 +58,20 @@ describe("passosDoArraste", () => {
 
   it("arrastar para baixo volta, e o que não completa uma música fica guardado", () => {
     expect(passosDoArraste(-ALTURA_DA_MUSICA * 2 - 10)).toEqual({ passos: -2, resto: -10 });
+  });
+});
+
+describe("passosSemDarAVolta", () => {
+  it("no topo, arrastar para trás não pula para a última música", () => {
+    expect(passosSemDarAVolta(0, -2, 5)).toBe(0);
+  });
+
+  it("na última, arrastar para frente não volta para o topo", () => {
+    expect(passosSemDarAVolta(4, 1, 5)).toBe(0);
+  });
+
+  it("anda só até a borda", () => {
+    expect(passosSemDarAVolta(3, 3, 5)).toBe(1);
+    expect(passosSemDarAVolta(1, -3, 5)).toBe(-1);
   });
 });
