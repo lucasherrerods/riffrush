@@ -690,8 +690,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
           <div
             className="absolute flex"
             style={{
-              left: layout.centro - layout.largura / 2,
-              width: layout.largura,
+              left: estreita ? 0 : layout.centro - layout.largura / 2,
+              width: estreita ? "100%" : layout.largura,
               top: layout.linhaDeBatida - layout.larguraDoTraste * 0.45,
               bottom: temAberta ? ALTURA_DA_FAIXA_ABERTA : 0,
             }}
@@ -720,16 +720,14 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
           {estreita && (
             <div
               aria-hidden
-              className="pointer-events-none absolute flex border-t border-texto/25"
+              className="pointer-events-none absolute inset-x-0 flex border-t border-texto/40"
               style={{
-                left: layout.centro - layout.largura / 2,
-                width: layout.largura,
                 top: layout.linhaDeBatida + layout.larguraDoTraste * 0.45,
                 bottom: temAberta ? ALTURA_DA_FAIXA_ABERTA : 0,
               }}
             >
               {NOMES_DAS_PISTAS.map((nome) => (
-                <span key={nome} data-parte="alvo-do-toque" className="flex-1 border-r border-texto/25 bg-texto/5 last:border-r-0" />
+                <span key={nome} data-parte="alvo-do-toque" className="flex-1 border-r border-texto/40 bg-texto/5 last:border-r-0" />
               ))}
             </div>
           )}
@@ -856,7 +854,7 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
               <div className="flex items-start gap-2">
                 {avatarDoJogador("h-14 w-auto")}
                 {/* A caixa do medidor guarda a vida e, em cima, os quatro pinos do star power: tocar nela ativa o star power. */}
-                <button aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`} onClick={aoEstrela} className="mr-[5px] flex w-32 flex-col items-center">
+                <button aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`} onClick={aoEstrela} className="-mr-2 flex w-32 flex-col items-center">
                   <MedidorDeRock vida={hud.vida} estrela={hud.estrela} estrelaAtiva={hud.estrelaAtiva} fantasma={hud.fantasma} className="w-full" />
                   <span className={cn("font-mono text-xs font-bold", hud.estrela >= 0.5 ? "text-estrela" : "text-texto-suave")}>{Math.round(hud.estrela * 100)}%</span>
                 </button>
