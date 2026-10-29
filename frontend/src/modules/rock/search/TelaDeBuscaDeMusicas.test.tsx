@@ -54,6 +54,22 @@ describe("TelaDeBuscaDeMusicas", () => {
     expect(screen.getByRole("searchbox", { name: "Buscar músicas" })).toHaveAttribute("placeholder", "Nome da música");
   });
 
+  it("a ordem é um select que entra na busca e volta para a primeira página", async () => {
+    const { buscar, usuario } = abrir();
+    await screen.findByRole("heading", { name: "Hit" });
+    await usuario.selectOptions(screen.getByRole("combobox", { name: "Ordem" }), "artista");
+    await waitFor(() => expect(ultimaChamada(buscar)[0]).toMatchObject({ ordem: "artista" }));
+    expect(ultimaChamada(buscar)[1]).toBe(1);
+  });
+
+  it("o check de só com vídeo entra na busca", async () => {
+    const { buscar, usuario } = abrir();
+    await screen.findByRole("heading", { name: "Hit" });
+    await usuario.click(screen.getByRole("switch", { name: "Só com vídeo" }));
+    await waitFor(() => expect(ultimaChamada(buscar)[0]).toMatchObject({ soComVideo: true }));
+    expect(screen.getByRole("searchbox", { name: "Buscar músicas" })).toHaveAttribute("placeholder", "Nome da música");
+  });
+
   it("pagina os resultados", async () => {
     const buscar = vi.fn(async (): Promise<RespostaDaBusca> => ({ total: 25, resultados: [resultado("Hit")] }));
     const { usuario } = abrir(buscar);

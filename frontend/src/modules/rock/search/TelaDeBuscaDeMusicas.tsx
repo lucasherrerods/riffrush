@@ -11,10 +11,12 @@ import { AcaoDoResultado, ItemDoResultado } from "./componentes/ResultadoDoEncor
 import { useBaixarDoEncore, type AoBaixar } from "./useBaixarDoEncore";
 import {
   FILTROS_PADRAO,
+  usaBuscaAvancada,
   TAMANHO_DA_PAGINA,
   buscarNoEncore,
   type DificuldadeDaBusca,
   type Genero,
+  type Ordem,
   type FiltrosDaBusca,
   type Instrumento,
   type RespostaDaBusca,
@@ -65,6 +67,16 @@ const OPCOES_DE_GENERO: { id: Genero | "todos"; rotulo: string }[] = [
   { id: "jazz", rotulo: "Jazz" },
   { id: "country", rotulo: "Country" },
   { id: "reggae", rotulo: "Reggae" },
+];
+
+const OPCOES_DE_ORDEM: { id: Ordem; rotulo: string }[] = [
+  { id: "recentes", rotulo: "Mais recentes" },
+  { id: "artista", rotulo: "Artista (A-Z)" },
+  { id: "nome", rotulo: "Música (A-Z)" },
+  { id: "ano-mais-novo", rotulo: "Ano: mais novas" },
+  { id: "ano-mais-antigo", rotulo: "Ano: mais antigas" },
+  { id: "mais-curtas", rotulo: "Mais curtas" },
+  { id: "mais-longas", rotulo: "Mais longas" },
 ];
 
 type Estado = { tipo: "carregando" } | { tipo: "pronto"; resposta: RespostaDaBusca } | { tipo: "erro"; mensagem: string };
@@ -120,19 +132,24 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
           <Input
             type="search"
             aria-label="Buscar músicas"
-            placeholder={filtros.genero === "todos" ? "Nome da música, artista, álbum ou charter" : "Nome da música"}
+            placeholder={!usaBuscaAvancada({ texto, ...filtros }) ? "Nome da música, artista, álbum ou charter" : "Nome da música"}
             value={texto}
             onChange={(evento) => setTexto(evento.target.value)}
             className="h-12 pl-12 text-base md:text-base max-md:h-10"
             autoFocus
           />
         </div>
-        <div className="flex flex-wrap gap-8 max-md:grid max-md:grid-cols-3 max-md:gap-2">
+        <div className="flex flex-wrap gap-8 max-md:grid max-md:grid-cols-2 max-md:gap-2">
           <CampoDeSelecao titulo="Instrumento" opcoes={OPCOES_DE_INSTRUMENTO} valor={filtros.instrumento} aoEscolher={(instrumento) => mudarFiltros({ instrumento })} />
           <CampoDeSelecao titulo="Dificuldade" opcoes={OPCOES_DE_DIFICULDADE} valor={filtros.dificuldade} aoEscolher={(dificuldade) => mudarFiltros({ dificuldade })} />
           <CampoDeSelecao titulo="Gênero" opcoes={OPCOES_DE_GENERO} valor={filtros.genero} aoEscolher={(genero) => mudarFiltros({ genero })} />
+          <CampoDeSelecao titulo="Ordem" opcoes={OPCOES_DE_ORDEM} valor={filtros.ordem} aoEscolher={(ordem) => mudarFiltros({ ordem })} />
+          <label className="flex items-center gap-2 self-end py-2 text-base text-texto-suave max-md:col-span-2 max-md:py-0 max-md:text-sm">
+            <Switch aria-label="Só com vídeo" checked={filtros.soComVideo} onCheckedChange={(soComVideo) => mudarFiltros({ soComVideo })} />
+            Só com vídeo
+          </label>
           {aoBaixar && (
-            <label className="flex items-center gap-2 self-end py-2 text-base text-texto-suave max-md:col-span-3 max-md:py-0 max-md:text-sm">
+            <label className="flex items-center gap-2 self-end py-2 text-base text-texto-suave max-md:col-span-2 max-md:py-0 max-md:text-sm">
               <Switch aria-label="Baixar com vídeo de fundo" checked={comVideo} onCheckedChange={setComVideo} />
               Baixar com vídeo de fundo
             </label>
