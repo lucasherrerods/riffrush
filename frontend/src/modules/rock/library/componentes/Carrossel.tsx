@@ -44,6 +44,8 @@ const COR_DA_DIFICULDADE: Record<Dificuldade, string> = {
 };
 
 const ESCALA_NO_CELULAR = 0.7;
+/** Quantos px o dedo anda antes de o toque deixar de ser um clique. */
+const LIMITE_DO_TOQUE = 8;
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 /** Lista de músicas em roda, como no osu!lazer: a selecionada fica no meio, com as dificuldades abertas embaixo. */
@@ -51,6 +53,9 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
   const giro = useRef(0);
   // No celular a roda gira arrastando o dedo: guarda a última altura do toque e o que sobrou do arraste.
   const toque = useRef<{ y: number; resto: number } | null>(null);
+  // O toque que arrastou não é clique: sem isso, soltar o dedo escolhe a música onde ele começou.
+  const inicioDoToque = useRef(0);
+  const arrastou = useRef(false);
   const posicoes = posicoesNoCarrossel(musicas.length, indice, dificuldades.length);
   const centro = centroDoGrupoAberto(dificuldades.length);
   // No celular a roda inteira encolhe, para caberem mais músicas e dar para ver que a lista continua.
@@ -66,16 +71,25 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
       }}
       onTouchStart={(evento) => {
         toque.current = { y: evento.touches[0].clientY, resto: 0 };
+        inicioDoToque.current = evento.touches[0].clientY;
+        arrastou.current = false;
       }}
       onTouchMove={(evento) => {
         if (!toque.current) return;
         const y = evento.touches[0].clientY;
+        if (Math.abs(y - inicioDoToque.current) > LIMITE_DO_TOQUE) arrastou.current = true;
         const { passos, resto } = passosDoArraste(toque.current.resto + toque.current.y - y);
         toque.current = { y, resto };
         if (passos) aoGirar(passos);
       }}
       onTouchEnd={() => {
         toque.current = null;
+      }}
+      onClickCapture={(evento) => {
+        if (!arrastou.current) return;
+        arrastou.current = false;
+        evento.preventDefault();
+        evento.stopPropagation();
       }}
       className={cn("relative col-span-7 min-h-0 min-w-0 touch-none overflow-hidden max-md:col-span-1 max-md:min-h-40", className)}
     >

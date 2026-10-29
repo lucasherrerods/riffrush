@@ -439,4 +439,17 @@ describe("no celular", () => {
     fireEvent.touchMove(lista, { touches: [{ clientY: 200 }] });
     expect(a.aoSelecionar).toHaveBeenCalledWith(1);
   });
+
+  it("o toque que arrastou não vira clique na música onde o dedo começou", () => {
+    const a = acoes();
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} velocidadeDaMusica={1} {...a} />);
+    const lista = screen.getByRole("list", { name: "Músicas" });
+    const botao = lista.querySelector('[data-indice="2"] button')!;
+    fireEvent.touchStart(botao, { touches: [{ clientY: 300 }] });
+    fireEvent.touchMove(botao, { touches: [{ clientY: 290 }] });
+    fireEvent.touchEnd(botao);
+    fireEvent.click(botao);
+    expect(a.aoSelecionar).not.toHaveBeenCalled();
+    expect(a.aoJogar).not.toHaveBeenCalled();
+  });
 });
