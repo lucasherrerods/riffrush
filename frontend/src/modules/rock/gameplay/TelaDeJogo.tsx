@@ -12,6 +12,7 @@ import { Button } from "@/shared/ui/button";
 import { criarBot, jogarSozinho } from "./bot";
 import { AvisoDeAcerto } from "./componentes/AvisoDeAcerto";
 import { MedidorDeRock } from "./componentes/MedidorDeRock";
+import { MedidorCompacto } from "./componentes/MedidorCompacto";
 import { MenuDePausa } from "./componentes/MenuDePausa";
 import { PainelDePontos } from "./componentes/PainelDePontos";
 import { BarraDeEstrelas } from "./componentes/BarraDeEstrelas";
@@ -853,9 +854,9 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
             estreita && (
               <div className="flex items-start gap-2">
                 {avatarDoJogador("h-14 w-auto")}
-                {/* A caixa do medidor guarda a vida e, em cima, os quatro pinos do star power: tocar nela ativa o star power. */}
+                {/* Os pinos do star power e a barra de vida: tocar neles ativa o star power. */}
                 <button aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`} onClick={aoEstrela} className="-mr-2 flex w-32 flex-col items-center">
-                  <MedidorDeRock vida={hud.vida} estrela={hud.estrela} estrelaAtiva={hud.estrelaAtiva} fantasma={hud.fantasma} className="w-full" />
+                  <MedidorCompacto vida={hud.vida} estrela={hud.estrela} estrelaAtiva={hud.estrelaAtiva} className="w-full" />
                   <span className={cn("font-mono text-xs font-bold", hud.estrela >= 0.5 ? "text-estrela" : "text-texto-suave")}>{Math.round(hud.estrela * 100)}%</span>
                 </button>
               </div>
