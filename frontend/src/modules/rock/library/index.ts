@@ -1,4 +1,5 @@
 export { TelaDeSelecao } from "./TelaDeSelecao";
+export { carregarFavoritas } from "./favoritas";
 export { Capa } from "./componentes/Capa";
 export { ProgressoDaImportacao } from "./componentes/ProgressoDaImportacao";
 export { SoltarParaImportar } from "./componentes/SoltarParaImportar";

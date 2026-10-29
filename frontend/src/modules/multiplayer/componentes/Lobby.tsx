@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { Check, ChevronDown, ChevronUp, Crown, Globe, Loader2, Play, Smartphone, Users } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Crown, Globe, Heart, Loader2, Play, Shuffle, Smartphone, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar } from "@/modules/rock/character";
 import { PainelDeChat } from "@/modules/chat";
+import { carregarFavoritas } from "@/modules/rock/library";
 import { useSeguirMusica } from "@/modules/rock/player";
 import { DIFICULDADES, INSTRUMENTOS, dificuldadesDaMusica, instrumentosDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { cn } from "@/shared/lib/utils";
@@ -26,9 +27,11 @@ interface Props {
   endereco: string;
   musicas: Musica[];
   volumeDosEfeitos: number;
+  /** Sorteia uma das mais jogadas; sem ele (contas desligadas), o botão não aparece. */
+  sortearMusica?: (musicas: Musica[]) => Promise<Musica>;
 }
 
-export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos }: Props) {
+export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos, sortearMusica }: Props) {
   const preparo = useMusicaDaSala(sala, musicas, endereco);
   useSeguirMusica(preparo.tipo === "pronta" ? (preparo.musica ?? null) : null);
   // Na LAN, escolher uma música importada envia o arquivo, e isso pode falhar.
@@ -41,7 +44,10 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
   const [novoLider, setNovoLider] = useState<{ id: number; nome: string } | null>(null);
   const musica = musicas.find((m) => m.id === sala.musica.id);
   const tituloDaMusica = musica?.titulo ?? ("titulo" in sala.musica ? sala.musica.titulo : sala.musica.id);
-  const posicao = musicas.findIndex((m) => m.id === sala.musica.id);
+  const [favoritas] = useState(carregarFavoritas);
+  const [soFavoritas, setSoFavoritas] = useState(false);
+  const naLista = soFavoritas ? musicas.filter((m) => favoritas.has(m.id)) : musicas;
+  const posicao = naLista.findIndex((m) => m.id === sala.musica.id);
   // A lista rola sozinha até a escolhida quando ela muda pelas setas ou pela busca.
   const escolhidaNaLista = useRef<HTMLButtonElement>(null);
   // Com chaves: no Chrome o scrollIntoView devolve uma Promise, e um efeito só pode devolver a função de limpeza.
@@ -49,10 +55,24 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
     escolhidaNaLista.current?.scrollIntoView?.({ block: "nearest" });
   }, [sala.musica.id]);
   const escolherVizinha = (passo: number) => {
-    const vizinha = musicas[posicao + passo];
+    const vizinha = naLista[posicao + passo];
     if (!vizinha) return;
     tocarEfeito("mover", volumeDosEfeitos);
     escolherNaSala(vizinha, sala.dificuldade);
+  };
+  const [sorteando, setSorteando] = useState(false);
+  const sortear = async () => {
+    if (!sortearMusica) return;
+    setSorteando(true);
+    try {
+      const sorteada = await sortearMusica(musicas);
+      tocarEfeito("selecionar", volumeDosEfeitos);
+      escolherNaSala(sorteada, sala.dificuldade);
+    } catch (erro) {
+      avisar.error(erro instanceof Error ? erro.message : String(erro));
+    } finally {
+      setSorteando(false);
+    }
   };
 
   useEffect(() => {
@@ -148,14 +168,25 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
                     <ChevronUp />
                   </Button>
                   <span className="flex-1 text-center text-base text-texto-suave">
-                    {posicao + 1} de {musicas.length}
+                    {posicao + 1} de {naLista.length}
                   </span>
-                  <Button variant="ghost" size="icon" aria-label="Próxima música" disabled={posicao >= musicas.length - 1} onClick={() => escolherVizinha(1)}>
+                  <Button variant="ghost" size="icon" aria-label="Próxima música" disabled={posicao >= naLista.length - 1} onClick={() => escolherVizinha(1)}>
                     <ChevronDown />
                   </Button>
                 </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant={soFavoritas ? "default" : "outline"} size="sm" aria-pressed={soFavoritas} onClick={() => setSoFavoritas(!soFavoritas)}>
+                    <Heart className={cn(soFavoritas ? "fill-current" : "opacity-70")} /> Favoritos
+                  </Button>
+                  {sortearMusica && (
+                    <Button variant="outline" size="sm" disabled={sorteando} onClick={() => void sortear()}>
+                      <Shuffle className="opacity-70" /> Aleatório
+                    </Button>
+                  )}
+                </div>
+                {soFavoritas && !naLista.length && <p className="text-sm text-texto-suave">Nenhuma música favorita ainda. Favorite no catálogo.</p>}
                 <div role="radiogroup" aria-label="Música" className="rolagem-de-toque flex min-h-48 flex-1 flex-col gap-1 max-md:max-h-48 max-md:min-h-0 max-md:flex-none max-md:overscroll-auto">
-                  {musicas.map((m) => {
+                  {naLista.map((m) => {
                     const escolhida = m.id === sala.musica.id;
                     return (
                       <button

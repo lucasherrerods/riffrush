@@ -16,9 +16,10 @@ interface Props {
   aoEditarPersonagem: () => void;
   /** Abre a busca de músicas sem sair da sala. */
   aoBuscarMusicas: () => void;
+  sortearMusica?: (musicas: Musica[]) => Promise<Musica>;
 }
 
-export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVoltar, aoEditarPersonagem, aoBuscarMusicas }: Props) {
+export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVoltar, aoEditarPersonagem, aoBuscarMusicas, sortearMusica }: Props) {
   const { sala, info, erro, online, codigo, endereco } = useConexao();
   const musicasDaSala = online ? musicas.filter(podeTocarOnline) : musicas;
 
@@ -58,7 +59,7 @@ export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVo
           <Loader2 className="animate-spin" aria-hidden /> Conectando na sala...
         </p>
       )}
-      {sala && sala.status !== "conectando" && <Lobby sala={sala} info={info} codigo={codigo} endereco={endereco} musicas={musicasDaSala} volumeDosEfeitos={volumeDosEfeitos} />}
+      {sala && sala.status !== "conectando" && <Lobby sala={sala} info={info} codigo={codigo} endereco={endereco} musicas={musicasDaSala} volumeDosEfeitos={volumeDosEfeitos} sortearMusica={sortearMusica} />}
     </div>
   );
 }

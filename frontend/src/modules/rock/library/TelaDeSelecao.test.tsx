@@ -31,6 +31,38 @@ beforeEach(() => {
 });
 
 describe("TelaDeSelecao", () => {
+  it("a aleatória do top 50 seleciona a música sorteada", async () => {
+    const sortearMusica = vi.fn(() => Promise.resolve(MUSICAS_DE_TESTE[2]));
+    const aoSelecionar = vi.fn();
+    render(
+      <TelaDeSelecao
+        musicas={MUSICAS_DE_TESTE}
+        indice={0}
+        dificuldade="medio"
+        instrumento="guitarra"
+        personagem={PERSONAGEM_PADRAO}
+        volumeDosEfeitos={0}
+        velocidadeDaMusica={1}
+        aoSelecionar={aoSelecionar}
+        aoDificuldade={vi.fn()}
+        aoInstrumento={vi.fn()}
+        aoJogar={vi.fn()}
+        aoVoltar={vi.fn()}
+        aoImportar={vi.fn()}
+        aoRemover={vi.fn()}
+        aoVelocidadeDaMusica={vi.fn()}
+        sortearMusica={sortearMusica}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Aleatório/ }));
+    expect(aoSelecionar).toHaveBeenCalledWith(2);
+  });
+
+  it("sem contas, não mostra a aleatória do top 50", () => {
+    abrir();
+    expect(screen.queryByRole("button", { name: /Aleatório/ })).toBeNull();
+  });
+
   it("o botão Buscar músicas, ao lado do de importar, abre a busca", async () => {
     const { aoBuscarMusicas, usuario } = abrir();
     expect(screen.getByLabelText("Importar música")).toBeInTheDocument();
