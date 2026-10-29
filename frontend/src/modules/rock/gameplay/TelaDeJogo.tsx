@@ -20,7 +20,7 @@ import { BarraDeEstrelas } from "./componentes/BarraDeEstrelas";
 import { progressoDasEstrelas } from "./estrelas";
 import { criarLojaDoHud, useLoja, type LojaDoHud } from "./lojaDoHud";
 import { NOMES_DAS_PISTAS } from "./cores";
-import { avancar, criarPartida, multiplicador, precisao, retirarEventos, type Julgamento } from "./partida";
+import { avancar, criarPartida, multiplicador, precisao, retirarEventos, type JeitoDeJogar, type Julgamento } from "./partida";
 import { aplicarEntradas, criarGravador, empacotarReplay, hashDoChart, type EventoDaTransmissao, type Replay } from "./replay";
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { forcaDoTrovao } from "./pista/efeitos";
@@ -48,6 +48,8 @@ export interface OpcoesDaPartida {
   semAberta: boolean;
   /** Velocidade da música (1 é a normal). */
   velocidadeDaMusica: number;
+  /** Como as teclas viram notas. Vai no replay, e a API rejulga com ele. */
+  jeitoDeJogar: JeitoDeJogar;
   bot: boolean;
   efeitos: boolean;
   /** Mostra o personagem 3D no palco e no HUD. */
@@ -71,6 +73,7 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   semFalha: false,
   semAberta: false,
   velocidadeDaMusica: 1,
+  jeitoDeJogar: "gamepad",
   bot: false,
   efeitos: true,
   personagem: true,
@@ -258,8 +261,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
 
     // Em rede ninguém sai da música: quem zera a vida vira fantasma e segue pontuando.
     const partida = replay
-      ? criarPartida(carregada.notas, { semFalha: replay.semFalha, fantasma: replay.fantasma, semAberta: replay.semAberta, velocidade })
-      : criarPartida(carregada.notas, { semFalha: opcoes.semFalha, fantasma: inicioEmRede !== undefined, semAberta: opcoes.semAberta, velocidade });
+      ? criarPartida(carregada.notas, { semFalha: replay.semFalha, fantasma: replay.fantasma, semAberta: replay.semAberta, velocidade, jeito: replay.jeito })
+      : criarPartida(carregada.notas, { semFalha: opcoes.semFalha, fantasma: inicioEmRede !== undefined, semAberta: opcoes.semAberta, velocidade, jeito: opcoes.jeitoDeJogar });
     const bot = opcoes.bot && !replay ? criarBot() : null;
     const gravador = criarGravador(partida);
     let proximaEntrada = 0;
@@ -282,7 +285,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       void hashDoChart(carregada.notas).then((hash) => {
         if (transmissaoAcabou) return;
         transmitindo = true;
-        transmitir({ tipo: "inicio", hashDoChart: hash, semFalha: opcoes.semFalha, semAberta: opcoes.semAberta, velocidade });
+        transmitir({ tipo: "inicio", hashDoChart: hash, semFalha: opcoes.semFalha, semAberta: opcoes.semAberta, velocidade, jeito: opcoes.jeitoDeJogar });
       });
     }
     const sprites = criarSprites();
@@ -348,6 +351,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
             fantasma: inicioEmRede !== undefined,
             semAberta: opcoes.semAberta,
             velocidade,
+            jeito: opcoes.jeitoDeJogar,
             hashDoChart: await hashDoChart(carregada.notas),
             entradas: gravador.entradas,
           });

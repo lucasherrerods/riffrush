@@ -14,6 +14,7 @@ export function opcoesDaPartida(c: Configuracoes): OpcoesDaPartida {
     semFalha: c.semFalha,
     semAberta: !c.notaAberta,
     velocidadeDaMusica: c.velocidadeDaMusica,
+    jeitoDeJogar: "gamepad",
     bot: c.bot,
     efeitos: c.efeitos,
     personagem: c.personagem3d,
