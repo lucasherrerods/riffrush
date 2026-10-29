@@ -1,5 +1,5 @@
 import { PISTA_ABERTA, type Nota } from "@/modules/rock/songs";
-import { ativarEstrela, avancar, JEITOS_DE_JOGAR, palhetar, quantizar, soltar, tocar, type JeitoDeJogar, type Partida } from "./partida";
+import { ativarEstrela, avancar, criarPartida, JEITOS_DE_JOGAR, palhetar, quantizar, retirarEventos, soltar, tocar, type JeitoDeJogar, type Partida } from "./partida";
 
 /**
  * Um replay guarda só as entradas do jogador (como o .osr do osu!), não vídeo: a partida é
@@ -106,6 +106,20 @@ export function aplicarEntradas(partida: Partida, entradas: EntradaDoReplay[], i
     }
   }
   return indice;
+}
+
+/**
+ * O estado do replay num instante qualquer, para ir e voltar na barra da música. Refaz a partida do começo:
+ * o motor é determinístico e passa pela música inteira em milissegundos, então não precisa guardar fotos
+ * do estado no caminho. Os eventos do que já passou são descartados, senão os efeitos tocariam todos de uma vez.
+ */
+export function partidaNoInstante(notas: Nota[], opcoes: NonNullable<Parameters<typeof criarPartida>[1]>, entradas: EntradaDoReplay[], tempo: number) {
+  const partida = criarPartida(notas, opcoes);
+  const apertados = Array<boolean>(PISTA_ABERTA + 1).fill(false);
+  const proximaEntrada = aplicarEntradas(partida, entradas, 0, tempo, apertados);
+  avancar(partida, tempo);
+  retirarEventos(partida);
+  return { partida, proximaEntrada, apertados };
 }
 
 /** SHA-256 das notas na grade da partida, cortado em 16 bytes (hex). */

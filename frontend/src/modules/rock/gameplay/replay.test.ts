@@ -1,6 +1,6 @@
 import type { Nota } from "@/modules/rock/songs";
 import { avancar, criarPartida, quantizar } from "./partida";
-import { VERSAO_DO_REPLAY, aplicarEntradas, codigoDaEntrada, entradaDoCodigo, criarGravador, desempacotarReplay, empacotarReplay, hashDoChart, type Replay } from "./replay";
+import { VERSAO_DO_REPLAY, aplicarEntradas, codigoDaEntrada, entradaDoCodigo, criarGravador, desempacotarReplay, empacotarReplay, hashDoChart, partidaNoInstante, type Replay } from "./replay";
 
 const nota = (tempo: number, pista = 0, duracao = 0): Nota => ({ tempo, pista, duracao, frase: -1 });
 
@@ -169,5 +169,46 @@ describe("gravar e reproduzir", () => {
     expect(apertados[0]).toBe(true);
     aplicarEntradas(partida, [{ tempo: 1.1, tipo: "soltar", pista: 0 }], 0, 1.1, apertados);
     expect(apertados[0]).toBe(false);
+  });
+});
+
+describe("partidaNoInstante", () => {
+  const notas = [nota(1), nota(2, 1), nota(3, 2), nota(4, 3)];
+  const opcoes = { semFalha: false, fantasma: false, semAberta: false, velocidade: 1, jeito: "tapping" as const, puneToqueEmVazio: true };
+  const entradas = [
+    { tempo: 1, tipo: "tocar" as const, pista: 0 },
+    { tempo: 1.05, tipo: "soltar" as const, pista: 0 },
+    { tempo: 2, tipo: "tocar" as const, pista: 1 },
+    { tempo: 3, tipo: "tocar" as const, pista: 2 },
+  ];
+
+  it("chega ao mesmo estado de tocar o replay do começo até ali", () => {
+    const tocada = criarPartida(notas, opcoes);
+    const apertados: boolean[] = [];
+    let indice = 0;
+    for (let t = -1; t <= 2.5; t += 0.016) {
+      indice = aplicarEntradas(tocada, entradas, indice, t, apertados);
+      avancar(tocada, t);
+    }
+    indice = aplicarEntradas(tocada, entradas, indice, 2.5, apertados);
+    avancar(tocada, 2.5);
+    const pulada = partidaNoInstante(notas, opcoes, entradas, 2.5);
+    expect(pulada.partida.pontos).toBe(tocada.pontos);
+    expect(pulada.partida.acertos).toBe(2);
+    expect(pulada.proximaEntrada).toBe(indice);
+    expect(pulada.apertados[1]).toBe(true);
+    expect(pulada.apertados[0]).toBe(false);
+  });
+
+  it("voltar no tempo refaz a partida sem os acertos de depois", () => {
+    const depois = partidaNoInstante(notas, opcoes, entradas, 3.5);
+    const antes = partidaNoInstante(notas, opcoes, entradas, 1.5);
+    expect(depois.partida.acertos).toBe(3);
+    expect(antes.partida.acertos).toBe(1);
+    expect(antes.partida.notas[2].acertada).toBe(false);
+  });
+
+  it("não deixa eventos para trás: os efeitos do que já passou não tocam ao pular", () => {
+    expect(partidaNoInstante(notas, opcoes, entradas, 3.5).partida.eventos).toEqual([]);
   });
 });

@@ -300,6 +300,41 @@ describe("TelaDeJogo", () => {
     expect(screen.getByLabelText("Pontos")).toHaveTextContent("50");
   });
 
+  it("no replay, a barra da música pula para frente e para trás e o áudio vai junto", async () => {
+    const notas = [nota(1), nota(5, 1)];
+    carregarCom(notas, 10);
+    const replay: Replay = {
+      semFalha: false,
+      fantasma: false,
+      semAberta: false,
+      jeito: "gamepad",
+      puneToqueEmVazio: true,
+      velocidade: 1,
+      hashDoChart: await hashDoChart(notas),
+      entradas: [
+        { tempo: 1, tipo: "tocar", pista: 0 },
+        { tempo: 5, tipo: "tocar", pista: 1 },
+      ],
+    };
+    abrir({}, undefined, replay);
+    await partidaPronta();
+    const barra = screen.getByRole("slider", { name: "Posição da música" });
+    fireEvent.change(barra, { target: { value: "0.6" } });
+    const fonte = audio().fontes.at(-1)!;
+    expect(fonte.deslocamento).toBeCloseTo(6);
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("100"));
+    fireEvent.change(barra, { target: { value: "0.2" } });
+    expect(audio().fontes.at(-2)!.parada).toBe(true);
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
+  });
+
+  it("jogando de verdade, a barra da música só mostra o progresso", async () => {
+    carregarCom([nota(1)]);
+    abrir();
+    await partidaPronta();
+    expect(screen.queryByRole("slider", { name: "Posição da música" })).not.toBeInTheDocument();
+  });
+
   it("na palhetada, o traste só acende e o Enter toca a nota; o jeito vai para o replay", async () => {
     carregarCom([nota(0.5)], 1);
     const { aoTerminar, usuario } = abrir({ jeitoDeJogar: "palhetada" });
