@@ -36,16 +36,16 @@ export function CartaoDaConta({ aoVerPerfil, mod = false }: { aoVerPerfil: () =>
   const progresso = <BarraDeProgresso fracao={xp_no_nivel / xp_para_o_proximo} rotulo={`XP do nível ${nivel}`} className="h-1 flex-1" />;
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="group -my-1 flex w-52 items-center gap-2.5 rounded-md px-2 py-1 text-left transition-colors outline-none hover:bg-superficie-hover focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-superficie-elevada">
-        <FotoDaConta avatar={conta.avatar} className="size-8" />
+      <DropdownMenuTrigger className="group -my-1 flex w-52 min-w-0 items-center gap-2.5 rounded-md px-2 py-1 max-md:w-32 max-md:gap-1.5 max-md:px-1 text-left transition-colors outline-none hover:bg-superficie-hover focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-superficie-elevada">
+        <FotoDaConta avatar={conta.avatar} className="size-8 max-md:size-7" />
         <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="truncate text-base leading-none font-bold">{conta.nome}</span>
+          <span className="truncate text-base leading-none font-bold max-md:text-sm">{conta.nome}</span>
           <span className="flex items-center gap-2">
-            <span className="font-titulo text-base leading-none text-destaque">Nv {nivel}</span>
+            <span className="shrink-0 font-titulo text-base leading-none text-destaque max-md:text-sm">Nv {nivel}</span>
             {progresso}
           </span>
         </span>
-        <ChevronsUpDown className="size-4 shrink-0 text-texto-suave transition-colors group-hover:text-texto" />
+        <ChevronsUpDown className="size-4 shrink-0 text-texto-suave max-md:hidden transition-colors group-hover:text-texto" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel className="flex items-center gap-3 p-2">
