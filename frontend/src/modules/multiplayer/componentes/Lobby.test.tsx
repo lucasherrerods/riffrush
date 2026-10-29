@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
 import { MUSICAS_DE_TESTE } from "@/test/musicas";
 import { estadoInicial, type EstadoDaSala } from "../protocolo";
-import { enviarChat, expulsar, passarLideranca } from "../sala";
+import { enviarChat, escolher, expulsar, passarLideranca } from "../sala";
 import { Lobby } from "./Lobby";
 
 vi.mock("@/modules/rock/character", async (original) => ({
@@ -11,7 +11,7 @@ vi.mock("@/modules/rock/character", async (original) => ({
   Avatar: () => null,
 }));
 vi.mock("@/modules/rock/player", () => ({ useSeguirMusica: () => {} }));
-vi.mock("../sala", async (original) => ({ ...(await original<typeof import("../sala")>()), expulsar: vi.fn(), enviarChat: vi.fn(() => true), passarLideranca: vi.fn() }));
+vi.mock("../sala", async (original) => ({ ...(await original<typeof import("../sala")>()), escolher: vi.fn(() => Promise.resolve()), expulsar: vi.fn(), enviarChat: vi.fn(() => true), passarLideranca: vi.fn() }));
 
 const [primeira, segunda] = MUSICAS_DE_TESTE;
 
@@ -98,5 +98,23 @@ describe("Lobby", () => {
     unmount();
     render(<Lobby sala={sala(primeira.id)} codigo="K7QXM" endereco="" musicas={MUSICAS_DE_TESTE} volumeDosEfeitos={0} />);
     expect(screen.getByText(/Quem entrar na sala lê o chat/)).toBeInTheDocument();
+  });
+
+  it("o filtro de favoritos mostra só as músicas favoritadas", async () => {
+    localStorage.setItem("riffrush:favoritas", JSON.stringify([segunda.id]));
+    render(lobby(primeira.id));
+    await userEvent.click(screen.getByRole("button", { name: /Favoritos/ }));
+    const lista = screen.getByRole("radiogroup", { name: "Música" });
+    expect(within(lista).getAllByRole("radio")).toHaveLength(1);
+    expect(within(lista).getByRole("radio", { name: new RegExp(segunda.titulo) })).toBeInTheDocument();
+    localStorage.clear();
+  });
+
+  it("a aleatória do top 50 escolhe a sorteada para a sala", async () => {
+    const sortearMusica = vi.fn(() => Promise.resolve(segunda));
+    render(<Lobby sala={sala(primeira.id)} endereco="" musicas={MUSICAS_DE_TESTE} volumeDosEfeitos={0} sortearMusica={sortearMusica} />);
+    await userEvent.click(screen.getByRole("button", { name: /Aleatória do top 50/ }));
+    expect(sortearMusica).toHaveBeenCalledWith(MUSICAS_DE_TESTE);
+    expect(escolher).toHaveBeenCalledWith(segunda, expect.anything(), expect.anything());
   });
 });
