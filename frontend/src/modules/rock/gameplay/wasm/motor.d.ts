@@ -35,7 +35,7 @@ export class MotorDaPartida {
   /**
    * As notas vêm em quatro listas paralelas, que passam para o WASM sem um objeto por nota.
    */
-  constructor(tempos: Float64Array, pistas: Uint8Array, frases: Int32Array, duracoes: Float64Array, sem_falha: boolean, fantasma: boolean, velocidade: number, sem_aberta: boolean, jeito: number);
+  constructor(tempos: Float64Array, pistas: Uint8Array, frases: Int32Array, duracoes: Float64Array, sem_falha: boolean, fantasma: boolean, velocidade: number, sem_aberta: boolean, jeito: number, pune_toque_em_vazio: boolean);
   tocar(pista: number, tempo: number): boolean;
   soltar(pista: number, tempo: number): void;
   acertar(indice: number, tempo: number): void;
@@ -56,7 +56,7 @@ export interface InitOutput {
   readonly motordapartida_avancar: (a: number, b: number) => void;
   readonly motordapartida_grade_das_notas: (a: number) => [number, number];
   readonly motordapartida_multiplicador: (a: number) => number;
-  readonly motordapartida_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number) => number;
+  readonly motordapartida_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number) => number;
   readonly motordapartida_palhetar: (a: number, b: number) => number;
   readonly motordapartida_precisao: (a: number) => number;
   readonly motordapartida_sincronizar: (a: number) => [number, number];

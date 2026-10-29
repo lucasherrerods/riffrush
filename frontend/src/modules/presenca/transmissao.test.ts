@@ -13,7 +13,7 @@ describe("criarTransmissao", () => {
 
   it("abre a transmissão da conta com a ficha e manda o que juntou enquanto conectava", async () => {
     const transmitir = montar();
-    transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false, semAberta: true, velocidade: 1, jeito: "gamepad" });
+    transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false, semAberta: true, velocidade: 1, jeito: "gamepad", puneToqueEmVazio: true });
     transmitir({ tipo: "lote", entradas: [{ tempo: 1.5, tipo: "tocar", pista: 2 }], ate: 1.6 });
     await umInstante();
     const socket = WebSocketFalso.ultimo!;
@@ -21,14 +21,14 @@ describe("criarTransmissao", () => {
     expect(socket.protocolos).toEqual(["riffrush", "ficha"]);
     socket.abrir();
     expect(socket.enviadas).toEqual([
-      { tipo: "inicio", partida: { musica: "encore:abc", dificuldade: "expert", instrumento: "baixo", hashDoChart: "a".repeat(32), semFalha: false, semAberta: true, velocidade: 1, jeito: "gamepad" } },
+      { tipo: "inicio", partida: { musica: "encore:abc", dificuldade: "expert", instrumento: "baixo", hashDoChart: "a".repeat(32), semFalha: false, semAberta: true, velocidade: 1, jeito: "gamepad", puneToqueEmVazio: true } },
       { tipo: "lote", ate: 1.6, entradas: [[1500, 2]] },
     ]);
   });
 
   it("a pausa e o fim vão para o relay, e o fim fecha a conexão", async () => {
     const transmitir = montar();
-    transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false, semAberta: false, velocidade: 1, jeito: "gamepad" });
+    transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false, semAberta: false, velocidade: 1, jeito: "gamepad", puneToqueEmVazio: true });
     await umInstante();
     const socket = WebSocketFalso.ultimo!;
     socket.abrir();
@@ -43,7 +43,7 @@ describe("criarTransmissao", () => {
       { ...partida, urlDoEncore: "https://files.enchor.us/x.sng" },
       { urlDoRelay: "wss://relay", pedirFicha: async () => "ficha", criarSocket: (url, protocolos) => new WebSocketFalso(url, protocolos) },
     );
-    transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false, semAberta: false, velocidade: 1, jeito: "gamepad" });
+    transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false, semAberta: false, velocidade: 1, jeito: "gamepad", puneToqueEmVazio: true });
     await umInstante();
     WebSocketFalso.ultimo!.abrir();
     expect(WebSocketFalso.ultimo!.enviadas[0]).toMatchObject({ partida: { urlDoEncore: "https://files.enchor.us/x.sng" } });
@@ -51,11 +51,11 @@ describe("criarTransmissao", () => {
 
   it("recomeçar depois do fim abre uma transmissão nova", async () => {
     const transmitir = montar();
-    transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false, semAberta: false, velocidade: 1, jeito: "gamepad" });
+    transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false, semAberta: false, velocidade: 1, jeito: "gamepad", puneToqueEmVazio: true });
     await umInstante();
     WebSocketFalso.ultimo!.abrir();
     transmitir({ tipo: "fim" });
-    transmitir({ tipo: "inicio", hashDoChart: "b".repeat(32), semFalha: false, semAberta: false, velocidade: 1, jeito: "gamepad" });
+    transmitir({ tipo: "inicio", hashDoChart: "b".repeat(32), semFalha: false, semAberta: false, velocidade: 1, jeito: "gamepad", puneToqueEmVazio: true });
     await umInstante();
     const nova = WebSocketFalso.ultimo!;
     nova.abrir();
@@ -66,7 +66,7 @@ describe("criarTransmissao", () => {
 
   it("sem ficha a partida segue: nada é aberto e nada quebra", async () => {
     const transmitir = montar(vi.fn(async () => Promise.reject(new Error("fora"))));
-    transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false, semAberta: false, velocidade: 1, jeito: "gamepad" });
+    transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false, semAberta: false, velocidade: 1, jeito: "gamepad", puneToqueEmVazio: true });
     await umInstante();
     expect(() => transmitir({ tipo: "lote", entradas: [], ate: 1 })).not.toThrow();
     expect(WebSocketFalso.ultimo).toBeNull();
@@ -84,7 +84,7 @@ describe("quem está assistindo", () => {
       criarSocket: (url, protocolos) => new WebSocketFalso(url, protocolos),
       aoContarEspectadores,
     });
-    transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false, semAberta: false, velocidade: 1, jeito: "gamepad" });
+    transmitir({ tipo: "inicio", hashDoChart: "a".repeat(32), semFalha: false, semAberta: false, velocidade: 1, jeito: "gamepad", puneToqueEmVazio: true });
     await umInstante();
     const socket = WebSocketFalso.ultimo!;
     socket.abrir();

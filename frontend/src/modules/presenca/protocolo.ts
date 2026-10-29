@@ -30,6 +30,8 @@ export interface PartidaTransmitida {
   velocidade?: number;
   /** Como quem joga toca as notas. Relay antigo não manda: aí é o gamepad. */
   jeito?: JeitoDeJogar;
+  /** Se tocar em vazio pune. Relay antigo não manda: aí não pune. */
+  puneToqueEmVazio?: boolean;
   /** O .sng no Encore, para quem assiste baixar com um clique. Só confiável depois de `linkDoChartConfere`. */
   urlDoEncore?: string;
 }

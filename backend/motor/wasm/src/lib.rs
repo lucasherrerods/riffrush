@@ -46,6 +46,7 @@ impl MotorDaPartida {
         velocidade: f64,
         sem_aberta: bool,
         jeito: u8,
+        pune_toque_em_vazio: bool,
     ) -> MotorDaPartida {
         let notas: Vec<motor::Nota> = tempos
             .iter()
@@ -67,6 +68,7 @@ impl MotorDaPartida {
                     2 => motor::JeitoDeJogar::Palhetada,
                     _ => motor::JeitoDeJogar::Gamepad,
                 },
+                pune_toque_em_vazio,
             },
         );
         let enviadas = partida.notas.iter().map(|n| (bandeiras(n), n.segurou_ate)).collect();
@@ -171,6 +173,8 @@ impl MotorDaPartida {
                 motor::Evento::EstrelaAtivada => [5.0, 0.0, 0.0],
                 motor::Evento::Derrota => [6.0, 0.0, 0.0],
                 motor::Evento::VirouFantasma => [7.0, 0.0, 0.0],
+                // Na palheta não há traste: vai como -1.
+                motor::Evento::ToqueEmVazio { pista } => [8.0, pista.map_or(-1.0, f64::from), 0.0],
             });
         }
 

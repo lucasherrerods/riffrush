@@ -153,6 +153,21 @@ describe("TelaDeJogo", () => {
     expect(screen.getByLabelText("Sequência")).toHaveTextContent("1");
   });
 
+  it("tocar sem nota na pista quebra a sequência e o replay guarda a regra", async () => {
+    carregarCom([nota(0.5), nota(1)], 1.5);
+    const { aoTerminar, usuario } = abrir();
+    await partidaPronta();
+    irPara(0.5);
+    await usuario.keyboard("a");
+    await waitFor(() => expect(screen.getByLabelText("Sequência")).toHaveTextContent("1"));
+    irPara(0.75);
+    await usuario.keyboard("s");
+    await waitFor(() => expect(screen.getByLabelText("Sequência")).toHaveTextContent("0"));
+    irPara(2);
+    await waitFor(() => expect(aoTerminar).toHaveBeenCalled());
+    expect((await desempacotarReplay(await aoTerminar.mock.calls[0][1]())).puneToqueEmVazio).toBe(true);
+  });
+
   it("Esc pausa a música e Continuar retoma", async () => {
     carregarCom([nota(5)]);
     const { usuario } = abrir();
@@ -268,6 +283,7 @@ describe("TelaDeJogo", () => {
       fantasma: false,
       semAberta: false,
       jeito: "gamepad",
+      puneToqueEmVazio: true,
       velocidade: 1,
       hashDoChart: await hashDoChart([nota(0.5), nota(0.8, 1)]),
       entradas: [{ tempo: 0.5, tipo: "tocar", pista: 0 }],
@@ -325,6 +341,7 @@ describe("TelaDeJogo", () => {
       fantasma: false,
       semAberta: true,
       jeito: "gamepad",
+      puneToqueEmVazio: true,
       velocidade: 1,
       hashDoChart: await hashDoChart([nota(0.5, PISTA_ABERTA)]),
       entradas: [{ tempo: 0.5, tipo: "tocar", pista: 0 }],
@@ -337,7 +354,7 @@ describe("TelaDeJogo", () => {
 
   it("replay gravado em outro chart avisa e não toca", async () => {
     carregarCom([nota(0.5)]);
-    abrir({}, undefined, { semFalha: false, fantasma: false, semAberta: false, jeito: "gamepad", velocidade: 1, hashDoChart: "0".repeat(32), entradas: [] });
+    abrir({}, undefined, { semFalha: false, fantasma: false, semAberta: false, jeito: "gamepad", puneToqueEmVazio: true, velocidade: 1, hashDoChart: "0".repeat(32), entradas: [] });
     expect(await screen.findByText(/outra versão do chart/)).toBeInTheDocument();
   });
 
@@ -368,7 +385,7 @@ describe("TelaDeJogo", () => {
 
   it("ao vivo, quem assiste não passa do que já chegou", async () => {
     carregarCom([nota(0.5)]);
-    const replay: Replay = { semFalha: false, fantasma: false, semAberta: false, jeito: "gamepad", velocidade: 1, hashDoChart: await hashDoChart([nota(0.5)]), entradas: [], ateAgora: 0.2 };
+    const replay: Replay = { semFalha: false, fantasma: false, semAberta: false, jeito: "gamepad", puneToqueEmVazio: true, velocidade: 1, hashDoChart: await hashDoChart([nota(0.5)]), entradas: [], ateAgora: 0.2 };
     abrir({}, undefined, replay);
     await partidaPronta();
     irPara(1);

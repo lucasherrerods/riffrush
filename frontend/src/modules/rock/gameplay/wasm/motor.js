@@ -171,8 +171,9 @@ export class MotorDaPartida {
      * @param {number} velocidade
      * @param {boolean} sem_aberta
      * @param {number} jeito
+     * @param {boolean} pune_toque_em_vazio
      */
-    constructor(tempos, pistas, frases, duracoes, sem_falha, fantasma, velocidade, sem_aberta, jeito) {
+    constructor(tempos, pistas, frases, duracoes, sem_falha, fantasma, velocidade, sem_aberta, jeito, pune_toque_em_vazio) {
         const ptr0 = passArrayF64ToWasm0(tempos, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
         const ptr1 = passArray8ToWasm0(pistas, wasm.__wbindgen_malloc);
@@ -181,7 +182,7 @@ export class MotorDaPartida {
         const len2 = WASM_VECTOR_LEN;
         const ptr3 = passArrayF64ToWasm0(duracoes, wasm.__wbindgen_malloc);
         const len3 = WASM_VECTOR_LEN;
-        const ret = wasm.motordapartida_new(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, sem_falha, fantasma, velocidade, sem_aberta, jeito);
+        const ret = wasm.motordapartida_new(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, sem_falha, fantasma, velocidade, sem_aberta, jeito, pune_toque_em_vazio);
         this.__wbg_ptr = ret >>> 0;
         MotorDaPartidaFinalization.register(this, this.__wbg_ptr, this);
         return this;

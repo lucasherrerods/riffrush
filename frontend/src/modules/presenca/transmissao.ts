@@ -103,6 +103,7 @@ export function criarTransmissao(partida: PartidaParaTransmitir, deps: Dependenc
           semAberta: evento.semAberta,
           velocidade: evento.velocidade,
           jeito: evento.jeito,
+          puneToqueEmVazio: evento.puneToqueEmVazio,
           ...(partida.urlDoEncore && { urlDoEncore: partida.urlDoEncore }),
         },
       });

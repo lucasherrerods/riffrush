@@ -74,6 +74,7 @@ pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Di
             velocidade: replay.velocidade,
             sem_aberta: replay.sem_aberta,
             jeito: replay.jeito,
+            pune_toque_em_vazio: replay.pune_toque_em_vazio,
         },
     );
     motor::aplicar_entradas(&mut partida, &replay.entradas);
@@ -178,6 +179,7 @@ pub mod testes {
             sem_aberta: false,
             velocidade,
             jeito: motor::JeitoDeJogar::Gamepad,
+            pune_toque_em_vazio: false,
             hash_do_chart: motor::hash_do_chart(&notas),
             entradas,
         })
@@ -249,6 +251,7 @@ mod tests {
                 sem_aberta,
                 velocidade: 1.0,
                 jeito: motor::JeitoDeJogar::Gamepad,
+                pune_toque_em_vazio: false,
                 // O hash é sempre o do chart original, com a aberta.
                 hash_do_chart: motor::hash_do_chart(&notas),
                 entradas: toques(pista_da_aberta).collect(),
@@ -269,6 +272,27 @@ mod tests {
         let rejulgada = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &motor::empacotar_replay(&na_palhetada)).unwrap();
         assert_eq!(rejulgada.resumo.acertos, 0);
         assert_eq!(rejulgada.jeito_de_jogar, JeitoDeJogar::Palhetada);
+    }
+
+    #[test]
+    fn rejulga_o_toque_em_vazio_so_nos_replays_que_tem_a_regra() {
+        let chart = chart();
+        let mut lido = motor::desempacotar_replay(&replay(&chart, &[(0, 0.0), (1, 0.0)])).unwrap();
+        let primeira = lido.entradas[0];
+        // Entre as duas notas, um aperto no meio do nada.
+        lido.entradas.insert(
+            2,
+            motor::Entrada {
+                tempo: primeira.tempo + 0.06,
+                ..primeira
+            },
+        );
+        let sem_regra = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &motor::empacotar_replay(&lido)).unwrap();
+        lido.pune_toque_em_vazio = true;
+        let com_regra = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &motor::empacotar_replay(&lido)).unwrap();
+        assert_eq!(sem_regra.resumo.maior_sequencia, Some(2));
+        assert_eq!(com_regra.resumo.maior_sequencia, Some(1));
+        assert_eq!(com_regra.resumo.acertos, 2);
     }
 
     #[test]
