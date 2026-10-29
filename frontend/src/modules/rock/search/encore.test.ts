@@ -1,4 +1,4 @@
-import { FILTROS_PADRAO, buscarChartPeloMd5, buscarNoEncore, montarCorpoDaBuscaAvancada, formatarDuracao, lerRespostaDaBusca, montarCorpoDaBusca, montarUrlDoChart, nomeDoArquivo, urlDaCapa, ehUrlDoEncore, linkDoChartConfere, type ResultadoDaBusca } from "./encore";
+import { FILTROS_PADRAO, usaBuscaAvancada, buscarChartPeloMd5, buscarNoEncore, montarCorpoDaBuscaAvancada, formatarDuracao, lerRespostaDaBusca, montarCorpoDaBusca, montarUrlDoChart, nomeDoArquivo, urlDaCapa, ehUrlDoEncore, linkDoChartConfere, type ResultadoDaBusca } from "./encore";
 
 const itemDaApi = {
   name: "Enter Sandman",
@@ -18,7 +18,7 @@ const itemDaApi = {
 
 describe("montarCorpoDaBusca", () => {
   it("traduz os filtros para o formato da API", () => {
-    expect(montarCorpoDaBusca({ texto: " sandman ", instrumento: "bateria", dificuldade: "expert", genero: "todos" }, 2)).toEqual({
+    expect(montarCorpoDaBusca({ texto: " sandman ", instrumento: "bateria", dificuldade: "expert", genero: "todos", ordem: "recentes", soComVideo: false }, 2)).toEqual({
       search: "sandman",
       page: 2,
       instrument: "drums",
@@ -27,6 +27,15 @@ describe("montarCorpoDaBusca", () => {
       drumsReviewed: false,
       source: "api",
     });
+  });
+
+  it("sem ordem escolhida não manda sort, e a API usa os envios mais recentes", () => {
+    expect(montarCorpoDaBusca(FILTROS_PADRAO, 1)).not.toHaveProperty("sort");
+  });
+
+  it("a ordem escolhida vira o sort da API, também na busca avançada", () => {
+    expect(montarCorpoDaBusca({ ...FILTROS_PADRAO, ordem: "artista" }, 1).sort).toEqual({ type: "artist", direction: "asc" });
+    expect(montarCorpoDaBuscaAvancada({ ...FILTROS_PADRAO, genero: "rock", ordem: "ano-mais-novo" }, 1).sort).toEqual({ type: "year", direction: "desc" });
   });
 
   it("sem filtro manda null para instrumento e dificuldade", () => {
@@ -38,7 +47,7 @@ describe("montarCorpoDaBusca", () => {
 
 describe("montarCorpoDaBuscaAvancada", () => {
   it("leva o gênero e o texto como pedaço do nome da música, além dos outros filtros", () => {
-    expect(montarCorpoDaBuscaAvancada({ texto: " master ", instrumento: "baixo", dificuldade: "expert", genero: "metal" }, 3)).toEqual({
+    expect(montarCorpoDaBuscaAvancada({ texto: " master ", instrumento: "baixo", dificuldade: "expert", genero: "metal", ordem: "recentes", soComVideo: false }, 3)).toEqual({
       page: 3,
       instrument: "bass",
       difficulty: "expert",
@@ -222,5 +231,18 @@ describe("linkDoChartConfere", () => {
 
     await buscarNoEncore(FILTROS_PADRAO, 1, { buscar });
     expect((buscar.mock.calls[1] as unknown as [string])[0]).toBe("https://api.enchor.us/search");
+  });
+});
+
+describe("só com vídeo", () => {
+  it("vai para a busca avançada, a única que filtra por vídeo", () => {
+    expect(usaBuscaAvancada(FILTROS_PADRAO)).toBe(false);
+    expect(usaBuscaAvancada({ ...FILTROS_PADRAO, soComVideo: true })).toBe(true);
+    expect(usaBuscaAvancada({ ...FILTROS_PADRAO, genero: "rock" })).toBe(true);
+  });
+
+  it("pede à API só os charts com vídeo de fundo", () => {
+    expect(montarCorpoDaBuscaAvancada({ ...FILTROS_PADRAO, soComVideo: true }, 1)).toMatchObject({ hasVideoBackground: true });
+    expect(montarCorpoDaBuscaAvancada(FILTROS_PADRAO, 1)).not.toHaveProperty("hasVideoBackground");
   });
 });

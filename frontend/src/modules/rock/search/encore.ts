@@ -43,7 +43,19 @@ export const GENEROS = {
   reggae: "Reggae",
 } as const;
 
+/** Sem sort, a API lista os envios mais recentes primeiro. */
+export const ORDENS = {
+  recentes: null,
+  artista: { type: "artist", direction: "asc" },
+  nome: { type: "name", direction: "asc" },
+  "ano-mais-novo": { type: "year", direction: "desc" },
+  "ano-mais-antigo": { type: "year", direction: "asc" },
+  "mais-curtas": { type: "length", direction: "asc" },
+  "mais-longas": { type: "length", direction: "desc" },
+} as const;
+
 export type Instrumento = keyof typeof INSTRUMENTOS;
+export type Ordem = keyof typeof ORDENS;
 export type DificuldadeDaBusca = keyof typeof DIFICULDADES;
 export type Genero = keyof typeof GENEROS;
 
@@ -52,21 +64,25 @@ export interface FiltrosDaBusca {
   instrumento: Instrumento | "todos";
   dificuldade: DificuldadeDaBusca | "todas";
   genero: Genero | "todos";
+  ordem: Ordem;
+  /** Só charts com vídeo de fundo. */
+  soComVideo: boolean;
 }
 
-export const FILTROS_PADRAO: FiltrosDaBusca = { texto: "", instrumento: "todos", dificuldade: "todas", genero: "todos" };
+export const FILTROS_PADRAO: FiltrosDaBusca = { texto: "", instrumento: "todos", dificuldade: "todas", genero: "todos", ordem: "recentes", soComVideo: false };
 
 const contem = (valor: string) => ({ value: valor, exact: false, exclude: false });
 
-/**
- * O gênero só existe na busca avançada, que não tem o campo de texto livre:
- * com gênero, o texto procura no nome da música.
- */
+/** Gênero e vídeo só existem na busca avançada, que não tem o campo de texto livre. */
+export const usaBuscaAvancada = (filtros: FiltrosDaBusca) => filtros.genero !== "todos" || filtros.soComVideo;
+
+/** Na busca avançada o texto procura no nome da música. */
 export function montarCorpoDaBuscaAvancada(filtros: FiltrosDaBusca, pagina: number) {
   const { search: texto, ...comum } = montarCorpoDaBusca(filtros, pagina);
   return {
     ...comum,
     ...(filtros.genero !== "todos" && { genre: contem(GENEROS[filtros.genero]) }),
+    ...(filtros.soComVideo && { hasVideoBackground: true }),
     ...(texto && { name: contem(texto) }),
   };
 }
@@ -103,6 +119,7 @@ export function montarCorpoDaBusca(filtros: FiltrosDaBusca, pagina: number) {
     drumsReviewed: false,
     // A API aceita "website", "bridge" ou "api"; "api" identifica clientes de terceiros.
     source: "api",
+    ...(ORDENS[filtros.ordem] && { sort: ORDENS[filtros.ordem] }),
   };
 }
 
@@ -161,7 +178,7 @@ export async function buscarNoEncore(
   pagina: number,
   { buscar = fetch, sinal }: { buscar?: typeof fetch; sinal?: AbortSignal } = {},
 ): Promise<RespostaDaBusca> {
-  const avancada = filtros.genero !== "todos";
+  const avancada = usaBuscaAvancada(filtros);
   const resposta = await buscar(`${URL_DA_API}/search${avancada ? "/advanced" : ""}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
