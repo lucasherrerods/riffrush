@@ -1,25 +1,36 @@
 const JANELA_MS = 500;
 
+export interface LeituraDeFps {
+  fps: number;
+  /** O intervalo mais longo entre dois quadros da janela: um engasgo aparece aqui mesmo quando a média fica em 60. */
+  piorQuadroMs: number;
+}
+
 /**
  * Conta quadros por segundo numa janela de meio segundo.
- * `quadro(agora)` só devolve um número quando a janela fecha; nos outros quadros, null.
+ * `quadro(agora)` só devolve uma leitura quando a janela fecha; nos outros quadros, null.
  */
 export function criarContadorDeFps() {
   let inicio: number | null = null;
+  let anterior = 0;
   let quadros = 0;
+  let pior = 0;
   return {
-    quadro(agora: number): number | null {
+    quadro(agora: number): LeituraDeFps | null {
       if (inicio === null) {
-        inicio = agora;
+        inicio = anterior = agora;
         return null;
       }
       quadros++;
+      pior = Math.max(pior, agora - anterior);
+      anterior = agora;
       const passou = agora - inicio;
       if (passou < JANELA_MS) return null;
-      const fps = (quadros * 1000) / passou;
+      const leitura = { fps: (quadros * 1000) / passou, piorQuadroMs: pior };
       inicio = agora;
       quadros = 0;
-      return fps;
+      pior = 0;
+      return leitura;
     },
   };
 }

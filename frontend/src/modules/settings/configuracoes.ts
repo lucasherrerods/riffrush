@@ -129,5 +129,5 @@ export function nomeDaTecla(codigo: string) {
 
 /** Segundos que uma nota leva do horizonte até a linha de batida. */
 export function antecedenciaDasNotas(velocidade: number) {
-  return 2.6 - velocidade * 0.19;
+  return 3.2 - velocidade * 0.23;
 }

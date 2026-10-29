@@ -10,7 +10,7 @@ describe("opcoesDaPartida", () => {
       rotuloDaTeclaDaEstrela: "E",
       bot: true,
     });
-    expect(opcoes.antecedencia).toBeCloseTo(0.7);
+    expect(opcoes.antecedencia).toBeCloseTo(0.9);
   });
 
   it("leva para a partida se o personagem aparece e se o FPS é mostrado", () => {
