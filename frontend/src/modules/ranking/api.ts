@@ -1,3 +1,4 @@
+import type { JeitoDeJogar } from "@/modules/rock/gameplay";
 import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
 import { URL_DA_API, criarCliente } from "@/shared/lib/api";
 
@@ -13,6 +14,8 @@ export interface PosicaoNoRanking {
   precisao: number;
   maior_sequencia: number | null;
   jogada_em: string;
+  /** Como o recorde foi tocado. Partidas de antes da opção vêm sem. */
+  jeito_de_jogar?: JeitoDeJogar | null;
   /** A partida do recorde, para abrir as estatísticas dela. */
   partida_id: string;
 }

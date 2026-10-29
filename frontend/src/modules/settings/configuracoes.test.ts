@@ -1,4 +1,4 @@
-import { CONFIGURACOES_PADRAO, antecedenciaDasNotas, carregarConfiguracoes, nomeDaTecla, salvarConfiguracoes, trocarBotao, trocarTecla } from "./configuracoes";
+import { CONFIGURACOES_PADRAO, INDICE_DA_PALHETA, antecedenciaDasNotas, carregarConfiguracoes, nomeDaTecla, salvarConfiguracoes, trocarBotao, trocarTecla } from "./configuracoes";
 
 beforeEach(() => localStorage.clear());
 
@@ -47,6 +47,17 @@ describe("trocarTecla", () => {
 
   it("o índice 6 é a tecla do star power", () => {
     expect(trocarTecla(CONFIGURACOES_PADRAO, 6, "KeyE").teclaDaEstrela).toBe("KeyE");
+  });
+
+  it("o índice 7 é a tecla da palheta, que começa no Enter", () => {
+    expect(CONFIGURACOES_PADRAO.teclaDaPalheta).toBe("Enter");
+    expect(trocarTecla(CONFIGURACOES_PADRAO, INDICE_DA_PALHETA, "ShiftRight").teclaDaPalheta).toBe("ShiftRight");
+  });
+
+  it("o jeito de jogar começa no gamepad, também para quem salvou antes dele existir", () => {
+    expect(CONFIGURACOES_PADRAO.jeitoDeJogar).toBe("gamepad");
+    localStorage.setItem("riffrush.configuracoes", JSON.stringify({ velocidade: 3 }));
+    expect(carregarConfiguracoes().jeitoDeJogar).toBe("gamepad");
   });
 });
 

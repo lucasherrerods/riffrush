@@ -8,7 +8,7 @@ use super::portas::{
     RepositorioDeContas, RepositorioDeSessoes,
 };
 use crate::modules::catalogo::{origem_do_id, Origem};
-use crate::modules::progresso::{nivel_do_xp, validar_replay, xp_da_partida, Instrumento, Nivel, PartidaInvalida, ResumoDaPartida};
+use crate::modules::progresso::{nivel_do_xp, validar_replay, xp_da_partida, Instrumento, JeitoDeJogar, Nivel, PartidaInvalida, ResumoDaPartida};
 
 /// As portas que os casos de uso da conta usam. O main liga os adaptadores reais; os testes, fakes.
 #[derive(Clone)]
@@ -94,6 +94,7 @@ pub struct PartidaRejulgada {
     pub precisao: f64,
     /// Com o modificador sem falha a partida rende XP, mas fica fora do ranking.
     pub sem_falha: bool,
+    pub jeito_de_jogar: JeitoDeJogar,
     pub jogada_em: chrono::DateTime<chrono::Utc>,
     pub replay: Vec<u8>,
 }
@@ -176,6 +177,7 @@ impl ServicosDaConta {
                 jogada_em: agora,
                 replay: None,
                 precisao: None,
+                jeito_de_jogar: None,
             })
             .await?;
         Ok(Registro::Registrada(XpDaPartida {
@@ -206,6 +208,7 @@ impl ServicosDaConta {
                 replay: vale_para_o_ranking.then_some(partida.replay),
                 // O ranking só lê partidas com precisão: sem ela, a partida fica de fora.
                 precisao: vale_para_o_ranking.then_some(partida.precisao),
+                jeito_de_jogar: Some(partida.jeito_de_jogar),
             })
             .await?;
         Ok(())
@@ -570,6 +573,7 @@ mod tests {
             sem_falha: false,
             jogada_em: quando,
             replay: vec![2, 0],
+            jeito_de_jogar: crate::modules::progresso::JeitoDeJogar::Gamepad,
         }
     }
 

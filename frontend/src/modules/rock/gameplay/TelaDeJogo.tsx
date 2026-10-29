@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronsUp, Eye, Loader2, Pause, Skull } from "lucide-react";
+import { PALHETA_DO_CONTROLE, veioDoControle } from "@/modules/gamepad";
 import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
 import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "@/modules/rock/character";
 import { cenaDaPartida } from "./cena";
@@ -20,7 +21,7 @@ import { BarraDeEstrelas } from "./componentes/BarraDeEstrelas";
 import { progressoDasEstrelas } from "./estrelas";
 import { criarLojaDoHud, useLoja, type LojaDoHud } from "./lojaDoHud";
 import { NOMES_DAS_PISTAS } from "./cores";
-import { avancar, criarPartida, multiplicador, precisao, retirarEventos, type Julgamento } from "./partida";
+import { avancar, criarPartida, multiplicador, precisao, retirarEventos, type JeitoDeJogar, type Julgamento } from "./partida";
 import { aplicarEntradas, criarGravador, empacotarReplay, hashDoChart, type EventoDaTransmissao, type Replay } from "./replay";
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { forcaDoTrovao } from "./pista/efeitos";
@@ -48,6 +49,10 @@ export interface OpcoesDaPartida {
   semAberta: boolean;
   /** Velocidade da música (1 é a normal). */
   velocidadeDaMusica: number;
+  /** Como as teclas viram notas. Vai no replay, e a API rejulga com ele. */
+  jeitoDeJogar: JeitoDeJogar;
+  /** Na palhetada, a tecla que toca o acorde. O direcional do controle chega como `PALHETA_DO_CONTROLE`. */
+  teclaDaPalheta: string;
   bot: boolean;
   efeitos: boolean;
   /** Mostra o personagem 3D no palco e no HUD. */
@@ -71,6 +76,8 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   semFalha: false,
   semAberta: false,
   velocidadeDaMusica: 1,
+  jeitoDeJogar: "gamepad",
+  teclaDaPalheta: "Enter",
   bot: false,
   efeitos: true,
   personagem: true,
@@ -258,8 +265,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
 
     // Em rede ninguém sai da música: quem zera a vida vira fantasma e segue pontuando.
     const partida = replay
-      ? criarPartida(carregada.notas, { semFalha: replay.semFalha, fantasma: replay.fantasma, semAberta: replay.semAberta, velocidade })
-      : criarPartida(carregada.notas, { semFalha: opcoes.semFalha, fantasma: inicioEmRede !== undefined, semAberta: opcoes.semAberta, velocidade });
+      ? criarPartida(carregada.notas, { semFalha: replay.semFalha, fantasma: replay.fantasma, semAberta: replay.semAberta, velocidade, jeito: replay.jeito, puneToqueEmVazio: replay.puneToqueEmVazio })
+      : criarPartida(carregada.notas, { semFalha: opcoes.semFalha, fantasma: inicioEmRede !== undefined, semAberta: opcoes.semAberta, velocidade, jeito: opcoes.jeitoDeJogar });
     const bot = opcoes.bot && !replay ? criarBot() : null;
     const gravador = criarGravador(partida);
     let proximaEntrada = 0;
@@ -282,7 +289,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       void hashDoChart(carregada.notas).then((hash) => {
         if (transmissaoAcabou) return;
         transmitindo = true;
-        transmitir({ tipo: "inicio", hashDoChart: hash, semFalha: opcoes.semFalha, semAberta: opcoes.semAberta, velocidade });
+        transmitir({ tipo: "inicio", hashDoChart: hash, semFalha: opcoes.semFalha, semAberta: opcoes.semAberta, velocidade, jeito: opcoes.jeitoDeJogar, puneToqueEmVazio: true });
       });
     }
     const sprites = criarSprites();
@@ -348,6 +355,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
             fantasma: inicioEmRede !== undefined,
             semAberta: opcoes.semAberta,
             velocidade,
+            jeito: opcoes.jeitoDeJogar,
+            puneToqueEmVazio: true,
             hashDoChart: await hashDoChart(carregada.notas),
             entradas: gravador.entradas,
           });
@@ -386,6 +395,13 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         } else if (evento.tipo === "derrota") {
           reagir("derrota");
           terminar();
+        } else if (evento.tipo === "toqueEmVazio") {
+          reagir("errou");
+          if (evento.pista !== null) {
+            falhas.push({ pista: evento.pista, tempo });
+            if (falhas.length > MAXIMO_DE_EXPLOSOES) falhas.shift();
+          }
+          tocarEfeito("erro", opcoes.volumeDosEfeitos);
         } else if (evento.tipo === "virouFantasma") {
           tocarEfeito("erro", opcoes.volumeDosEfeitos);
           avisar("Virou fantasma! Acerte as notas para voltar.");
@@ -456,6 +472,15 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       apertados[pista] = false;
       gravador.soltar(pista, tempoDaMusica(agoraNoAudio(audio)));
     };
+    const palhetar = (evento: Event) => {
+      if (pausadoAgora || terminou || replay) return;
+      const tempo = tempoDaMusica(momentoDoEvento(audio, evento));
+      gravador.palhetar(tempo);
+      tratarEventos(tempo);
+    };
+    /** O A do controle também manda Enter (confirma na pausa): só o direcional palheta pelo controle. */
+    const ehPalheta = (evento: KeyboardEvent) =>
+      opcoes.jeitoDeJogar === "palhetada" && (evento.code === PALHETA_DO_CONTROLE || (evento.code === opcoes.teclaDaPalheta && !veioDoControle(evento)));
     controles.current.apertar = apertar;
     controles.current.largar = largar;
 
@@ -469,7 +494,10 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       }
       if (pausadoAgora || terminou) return;
       const pista = opcoes.teclas.indexOf(evento.code);
-      if (pista >= 0) {
+      if (ehPalheta(evento)) {
+        evento.preventDefault();
+        if (!evento.repeat) palhetar(evento);
+      } else if (pista >= 0) {
         evento.preventDefault();
         if (!evento.repeat) apertar(pista, evento);
       } else if (evento.code === opcoes.teclaDaEstrela) {

@@ -4,6 +4,24 @@ import { JANELA_DE_ACERTO, ativarEstrela, janelaDoMotor, avancar, criarPartida, 
 const nota = (tempo: number, pista = 0, extra: Partial<Nota> = {}): Nota => ({ tempo, pista, frase: -1, duracao: 0, ...extra });
 
 describe("tocar", () => {
+  it("tocar em vazio zera a sequência, tira vida e avisa com o traste", () => {
+    const partida = criarPartida([nota(1), nota(2)]);
+    tocar(partida, 0, 1);
+    retirarEventos(partida);
+    const vida = partida.vida;
+    expect(tocar(partida, 1, 1)).toBe(false);
+    expect(partida.sequencia).toBe(0);
+    expect(partida.vida).toBeLessThan(vida);
+    expect(retirarEventos(partida)).toContainEqual({ tipo: "toqueEmVazio", pista: 1 });
+  });
+
+  it("sem a regra (replays antigos), tocar em vazio não pune", () => {
+    const partida = criarPartida([nota(1)], { puneToqueEmVazio: false });
+    const vida = partida.vida;
+    tocar(partida, 0, 0.5);
+    expect(partida.vida).toBe(vida);
+  });
+
   it("acerta a nota da pista dentro da janela de acerto", () => {
     const partida = criarPartida([nota(1)]);
     expect(tocar(partida, 0, 1 + JANELA_DE_ACERTO * 0.9)).toBe(true);

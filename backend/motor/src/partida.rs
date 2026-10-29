@@ -86,6 +86,18 @@ pub struct NotaEmJogo {
     pub segurou_ate: f64,
 }
 
+/// Como as teclas viram notas.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum JeitoDeJogar {
+    /// Cada aperto acerta uma nota, e só uma.
+    Tapping,
+    /// Soltar a tecla depois de um acerto também acerta a próxima nota da pista.
+    #[default]
+    Gamepad,
+    /// Os trastes só ficam apertados; a palheta toca o acorde que eles formam.
+    Palhetada,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct OpcoesDaPartida {
     pub sem_falha: bool,
@@ -97,6 +109,10 @@ pub struct OpcoesDaPartida {
     pub velocidade: f64,
     /// A nota aberta vira verde. Não muda quantas notas a música tem, então a partida vale igual.
     pub sem_aberta: bool,
+    pub jeito: JeitoDeJogar,
+    /// Tocar sem acertar nota (traste a mais, palheta sem nota) zera a sequência e tira vida.
+    /// Os replays de antes da regra tocam sem ela.
+    pub pune_toque_em_vazio: bool,
 }
 
 impl Default for OpcoesDaPartida {
@@ -106,6 +122,8 @@ impl Default for OpcoesDaPartida {
             fantasma: false,
             velocidade: 1.0,
             sem_aberta: false,
+            jeito: JeitoDeJogar::Gamepad,
+            pune_toque_em_vazio: true,
         }
     }
 }
@@ -123,6 +141,10 @@ pub enum Evento {
     },
     Erro {
         nota: usize,
+    },
+    /// Um toque que não acertou nada. `pista` é o traste; na palheta, `None`.
+    ToqueEmVazio {
+        pista: Option<u8>,
     },
     Sequencia(u32),
     FraseCompleta,
@@ -167,6 +189,10 @@ pub struct Partida {
     pub frases_falhas: HashSet<i32>,
     /// Pistas cujo último aperto acertou uma nota: soltar a tecla pode acertar mais uma.
     armadas: HashSet<u8>,
+    jeito: JeitoDeJogar,
+    pune_toque_em_vazio: bool,
+    /// Na palhetada, os trastes que estão apertados agora.
+    apertados: HashSet<u8>,
     eventos: Vec<Evento>,
 }
 
@@ -218,6 +244,9 @@ pub fn criar_partida(notas: &[Nota], opcoes: OpcoesDaPartida) -> Partida {
         acertos_por_frase: HashMap::new(),
         frases_falhas: HashSet::new(),
         armadas: HashSet::new(),
+        jeito: opcoes.jeito,
+        pune_toque_em_vazio: opcoes.pune_toque_em_vazio,
+        apertados: HashSet::new(),
         eventos: Vec::new(),
     }
 }
@@ -302,6 +331,22 @@ fn errar(partida: &mut Partida, indice: usize) {
         partida.frases_falhas.insert(frase);
     }
     partida.eventos.push(Evento::Erro { nota: indice });
+    perder_vida(partida);
+}
+
+/// O toque não acertou nota nenhuma: perde a sequência e a vida de um erro, mas nenhuma nota conta como perdida.
+fn tocar_em_vazio(partida: &mut Partida, pista: Option<u8>) {
+    if !partida.pune_toque_em_vazio {
+        return;
+    }
+    partida.sequencia = 0;
+    partida.vida = (partida.vida - VIDA_POR_ERRO).max(0.0);
+    partida.eventos.push(Evento::ToqueEmVazio { pista });
+    perder_vida(partida);
+}
+
+/// Depois de a vida cair: com ela zerada, a partida acaba (ou vira fantasma no multijogador).
+fn perder_vida(partida: &mut Partida) {
     if partida.vida > 0.0 || partida.sem_falha {
         return;
     }
@@ -336,11 +381,69 @@ pub fn tocar(partida: &mut Partida, pista: u8, tempo: f64) -> bool {
     if partida.derrota {
         return false;
     }
-    if !acertar_mais_proxima(partida, pista, tempo) {
-        partida.armadas.remove(&pista);
+    match partida.jeito {
+        JeitoDeJogar::Palhetada => {
+            partida.apertados.insert(pista);
+            false
+        }
+        JeitoDeJogar::Tapping => {
+            let acertou = acertar_mais_proxima(partida, pista, tempo);
+            if !acertou {
+                tocar_em_vazio(partida, Some(pista));
+            }
+            acertou
+        }
+        JeitoDeJogar::Gamepad => {
+            if !acertar_mais_proxima(partida, pista, tempo) {
+                partida.armadas.remove(&pista);
+                tocar_em_vazio(partida, Some(pista));
+                return false;
+            }
+            partida.armadas.insert(pista);
+            true
+        }
+    }
+}
+
+/// Na palhetada, toca o acorde mais perto se os trastes apertados forem exatamente os dele.
+/// Sem nenhum traste apertado, é a nota aberta que toca.
+pub fn palhetar(partida: &mut Partida, tempo: f64) -> bool {
+    let tempo = trazer_ate(partida, tempo);
+    if partida.derrota || partida.jeito != JeitoDeJogar::Palhetada {
         return false;
     }
-    partida.armadas.insert(pista);
+    let mut mais_perto: Option<f64> = None;
+    for nota in partida.notas.iter().skip(partida.primeira) {
+        if nota.tempo >= tempo + JANELA_DE_ACERTO {
+            break;
+        }
+        if nota.acertada || nota.perdida {
+            continue;
+        }
+        let distancia = (nota.tempo - tempo).abs();
+        if distancia <= JANELA_DE_ACERTO && mais_perto.is_none_or(|t| distancia < (t - tempo).abs()) {
+            mais_perto = Some(nota.tempo);
+        }
+    }
+    let Some(batida) = mais_perto else {
+        tocar_em_vazio(partida, None);
+        return false;
+    };
+    let acorde: Vec<usize> = (partida.primeira..partida.notas.len())
+        .take_while(|&i| partida.notas[i].tempo <= batida)
+        .filter(|&i| {
+            let nota = &partida.notas[i];
+            nota.tempo == batida && !nota.acertada && !nota.perdida
+        })
+        .collect();
+    let pistas: HashSet<u8> = acorde.iter().map(|&i| partida.notas[i].pista).filter(|&p| p != PISTA_ABERTA).collect();
+    if pistas != partida.apertados {
+        tocar_em_vazio(partida, None);
+        return false;
+    }
+    for indice in acorde {
+        acertar(partida, indice, tempo);
+    }
     true
 }
 
@@ -373,6 +476,7 @@ fn acertar_mais_proxima(partida: &mut Partida, pista: u8, tempo: f64) -> bool {
 pub fn soltar(partida: &mut Partida, pista: u8, tempo: f64) {
     let tempo = trazer_ate(partida, tempo);
     let armada = partida.armadas.remove(&pista);
+    partida.apertados.remove(&pista);
     let mut largou_cedo = false;
     for nota in partida.notas.iter_mut().skip(partida.primeira) {
         if nota.tempo > tempo {
@@ -598,5 +702,126 @@ mod tests {
         assert!(!tocar(&mut partida, 0, 0.8));
         assert!(!tocar(&mut partida, 1, 1.0));
         assert!(tocar(&mut partida, 0, 1.0));
+    }
+
+    fn com_jeito(jeito: JeitoDeJogar) -> OpcoesDaPartida {
+        OpcoesDaPartida {
+            jeito,
+            ..OpcoesDaPartida::default()
+        }
+    }
+
+    fn na_pista(tempo: f64, pista: u8) -> Nota {
+        Nota { pista, ..nota(tempo) }
+    }
+
+    #[test]
+    fn no_gamepad_soltar_a_tecla_acerta_a_proxima_nota_da_pista() {
+        let mut partida = criar_partida(&[nota(1.0), nota(1.2)], com_jeito(JeitoDeJogar::Gamepad));
+        assert!(tocar(&mut partida, 0, 1.0));
+        soltar(&mut partida, 0, 1.2);
+        assert_eq!(partida.acertos, 2);
+    }
+
+    #[test]
+    fn no_tapping_cada_aperto_vale_uma_nota_e_soltar_nao_acerta() {
+        let mut partida = criar_partida(&[nota(1.0), nota(1.2)], com_jeito(JeitoDeJogar::Tapping));
+        assert!(tocar(&mut partida, 0, 1.0));
+        soltar(&mut partida, 0, 1.2);
+        assert_eq!(partida.acertos, 1);
+        assert!(tocar(&mut partida, 0, 1.2));
+        assert_eq!(partida.acertos, 2);
+    }
+
+    #[test]
+    fn na_palhetada_o_traste_so_acende_e_a_palheta_toca_o_acorde() {
+        let mut partida = criar_partida(&[na_pista(1.0, 0), na_pista(1.0, 1)], com_jeito(JeitoDeJogar::Palhetada));
+        assert!(!tocar(&mut partida, 0, 0.95));
+        assert!(!tocar(&mut partida, 1, 0.96));
+        assert_eq!(partida.acertos, 0);
+        assert!(palhetar(&mut partida, 1.0));
+        assert_eq!(partida.acertos, 2);
+    }
+
+    #[test]
+    fn na_palhetada_o_acorde_errado_nao_acerta_nada() {
+        let mut partida = criar_partida(&[na_pista(1.0, 0), na_pista(1.0, 1)], com_jeito(JeitoDeJogar::Palhetada));
+        tocar(&mut partida, 0, 0.95);
+        assert!(!palhetar(&mut partida, 1.0));
+        tocar(&mut partida, 2, 0.97);
+        tocar(&mut partida, 1, 0.98);
+        assert!(!palhetar(&mut partida, 1.0));
+        assert_eq!(partida.acertos, 0);
+    }
+
+    #[test]
+    fn na_palhetada_soltar_o_traste_apaga_ele_e_sem_traste_a_palheta_toca_a_aberta() {
+        let mut partida = criar_partida(&[na_pista(1.0, 0), na_pista(1.5, PISTA_ABERTA)], com_jeito(JeitoDeJogar::Palhetada));
+        tocar(&mut partida, 0, 0.9);
+        assert!(palhetar(&mut partida, 1.0));
+        soltar(&mut partida, 0, 1.2);
+        assert!(palhetar(&mut partida, 1.5));
+        assert_eq!(partida.acertos, 2);
+    }
+
+    #[test]
+    fn fora_da_palhetada_a_palheta_nao_faz_nada() {
+        let mut partida = criar_partida(&[nota(1.0)], com_jeito(JeitoDeJogar::Gamepad));
+        assert!(!palhetar(&mut partida, 1.0));
+        assert_eq!(partida.acertos, 0);
+    }
+
+    #[test]
+    fn tocar_em_vazio_zera_o_combo_e_tira_vida_sem_contar_como_nota_errada() {
+        let mut partida = criar_partida(&[nota(1.0), nota(2.0)], OpcoesDaPartida::default());
+        assert!(tocar(&mut partida, 0, 1.0));
+        let vida = partida.vida;
+        assert!(!tocar(&mut partida, 0, 1.5));
+        assert_eq!(partida.sequencia, 0);
+        assert!(partida.vida < vida);
+        assert_eq!(partida.erros, 0);
+        assert!(retirar_eventos(&mut partida).contains(&Evento::ToqueEmVazio { pista: Some(0) }));
+    }
+
+    #[test]
+    fn no_acorde_o_traste_a_mais_tambem_pune() {
+        let mut partida = criar_partida(&[nota(1.0)], com_jeito(JeitoDeJogar::Tapping));
+        assert!(tocar(&mut partida, 0, 1.0));
+        assert!(!tocar(&mut partida, 1, 1.0));
+        assert_eq!(partida.sequencia, 0);
+        assert_eq!(partida.acertos, 1);
+    }
+
+    #[test]
+    fn na_palhetada_so_a_palheta_em_vazio_pune() {
+        let mut partida = criar_partida(&[na_pista(1.0, 0)], com_jeito(JeitoDeJogar::Palhetada));
+        let vida = partida.vida;
+        tocar(&mut partida, 1, 0.5);
+        soltar(&mut partida, 1, 0.6);
+        assert_eq!(partida.vida, vida);
+        assert!(!palhetar(&mut partida, 0.5));
+        assert!(partida.vida < vida);
+        assert!(retirar_eventos(&mut partida).contains(&Evento::ToqueEmVazio { pista: None }));
+    }
+
+    #[test]
+    fn tocar_em_vazio_ate_a_vida_acabar_e_derrota() {
+        let mut partida = criar_partida(&[nota(100.0)], OpcoesDaPartida::default());
+        for i in 0..20 {
+            tocar(&mut partida, 0, f64::from(i) * 0.5);
+        }
+        assert!(partida.derrota);
+    }
+
+    #[test]
+    fn sem_a_regra_tocar_em_vazio_nao_pune() {
+        let opcoes = OpcoesDaPartida {
+            pune_toque_em_vazio: false,
+            ..OpcoesDaPartida::default()
+        };
+        let mut partida = criar_partida(&[nota(1.0)], opcoes);
+        let vida = partida.vida;
+        assert!(!tocar(&mut partida, 0, 0.5));
+        assert_eq!(partida.vida, vida);
     }
 }

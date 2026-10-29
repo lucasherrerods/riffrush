@@ -72,6 +72,8 @@ fn o_replay_da_o_mesmo_resultado_que_no_app() {
                 fantasma: replay.fantasma,
                 velocidade: replay.velocidade,
                 sem_aberta: replay.sem_aberta,
+                jeito: replay.jeito,
+                pune_toque_em_vazio: replay.pune_toque_em_vazio,
             },
         );
         aplicar_entradas(&mut partida, &replay.entradas);

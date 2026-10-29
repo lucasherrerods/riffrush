@@ -20,6 +20,9 @@ export function marcarComoDoControle(evento: Event) {
   doControle.add(evento);
 }
 
+/** O evento é uma tecla simulada pelo controle, e não do teclado. */
+export const veioDoControle = (evento: Event) => doControle.has(evento);
+
 export function registrarUso(dispositivo: Dispositivo) {
   if (dispositivo === atual) return;
   atual = dispositivo;

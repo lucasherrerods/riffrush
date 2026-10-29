@@ -75,7 +75,7 @@ export function TelaDeEspectador({ pessoa, musicas, opcoes, personagem, aoSair, 
         if (mensagem.tipo === "semPartida") return setFase("semPartida");
         if (mensagem.tipo === "inicio") {
           clearTimeout(fimAgendado);
-          const replay: Replay = { semFalha: mensagem.partida.semFalha, velocidade: mensagem.partida.velocidade ?? 1, fantasma: false, semAberta: mensagem.partida.semAberta ?? false, hashDoChart: mensagem.partida.hashDoChart, entradas: [], ateAgora: 0 };
+          const replay: Replay = { semFalha: mensagem.partida.semFalha, velocidade: mensagem.partida.velocidade ?? 1, fantasma: false, semAberta: mensagem.partida.semAberta ?? false, jeito: mensagem.partida.jeito ?? "gamepad", puneToqueEmVazio: mensagem.partida.puneToqueEmVazio ?? false, hashDoChart: mensagem.partida.hashDoChart, entradas: [], ateAgora: 0 };
           atual = { partida: mensagem.partida, replay };
           setTransmissao(atual);
           musicaDaPartida.current = acharMusicaAtual.current(mensagem.partida);
