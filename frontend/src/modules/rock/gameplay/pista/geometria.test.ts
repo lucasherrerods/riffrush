@@ -13,8 +13,8 @@ describe("layoutDaPista", () => {
     expect(layoutDaPista(1200, 800).horizonte).toBeGreaterThanOrEqual(800 * 0.15);
   });
 
-  it("a pista fica deitada, como no Guitar Hero: sobe só até perto de um quarto da tela", () => {
-    expect(layoutDaPista(1200, 800).horizonte).toBeGreaterThanOrEqual(800 * 0.25);
+  it("a pista fica deitada, como no Guitar Hero: sobe só até perto de um terço da tela", () => {
+    expect(layoutDaPista(1200, 800).horizonte).toBeGreaterThanOrEqual(800 * 0.3);
   });
 
   it("divide a pista em 5 trastes iguais", () => {
@@ -33,7 +33,7 @@ describe("projetar", () => {
   it("no fundo a nota fica no horizonte e bem menor", () => {
     const fundo = projetar(layout, 1);
     expect(fundo.y).toBeCloseTo(layout.horizonte);
-    expect(fundo.escala).toBeLessThan(0.3);
+    expect(fundo.escala).toBeLessThan(0.35);
   });
 
   it("quanto mais longe, mais alto e menor", () => {
