@@ -78,6 +78,14 @@ describe("TelaDeBuscaDeMusicas", () => {
     expect(screen.getByRole("searchbox", { name: "Buscar músicas" })).toHaveAttribute("placeholder", "Nome da música");
   });
 
+  it("o check de oficiais e a ordem de mais jogadas entram na busca", async () => {
+    const { buscar, usuario } = abrir();
+    await screen.findByRole("heading", { name: "Hit" });
+    await usuario.click(screen.getByRole("switch", { name: "Oficiais" }));
+    await usuario.selectOptions(screen.getByRole("combobox", { name: "Ordem" }), "mais-jogadas");
+    await waitFor(() => expect(ultimaChamada(buscar)[0]).toMatchObject({ soOficiais: true, ordem: "mais-jogadas" }));
+  });
+
   it("pagina os resultados", async () => {
     const buscar = vi.fn(async (): Promise<RespostaDaBusca> => ({ total: 25, resultados: [resultado("Hit")] }));
     const { usuario } = abrir(buscar);

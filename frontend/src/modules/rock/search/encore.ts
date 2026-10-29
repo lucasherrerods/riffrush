@@ -1,5 +1,7 @@
 // Cliente da API pública do Chorus Encore (enchor.us). Ela não tem documentação oficial:
 // os formatos aqui vêm do próprio site, por isso a resposta é conferida antes de usar.
+import type { Instrumento as InstrumentoDaPartida } from "@/modules/rock/songs";
+
 const URL_DA_API = "https://api.enchor.us";
 const URL_DOS_ARQUIVOS = "https://files.enchor.us";
 const MD5 = /^[a-f0-9]{32}$/i;
@@ -46,6 +48,8 @@ export const GENEROS = {
 /** Sem sort, a API lista os envios mais recentes primeiro. */
 export const ORDENS = {
   recentes: null,
+  // Não é ordem do Encore: a lista vem do nosso ranking (ver buscarEntreOsCharts).
+  "mais-jogadas": null,
   artista: { type: "artist", direction: "asc" },
   nome: { type: "name", direction: "asc" },
   "ano-mais-novo": { type: "year", direction: "desc" },
@@ -67,14 +71,16 @@ export interface FiltrosDaBusca {
   ordem: Ordem;
   /** Só charts com vídeo de fundo. */
   soComVideo: boolean;
+  /** Só charts da Harmonix, os oficiais de Guitar Hero e Rock Band. */
+  soOficiais: boolean;
 }
 
-export const FILTROS_PADRAO: FiltrosDaBusca = { texto: "", instrumento: "todos", dificuldade: "todas", genero: "todos", ordem: "recentes", soComVideo: false };
+export const FILTROS_PADRAO: FiltrosDaBusca = { texto: "", instrumento: "todos", dificuldade: "todas", genero: "todos", ordem: "recentes", soComVideo: false, soOficiais: false };
 
 const contem = (valor: string) => ({ value: valor, exact: false, exclude: false });
 
-/** Gênero e vídeo só existem na busca avançada, que não tem o campo de texto livre. */
-export const usaBuscaAvancada = (filtros: FiltrosDaBusca) => filtros.genero !== "todos" || filtros.soComVideo;
+/** Gênero, vídeo e charter só existem na busca avançada, que não tem o campo de texto livre. */
+export const usaBuscaAvancada = (filtros: FiltrosDaBusca) => filtros.genero !== "todos" || filtros.soComVideo || filtros.soOficiais;
 
 /** Na busca avançada o texto procura no nome da música. */
 export function montarCorpoDaBuscaAvancada(filtros: FiltrosDaBusca, pagina: number) {
@@ -83,6 +89,7 @@ export function montarCorpoDaBuscaAvancada(filtros: FiltrosDaBusca, pagina: numb
     ...comum,
     ...(filtros.genero !== "todos" && { genre: contem(GENEROS[filtros.genero]) }),
     ...(filtros.soComVideo && { hasVideoBackground: true }),
+    ...(filtros.soOficiais && { charter: contem("Harmonix") }),
     ...(texto && { name: contem(texto) }),
   };
 }
@@ -188,6 +195,58 @@ export async function buscarNoEncore(
   if (resposta.status === 429) throw new Error("Muitas buscas seguidas. Espere um pouco e tente de novo.");
   if (!resposta.ok) throw new Error("O Encore está indisponível agora. Tente de novo mais tarde.");
   return lerRespostaDaBusca(await resposta.json());
+}
+
+/** O Encore aceita vários md5 separados por vírgula; as 50 mais jogadas cabem em 5 páginas. */
+const PAGINAS_ENTRE_OS_CHARTS = 5;
+
+/**
+ * Busca entre os charts da lista (as mais jogadas do ranking), com os mesmos filtros, e devolve na ordem da lista.
+ * O Encore pagina na ordem dele, então todas as páginas vêm de uma vez e a paginação é feita aqui.
+ */
+export async function buscarEntreOsCharts(
+  md5s: string[],
+  filtros: FiltrosDaBusca,
+  pagina: number,
+  { buscar = fetch, sinal }: { buscar?: typeof fetch; sinal?: AbortSignal } = {},
+): Promise<RespostaDaBusca> {
+  const validos = md5s.filter((m) => MD5.test(m));
+  if (!validos.length) return { total: 0, resultados: [] };
+  const encontrados: ResultadoDaBusca[] = [];
+  for (let paginaDoEncore = 1; paginaDoEncore <= PAGINAS_ENTRE_OS_CHARTS; paginaDoEncore++) {
+    const resposta = await buscar(`${URL_DA_API}/search/advanced`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...montarCorpoDaBuscaAvancada(filtros, paginaDoEncore), hash: validos.join(",") }),
+      signal: sinal,
+    });
+    if (resposta.status === 429) throw new Error("Muitas buscas seguidas. Espere um pouco e tente de novo.");
+    if (!resposta.ok) throw new Error("O Encore está indisponível agora. Tente de novo mais tarde.");
+    const lida = lerRespostaDaBusca(await resposta.json());
+    encontrados.push(...lida.resultados);
+    if (encontrados.length >= lida.total || lida.resultados.length < TAMANHO_DA_PAGINA) break;
+  }
+  const posicao = new Map(validos.map((m, i) => [m.toLowerCase(), i]));
+  const ordenados = encontrados.filter((r) => posicao.has(r.md5.toLowerCase())).sort((a, b) => posicao.get(a.md5.toLowerCase())! - posicao.get(b.md5.toLowerCase())!);
+  return { total: ordenados.length, resultados: ordenados.slice((pagina - 1) * TAMANHO_DA_PAGINA, pagina * TAMANHO_DA_PAGINA) };
+}
+
+/** O instrumento da partida com o nome que a busca usa. */
+const INSTRUMENTO_DA_BUSCA: Record<InstrumentoDaPartida, Instrumento> = { guitarra: "guitarra", baixo: "baixo", ritmica: "ritmo", coop: "guitarra-coop", teclado: "teclado" };
+
+/** Sorteia um chart oficial que tem a dificuldade no instrumento: a primeira página dá o total, a segunda é a sorteada. */
+export async function sortearChartOficial(
+  dificuldade: DificuldadeDaBusca,
+  instrumento: InstrumentoDaPartida,
+  { buscar = fetch, aleatorio = Math.random }: { buscar?: typeof fetch; aleatorio?: () => number } = {},
+): Promise<ResultadoDaBusca> {
+  const filtros: FiltrosDaBusca = { ...FILTROS_PADRAO, soOficiais: true, dificuldade, instrumento: INSTRUMENTO_DA_BUSCA[instrumento] };
+  const primeira = await buscarNoEncore(filtros, 1, { buscar });
+  if (!primeira.total) throw new Error("Nenhuma música oficial tem essa dificuldade nesse instrumento.");
+  const pagina = 1 + Math.floor(aleatorio() * Math.ceil(primeira.total / TAMANHO_DA_PAGINA));
+  const { resultados } = pagina === 1 ? primeira : await buscarNoEncore(filtros, pagina, { buscar });
+  const lista = resultados.length ? resultados : primeira.resultados;
+  return lista[Math.floor(aleatorio() * lista.length)];
 }
 
 /**

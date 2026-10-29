@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
 import { registrarUso } from "@/modules/gamepad";
@@ -31,6 +31,37 @@ beforeEach(() => {
 });
 
 describe("TelaDeSelecao", () => {
+  it("o botão de oficial aleatória pede a dificuldade e o instrumento escolhidos e fica ocupado até baixar", async () => {
+    let terminar = () => {};
+    const sortearOficial = vi.fn(() => new Promise<void>((r) => (terminar = r)));
+    render(
+      <TelaDeSelecao
+        musicas={MUSICAS_DE_TESTE}
+        indice={0}
+        dificuldade="dificil"
+        instrumento="baixo"
+        personagem={PERSONAGEM_PADRAO}
+        volumeDosEfeitos={0}
+        velocidadeDaMusica={1}
+        aoSelecionar={vi.fn()}
+        aoDificuldade={vi.fn()}
+        aoInstrumento={vi.fn()}
+        aoJogar={vi.fn()}
+        aoVoltar={vi.fn()}
+        aoImportar={vi.fn()}
+        aoRemover={vi.fn()}
+        aoVelocidadeDaMusica={vi.fn()}
+        sortearOficial={sortearOficial}
+      />,
+    );
+    const botao = screen.getByRole("button", { name: /Oficial aleatória/ });
+    await userEvent.click(botao);
+    expect(sortearOficial).toHaveBeenCalledWith("dificil", "baixo");
+    expect(botao).toBeDisabled();
+    terminar();
+    await waitFor(() => expect(botao).toBeEnabled());
+  });
+
   it("a aleatória do top 50 seleciona a música sorteada", async () => {
     const sortearMusica = vi.fn(() => Promise.resolve(MUSICAS_DE_TESTE[2]));
     const aoSelecionar = vi.fn();
