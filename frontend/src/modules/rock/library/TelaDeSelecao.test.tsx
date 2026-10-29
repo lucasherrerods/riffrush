@@ -9,7 +9,7 @@ import { TelaDeSelecao } from "./TelaDeSelecao";
 import { MUSICAS_DE_TESTE } from "@/test/musicas";
 
 function abrir({ indice = 0, dificuldade = "medio" as Dificuldade, instrumento = "guitarra" as Instrumento, musicas = MUSICAS_DE_TESTE } = {}) {
-  const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoInstrumento: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn(), aoVelocidadeDaMusica: vi.fn() };
+  const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoInstrumento: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoBuscarMusicas: vi.fn(), aoRemover: vi.fn(), aoVelocidadeDaMusica: vi.fn() };
   render(
     <TelaDeSelecao
       musicas={musicas}
@@ -31,6 +31,13 @@ beforeEach(() => {
 });
 
 describe("TelaDeSelecao", () => {
+  it("o botão Buscar músicas, ao lado do de importar, abre a busca", async () => {
+    const { aoBuscarMusicas, usuario } = abrir();
+    expect(screen.getByLabelText("Importar música")).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Buscar músicas" }));
+    expect(aoBuscarMusicas).toHaveBeenCalled();
+  });
+
   it("lista as músicas e marca a selecionada", () => {
     abrir({ indice: 2 });
     expect(screen.getAllByRole("listitem")).toHaveLength(MUSICAS_DE_TESTE.length);

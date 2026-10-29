@@ -461,6 +461,10 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                 aoJogar={jogar}
                 aoVoltar={() => setTela("menu")}
                 aoImportar={(arquivos) => void importar(arquivos)}
+                aoBuscarMusicas={() => {
+                  setVoltarDaBuscaPara("selecao");
+                  setTela("buscaDeMusicas");
+                }}
                 aoRemover={(removida) => {
                   void biblioteca.remover(removida);
                   setMusicas((atuais) => {

@@ -110,9 +110,9 @@ describe("personagem e FPS", () => {
     expect(carregarConfiguracoes()).toMatchObject({ velocidade: 3, personagem3d: true, mostrarFps: false });
   });
 
-  it("o modo competitivo começa desligado, inclusive para quem já tinha configurações salvas", () => {
-    expect(CONFIGURACOES_PADRAO.modoCompetitivo).toBe(false);
+  it("o modo competitivo começa ligado, inclusive para quem já tinha configurações salvas", () => {
+    expect(CONFIGURACOES_PADRAO.modoCompetitivo).toBe(true);
     localStorage.setItem("riffrush.configuracoes", JSON.stringify({ velocidade: 3 }));
-    expect(carregarConfiguracoes().modoCompetitivo).toBe(false);
+    expect(carregarConfiguracoes().modoCompetitivo).toBe(true);
   });
 });

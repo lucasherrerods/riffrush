@@ -334,13 +334,13 @@ describe("App", () => {
     expect(modo()).toBe("jogo");
   });
 
-  it("Shift+Tab liga e desliga o modo competitivo e salva", async () => {
+  it("Shift+Tab desliga e liga o modo competitivo e salva", async () => {
     const usuario = abrir();
     const salvo = () => JSON.parse(localStorage.getItem("riffrush.configuracoes") ?? "{}").modoCompetitivo;
     await usuario.keyboard("{Shift>}{Tab}{/Shift}");
-    await waitFor(() => expect(salvo()).toBe(true));
-    await usuario.keyboard("{Shift>}{Tab}{/Shift}");
     await waitFor(() => expect(salvo()).toBe(false));
+    await usuario.keyboard("{Shift>}{Tab}{/Shift}");
+    await waitFor(() => expect(salvo()).toBe(true));
   });
 
   it("F11 alterna a tela cheia", async () => {

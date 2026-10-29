@@ -113,11 +113,11 @@ describe("TelaDeConfiguracoes", () => {
     expect(screen.getByText(/junto com o clique/)).toBeInTheDocument();
   });
 
-  it("liga o modo competitivo no vídeo", async () => {
+  it("desliga o modo competitivo no vídeo", async () => {
     const { aoMudar, usuario } = abrir();
     await usuario.click(screen.getByRole("tab", { name: /Vídeo/ }));
     await usuario.click(screen.getByRole("switch", { name: "Modo competitivo" }));
-    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ modoCompetitivo: true }));
+    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ modoCompetitivo: false }));
   });
 
   it("sem controle, não mostra os botões do controle", () => {
