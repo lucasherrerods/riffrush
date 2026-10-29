@@ -88,10 +88,9 @@ describe("antecedenciaDasNotas", () => {
     expect(antecedenciaDasNotas(10)).toBeLessThan(antecedenciaDasNotas(1));
   });
 
-  it("vai de cerca de 3 s (velocidade 1) a 0,9 s (velocidade 10), com quase 1,8 s no padrão", () => {
-    expect(antecedenciaDasNotas(1)).toBeCloseTo(2.97);
-    expect(antecedenciaDasNotas(CONFIGURACOES_PADRAO.velocidade)).toBeCloseTo(1.82);
-    expect(antecedenciaDasNotas(10)).toBeCloseTo(0.9);
+  it("vai de cerca de 2,4 s (velocidade 1) a 0,7 s (velocidade 10)", () => {
+    expect(antecedenciaDasNotas(1)).toBeCloseTo(2.41);
+    expect(antecedenciaDasNotas(10)).toBeCloseTo(0.7);
   });
 });
 

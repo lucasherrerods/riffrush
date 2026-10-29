@@ -87,12 +87,13 @@ export function desenharPista(
   altura: number,
   tempo: number,
   antecedencia: number,
+  inclinacao: number,
   cena: Cena,
   efeitos: boolean,
   sprites: Sprites,
 ) {
   c.clearRect(0, 0, largura, altura);
-  const layout = layoutDaPista(largura, altura);
+  const layout = layoutDaPista(largura, altura, inclinacao);
   const { centro, linhaDeBatida, larguraDoTraste } = layout;
 
   // O tremor do star power gira e desloca a pista em torno da linha de batida.
@@ -108,7 +109,7 @@ export function desenharPista(
   const perto = projetar(layout, ATRAS_DA_LINHA);
   const longe = projetar(layout, 1);
 
-  const tamanho = `${largura}x${altura}`;
+  const tamanho = `${largura}x${altura}:${inclinacao}`;
   const comEstrela = `${tamanho}:${cena.estrelaAtiva}`;
   const fundoDaPista = gradienteGuardado(c, `pista:${comEstrela}`, () => {
     const gradiente = c.createLinearGradient(0, longe.y, 0, perto.y);

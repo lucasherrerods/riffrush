@@ -167,6 +167,16 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
               aoMudar={(velocidade) => mudar({ velocidade })}
             />
             <LinhaDeSlider
+              rotulo="Inclinação da pista"
+              dica="Mais deitada, as notas ficam mais juntas no fundo e parecem vir mais devagar"
+              valor={configuracoes.inclinacaoDaPista}
+              minimo={0}
+              maximo={10}
+              passo={1}
+              formatar={String}
+              aoMudar={(inclinacaoDaPista) => mudar({ inclinacaoDaPista })}
+            />
+            <LinhaDeSlider
               rotulo="Atraso do áudio"
               dica="Ajuste se as notas parecerem fora do ritmo da música"
               valor={configuracoes.atrasoMs}

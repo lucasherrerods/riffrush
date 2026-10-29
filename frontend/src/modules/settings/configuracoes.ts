@@ -10,6 +10,8 @@ export interface Configuracoes {
   botaoDaEstrela: number;
   /** De 1 a 10. */
   velocidade: number;
+  /** De 0 (em pé) a 10 (deitada): o quanto a pista se inclina para o fundo. */
+  inclinacaoDaPista: number;
   /** Velocidade da música (1 é a normal). Mais lenta rende menos pontos; mais rápida, mais. */
   velocidadeDaMusica: number;
   /** O volume de tudo (Alt + roda em qualquer tela). Os outros volumes são a mistura dentro dele. */
@@ -44,6 +46,7 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   botoesDoControle: BOTOES_DOS_TRASTES_PADRAO,
   botaoDaEstrela: BOTAO_DA_ESTRELA_PADRAO,
   velocidade: 6,
+  inclinacaoDaPista: 6,
   velocidadeDaMusica: 1,
   volumeGeral: 1,
   volumeDaMusica: 0.8,
@@ -129,5 +132,5 @@ export function nomeDaTecla(codigo: string) {
 
 /** Segundos que uma nota leva do horizonte até a linha de batida. */
 export function antecedenciaDasNotas(velocidade: number) {
-  return 3.2 - velocidade * 0.23;
+  return 2.6 - velocidade * 0.19;
 }

@@ -8,6 +8,7 @@ export function opcoesDaPartida(c: Configuracoes): OpcoesDaPartida {
     teclaDaEstrela: c.teclaDaEstrela,
     rotuloDaTeclaDaEstrela: nomeDaTecla(c.teclaDaEstrela),
     antecedencia: antecedenciaDasNotas(c.velocidade),
+    inclinacaoDaPista: c.inclinacaoDaPista,
     volumeDaMusica: c.volumeDaMusica,
     volumeDosEfeitos: c.volumeDosEfeitos,
     atrasoMs: c.atrasoMs,
