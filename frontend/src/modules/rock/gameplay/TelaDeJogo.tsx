@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronsUp, Eye, Loader2, Pause, Skull } from "lucide-react";
+import { PALHETA_DO_CONTROLE, veioDoControle } from "@/modules/gamepad";
 import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
 import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "@/modules/rock/character";
 import { cenaDaPartida } from "./cena";
@@ -50,6 +51,8 @@ export interface OpcoesDaPartida {
   velocidadeDaMusica: number;
   /** Como as teclas viram notas. Vai no replay, e a API rejulga com ele. */
   jeitoDeJogar: JeitoDeJogar;
+  /** Na palhetada, a tecla que toca o acorde. O direcional do controle chega como `PALHETA_DO_CONTROLE`. */
+  teclaDaPalheta: string;
   bot: boolean;
   efeitos: boolean;
   /** Mostra o personagem 3D no palco e no HUD. */
@@ -74,6 +77,7 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   semAberta: false,
   velocidadeDaMusica: 1,
   jeitoDeJogar: "gamepad",
+  teclaDaPalheta: "Enter",
   bot: false,
   efeitos: true,
   personagem: true,
@@ -460,6 +464,15 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       apertados[pista] = false;
       gravador.soltar(pista, tempoDaMusica(agoraNoAudio(audio)));
     };
+    const palhetar = (evento: Event) => {
+      if (pausadoAgora || terminou || replay) return;
+      const tempo = tempoDaMusica(momentoDoEvento(audio, evento));
+      gravador.palhetar(tempo);
+      tratarEventos(tempo);
+    };
+    /** O A do controle também manda Enter (confirma na pausa): só o direcional palheta pelo controle. */
+    const ehPalheta = (evento: KeyboardEvent) =>
+      opcoes.jeitoDeJogar === "palhetada" && (evento.code === PALHETA_DO_CONTROLE || (evento.code === opcoes.teclaDaPalheta && !veioDoControle(evento)));
     controles.current.apertar = apertar;
     controles.current.largar = largar;
 
@@ -473,7 +486,10 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       }
       if (pausadoAgora || terminou) return;
       const pista = opcoes.teclas.indexOf(evento.code);
-      if (pista >= 0) {
+      if (ehPalheta(evento)) {
+        evento.preventDefault();
+        if (!evento.repeat) palhetar(evento);
+      } else if (pista >= 0) {
         evento.preventDefault();
         if (!evento.repeat) apertar(pista, evento);
       } else if (evento.code === opcoes.teclaDaEstrela) {

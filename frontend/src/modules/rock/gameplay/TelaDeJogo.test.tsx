@@ -284,6 +284,23 @@ describe("TelaDeJogo", () => {
     expect(screen.getByLabelText("Pontos")).toHaveTextContent("50");
   });
 
+  it("na palhetada, o traste só acende e o Enter toca a nota; o jeito vai para o replay", async () => {
+    carregarCom([nota(0.5)], 1);
+    const { aoTerminar, usuario } = abrir({ jeitoDeJogar: "palhetada" });
+    await partidaPronta();
+    irPara(0.5);
+    await usuario.keyboard("{a>}");
+    expect(screen.getByLabelText("Pontos")).toHaveTextContent("0");
+    await usuario.keyboard("{Enter}");
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
+    await usuario.keyboard("{/a}");
+    irPara(1.2);
+    await waitFor(() => expect(aoTerminar).toHaveBeenCalled());
+    const replay = await desempacotarReplay(await aoTerminar.mock.calls[0][1]());
+    expect(replay.jeito).toBe("palhetada");
+    expect(replay.entradas.map((e) => e.tipo)).toEqual(["tocar", "palhetar", "soltar"]);
+  });
+
   it("sem a nota aberta, ela sai no verde e a opção vai para o replay e para a transmissão", async () => {
     carregarCom([nota(0.5, PISTA_ABERTA)], 1);
     const transmissao = vi.fn();

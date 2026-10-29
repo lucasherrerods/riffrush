@@ -24,6 +24,7 @@ export { codigoDaEntrada, desempacotarReplay, emTicks, entradaDoCodigo, hashDoCh
 export type { EstadoDoJogador } from "./rede";
 export { OPCOES_PADRAO_DA_PARTIDA, TelaDeJogo, type OpcoesDaPartida } from "./TelaDeJogo";
 export { EntradaDaPartida } from "./componentes/EntradaDaPartida";
+export { IconeDoJeito, NOMES_DOS_JEITOS } from "./componentes/IconeDoJeito";
 export { MedidorDeVida } from "./componentes/MedidorDeVida";
 export { corDaPrecisao } from "./componentes/PainelDePontos";
 export { estrelasPorPontos, progressoDasEstrelas } from "./estrelas";

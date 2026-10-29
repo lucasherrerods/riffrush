@@ -1,7 +1,7 @@
 use chrono::{DateTime, Duration, Utc};
 use riffrush_motor as motor;
 
-use crate::modules::progresso::{Dificuldade, Instrumento, ResumoDaPartida};
+use crate::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar, ResumoDaPartida};
 
 pub use motor::ChartGuardado;
 
@@ -17,6 +17,7 @@ pub struct Rejulgada {
     pub precisao: f64,
     /// Jogou com o modificador sem falha: a vida não acaba, então a partida não vale para o ranking.
     pub sem_falha: bool,
+    pub jeito_de_jogar: JeitoDeJogar,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
@@ -98,6 +99,11 @@ pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Di
         bons: partida.bons,
         precisao: f64::from(partida.valor_dos_acertos) / (f64::from(total) * 300.0),
         sem_falha: replay.sem_falha,
+        jeito_de_jogar: match replay.jeito {
+            motor::JeitoDeJogar::Tapping => JeitoDeJogar::Tapping,
+            motor::JeitoDeJogar::Gamepad => JeitoDeJogar::Gamepad,
+            motor::JeitoDeJogar::Palhetada => JeitoDeJogar::Palhetada,
+        },
     })
 }
 
@@ -262,6 +268,7 @@ mod tests {
         na_palhetada.jeito = motor::JeitoDeJogar::Palhetada;
         let rejulgada = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &motor::empacotar_replay(&na_palhetada)).unwrap();
         assert_eq!(rejulgada.resumo.acertos, 0);
+        assert_eq!(rejulgada.jeito_de_jogar, JeitoDeJogar::Palhetada);
     }
 
     #[test]
