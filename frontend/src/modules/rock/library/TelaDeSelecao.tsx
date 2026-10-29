@@ -199,7 +199,7 @@ export function TelaDeSelecao(props: Props) {
   const tocar = precisaReimportar ? (
     <div className="flex flex-col gap-2">
       <p className="text-base text-texto-suave">O áudio não está mais salvo neste aparelho. Escolha o arquivo de novo para tocar.</p>
-      <Button size="lg" className="h-11 font-titulo text-xl tracking-widest max-md:h-14 max-md:text-2xl" asChild>
+      <Button size="lg" className="h-11 font-titulo text-xl tracking-widest max-md:h-10 max-md:text-lg" asChild>
         <label className="">
           <RotateCcw className="opacity-70" /> Importar de novo
           <input ref={reimportar} type="file" accept={TIPOS_IMPORTAVEIS} className="sr-only" onChange={(e) => importarEscolhidos(e.target)} />
@@ -207,7 +207,7 @@ export function TelaDeSelecao(props: Props) {
       </Button>
     </div>
   ) : (
-    <Button size="lg" className="h-11 font-titulo text-xl tracking-widest max-md:h-14 max-md:text-2xl" onClick={jogar}>
+    <Button size="lg" className="h-11 font-titulo text-xl tracking-widest max-md:h-10 max-md:text-lg" onClick={jogar}>
       <Play className="fill-current opacity-70" /> TOCAR
     </Button>
   );
@@ -323,7 +323,7 @@ export function TelaDeSelecao(props: Props) {
               </div>
               {favoritar}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 [&_button]:h-8 [&_button]:gap-1 [&_button]:px-2 [&_button]:text-xs">
               <Button variant="outline" size="sm" onClick={() => setJanela("detalhes")}>
                 <Info className="opacity-70" /> Detalhes
               </Button>

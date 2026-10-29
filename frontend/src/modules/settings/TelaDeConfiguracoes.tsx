@@ -69,7 +69,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
     <button
       aria-label={`Tecla ${nome}`}
       onClick={() => setTrocando(indice)}
-      className="min-w-28 rounded-lg border-2 bg-superficie px-4 py-2 font-mono text-base font-bold transition-colors hover:bg-superficie-hover"
+      className="min-w-28 rounded-lg border-2 bg-superficie px-4 py-2 font-mono text-base font-bold max-md:min-w-16 max-md:px-2 max-md:py-1 max-md:text-sm transition-colors hover:bg-superficie-hover"
       style={{ borderColor: trocando === indice ? "var(--cor-texto)" : cor }}
     >
       {trocando === indice ? "Aperte..." : nomeDaTecla(codigo)}
@@ -80,7 +80,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
     <button
       aria-label={`Botão do controle ${nome}`}
       onClick={() => setTrocandoNoControle(trocandoNoControle === indice ? null : indice)}
-      className="min-w-28 rounded-lg border-2 bg-superficie px-4 py-2 font-mono text-base font-bold transition-colors hover:bg-superficie-hover"
+      className="min-w-28 rounded-lg border-2 bg-superficie px-4 py-2 font-mono text-base font-bold max-md:min-w-16 max-md:px-2 max-md:py-1 max-md:text-sm transition-colors hover:bg-superficie-hover"
       style={{ borderColor: trocandoNoControle === indice ? "var(--cor-texto)" : cor }}
     >
       {trocandoNoControle === indice ? "Aperte..." : nomeDoBotao(botao)}
@@ -124,9 +124,9 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
           </TabsTrigger>
         </TabsList>
 
-        <div className="mt-2 min-h-0 flex-1 placa p-2">
+        <div className="rolagem-de-toque mt-2 min-h-0 flex-1 placa p-2 max-md:mt-1 max-md:p-1.5">
           <TabsContent value="controles" className="flex flex-col gap-2">
-            <p className="px-4 py-2 text-base text-texto-suave">
+            <p className="px-4 py-2 text-base text-texto-suave max-md:px-2 max-md:py-1 max-md:text-sm">
               {comControle
                 ? "Clique numa tecla ou num botão do controle e aperte o novo. Esc cancela. O direcional e o Start ficam fixos."
                 : "Clique numa tecla e aperte a nova. Esc cancela. Conecte um controle e aperte um botão dele para trocar os botões também."}
@@ -187,7 +187,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
               formatar={porcentagem}
               aoMudar={(volumeGeral) => mudar({ volumeGeral })}
             />
-            <p className="px-2 text-base text-texto-suave">Em qualquer tela: Alt + roda do mouse.</p>
+            <p className="px-2 text-base text-texto-suave max-md:text-sm">Em qualquer tela: Alt + roda do mouse.</p>
             <LinhaDeSlider
               rotulo="Volume da música"
               valor={configuracoes.volumeDaMusica}

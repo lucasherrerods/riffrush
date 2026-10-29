@@ -140,7 +140,7 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarNoEncore, atraso
         </div>
 
         <nav aria-label="Paginação" className="chapa flex items-center justify-between gap-2 bg-superficie px-3 py-1 text-base text-texto-suave max-md:text-sm">
-          <span className="truncate">Resultados do Chorus Encore (enchor.us).</span>
+          <span className="truncate"><span className="md:hidden">Resultados</span><span className="max-md:hidden">Resultados do Chorus Encore (enchor.us).</span></span>
           <div className="flex shrink-0 items-center gap-1">
             <Button variant="ghost" size="icon" aria-label="Página anterior" disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)}>
               <ChevronLeft />

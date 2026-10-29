@@ -19,8 +19,8 @@ interface Props<T extends string> {
 export function CampoDeSelecao<T extends string>({ titulo, opcoes, valor, aoEscolher, className }: Props<T>) {
   const id = useId();
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
-      <label htmlFor={id} className="text-base font-semibold text-texto-suave max-md:text-sm">
+    <div className={cn("flex flex-col gap-2 max-md:gap-1", className)}>
+      <label htmlFor={id} className="text-base font-semibold text-texto-suave max-md:text-xs">
         {titulo}
       </label>
       <div className="relative">
@@ -28,7 +28,7 @@ export function CampoDeSelecao<T extends string>({ titulo, opcoes, valor, aoEsco
           id={id}
           value={valor}
           onChange={(evento) => aoEscolher(evento.target.value as T)}
-          className="h-10 w-full min-w-40 appearance-none max-md:min-w-0 max-md:pr-7 max-md:pl-2 rounded-md border border-borda bg-superficie pr-10 pl-3 text-base text-texto outline-none hover:bg-superficie-hover focus-visible:border-primaria"
+          className="h-10 w-full min-w-40 appearance-none max-md:h-8 max-md:min-w-0 max-md:text-sm max-md:pr-7 max-md:pl-2 rounded-md border border-borda bg-superficie pr-10 pl-3 text-base text-texto outline-none hover:bg-superficie-hover focus-visible:border-primaria"
         >
           {opcoes.map((opcao) => (
             <option key={opcao.id} value={opcao.id} className="bg-superficie text-texto">

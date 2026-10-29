@@ -83,10 +83,10 @@ export function TelaDePersonagem({ personagem, aoSalvar, aoVoltar, nomeDaConta }
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:flex-none max-md:grid-cols-1 max-md:gap-2">
-        <section className="col-span-5 flex min-h-0 flex-col items-center justify-center gap-2 placa p-6 max-md:p-3">
-          <Avatar personagem={rascunho} tocando pulso={pulso} className="h-[min(60vh,480px)] w-auto max-md:h-[36vh]" />
-          <p className="font-titulo text-3xl uppercase max-md:text-2xl">{nomeNaTela || "Sem nome"}</p>
-          <p className="text-base text-texto-suave">{INSTRUMENTOS.find((i) => i.id === rascunho.instrumento)?.rotulo}</p>
+        <section className="col-span-5 flex min-h-0 flex-col items-center justify-center gap-2 placa p-6 max-md:gap-0 max-md:p-2">
+          <Avatar personagem={rascunho} tocando pulso={pulso} className="h-[min(60vh,480px)] w-auto max-md:h-[24vh]" />
+          <p className="font-titulo text-3xl uppercase max-md:text-lg max-md:leading-tight">{nomeNaTela || "Sem nome"}</p>
+          <p className="text-base text-texto-suave max-md:text-sm">{INSTRUMENTOS.find((i) => i.id === rascunho.instrumento)?.rotulo}</p>
         </section>
 
         <section className="col-span-7 flex min-h-0 flex-col gap-6 placa p-6 max-md:gap-4 max-md:p-3">

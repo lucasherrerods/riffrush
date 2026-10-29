@@ -290,7 +290,7 @@ body {
 /* Fileira de abas que não cabe no celular: rola de lado com o dedo, em vez de cortar. */
 @utility abas-rolaveis {
   @media (width < 48rem) {
-    justify-content: flex-start;
+    justify-content: flex-start !important;
     overflow-x: auto;
     touch-action: pan-x;
     scrollbar-width: none;
