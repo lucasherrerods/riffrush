@@ -709,14 +709,30 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
                 onPointerUp={() => controles.current.largar(pista)}
                 onPointerCancel={() => controles.current.largar(pista)}
               >
-                {/* No celular, um quadrado marca onde o dedo pode tocar sem mirar no traste. */}
-                {estreita && <span data-parte="alvo-do-toque" aria-hidden className="mb-2 aspect-square w-3/4 rounded-md border border-texto/25 bg-texto/5" />}
                 {opcoes.rotulosDosTrastes && (
                   <span className="mb-2 rounded-sm bg-superficie-elevada px-2 font-titulo text-lg tracking-wide text-texto-suave">{opcoes.rotulosDosTrastes[pista]}</span>
                 )}
               </div>
             ))}
           </div>
+
+          {/* No celular, faixas como teclas de piano marcam, logo abaixo dos trastes, onde o dedo pode tocar. */}
+          {estreita && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute flex border-t border-texto/25"
+              style={{
+                left: layout.centro - layout.largura / 2,
+                width: layout.largura,
+                top: layout.linhaDeBatida + layout.larguraDoTraste * 0.45,
+                bottom: temAberta ? ALTURA_DA_FAIXA_ABERTA : 0,
+              }}
+            >
+              {NOMES_DAS_PISTAS.map((nome) => (
+                <span key={nome} data-parte="alvo-do-toque" className="flex-1 border-r border-texto/25 bg-texto/5 last:border-r-0" />
+              ))}
+            </div>
+          )}
 
           {/* A nota aberta não tem traste: no toque, ela tem uma faixa própria no pé da tela. */}
           {temAberta && (
@@ -840,7 +856,7 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
               <div className="flex items-start gap-2">
                 {avatarDoJogador("h-14 w-auto")}
                 {/* A caixa do medidor guarda a vida e, em cima, os quatro pinos do star power: tocar nela ativa o star power. */}
-                <button aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`} onClick={aoEstrela} className="flex w-32 flex-col items-center">
+                <button aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`} onClick={aoEstrela} className="mr-[5px] flex w-32 flex-col items-center">
                   <MedidorDeRock vida={hud.vida} estrela={hud.estrela} estrelaAtiva={hud.estrelaAtiva} fantasma={hud.fantasma} className="w-full" />
                   <span className={cn("font-mono text-xs font-bold", hud.estrela >= 0.5 ? "text-estrela" : "text-texto-suave")}>{Math.round(hud.estrela * 100)}%</span>
                 </button>
