@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Ellipsis, Gauge, FileAudio, Flame, Heart, Info, ListOrdered, Play, RotateCcw, Trash2, Trophy } from "lucide-react";
+import { ArrowLeft, Ellipsis, Gauge, FileAudio, Flame, Heart, Info, ListOrdered, Play, RotateCcw, Search, Trash2, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/rock/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
@@ -37,6 +37,8 @@ interface Props {
   aoJogar: () => void;
   aoVoltar: () => void;
   aoImportar: (arquivos: File[]) => void;
+  /** Abre a busca de músicas; sem ele o botão não aparece. */
+  aoBuscarMusicas?: () => void;
   aoRemover: (musica: Musica) => void;
   /** O ranking online da música, montado pelo App. Sem ele (contas desligadas), só os detalhes aparecem. */
   ranking?: ReactNode;
@@ -297,7 +299,7 @@ export function TelaDeSelecao(props: Props) {
       <Button variant="outline" asChild>
         <label className="">
           <FileAudio className="opacity-70" />
-          <span className="max-md:sr-only">Importar música, clipe ou .sng</span>
+          <span className="max-md:sr-only">Importar música</span>
           <input
             type="file"
             accept={TIPOS_IMPORTAVEIS}
@@ -307,6 +309,12 @@ export function TelaDeSelecao(props: Props) {
           />
         </label>
       </Button>
+      {props.aoBuscarMusicas && (
+        <Button variant="outline" onClick={props.aoBuscarMusicas}>
+          <Search className="opacity-70" />
+          <span className="max-md:sr-only">Buscar músicas</span>
+        </Button>
+      )}
     </header>
   );
 
@@ -314,8 +322,8 @@ export function TelaDeSelecao(props: Props) {
     return (
       <div className="relative isolate flex h-full flex-col">
         {cabecalho}
-        <div className="flex min-h-0 flex-1 flex-col gap-2 p-2">
-          <section aria-label="Informações da música" className="flex flex-col gap-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
+          <section aria-label="Informações da música" className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
                 <h2 className="truncate text-2xl leading-[1.1]">{musica.titulo}</h2>
@@ -323,7 +331,7 @@ export function TelaDeSelecao(props: Props) {
               </div>
               {favoritar}
             </div>
-            <div className="flex flex-wrap gap-1.5 [&_button]:h-8 [&_button]:gap-1 [&_button]:px-2 [&_button]:text-xs">
+            <div className="flex flex-wrap gap-2 [&_button]:h-9 [&_button]:gap-1.5 [&_button]:px-3 [&_button]:text-xs">
               <Button variant="outline" size="sm" onClick={() => setJanela("detalhes")}>
                 <Info className="opacity-70" /> Detalhes
               </Button>
@@ -338,7 +346,7 @@ export function TelaDeSelecao(props: Props) {
           </section>
           {lista}
         </div>
-        <footer className="flex flex-col bg-superficie p-2">{tocar}</footer>
+        <footer className="flex flex-col bg-superficie p-3">{tocar}</footer>
         {modais}
         <Dialog open={janela !== null} onOpenChange={(aberto) => !aberto && setJanela(null)}>
           {/* O Esc só fecha a janela: sem passar adiante, a tela não volta ao menu. */}

@@ -29,8 +29,8 @@ describe("opcoesDaPartida", () => {
   });
 
   it("leva o modo competitivo", () => {
-    expect(opcoesDaPartida(CONFIGURACOES_PADRAO).modoCompetitivo).toBe(false);
-    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, modoCompetitivo: true }).modoCompetitivo).toBe(true);
+    expect(opcoesDaPartida(CONFIGURACOES_PADRAO).modoCompetitivo).toBe(true);
+    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, modoCompetitivo: false }).modoCompetitivo).toBe(false);
   });
 });
 

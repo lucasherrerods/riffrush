@@ -11,10 +11,14 @@ describe("cenaDaPartida", () => {
     expect(cenaDaPartida({ ...normal, modoCompetitivo: true })).toEqual({ palco: false, personagem: false, video: false });
   });
 
-  it("sem WebGL, no celular ou sem efeitos, o palco sai mas o personagem fica no HUD", () => {
-    for (const mudanca of [{ comWebGL: false }, { estreita: true }, { efeitos: false }]) {
+  it("sem WebGL ou sem efeitos, o palco sai mas o personagem fica no HUD", () => {
+    for (const mudanca of [{ comWebGL: false }, { efeitos: false }]) {
       expect(cenaDaPartida({ ...normal, ...mudanca })).toEqual({ palco: false, personagem: true, video: true });
     }
+  });
+
+  it("no celular o personagem sai junto com o palco, mesmo ligado nas configurações", () => {
+    expect(cenaDaPartida({ ...normal, estreita: true })).toEqual({ palco: false, personagem: false, video: true });
   });
 
   it("com o personagem desligado, ele some do palco e do HUD", () => {

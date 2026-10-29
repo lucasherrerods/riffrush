@@ -57,7 +57,7 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   personagem3d: true,
   mostrarFps: false,
   qualidadeDoPalco: "media",
-  modoCompetitivo: false,
+  modoCompetitivo: true,
   mostrarOnline: null,
   permitirEspectadores: true,
   chatGlobal: null,
