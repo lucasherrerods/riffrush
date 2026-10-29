@@ -73,7 +73,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
   });
 
   return (
-    <div className="rolagem-de-toque relative flex h-full flex-col items-center gap-6 py-6 max-md:px-4">
+    <div className={cn("rolagem-de-toque relative flex h-full flex-col items-center gap-6 py-6 max-md:px-4", chat && "max-md:pb-16")}>
       <motion.div
         initial={{ y: -40, opacity: 0, scale: 0.8 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -114,7 +114,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
       </nav>
 
       {chat && (
-        <aside aria-label="Chat" className="absolute bottom-4 left-4 flex max-h-72 w-96 origin-bottom-left scale-[0.8] flex-col justify-end max-lg:hidden">
+        <aside aria-label="Chat" className="absolute bottom-4 left-4 flex max-h-72 w-96 origin-bottom-left scale-[0.8] flex-col justify-end max-lg:hidden max-md:fixed max-md:bottom-0 max-md:left-0 max-md:z-10 max-md:flex max-md:w-3/4 max-md:scale-100">
           {chat}
         </aside>
       )}
