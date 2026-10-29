@@ -1,3 +1,4 @@
+import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { useEffect, useState } from "react";
 import { animate, motion } from "framer-motion";
 import { ListMusic, RotateCcw, Star, Trophy } from "lucide-react";
@@ -35,6 +36,8 @@ export function TelaDeResultado(props: Props) {
   const podeRepetir = rotuloDeContinuar === undefined;
   const [pontosNaTela, setPontosNaTela] = useState(0);
   const dispositivo = useDispositivo();
+  // No celular não há teclado: os botões não mostram atalhos.
+  const estreita = useTelaEstreita();
   const estrelas = estrelasDoResultado(resultado);
   const precisao = resultado.precisao ?? (resultado.total ? resultado.acertos / resultado.total : 0);
   const fullCombo = resultado.total > 0 && resultado.acertos === resultado.total;
@@ -151,11 +154,11 @@ export function TelaDeResultado(props: Props) {
       <div className="pointer-events-none sticky bottom-0 flex justify-center gap-4 px-8 pt-4 pb-6 max-md:px-4 max-md:pb-4 [&>*]:pointer-events-auto">
         {podeRepetir && (
           <Button size="lg" variant="outline" onClick={aoRepetir}>
-            <RotateCcw className="opacity-70" /> Tocar de novo{dispositivo === "teclado" && " (R)"}
+            <RotateCcw className="opacity-70" /> Tocar de novo{dispositivo === "teclado" && !estreita && " (R)"}
           </Button>
         )}
         <Button size="lg" onClick={aoContinuar}>
-          <ListMusic className="opacity-70" /> {rotuloDeContinuar ?? "Escolher outra"} ({rotuloDoComando("confirmar", dispositivo)})
+          <ListMusic className="opacity-70" /> {rotuloDeContinuar ?? "Escolher outra"}{!estreita && ` (${rotuloDoComando("confirmar", dispositivo)})`}
         </Button>
       </div>
     </div>

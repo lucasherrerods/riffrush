@@ -164,6 +164,9 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   });
   const estreita = useTelaEstreita();
   const inicioDoArraste = useRef<{ x: number; y: number } | null>(null);
+  // A faixa de toque acende enquanto o dedo segura o traste; muda direto no DOM para não re-renderizar a tela a cada toque.
+  const faixas = useRef<(HTMLSpanElement | null)[]>([]);
+  const marcarFaixa = (pista: number, apertada: boolean) => faixas.current[pista]?.toggleAttribute("data-apertada", apertada);
   const [comWebGL] = useState(suportaWebGL);
   const cena = cenaDaPartida({ modoCompetitivo: opcoes.modoCompetitivo, efeitos: opcoes.efeitos, personagem: opcoes.personagem, comWebGL, estreita });
   const comPalco = cena.palco;
@@ -719,9 +722,16 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
                 onPointerDown={(e) => {
                   e.currentTarget.setPointerCapture?.(e.pointerId);
                   controles.current.apertar(pista, e.nativeEvent);
+                  marcarFaixa(pista, true);
                 }}
-                onPointerUp={() => controles.current.largar(pista)}
-                onPointerCancel={() => controles.current.largar(pista)}
+                onPointerUp={() => {
+                  controles.current.largar(pista);
+                  marcarFaixa(pista, false);
+                }}
+                onPointerCancel={() => {
+                  controles.current.largar(pista);
+                  marcarFaixa(pista, false);
+                }}
               >
                 {opcoes.rotulosDosTrastes && (
                   <span className="mb-2 rounded-sm bg-superficie-elevada px-2 font-titulo text-lg tracking-wide text-texto-suave">{opcoes.rotulosDosTrastes[pista]}</span>
@@ -740,8 +750,15 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
                 bottom: temAberta ? ALTURA_DA_FAIXA_ABERTA : 0,
               }}
             >
-              {NOMES_DAS_PISTAS.map((nome) => (
-                <span key={nome} data-parte="alvo-do-toque" className="flex-1 border-r border-texto/40 bg-texto/5 last:border-r-0" />
+              {NOMES_DAS_PISTAS.map((nome, pista) => (
+                <span
+                  key={nome}
+                  ref={(elemento) => {
+                    faixas.current[pista] = elemento;
+                  }}
+                  data-parte="alvo-do-toque"
+                  className="flex-1 border-r border-texto/40 bg-texto/5 transition-colors duration-75 last:border-r-0 data-[apertada]:bg-texto/25"
+                />
               ))}
             </div>
           )}

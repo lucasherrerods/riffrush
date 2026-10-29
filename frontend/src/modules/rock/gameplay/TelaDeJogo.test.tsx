@@ -606,6 +606,18 @@ describe("TelaDeJogo no celular", () => {
     expect(within(hud).getByRole("progressbar", { name: "Star power" })).toBeInTheDocument();
   });
 
+  it("a faixa de toque fica apertada enquanto o dedo segura o traste", async () => {
+    carregarCom([nota(5)]);
+    abrir();
+    await partidaPronta();
+    const traste = screen.getByRole("button", { name: "Traste Verde" });
+    const faixa = document.querySelectorAll('[data-parte="alvo-do-toque"]')[0] as HTMLElement;
+    fireEvent.pointerDown(traste, { pointerId: 1 });
+    expect(faixa).toHaveAttribute("data-apertada");
+    fireEvent.pointerUp(traste, { pointerId: 1 });
+    expect(faixa).not.toHaveAttribute("data-apertada");
+  });
+
   it("mostra um alvo de toque embaixo de cada traste", async () => {
     carregarCom([nota(5)]);
     abrir();

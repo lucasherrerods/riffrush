@@ -259,7 +259,7 @@ export function TelaDeSelecao(props: Props) {
       }
     />
   ) : (
-    <p className="placa p-4 text-base text-texto-suave">Nenhuma música favorita ainda. Favorite com o coração ou a tecla F.</p>
+    <p className="placa p-4 text-base text-texto-suave">Nenhuma música favorita ainda. {estreita ? "Favorite com o botão Favoritar." : "Favorite com o coração ou a tecla F."}</p>
   );
 
   const modais = (
