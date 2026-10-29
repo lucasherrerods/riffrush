@@ -66,9 +66,13 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
   };
 
   return (
-    <section aria-label={titulo} className={cn("flex min-h-0 flex-col placa p-4", className)}>
+    <section aria-label={titulo} className={cn("flex min-h-0 flex-col placa p-4 max-md:p-2", className)}>
       <div className="flex items-center gap-2">
-        <p className="flex flex-1 items-center gap-2 text-sm font-bold">
+        {/* Minimizável, o cabeçalho inteiro abre e fecha o chat, não só a setinha. */}
+        <p
+          className={cn("flex flex-1 items-center gap-2 text-sm font-bold max-md:text-xs", minimizar && "cursor-pointer")}
+          onClick={minimizar && (() => minimizar.aoAlternar(!minimizado))}
+        >
           <MessageSquare className="size-4 text-primaria opacity-70" aria-hidden /> {titulo}
         </p>
         {!minimizado && extra}
@@ -93,14 +97,14 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
         inert={minimizado || undefined}
         className={cn("flex min-h-0 flex-col overflow-hidden", !minimizar && "flex-1")}
       >
-        <div className={cn("flex min-h-0 flex-1 flex-col gap-2 pt-2", minimizar && "h-64")}>
-          <ol ref={lista} role="log" aria-label={titulo} className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto text-sm">
+        <div className={cn("flex min-h-0 flex-1 flex-col gap-2 pt-2", minimizar && "h-64 max-md:h-[55vh]")}>
+          <ol ref={lista} role="log" aria-label={titulo} className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto text-sm max-md:text-xs">
             {mensagens.length === 0 && !bloqueado && <li className="text-texto-suave">Nenhuma mensagem ainda.</li>}
             {mensagens.map((m) => (
               <li key={m.id} className="group flex items-start gap-1 break-words">
                 <p className="min-w-0 flex-1">
                   <span className={cn("font-bold", m.minha ? "text-destaque" : "text-texto")}>{m.autor}</span>
-                  {m.selo && <span className="ml-1 rounded-full bg-ouro px-2 text-base font-bold text-fundo">{m.selo}</span>}
+                  {m.selo && <span className="ml-1 rounded-full bg-ouro px-2 text-base font-bold text-fundo max-md:px-1.5 max-md:text-[10px]">{m.selo}</span>}
                   <span className="text-texto-suave">: </span>
                   <span>{m.texto}</span>
                 </p>
@@ -133,7 +137,7 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
                   placeholder="Escreva uma mensagem"
                   onChange={(e) => setTexto(e.target.value)}
                   onKeyDown={segurarTeclas}
-                  className="h-9 min-w-0 flex-1 rounded-md border border-borda bg-fundo px-3 text-sm outline-none placeholder:text-texto-suave focus-visible:border-primaria"
+                  className="h-9 min-w-0 flex-1 rounded-md border border-borda bg-fundo px-3 text-sm outline-none max-md:h-8 max-md:text-xs placeholder:text-texto-suave focus-visible:border-primaria"
                 />
                 <Button type="submit" size="icon" variant="ghost" aria-label="Enviar">
                   <Send />

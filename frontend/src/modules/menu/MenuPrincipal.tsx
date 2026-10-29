@@ -114,7 +114,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
       </nav>
 
       {chat && (
-        <aside aria-label="Chat" className="absolute bottom-4 left-4 flex max-h-72 w-96 origin-bottom-left scale-[0.8] flex-col justify-end max-lg:hidden max-md:fixed max-md:bottom-0 max-md:left-0 max-md:z-10 max-md:flex max-md:w-3/4 max-md:scale-100">
+        <aside aria-label="Chat" className="absolute bottom-4 left-4 flex max-h-72 w-96 origin-bottom-left scale-[0.8] flex-col justify-end max-lg:hidden max-md:fixed max-md:bottom-0 max-md:left-[1%] max-md:z-10 max-md:flex max-md:w-[98%] max-md:scale-100">
           {chat}
         </aside>
       )}
