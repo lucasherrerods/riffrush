@@ -3,14 +3,15 @@ import { mesmasOpcoes, opcoesDaPartida } from "./opcoes";
 
 describe("opcoesDaPartida", () => {
   it("traduz as configurações do jogador para a partida", () => {
-    const opcoes = opcoesDaPartida({ ...CONFIGURACOES_PADRAO, velocidade: 10, teclaDaEstrela: "KeyE", bot: true });
+    const opcoes = opcoesDaPartida({ ...CONFIGURACOES_PADRAO, teclaDaEstrela: "KeyE", bot: true });
     expect(opcoes).toMatchObject({
       teclas: CONFIGURACOES_PADRAO.teclas,
       teclaDaEstrela: "KeyE",
       rotuloDaTeclaDaEstrela: "E",
       bot: true,
     });
-    expect(opcoes.antecedencia).toBeCloseTo(0.7);
+    // A velocidade é a mesma para todos: a 9, com as notas a menos de 1 s da linha.
+    expect(opcoes.antecedencia).toBeCloseTo(0.89);
   });
 
   it("leva para a partida se o personagem aparece e se o FPS é mostrado", () => {

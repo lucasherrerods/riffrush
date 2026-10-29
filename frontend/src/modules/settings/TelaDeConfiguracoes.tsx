@@ -157,26 +157,6 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
 
           <TabsContent value="gameplay" className="flex flex-col gap-2">
             <LinhaDeSlider
-              rotulo="Velocidade das notas"
-              dica="Quanto maior, mais rápido as notas descem"
-              valor={configuracoes.velocidade}
-              minimo={1}
-              maximo={10}
-              passo={1}
-              formatar={String}
-              aoMudar={(velocidade) => mudar({ velocidade })}
-            />
-            <LinhaDeSlider
-              rotulo="Inclinação da pista"
-              dica="Mais deitada, as notas ficam mais juntas no fundo e parecem vir mais devagar"
-              valor={configuracoes.inclinacaoDaPista}
-              minimo={0}
-              maximo={10}
-              passo={1}
-              formatar={String}
-              aoMudar={(inclinacaoDaPista) => mudar({ inclinacaoDaPista })}
-            />
-            <LinhaDeSlider
               rotulo="Atraso do áudio"
               dica="Ajuste se as notas parecerem fora do ritmo da música"
               valor={configuracoes.atrasoMs}

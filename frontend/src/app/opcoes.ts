@@ -1,5 +1,5 @@
 import type { OpcoesDaPartida } from "@/modules/rock/gameplay";
-import { antecedenciaDasNotas, nomeDaTecla, type Configuracoes } from "@/modules/settings";
+import { VELOCIDADE_DAS_NOTAS, antecedenciaDasNotas, nomeDaTecla, type Configuracoes } from "@/modules/settings";
 
 /** A partida não conhece as configurações: o App traduz o que ela precisa. */
 export function opcoesDaPartida(c: Configuracoes): OpcoesDaPartida {
@@ -7,8 +7,7 @@ export function opcoesDaPartida(c: Configuracoes): OpcoesDaPartida {
     teclas: c.teclas,
     teclaDaEstrela: c.teclaDaEstrela,
     rotuloDaTeclaDaEstrela: nomeDaTecla(c.teclaDaEstrela),
-    antecedencia: antecedenciaDasNotas(c.velocidade),
-    inclinacaoDaPista: c.inclinacaoDaPista,
+    antecedencia: antecedenciaDasNotas(VELOCIDADE_DAS_NOTAS),
     volumeDaMusica: c.volumeDaMusica,
     volumeDosEfeitos: c.volumeDosEfeitos,
     atrasoMs: c.atrasoMs,

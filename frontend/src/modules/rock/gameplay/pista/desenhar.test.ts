@@ -33,7 +33,7 @@ function cena(notas: Nota[], extra: Partial<Cena> = {}): Cena {
 
 function desenhar(c: Cena, tempo = 0, efeitos = true) {
   const canvas = criarCanvasFalso();
-  desenharPista(canvas.contexto, 1200, 800, tempo, 2, 6, c, efeitos, sprites);
+  desenharPista(canvas.contexto, 1200, 800, tempo, 2, c, efeitos, sprites);
   return canvas;
 }
 
@@ -41,9 +41,9 @@ describe("desenharPista", () => {
   // Bug: a luz, o cromo dos botões e o fade eram gradientes novos a cada quadro, 7 por quadro.
   it("no mesmo tamanho, o quadro seguinte reaproveita todos os gradientes", () => {
     const canvas = criarCanvasFalso();
-    desenharPista(canvas.contexto, 1000, 700, 0, 2, 6, cena([]), true, sprites);
+    desenharPista(canvas.contexto, 1000, 700, 0, 2, cena([]), true, sprites);
     const antes = canvas.chamadas.length;
-    desenharPista(canvas.contexto, 1000, 700, 0.1, 2, 6, cena([]), true, sprites);
+    desenharPista(canvas.contexto, 1000, 700, 0.1, 2, cena([]), true, sprites);
     const novos = canvas.chamadas.slice(antes).filter((c) => c.metodo.startsWith("create") && c.metodo.endsWith("Gradient"));
     expect(novos).toEqual([]);
   });

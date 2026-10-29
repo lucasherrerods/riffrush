@@ -1,6 +1,6 @@
 import { ehTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 
-/** Inclinação da pista quando o jogador não escolheu outra: deitada, como no Guitar Hero. */
+/** A inclinação é igual para todos: deitada, como no Guitar Hero. */
 export const INCLINACAO_PADRAO = 6;
 const INCLINACAO_MAXIMA = 10;
 const LARGURA_MAXIMA = 620;

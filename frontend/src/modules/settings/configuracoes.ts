@@ -8,10 +8,6 @@ export interface Configuracoes {
   /** Índices (Gamepad API) dos botões do controle de cada traste e da aberta, na mesma ordem das teclas. */
   botoesDoControle: number[];
   botaoDaEstrela: number;
-  /** De 1 a 10. */
-  velocidade: number;
-  /** De 0 (em pé) a 10 (deitada): o quanto a pista se inclina para o fundo. */
-  inclinacaoDaPista: number;
   /** Velocidade da música (1 é a normal). Mais lenta rende menos pontos; mais rápida, mais. */
   velocidadeDaMusica: number;
   /** O volume de tudo (Alt + roda em qualquer tela). Os outros volumes são a mistura dentro dele. */
@@ -45,8 +41,6 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   teclaDaEstrela: "Space",
   botoesDoControle: BOTOES_DOS_TRASTES_PADRAO,
   botaoDaEstrela: BOTAO_DA_ESTRELA_PADRAO,
-  velocidade: 6,
-  inclinacaoDaPista: 6,
   velocidadeDaMusica: 1,
   volumeGeral: 1,
   volumeDaMusica: 0.8,
@@ -134,3 +128,6 @@ export function nomeDaTecla(codigo: string) {
 export function antecedenciaDasNotas(velocidade: number) {
   return 2.6 - velocidade * 0.19;
 }
+
+/** A velocidade é igual para todos, para ninguém levar vantagem na mesma dificuldade. */
+export const VELOCIDADE_DAS_NOTAS = 9;

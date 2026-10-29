@@ -25,7 +25,7 @@ import { aplicarEntradas, criarGravador, empacotarReplay, hashDoChart, type Even
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { forcaDoTrovao } from "./pista/efeitos";
 import { criarContadorDeFps, type LeituraDeFps } from "./fps";
-import { INCLINACAO_PADRAO, layoutDaPista } from "./pista/geometria";
+import { layoutDaPista } from "./pista/geometria";
 import { criarSprites } from "./pista/sprites";
 import type { EstadoDoJogador } from "./rede";
 import { resultadoDaPartida, type Resultado } from "./resultado";
@@ -40,8 +40,6 @@ export interface OpcoesDaPartida {
   rotulosDosTrastes?: string[];
   /** Segundos que a nota leva do horizonte até a linha de batida. */
   antecedencia: number;
-  /** De 0 (em pé) a 10 (deitada). */
-  inclinacaoDaPista: number;
   volumeDaMusica: number;
   volumeDosEfeitos: number;
   atrasoMs: number;
@@ -67,7 +65,6 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   teclaDaEstrela: "Space",
   rotuloDaTeclaDaEstrela: "Espaço",
   antecedencia: 1.46,
-  inclinacaoDaPista: INCLINACAO_PADRAO,
   volumeDaMusica: 0.8,
   volumeDosEfeitos: 0.5,
   atrasoMs: 0,
@@ -554,7 +551,6 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
           altura,
           tempo,
           opcoes.antecedencia,
-          opcoes.inclinacaoDaPista,
           {
             notas: partida.notas,
             primeira: partida.primeira,
@@ -633,7 +629,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   const rotuloDaDificuldade = [instrumento !== "guitarra" && INSTRUMENTOS.find((i) => i.id === instrumento)?.rotulo, DIFICULDADES.find((d) => d.id === dificuldade)?.rotulo]
     .filter(Boolean)
     .join(" · ");
-  const layout = layoutDaPista(tamanho.largura, tamanho.altura, opcoes.inclinacaoDaPista);
+  const layout = layoutDaPista(tamanho.largura, tamanho.altura);
 
   if (erro) {
     return (

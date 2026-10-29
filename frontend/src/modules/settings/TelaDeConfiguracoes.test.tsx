@@ -113,6 +113,13 @@ describe("TelaDeConfiguracoes", () => {
     expect(screen.getByText(/junto com o clique/)).toBeInTheDocument();
   });
 
+  it("velocidade das notas e inclinação da pista são fixas: não aparecem para configurar", async () => {
+    const { usuario } = abrir();
+    await usuario.click(screen.getByRole("tab", { name: /Gameplay/ }));
+    expect(screen.queryByText("Velocidade das notas")).toBeNull();
+    expect(screen.queryByText("Inclinação da pista")).toBeNull();
+  });
+
   it("desliga o modo competitivo no vídeo", async () => {
     const { aoMudar, usuario } = abrir();
     await usuario.click(screen.getByRole("tab", { name: /Vídeo/ }));
