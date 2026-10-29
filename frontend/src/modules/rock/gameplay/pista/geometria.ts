@@ -1,7 +1,7 @@
 import { ehTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 
 /** Escala das notas no horizonte, comparada com a linha de batida. */
-const ESCALA_NO_HORIZONTE = 0.22;
+const ESCALA_NO_HORIZONTE = 0.28;
 const LARGURA_MAXIMA = 620;
 
 export interface LayoutDaPista {
@@ -19,8 +19,8 @@ export function layoutDaPista(largura: number, altura: number): LayoutDaPista {
   return {
     centro: largura / 2,
     linhaDeBatida: altura * (estreita ? 0.8 : 0.86),
-    // O braço acaba antes do topo da tela e some num fade, como no Guitar Hero.
-    horizonte: altura * (estreita ? 0.2 : 0.16),
+    // O braço fica deitado e acaba bem antes do topo da tela, sumindo num fade, como no Guitar Hero.
+    horizonte: altura * (estreita ? 0.28 : 0.26),
     largura: larguraDaPista,
     larguraDoTraste: larguraDaPista / 5,
   };

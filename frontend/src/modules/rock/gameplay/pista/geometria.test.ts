@@ -13,6 +13,10 @@ describe("layoutDaPista", () => {
     expect(layoutDaPista(1200, 800).horizonte).toBeGreaterThanOrEqual(800 * 0.15);
   });
 
+  it("a pista fica deitada, como no Guitar Hero: sobe só até perto de um quarto da tela", () => {
+    expect(layoutDaPista(1200, 800).horizonte).toBeGreaterThanOrEqual(800 * 0.25);
+  });
+
   it("divide a pista em 5 trastes iguais", () => {
     const layout = layoutDaPista(1200, 800);
     expect(layout.larguraDoTraste * 5).toBeCloseTo(layout.largura);
