@@ -51,7 +51,9 @@ export type Evento =
   | { tipo: "estrelaPronta" }
   | { tipo: "estrelaAtivada" }
   | { tipo: "derrota" }
-  | { tipo: "virouFantasma" };
+  | { tipo: "virouFantasma" }
+  /** Um toque que não acertou nada: zera a sequência e tira vida. Na palheta, `pista` é `null`. */
+  | { tipo: "toqueEmVazio"; pista: number | null };
 
 export interface Partida {
   notas: NotaEmJogo[];
@@ -87,7 +89,7 @@ const ACERTADA = 1;
 const PERDIDA = 2;
 const SEGURANDO = 4;
 const SOLTA = 8;
-const EVENTOS_SEM_VALOR: Evento["tipo"][] = ["acerto", "erro", "sequencia", "fraseCompleta", "estrelaPronta", "estrelaAtivada", "derrota", "virouFantasma"];
+const EVENTOS_SEM_VALOR: Evento["tipo"][] = ["acerto", "erro", "sequencia", "fraseCompleta", "estrelaPronta", "estrelaAtivada", "derrota", "virouFantasma", "toqueEmVazio"];
 
 /** As velocidades da música que o jogo oferece. Vêm do motor, que recusa qualquer outra. */
 export const velocidadesDaMusica = () => [...velocidades()];
@@ -102,7 +104,7 @@ export type JeitoDeJogar = (typeof JEITOS_DE_JOGAR)[number];
 
 /** `velocidade` é a da música: as notas chegam no tempo da música e a partida roda no tempo real. */
 /** `semAberta`: a nota aberta vira verde, decidido no motor para o app e a API darem o mesmo resultado. */
-export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false, velocidade = 1, semAberta = false, jeito = "gamepad" as JeitoDeJogar } = {}): Partida {
+export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false, velocidade = 1, semAberta = false, jeito = "gamepad" as JeitoDeJogar, puneToqueEmVazio = true } = {}): Partida {
   const motor = new MotorDaPartida(
     Float64Array.from(notas, (n) => n.tempo),
     Uint8Array.from(notas, (n) => n.pista),
@@ -113,6 +115,7 @@ export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false
     velocidade,
     semAberta,
     JEITOS_DE_JOGAR.indexOf(jeito),
+    puneToqueEmVazio,
   );
   const grade = motor.grade_das_notas();
   const partida: Partida = {
@@ -178,6 +181,7 @@ function sincronizar(partida: Partida) {
     if (tipo === "acerto") partida.eventos.push({ tipo, nota: partida.notas[a], julgamento: JULGAMENTOS[b] });
     else if (tipo === "erro") partida.eventos.push({ tipo, nota: partida.notas[a] });
     else if (tipo === "sequencia") partida.eventos.push({ tipo, valor: a });
+    else if (tipo === "toqueEmVazio") partida.eventos.push({ tipo, pista: a < 0 ? null : a });
     else partida.eventos.push({ tipo });
   }
   for (let n = proximo(); n > 0; n--) partida.frasesFalhas.add(proximo());

@@ -265,7 +265,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
 
     // Em rede ninguém sai da música: quem zera a vida vira fantasma e segue pontuando.
     const partida = replay
-      ? criarPartida(carregada.notas, { semFalha: replay.semFalha, fantasma: replay.fantasma, semAberta: replay.semAberta, velocidade, jeito: replay.jeito })
+      ? criarPartida(carregada.notas, { semFalha: replay.semFalha, fantasma: replay.fantasma, semAberta: replay.semAberta, velocidade, jeito: replay.jeito, puneToqueEmVazio: replay.puneToqueEmVazio })
       : criarPartida(carregada.notas, { semFalha: opcoes.semFalha, fantasma: inicioEmRede !== undefined, semAberta: opcoes.semAberta, velocidade, jeito: opcoes.jeitoDeJogar });
     const bot = opcoes.bot && !replay ? criarBot() : null;
     const gravador = criarGravador(partida);
@@ -289,7 +289,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       void hashDoChart(carregada.notas).then((hash) => {
         if (transmissaoAcabou) return;
         transmitindo = true;
-        transmitir({ tipo: "inicio", hashDoChart: hash, semFalha: opcoes.semFalha, semAberta: opcoes.semAberta, velocidade, jeito: opcoes.jeitoDeJogar });
+        transmitir({ tipo: "inicio", hashDoChart: hash, semFalha: opcoes.semFalha, semAberta: opcoes.semAberta, velocidade, jeito: opcoes.jeitoDeJogar, puneToqueEmVazio: true });
       });
     }
     const sprites = criarSprites();
@@ -356,6 +356,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
             semAberta: opcoes.semAberta,
             velocidade,
             jeito: opcoes.jeitoDeJogar,
+            puneToqueEmVazio: true,
             hashDoChart: await hashDoChart(carregada.notas),
             entradas: gravador.entradas,
           });
@@ -394,6 +395,13 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         } else if (evento.tipo === "derrota") {
           reagir("derrota");
           terminar();
+        } else if (evento.tipo === "toqueEmVazio") {
+          reagir("errou");
+          if (evento.pista !== null) {
+            falhas.push({ pista: evento.pista, tempo });
+            if (falhas.length > MAXIMO_DE_EXPLOSOES) falhas.shift();
+          }
+          tocarEfeito("erro", opcoes.volumeDosEfeitos);
         } else if (evento.tipo === "virouFantasma") {
           tocarEfeito("erro", opcoes.volumeDosEfeitos);
           avisar("Virou fantasma! Acerte as notas para voltar.");

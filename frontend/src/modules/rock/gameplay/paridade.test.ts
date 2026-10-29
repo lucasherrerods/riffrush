@@ -10,7 +10,7 @@ const casos: { notas: Nota[]; replay: string; fim: number; esperado: unknown }[]
 describe("paridade com o motor da API", () => {
   casos.forEach((caso, i) => it(`o caso ${i} dá o resultado gravado`, async () => {
     const replay = await desempacotarReplay(Uint8Array.from(Buffer.from(caso.replay, "base64")));
-    const partida = criarPartida(caso.notas, { semFalha: replay.semFalha, fantasma: replay.fantasma, velocidade: replay.velocidade, semAberta: replay.semAberta, jeito: replay.jeito });
+    const partida = criarPartida(caso.notas, { semFalha: replay.semFalha, fantasma: replay.fantasma, velocidade: replay.velocidade, semAberta: replay.semAberta, jeito: replay.jeito, puneToqueEmVazio: replay.puneToqueEmVazio });
     aplicarEntradas(partida, replay.entradas, 0, Infinity, []);
     avancar(partida, caso.fim);
     const { pontos, acertos, erros, julgamentos, valorDosAcertos, sequencia, maiorSequencia, vida, estrelaEmTicks, estrelaAtiva, derrota, fantasma } = partida;
