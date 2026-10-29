@@ -46,6 +46,8 @@ const COR_DA_DIFICULDADE: Record<Dificuldade, string> = {
 const ESCALA_NO_CELULAR = 0.7;
 /** Quantos px o dedo anda antes de o toque deixar de ser um clique. */
 const LIMITE_DO_TOQUE = 8;
+/** Toque mais longo que isso (ms) é segurar, não clicar. */
+const TEMPO_DO_TOQUE = 250;
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 /** Lista de músicas em roda, como no osu!lazer: a selecionada fica no meio, com as dificuldades abertas embaixo. */
@@ -56,6 +58,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
   // O toque que arrastou não é clique: sem isso, soltar o dedo escolhe a música onde ele começou.
   const inicioDoToque = useRef(0);
   const arrastou = useRef(false);
+  const momentoDoToque = useRef(0);
   const posicoes = posicoesNoCarrossel(musicas.length, indice, dificuldades.length);
   const centro = centroDoGrupoAberto(dificuldades.length);
   // No celular a roda inteira encolhe, para caberem mais músicas e dar para ver que a lista continua.
@@ -73,6 +76,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
         toque.current = { y: evento.touches[0].clientY, resto: 0 };
         inicioDoToque.current = evento.touches[0].clientY;
         arrastou.current = false;
+        momentoDoToque.current = Date.now();
       }}
       onTouchMove={(evento) => {
         if (!toque.current) return;
@@ -84,6 +88,8 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
       }}
       onTouchEnd={() => {
         toque.current = null;
+        // Segurar o dedo é o começo de um arraste, não um clique.
+        if (Date.now() - momentoDoToque.current > TEMPO_DO_TOQUE) arrastou.current = true;
       }}
       onClickCapture={(evento) => {
         if (!arrastou.current) return;

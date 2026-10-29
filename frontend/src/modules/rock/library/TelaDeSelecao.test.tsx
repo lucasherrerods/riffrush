@@ -452,4 +452,17 @@ describe("no celular", () => {
     expect(a.aoSelecionar).not.toHaveBeenCalled();
     expect(a.aoJogar).not.toHaveBeenCalled();
   });
+
+  it("apertar e segurar sem mover não vira clique", () => {
+    vi.useFakeTimers();
+    const a = acoes();
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} velocidadeDaMusica={1} {...a} />);
+    const botao = screen.getByRole("list", { name: "Músicas" }).querySelector('[data-indice="2"] button')!;
+    fireEvent.touchStart(botao, { touches: [{ clientY: 300 }] });
+    act(() => vi.advanceTimersByTime(500));
+    fireEvent.touchEnd(botao);
+    fireEvent.click(botao);
+    vi.useRealTimers();
+    expect(a.aoSelecionar).not.toHaveBeenCalled();
+  });
 });
