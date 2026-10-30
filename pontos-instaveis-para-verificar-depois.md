@@ -15,3 +15,10 @@ Problemas encontrados de passagem, fora do escopo da mudança que estava sendo f
 - **O que se viu:** em 29/10/2026, os testes "busca o áudio do arquivo do projeto e gera o chart automático" e "reaproveita o áudio ao trocar de dificuldade, sem buscar de novo" falharam na suíte inteira e passaram rodando o arquivo sozinho.
 - **Suspeita:** dependem de tempo (timeout sob carga) ou de algum mock/cache de módulo que vaza de outro teste.
 - **Próximo passo:** rodar a suíte inteira algumas vezes e ver a mensagem de erro; conferir se o cache de áudio é limpo no `beforeEach`.
+
+## Aviso do clippy no lado nativo do app
+
+- **Onde:** `frontend/src-tauri/src/lan/mod.rs:54`, ao rodar `cargo clippy -- -D warnings` em `frontend/src-tauri`.
+- **O que se viu:** em 29/10/2026, na `main`, o clippy falha com `very complex type used` (`type_complexity`). O CI não roda o clippy nessa pasta, então passa.
+- **Suspeita:** tipo aninhado (Arc/Mutex/Option…) escrito direto no campo, sem um `type` com nome.
+- **Próximo passo:** extrair o tipo para um `type` com nome e, se fizer sentido, ligar o clippy do `src-tauri` no CI.

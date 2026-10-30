@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { IndicadorDeVolume, definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/rock/character";
 import { iniciarControle, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
+import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 import { EntradaDaPartida, TelaDeJogo, type Resultado, desempacotarReplay, type Replay, type OpcoesDaPartida } from "@/modules/rock/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/rock/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
@@ -34,6 +35,7 @@ interface PartidaEmRede {
 /** O Riff Rush Rock inteiro. A `alavanca` aparece embaixo da logo, na tela inicial. */
 export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
   const [tela, setTela] = useState<Tela>(() => documentoDoEndereco(location.pathname) ?? "menu");
+  useAtualizacaoAutomatica(tela === "jogo" || tela === "espectador");
   /** md5 do chart do Encore aberto na janela de baixar do leaderboard. */
   const [chartDoLeaderboard, setChartDoLeaderboard] = useState<string | null>(null);
   // Lembrada aqui para o leaderboard voltar nela depois de abrir uma partida.
