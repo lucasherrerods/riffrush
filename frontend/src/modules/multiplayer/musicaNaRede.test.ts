@@ -46,6 +46,16 @@ describe("resolverMusica", () => {
     expect(musica.md5DoEncore).toBe("abc123");
   });
 
+  it("avisa só quando baixou, para a música entrar no catálogo", async () => {
+    const baixar = vi.fn(async () => new Response(new Blob(["abc"], { type: "audio/wav" })));
+    const aoBaixar = vi.fn();
+    const musica = await resolverMusica({ ...paraRede(importada), id: "arquivo:nova.wav:7" }, [], "http://h", baixar, aoBaixar);
+    expect(aoBaixar).toHaveBeenCalledWith(musica);
+    await resolverMusica(paraRede(importada), [importada], "http://h", baixar, aoBaixar);
+    await resolverMusica({ tipo: "embutida", id: "spektrem-shine" }, [], "http://h", baixar, aoBaixar);
+    expect(aoBaixar).toHaveBeenCalledTimes(1);
+  });
+
   it("avisa quando o host ainda não compartilhou a música", async () => {
     const baixar = vi.fn(async () => new Response("", { status: 404 }));
     await expect(resolverMusica({ ...paraRede(importada), id: "outra" } as never, [], "http://h", baixar)).rejects.toThrow(/ainda não compartilhou/);

@@ -279,11 +279,11 @@ mod tests {
         let chart = chart();
         let mut lido = motor::desempacotar_replay(&replay(&chart, &[(0, 0.0), (1, 0.0)])).unwrap();
         let primeira = lido.entradas[0];
-        // Entre as duas notas, um aperto no meio do nada.
+        // Entre as duas notas, um aperto longe de qualquer nota da pista.
         lido.entradas.insert(
             2,
             motor::Entrada {
-                tempo: primeira.tempo + 0.06,
+                tempo: primeira.tempo + 0.25,
                 ..primeira
             },
         );

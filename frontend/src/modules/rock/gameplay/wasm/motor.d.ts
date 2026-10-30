@@ -8,11 +8,11 @@ export function quantizar(tempo: number): number;
  * 0 é perfeito, 1 ótimo e 2 bom.
  */
 export function julgar(distancia: number): number;
+export function janela_de_acerto(): number;
 /**
  * As velocidades da música que o jogo oferece.
  */
 export function velocidades(): Float64Array;
-export function janela_de_acerto(): number;
 export class MotorDaPartida {
   free(): void;
   /**
