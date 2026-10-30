@@ -50,8 +50,17 @@ describe("ConvitesDeAmigos", () => {
     render(<ConvitesDeAmigos aoEntrar={aoEntrar} />);
     chegar(convite("amiga"));
     expect(screen.getByRole("alert")).toHaveTextContent("AnaRock chamou você para a sala ABCDE");
-    await userEvent.click(screen.getByRole("button", { name: "Entrar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Aceitar" }));
     expect(aoEntrar).toHaveBeenCalledWith("ABCDE");
+  });
+
+  it("recusar o convite de sala só fecha o aviso", async () => {
+    const aoEntrar = vi.fn();
+    render(<ConvitesDeAmigos aoEntrar={aoEntrar} />);
+    chegar(convite("amiga"));
+    await userEvent.click(screen.getByRole("button", { name: "Recusar" }));
+    expect(aoEntrar).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
 
   it("convite de quem não é amigo não aparece", () => {

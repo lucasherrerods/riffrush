@@ -81,7 +81,7 @@ export function ConvitesDeAmigos({ aoEntrar, duracaoMs = DURACAO_DO_CONVITE_MS }
               }
             >
               <Button variant="ghost" size="sm" onClick={() => dispensar(aviso)}>
-                Ignorar
+                Recusar
               </Button>
               <Button
                 size="sm"
@@ -90,7 +90,7 @@ export function ConvitesDeAmigos({ aoEntrar, duracaoMs = DURACAO_DO_CONVITE_MS }
                   aoEntrar(aviso.convite.codigo);
                 }}
               >
-                Entrar
+                Aceitar
               </Button>
             </Cartao>
           ) : (
