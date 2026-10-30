@@ -1,7 +1,7 @@
 /** Efeitos de jogo da pista, em funções puras: o desenho fica em desenhar.ts. */
 
 import { cores } from "@/modules/rock/tema";
-import type { Julgamento } from "../partida";
+import type { Evento, Julgamento } from "../partida";
 
 /** Quanto tempo o julgamento do último acerto fica escrito acima da nota. */
 export const DURACAO_DO_JULGAMENTO = 0.45;
@@ -13,12 +13,9 @@ export function estiloDoJulgamento(julgamento: Julgamento) {
   return { texto: "BOM", cor: cores.textoSuave };
 }
 
-/** Combos que trovejam: 25, 50, 100 e depois a cada 50. Quanto maior, mais raios. */
-export function forcaDoTrovao(sequencia: number) {
-  if (sequencia === 25) return 1;
-  if (sequencia === 50) return 2;
-  if (sequencia >= 100 && sequencia % 50 === 0) return 3;
-  return 0;
+/** O raio só cai quando o star power fica pronto para usar; força 3 é o trovão mais forte. */
+export function trovaoDoEvento(tipo: Evento["tipo"]) {
+  return tipo === "estrelaPronta" ? 3 : 0;
 }
 
 export interface Ponto {
@@ -60,6 +57,15 @@ export function tremor(desdeAtivacao: number) {
     y: Math.cos(desdeAtivacao * 83) * forca * 0.6,
     angulo: Math.sin(desdeAtivacao * 71) * forca * 0.002,
   };
+}
+
+const DURACAO_DO_PULO = 0.4;
+const ALTURA_DO_PULO = 32;
+
+/** Deslocamento vertical da pista ao soltar o star power: sobe e volta numa meia senoide em 0,4 s. */
+export function pulo(desdeAtivacao: number) {
+  if (desdeAtivacao <= 0 || desdeAtivacao >= DURACAO_DO_PULO) return 0;
+  return -Math.sin((desdeAtivacao / DURACAO_DO_PULO) * Math.PI) * ALTURA_DO_PULO;
 }
 
 const NOTAS_POR_NIVEL = 10;

@@ -20,7 +20,7 @@ import { progressoDasEstrelas } from "./estrelas";
 import { useLoja, type LojaDoHud } from "./lojaDoHud";
 import { avancar, criarPartida, multiplicador, precisao, retirarEventos, type Julgamento } from "./partida";
 import { desenharPista, type Cena } from "./pista/desenhar";
-import { forcaDoTrovao } from "./pista/efeitos";
+import { trovaoDoEvento } from "./pista/efeitos";
 import type { layoutDaPista } from "./pista/geometria";
 import { criarSprites } from "./pista/sprites";
 import type { EstadoDoJogador } from "./rede";
@@ -235,16 +235,16 @@ export function PistaDoJogador(props: Props) {
 
     const tratarEventos = (tempo: number) => {
       for (const evento of retirarEventos(partida)) {
+        const forca = trovaoDoEvento(evento.tipo);
+        if (forca) {
+          ultimoTrovao = tempo;
+          trovoes.push({ tempo, forca, semente: Math.floor(tempo * 1000) });
+          if (trovoes.length > MAXIMO_DE_TROVOES) trovoes.shift();
+        }
         if (evento.tipo === "acerto") {
           explosoes.push({ pista: evento.nota.pista, tempo });
           julgamento = { julgamento: evento.julgamento, tempo };
           if (explosoes.length > MAXIMO_DE_EXPLOSOES) explosoes.shift();
-          const forca = forcaDoTrovao(partida.sequencia);
-          if (forca) {
-            ultimoTrovao = tempo;
-            trovoes.push({ tempo, forca, semente: partida.sequencia });
-            if (trovoes.length > MAXIMO_DE_TROVOES) trovoes.shift();
-          }
         } else if (evento.tipo === "erro") {
           reagir("errou");
           falhas.push({ pista: evento.nota.pista, tempo });
