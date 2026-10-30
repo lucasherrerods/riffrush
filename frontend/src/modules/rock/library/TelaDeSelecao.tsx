@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Dices, Ellipsis, Gauge, FileAudio, Flame, Heart, Info, ListOrdered, LoaderCircle, Play, RotateCcw, Search, Shuffle, Trash2, Trophy } from "lucide-react";
+import { ArrowLeft, Dices, Ellipsis, Gauge, FileAudio, Flame, Heart, Info, ListOrdered, LoaderCircle, Play, RotateCcw, Search, Trash2, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/rock/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
@@ -41,10 +41,8 @@ interface Props {
   /** Abre a busca de músicas; sem ele o botão não aparece. */
   aoBuscarMusicas?: () => void;
   aoRemover: (musica: Musica) => void;
-  /** Sorteia uma das mais jogadas; sem ele (contas desligadas), o botão não aparece. */
-  sortearMusica?: (musicas: Musica[]) => Promise<Musica>;
   /** Baixa um chart oficial sorteado com essa dificuldade e instrumento; a importação já o seleciona. */
-  sortearOficial?: (dificuldade: Dificuldade, instrumento: Instrumento) => Promise<void>;
+  sortearOficial?: (dificuldade: Dificuldade, instrumento: Instrumento) => Promise<unknown>;
   /** O ranking online da música, montado pelo App. Sem ele (contas desligadas), só os detalhes aparecem. */
   ranking?: ReactNode;
   /** Velocidade da música, o modificador escolhido na modal (1 é a normal). */
@@ -92,23 +90,6 @@ export function TelaDeSelecao(props: Props) {
     // A selecionada que some do filtro dá lugar à próxima favorita.
     const proxima = selecaoNoFiltro(indicesVisiveis(musicas, favoritas, ligado), indice);
     if (proxima !== undefined && proxima !== indice) aoSelecionar(proxima);
-  };
-
-  const [sorteando, setSorteando] = useState(false);
-  const sortear = async () => {
-    if (!props.sortearMusica) return;
-    setSorteando(true);
-    try {
-      const sorteada = musicas.indexOf(await props.sortearMusica(musicas));
-      efeito("selecionar");
-      // A sorteada pode não ser favorita: o filtro desliga para ela aparecer na lista.
-      if (soFavoritas && !favoritas.has(musicas[sorteada].id)) setSoFavoritas(false);
-      aoSelecionar(sorteada);
-    } catch (erro) {
-      avisar.error(erro instanceof Error ? erro.message : String(erro));
-    } finally {
-      setSorteando(false);
-    }
   };
 
   const [sorteandoOficial, setSorteandoOficial] = useState(false);
@@ -260,11 +241,6 @@ export function TelaDeSelecao(props: Props) {
     <Button {...estiloDoFiltro(soFavoritas)} aria-pressed={soFavoritas} onClick={alternarFiltro}>
       <Heart className={cn(soFavoritas ? "fill-current" : "opacity-70")} /> Favoritos
     </Button>
-    {props.sortearMusica && (
-      <Button {...estiloDoFiltro(false)} disabled={sorteando} onClick={() => void sortear()}>
-        <Shuffle className="opacity-70" /> Aleatório
-      </Button>
-    )}
     </>
   );
 
@@ -352,9 +328,9 @@ export function TelaDeSelecao(props: Props) {
         </label>
       </Button>
       {props.sortearOficial && (
-        <Button variant="outline" disabled={sorteandoOficial} onClick={() => void sortearOficial()} aria-label="Oficial aleatória">
+        <Button variant="outline" disabled={sorteandoOficial} onClick={() => void sortearOficial()} aria-label="Aleatória">
           {sorteandoOficial ? <LoaderCircle className="animate-spin opacity-70" /> : <Dices className="opacity-70" />}
-          <span className="max-md:sr-only">Oficial aleatória</span>
+          <span className="max-md:sr-only">Aleatória</span>
         </Button>
       )}
       {props.aoBuscarMusicas && (

@@ -110,11 +110,12 @@ describe("Lobby", () => {
     localStorage.clear();
   });
 
-  it("a aleatória do top 50 escolhe a sorteada para a sala", async () => {
-    const sortearMusica = vi.fn(() => Promise.resolve(segunda));
-    render(<Lobby sala={sala(primeira.id)} endereco="" musicas={MUSICAS_DE_TESTE} volumeDosEfeitos={0} sortearMusica={sortearMusica} />);
-    await userEvent.click(screen.getByRole("button", { name: /Aleatório/ }));
-    expect(sortearMusica).toHaveBeenCalledWith(MUSICAS_DE_TESTE);
+  it("a Aleatória sorteia um chart oficial na dificuldade e no instrumento da sala e escolhe ele", async () => {
+    const sortearAleatoria = vi.fn(() => Promise.resolve(segunda));
+    const naSala = sala(primeira.id);
+    render(<Lobby sala={naSala} endereco="" musicas={MUSICAS_DE_TESTE} volumeDosEfeitos={0} sortearAleatoria={sortearAleatoria} />);
+    await userEvent.click(screen.getByRole("button", { name: "Aleatória" }));
+    expect(sortearAleatoria).toHaveBeenCalledWith(naSala.dificuldade, naSala.instrumento);
     expect(escolher).toHaveBeenCalledWith(segunda, expect.anything(), expect.anything());
   });
 });
