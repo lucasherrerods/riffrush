@@ -20,6 +20,8 @@ export interface ManifestoDoAtor {
   nome: string;
   fps: number;
   alturaEmMetros: number;
+  /** Arte vertical da escolha de personagem, relativa à pasta do ator. A tela lê o `card` da skin no catálogo. */
+  card?: string;
   /** Só "tocando" é obrigatória; as cenas que faltam usam ela. */
   cenas: Partial<Record<NomeDaCena, CenaDoAtor>> & { tocando: CenaDoAtor };
 }

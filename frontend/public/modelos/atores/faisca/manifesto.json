@@ -2,6 +2,7 @@
   "nome": "Faísca",
   "fps": 12,
   "alturaEmMetros": 1.95,
+  "card": "card.webp",
   "cenas": {
     "tocando": {
       "arquivo": "tocando.png",
