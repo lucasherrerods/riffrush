@@ -126,6 +126,17 @@ describe("SessaoDaConta", () => {
     expect(sessao.estado().conta).toMatchObject({ xp_total: 150, nivel: depois });
   });
 
+  it("manda a rodada da sala, para a partida em grupo contar uma vez no ranking", async () => {
+    const { sessao, ambiente } = montar({ registrarPartida: vi.fn(async () => ({ xp_ganho: 0, antes: conta.nivel, depois: conta.nivel })) });
+    ambiente.local.setItem("riffrush:token", "tok");
+    await sessao.iniciar();
+    await sessao.registrarPartida(resultado, undefined, "r-1");
+    await sessao.registrarPartida(resultado);
+    const corpos = vi.mocked(ambiente.api.registrarPartida).mock.calls.map(([, corpo]) => corpo);
+    expect(corpos[0]).toMatchObject({ rodada_id: "r-1" });
+    expect(corpos[1]).not.toHaveProperty("rodada_id");
+  });
+
   it("manda o valor dos acertos, para o perfil mostrar a mesma precisão do jogo", async () => {
     const { sessao, ambiente } = montar({ registrarPartida: vi.fn(async () => ({ xp_ganho: 0, antes: conta.nivel, depois: conta.nivel })) });
     ambiente.local.setItem("riffrush:token", "tok");

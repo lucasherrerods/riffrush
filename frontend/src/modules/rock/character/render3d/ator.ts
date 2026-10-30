@@ -2,13 +2,13 @@ import * as THREE from "three";
 import { VRMUtils, type VRM, type VRMHumanBoneName } from "@pixiv/three-vrm";
 import { POSE_DE_DESCANSO, ajustesDaPose, animacaoDoInstrumento } from "../animacao";
 import { pesosDasExpressoes } from "../aparencia";
-import { BASES, PECAS, tipoDoModelo } from "../catalogo";
+import { instrumentoDoPersonagem, skinDoPersonagem } from "../catalogo";
 import { criarAtorDeVideo } from "./atorDeVideo";
 import { combinarAjustes, expressoesComReacao, novaReacao, reacaoDoAtor, type Reacao, type TipoDeReacao } from "../reacao";
 import { migrarPersonagem, type Personagem } from "../personagem";
 import { criarAjustador } from "./ajustes";
 import { criarInstrumento, encaixarNasMaos, type Montado } from "./instrumentos";
-import { animacaoParaVRM, aplicarCores, aplicarCorpo, carregarPeca, carregarVRM, vestirPeca } from "./vrm";
+import { animacaoParaVRM, carregarVRM } from "./vrm";
 
 export interface EstadoDoAvatar {
   personagem: Personagem;
@@ -60,7 +60,7 @@ const coxa = new THREE.Vector3();
 const tronco = new THREE.Vector3();
 const CIMA = new THREE.Vector3(0, 1, 0);
 
-const chaveDoModelo = (p: Personagem) => `${p.base}|${p.pecas.join(",")}`;
+const chaveDoModelo = (p: Personagem) => skinDoPersonagem(p).arquivo;
 const nomeDoOsso = (vrm: VRM, osso: string) => vrm.humanoid.getNormalizedBoneNode(osso as VRMHumanBoneName)?.name;
 
 /** A pose de descanso vira um clipe parado, para o mixer fazer a transição suave com as animações. */
@@ -76,7 +76,7 @@ function clipeDeDescanso(vrm: VRM) {
 
 function trocarInstrumento(modelo: Modelo, personagem: Personagem) {
   for (const { objeto } of modelo.instrumentos) objeto.removeFromParent();
-  modelo.instrumentos = criarInstrumento(personagem.instrumento);
+  modelo.instrumentos = criarInstrumento(instrumentoDoPersonagem(personagem));
   for (const { objeto, osso } of modelo.instrumentos) {
     if (osso === "maos") modelo.vrm.scene.add(objeto);
     else modelo.vrm.humanoid.getNormalizedBoneNode(osso)?.add(objeto);
@@ -128,12 +128,7 @@ function criarAtorVrm(estadoInicial: EstadoDoAvatar): Ator {
   async function carregar() {
     const chave = chaveDoModelo(personagem);
     carregando = chave;
-    const base = BASES.find((b) => b.id === personagem.base) ?? BASES[0];
-    const vrm = await carregarVRM(base.arquivo);
-    for (const id of personagem.pecas) {
-      const peca = PECAS.find((p) => p.id === id);
-      if (peca) vestirPeca(vrm.scene, await carregarPeca(peca.arquivo), peca.cobre);
-    }
+    const vrm = await carregarVRM(chave);
     // Enquanto carregava, o ator pode ter saído da tela ou trocado de modelo.
     if (removido || carregando !== chave) {
       VRMUtils.deepDispose(vrm.scene);
@@ -142,8 +137,6 @@ function criarAtorVrm(estadoInicial: EstadoDoAvatar): Ator {
     if (modelo) descartarModelo(modelo);
     const mixer = new THREE.AnimationMixer(vrm.scene);
     const descanso = mixer.clipAction(clipeDeDescanso(vrm)).play();
-    aplicarCores(vrm.scene, personagem.cores);
-    aplicarCorpo(vrm, personagem.corpo);
     mixer.update(0);
     vrm.update(0);
     const altura = new THREE.Box3().setFromObject(vrm.scene).max.y || 1.6;
@@ -157,7 +150,7 @@ function criarAtorVrm(estadoInicial: EstadoDoAvatar): Ator {
 
   /** Troca a animação com transição suave quando o instrumento ou o estado de tocar mudam. */
   function escolherAnimacao(atual: Modelo) {
-    const desejada = estado.tocando ? animacaoDoInstrumento(personagem.instrumento, semente) : null;
+    const desejada = estado.tocando ? animacaoDoInstrumento(instrumentoDoPersonagem(personagem), semente) : null;
     if (desejada === atual.animacao) return;
     atual.animacao = desejada;
     const trocarPara = (acao: THREE.AnimationAction) => {
@@ -178,15 +171,10 @@ function criarAtorVrm(estadoInicial: EstadoDoAvatar): Ator {
       if (novo.reacao && (novo.reacao.contador !== reacao?.contador || novo.reacao.tipo !== reacao?.tipo)) comecarReacao(novo.reacao);
       else if (!novo.reacao && reacao && estado.reacao) reacao = null;
       estado = novo;
-      const anterior = personagem;
       const atual = migrarPersonagem(novo.personagem);
-      if (JSON.stringify(atual) === JSON.stringify(anterior)) return;
+      if (JSON.stringify(atual) === JSON.stringify(personagem)) return;
       personagem = atual;
-      if (!modelo || chaveDoModelo(atual) !== modelo.chave) return iniciarCarga();
-      // Cores, corpo e instrumento mudam na hora, sem recarregar o modelo.
-      aplicarCores(modelo.vrm.scene, atual.cores);
-      aplicarCorpo(modelo.vrm, atual.corpo);
-      if (atual.instrumento !== anterior.instrumento) trocarInstrumento(modelo, atual);
+      if (!modelo || chaveDoModelo(atual) !== modelo.chave) iniciarCarga();
     },
     reagir(tipo) {
       comecarReacao(novaReacao(reacao, tipo));
@@ -204,7 +192,7 @@ function criarAtorVrm(estadoInicial: EstadoDoAvatar): Ator {
         const no = vrm.humanoid.getNormalizedBoneNode(osso as VRMHumanBoneName);
         if (no) modelo.ajustador.aplicar(no, rotacao);
       }
-      const pesos = expressoesComReacao(pesosDasExpressoes({ expressao: personagem.expressao, triste: estado.triste, tempo, desdeOPulso: (agora - ultimoPulso) / 1000 }), momento.expressoes);
+      const pesos = expressoesComReacao(pesosDasExpressoes({ triste: estado.triste, tempo, desdeOPulso: (agora - ultimoPulso) / 1000 }), momento.expressoes);
       for (const nome of EXPRESSOES_CONTROLADAS) vrm.expressionManager?.setValue(nome, pesos[nome] ?? 0);
       vrm.update(dt);
       encaixarInstrumentos(modelo);
@@ -226,8 +214,8 @@ export function criarAtor(estadoInicial: EstadoDoAvatar): Ator {
   let atual: Ator;
   let chave = "";
   const chaveDe = (estado: EstadoDoAvatar) => {
-    const base = migrarPersonagem(estado.personagem).base;
-    return tipoDoModelo(base) === "video" ? `video:${base}` : "vrm";
+    const skin = skinDoPersonagem(migrarPersonagem(estado.personagem));
+    return skin.tipo === "video" ? `video:${skin.arquivo}` : "vrm";
   };
   const montar = (estado: EstadoDoAvatar) => {
     atual?.descartar();

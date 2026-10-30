@@ -436,7 +436,8 @@ export function PistaDoJogador(props: Props) {
         estrelaAtiva: partida.estrelaAtiva,
         progresso: Math.round(Math.max(0, Math.min(1, tempo / duracao)) * 500) / 500,
         precisao: Math.round(precisao(partida) * 1000) / 1000,
-        contagem: tempo < 0 ? Math.ceil(-tempo) : 0,
+        // Conta até a música começar a tocar, que é antes do tempo das notas quando há atraso calibrado.
+        contagem: tempo + opcoes.atrasoMs / 1000 < 0 ? Math.ceil(-(tempo + opcoes.atrasoMs / 1000)) : 0,
         pulso: partida.acertos,
         fantasma: partida.fantasma,
         estrelas: Math.round(progressoDasEstrelas(partida.pontos, carregada.notas.length) * 100) / 100,

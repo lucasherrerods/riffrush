@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use riffrush_api::modules::amizade::{AmizadesPostgres, ServicosDeAmizade};
 use riffrush_api::modules::catalogo::{CatalogoPostgres, Encore, ServicosDoCatalogo};
 use riffrush_api::modules::conta::{ContasPostgres, CredenciaisDoGoogle, GeradorAleatorio, Google, RelogioDoSistema, ServicosDaConta};
 use riffrush_api::modules::mania::{self, CredenciaisDoOsu, ManiaPostgres, Osu, ServicosDoMania};
@@ -104,7 +105,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         gerador: conta.gerador.clone(),
     };
     mania::iniciar_trabalhador(servicos_do_mania.clone());
+    let amizade = ServicosDeAmizade {
+        repositorio: Arc::new(AmizadesPostgres(banco.clone())),
+        conta: conta.clone(),
+        janelas: Default::default(),
+    };
     let estado = EstadoDoApp {
+        amizade,
         banco: Arc::new(BancoPostgres(banco)),
         conta,
         ranking,

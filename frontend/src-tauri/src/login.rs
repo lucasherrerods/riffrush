@@ -13,9 +13,13 @@ const INICIO_DO_LOGIN: &str = "https://accounts.google.com/o/oauth2/v2/auth?";
 const ESPERA_MAXIMA: Duration = Duration::from_secs(300);
 const TAMANHO_MAXIMO_DO_PEDIDO: usize = 8 * 1024;
 
-const PAGINA_DE_VOLTA: &str = "<!doctype html><meta charset=utf-8><title>Riff Rush</title>\
+/// O navegador só deixa o script fechar a aba em alguns casos. Quando não deixa, a página
+/// continua aberta e troca a mensagem.
+const PAGINA_DE_VOLTA: &str ="<!doctype html><meta charset=utf-8><title>Riff Rush</title>\
 <body style=\"background:#141118;color:#f4f1f7;font-family:sans-serif;display:grid;place-items:center;height:100vh;margin:0\">\
-<p>Pronto! Pode fechar esta aba e voltar ao Riff Rush.</p>";
+<p id=m>Login feito! Voltando para o Riff Rush...</p>\
+<script>setTimeout(function(){window.close();setTimeout(function(){\
+document.getElementById('m').textContent='Login feito! Pode fechar esta aba: o Riff Rush já está aberto.'},300)},800)</script>";
 
 #[derive(Debug, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -97,9 +101,19 @@ async fn esperar_a_volta(ouvinte: TcpListener) -> Result<String, String> {
     }
 }
 
+/// Traz a janela do jogo para a frente do navegador. No Windows, só o foco não basta para passar
+/// na frente de outro programa: ficar por cima por um instante resolve.
+fn trazer_para_frente(janela: &tauri::WebviewWindow) {
+    let _ = janela.unminimize();
+    let _ = janela.show();
+    let _ = janela.set_always_on_top(true);
+    let _ = janela.set_focus();
+    let _ = janela.set_always_on_top(false);
+}
+
 /// Abre o login no navegador e devolve a volta do Google. `url` é a URL de login sem o redirect.
 #[tauri::command]
-pub async fn login_pelo_navegador(url: String) -> Result<RetornoDoLogin, String> {
+pub async fn login_pelo_navegador(janela: tauri::WebviewWindow, url: String) -> Result<RetornoDoLogin, String> {
     if !url_do_google_valida(&url) {
         return Err("Endereço de login inválido.".into());
     }
@@ -110,6 +124,7 @@ pub async fn login_pelo_navegador(url: String) -> Result<RetornoDoLogin, String>
     let busca = tokio::time::timeout(ESPERA_MAXIMA, esperar_a_volta(ouvinte))
         .await
         .map_err(|_| "O login demorou demais. Tente de novo.".to_string())??;
+    trazer_para_frente(&janela);
     Ok(RetornoDoLogin { busca, redirect_uri })
 }
 
@@ -161,7 +176,13 @@ mod tests {
         navegador.write_all(b"GET /?code=abc&state=e HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").await.unwrap();
         let mut pagina = String::new();
         navegador.read_to_string(&mut pagina).await.unwrap();
-        assert!(pagina.contains("Pode fechar esta aba"));
+        assert!(pagina.contains("Voltando para o Riff Rush"));
         assert_eq!(espera.await.unwrap(), Ok("?code=abc&state=e".into()));
+    }
+
+    #[test]
+    fn a_pagina_de_volta_fecha_a_aba_sozinha_e_avisa_se_o_navegador_nao_deixar() {
+        assert!(PAGINA_DE_VOLTA.contains("window.close()"));
+        assert!(PAGINA_DE_VOLTA.contains("Pode fechar esta aba"));
     }
 }

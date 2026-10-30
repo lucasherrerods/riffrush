@@ -1,0 +1,16 @@
+{
+  "nome": "Faísca",
+  "fps": 12,
+  "alturaEmMetros": 1.95,
+  "card": "card.webp",
+  "cenas": {
+    "tocando": {
+      "arquivo": "tocando.png",
+      "quadros": 39,
+      "colunas": 8,
+      "linhas": 5,
+      "largura": 88,
+      "altura": 128
+    }
+  }
+}

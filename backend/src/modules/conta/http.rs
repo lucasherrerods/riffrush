@@ -175,6 +175,9 @@ pub struct CorpoDaPartida {
     /// As entradas da partida comprimidas, em base64. Só em partida que vale para o ranking.
     #[serde(default)]
     replay: Option<String>,
+    /// Igual para todos os jogadores que tocaram a música juntos na sala. Solo não manda.
+    #[serde(default)]
+    rodada_id: Option<Uuid>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -228,6 +231,7 @@ pub async fn registrar_partida(
             valor_dos_acertos: corpo.valor_dos_acertos,
         },
         replay,
+        rodada: corpo.rodada_id,
     };
     Ok(match estado.conta.registrar_partida(&token, partida).await? {
         Registro::Registrada(xp) => Json(RespostaDaPartida::from(xp)).into_response(),

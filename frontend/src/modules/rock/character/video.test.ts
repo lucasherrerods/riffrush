@@ -1,4 +1,4 @@
-import { cenaDoAtor, quadroDaCena, recorteDoQuadro, type CenaDoAtor } from "./video";
+import { cenaDoAtor, dadosDaCena, quadroDaCena, recorteDoQuadro, type CenaDoAtor } from "./video";
 
 const base = { tocando: false, triste: false, reacao: null, desdeReacao: 0 };
 
@@ -50,5 +50,14 @@ describe("recorteDoQuadro", () => {
     // A textura tem a origem embaixo: a primeira linha da folha é a de cima.
     expect(recorteDoQuadro(cena, 0)).toEqual({ x: 0, y: 2 / 3, largura: 1 / 4, altura: 1 / 3 });
     expect(recorteDoQuadro(cena, 5)).toEqual({ x: 1 / 4, y: 1 / 3, largura: 1 / 4, altura: 1 / 3 });
+  });
+});
+
+describe("dadosDaCena", () => {
+  it("ator com só a cena tocando usa ela para as cenas que faltam", () => {
+    const tocando: CenaDoAtor = { arquivo: "tocando.png", quadros: 39, colunas: 8, linhas: 5, largura: 88, altura: 128 };
+    const cenas = { tocando };
+    expect(dadosDaCena(cenas, "errou")).toEqual({ nome: "tocando", dados: tocando });
+    expect(dadosDaCena(cenas, "tocando")).toEqual({ nome: "tocando", dados: tocando });
   });
 });

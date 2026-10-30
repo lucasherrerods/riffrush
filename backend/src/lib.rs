@@ -12,7 +12,7 @@ use shared::estado::EstadoDoApp;
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida, modules::conta::situacao_da_partida, modules::ranking::ranking, modules::ranking::geral, modules::ranking::musicas, modules::ranking::partida, modules::ranking::replay, modules::perfil::perfil, modules::perfil::recordes, modules::presenca::ficha, modules::moderacao::denunciar, modules::moderacao::denuncias, modules::moderacao::resolver, modules::moderacao::banidos, modules::moderacao::banir, modules::moderacao::desbanir, modules::mania::enviar_partida, modules::mania::situacao_da_partida, modules::mania::ranking, modules::mania::replay),
+    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida, modules::conta::situacao_da_partida, modules::ranking::ranking, modules::ranking::geral, modules::ranking::musicas, modules::ranking::partida, modules::ranking::replay, modules::perfil::perfil, modules::perfil::recordes, modules::presenca::ficha, modules::moderacao::denunciar, modules::moderacao::denuncias, modules::moderacao::resolver, modules::moderacao::banidos, modules::moderacao::banir, modules::moderacao::desbanir, modules::mania::enviar_partida, modules::mania::situacao_da_partida, modules::mania::ranking, modules::mania::replay, modules::amizade::amigos, modules::amizade::sugestoes, modules::amizade::pedir, modules::amizade::aceitar, modules::amizade::desfazer, modules::amizade::bloquear, modules::amizade::desbloquear),
     components(schemas(
         modules::saude::RespostaDeSaude,
         modules::conta::CorpoDoLogin,
@@ -45,7 +45,12 @@ use shared::estado::EstadoDoApp;
         modules::mania::XpDaPartidaDoMania,
         modules::mania::SituacaoDaPartidaDoMania,
         modules::mania::RespostaDoRankingDoMania,
-        modules::mania::PosicaoNoRankingDoMania
+        modules::mania::PosicaoNoRankingDoMania,
+        modules::amizade::RespostaDosAmigos,
+        modules::amizade::PessoaDaAmizade,
+        modules::amizade::SugestaoDeAmizade,
+        modules::amizade::CorpoDoPedido,
+        modules::amizade::RespostaDoPedido
     )),
     modifiers(&Token)
 )]
@@ -79,6 +84,7 @@ pub fn app(estado: EstadoDoApp, origens_permitidas: &[String]) -> Router {
         .merge(modules::presenca::rotas())
         .merge(modules::moderacao::rotas())
         .merge(modules::mania::rotas())
+        .merge(modules::amizade::rotas())
         .route("/openapi.json", get(|| async { Json(Documentacao::openapi()) }))
         .with_state(estado)
         .layer(cors)

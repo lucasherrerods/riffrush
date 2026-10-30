@@ -89,6 +89,7 @@ async fn cenario() -> Cenario {
     let (mania, repositorio) = servicos_do_mania(conta.clone(), osu);
     let app = riffrush_api::app(
         EstadoDoApp {
+            amizade: riffrush_api::modules::amizade::fakes::servicos_de_amizade(conta.clone(), Default::default()).0,
             mania: mania.clone(),
             banco: Arc::new(BancoOk),
             ranking: riffrush_api::modules::ranking::fakes::servicos_do_ranking(conta.clone()).0,

@@ -6,14 +6,16 @@ Como criar novos personagens 3D para o Riff Rush sem abrir o Blender, e como ele
 
 ## Visão geral
 
-Os personagens são arquivos **VRM 1.0** (um `.glb` com o esqueleto humanoide e as expressões descritas na extensão `VRMC_vrm`). O jogo carrega o VRM com `@pixiv/three-vrm`, aplica as animações da Mixamo por retarget (`render3d/retarget.ts`) e pinta as partes pelas cores escolhidas no criador de personagem.
+Os personagens são arquivos **VRM 1.0** (um `.glb` com o esqueleto humanoide e as expressões descritas na extensão `VRMC_vrm`). O jogo carrega o VRM com `@pixiv/three-vrm`, aplica as animações da Mixamo por retarget (`render3d/retarget.ts`) e encaixa o instrumento do personagem nas mãos.
+
+Não existe customização livre (cores, corpo, peças): cada personagem do catálogo (`PERSONAGENS` em `catalogo.ts`) toca um instrumento e pode ter algumas **skins**, que são versões do mesmo personagem. O jogador escolhe o personagem e a skin.
 
 Há dois caminhos para ter um personagem novo:
 
 | Caminho | Quando usar |
 |---|---|
 | **Gerador procedural** (`scripts/gerar-personagem.mjs`) | Personagens estilizados no visual do jogo, feitos a partir de uma receita JSON. Rápido para criar a banda inteira. |
-| **VRoid Studio / Booth** | Quando quiser um personagem anime detalhado. Exporte em `.vrm` e registre em `BASES`. |
+| **VRoid Studio / Booth** | Quando quiser um personagem anime detalhado. Exporte em `.vrm` e registre como skin em `PERSONAGENS`. |
 
 Os dois produzem o mesmo tipo de arquivo, então o resto do jogo não muda.
 
@@ -29,10 +31,10 @@ Os dois produzem o mesmo tipo de arquivo, então o resto do jogo não muda.
    ```
 
    O arquivo sai em `public/modelos/personagens/<id>.vrm`, e o script mostra triângulos e tamanho.
-3. Registre em `BASES` em `src/modules/rock/character/catalogo.ts`:
+3. Registre em `PERSONAGENS` em `src/modules/rock/character/catalogo.ts`, como um personagem novo ou uma skin de um que já existe:
 
    ```ts
-   { id: "<id>", rotulo: "Nome no menu", arquivo: "/modelos/personagens/<id>.vrm" },
+   { id: "<id>", rotulo: "Nome no menu", instrumento: "baixo", skins: [{ id: "padrao", rotulo: "Padrão", arquivo: "/modelos/personagens/<id>.vrm" }] },
    ```
 
 O script só usa o Node, sem dependências. Cada personagem fica com **8–11 mil triângulos e 330–400 KB**.
@@ -193,18 +195,33 @@ python scripts/preparar-ator.py atores/<id>.json
 
 O script recorta a pessoa com dois modelos de IA (cada um erra em quadros diferentes), descarta o que fica solto (cadeiras, gente passando atrás), enquadra todas as cenas do mesmo jeito e gera `public/modelos/atores/<id>/` com uma folha `.png` por cena e o `manifesto.json`. Na primeira vez ele baixa os modelos (~350 MB).
 
-Registre em `BASES` com `tipo: "video"`:
+Registre a pasta como skin em `PERSONAGENS`, com `tipo: "video"`:
 
 ```ts
-{ id: "<id>", rotulo: "Nome (filmado)", arquivo: "/modelos/atores/<id>", tipo: "video" },
+{ id: "<skin>", rotulo: "Nome da skin", arquivo: "/modelos/atores/<id>", tipo: "video" },
 ```
+
+Só a cena `tocando` é obrigatória no manifesto; as que faltam usam ela. O Faísca, por exemplo, tem só uma folha de 39 quadros de 88 × 128 (8 colunas × 5 linhas).
+
+### Card da escolha de personagem
+
+Na tela de personagem, cada personagem aparece como um card vertical, e o escolhido ganha um destaque grande com o ator tocando por cima. Para dar um card a um ator:
+
+1. Faça uma arte **vertical 2:3**: a pessoa de corpo inteiro, em pé, com fundo de palco e luz de show. Deixe espaço acima da cabeça, porque o card é cortado de baixo e dos lados, nunca do topo.
+2. Salve como `assets-fonte/atores/<id>_card.png`, ao lado do vídeo.
+3. Rode `python scripts/preparar-ator.py atores/<id>.json`. O script converte a arte para `public/modelos/atores/<id>/card.webp` (no máximo 1024 px de largura) e registra `"card": "card.webp"` no `manifesto.json`.
+4. Aponte a skin para o card em `PERSONAGENS`:
+
+   ```ts
+   { id: "<skin>", rotulo: "Nome da skin", arquivo: "/modelos/atores/<id>", tipo: "video", card: "/modelos/atores/<id>/card.webp" },
+   ```
+
+Uma skin sem `card` usa o da primeira skin do personagem. Um personagem sem card nenhum continua aparecendo: o card mostra só o nome, e o destaque volta a ser o personagem animado (`cardDoPersonagem` em `catalogo.ts`). Personagens 3D também aceitam `card`.
 
 ### No código
 
 - `character/video.ts`: funções puras que escolhem a cena (`cenaDoAtor`) e o quadro (`quadroDaCena`, `recorteDoQuadro`).
 - `render3d/atorDeVideo.ts`: o ator 2D, com a mesma interface do ator VRM.
 - `render3d/ator.ts › criarAtor`: monta o ator certo conforme o tipo do modelo escolhido.
-
-Cores, corpo e instrumento do criador de personagem não se aplicam a atores filmados: eles aparecem como foram gravados (inclusive com a guitarra imaginária).
 
 **Combine antes com quem foi filmado.** O vídeo original fica só na sua máquina, mas as folhas de sprites vão para o repositório e para quem jogar.

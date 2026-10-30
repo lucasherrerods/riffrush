@@ -1,46 +1,46 @@
-import { CORES_DO_PERSONAGEM } from "@/modules/rock/tema";
-
 /**
- * Tudo que pode ser escolhido na criação do personagem.
- * - Novo personagem: gere um com scripts/gerar-personagem.mjs (docs/personagens.md) ou exporte um .vrm (VRoid Studio, Booth…), coloque em public/modelos/personagens e registre em BASES.
+ * Os personagens que dá para escolher: um por instrumento, cada um com as próprias skins.
+ * - Personagem filmado: rode scripts/preparar-ator.py (ou monte a folha de sprites à mão) e coloque a pasta em public/modelos/atores.
+ * - Personagem 3D: gere com scripts/gerar-personagem.mjs (docs/personagens.md) e coloque o .vrm em public/modelos/personagens.
  * - Nova animação: rode scripts/preparar-animacoes.mjs com o .fbx da Mixamo e registre em ANIMACOES_POR_INSTRUMENTO.
- * - Nova peça: um .glb com malha presa ao esqueleto humanoide, em public/modelos/pecas, registrado em PECAS.
  */
 export type Instrumento = "guitarra" | "baixo" | "keytar" | "bateria" | "vocal";
-export type Expressao = "neutra" | "determinada" | "confiante" | "alegre";
-export type ParteColorivel = "pele" | "cabelo" | "olhos" | "roupa" | "calca" | "calcados";
 
 export interface Opcao<T extends string> {
   id: T;
   rotulo: string;
 }
 
-export interface Base extends Opcao<string> {
+export interface Skin extends Opcao<string> {
   /** O .vrm, ou a pasta do ator filmado quando `tipo` é "video". */
   arquivo: string;
-  /** "video": pessoa filmada em 2D (scripts/preparar-ator.py). Sem tipo, é um VRM. */
+  /** "video": pessoa filmada em 2D. Sem tipo, é um VRM. */
   tipo?: "vrm" | "video";
+  /** Arte vertical 2:3 do personagem em pé no palco, mostrada na escolha de personagem. */
+  card?: string;
 }
 
-export interface Peca extends Opcao<string> {
-  arquivo: string;
-  /** Partes do corpo base que a peça cobre e que ficam escondidas por baixo dela. */
-  cobre: ParteColorivel[];
+export interface DefinicaoDePersonagem extends Opcao<string> {
+  instrumento: Instrumento;
+  skins: Skin[];
 }
 
-export const BASES: Base[] = [
-  // Gerados por scripts/gerar-personagem.mjs a partir de personagens/*.json (veja docs/personagens.md). O primeiro é o padrão.
-  { id: "roqueiro", rotulo: "Roqueiro", arquivo: "/modelos/personagens/roqueiro.vrm" },
-  { id: "baixista", rotulo: "Baixista", arquivo: "/modelos/personagens/baixista.vrm" },
-  { id: "tecladista", rotulo: "Tecladista", arquivo: "/modelos/personagens/tecladista.vrm" },
-  { id: "vocalista", rotulo: "Vocalista", arquivo: "/modelos/personagens/vocalista.vrm" },
-  { id: "baterista", rotulo: "Baterista", arquivo: "/modelos/personagens/baterista.vrm" },
-  // Gente de verdade filmada, recortada por scripts/preparar-ator.py a partir de atores/*.json.
-  { id: "sorriso", rotulo: "Sorriso (filmado)", arquivo: "/modelos/atores/sorriso", tipo: "video" },
+/** O primeiro é o padrão. */
+export const PERSONAGENS: DefinicaoDePersonagem[] = [
+  { id: "faisca", rotulo: "Faísca", instrumento: "guitarra", skins: [{ id: "classico", rotulo: "Clássico", arquivo: "/modelos/atores/faisca", tipo: "video", card: "/modelos/atores/faisca/card.webp" }] },
 ];
-export const PECAS: Peca[] = [];
 
-export const tipoDoModelo = (id: string) => BASES.find((b) => b.id === id)?.tipo ?? "vrm";
+export const definicaoDoPersonagem = ({ personagem }: { personagem: string }) => PERSONAGENS.find((p) => p.id === personagem) ?? PERSONAGENS[0];
+export const instrumentoDoPersonagem = (escolha: { personagem: string }) => definicaoDoPersonagem(escolha).instrumento;
+export function skinDoPersonagem(escolha: { personagem: string; skin: string }) {
+  const { skins } = definicaoDoPersonagem(escolha);
+  return skins.find((s) => s.id === escolha.skin) ?? skins[0];
+}
+
+/** Card da skin escolhida; sem ele, o da primeira skin. Sem nenhum, a tela mostra só o nome. */
+export function cardDoPersonagem({ skins }: DefinicaoDePersonagem, skin?: string) {
+  return skins.find((s) => s.id === skin)?.card ?? skins[0]?.card ?? null;
+}
 
 export const INSTRUMENTOS: Opcao<Instrumento>[] = [
   { id: "guitarra", rotulo: "Guitarra" },
@@ -59,28 +59,3 @@ export const ANIMACOES_POR_INSTRUMENTO: Record<Instrumento, string[]> = {
   vocal: [],
 };
 export const arquivoDaAnimacao = (id: string) => `/modelos/animacoes/${id}.glb`;
-
-export const EXPRESSOES: Opcao<Expressao>[] = [
-  { id: "neutra", rotulo: "Neutra" },
-  { id: "determinada", rotulo: "Determinada" },
-  { id: "confiante", rotulo: "Confiante" },
-  { id: "alegre", rotulo: "Alegre" },
-];
-
-/** Ajustes do corpo, de 0 a 1 (0,5 é o modelo original). */
-export const AJUSTES_DO_CORPO = [
-  { id: "altura", rotulo: "Altura" },
-  { id: "porte", rotulo: "Porte físico" },
-  { id: "ombros", rotulo: "Ombros" },
-] as const;
-
-export const PARTES_COLORIVEIS: Opcao<ParteColorivel>[] = [
-  { id: "pele", rotulo: "Pele" },
-  { id: "cabelo", rotulo: "Cabelo" },
-  { id: "olhos", rotulo: "Olhos" },
-  { id: "roupa", rotulo: "Roupa" },
-  { id: "calca", rotulo: "Calça" },
-  { id: "calcados", rotulo: "Calçados" },
-];
-
-export const PALETAS: Record<ParteColorivel, string[]> = CORES_DO_PERSONAGEM;

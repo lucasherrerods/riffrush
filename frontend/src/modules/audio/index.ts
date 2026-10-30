@@ -1,4 +1,4 @@
-export { obterContextoDeAudio } from "./contexto";
+export { obterContextoDeAudio, pausarAudio, retomarAudio } from "./contexto";
 export { desbloquearNoPrimeiroToque } from "./desbloqueio";
 export { EFEITOS, tocarEfeito, tocarTrovao, type NomeDoEfeito } from "./efeitos";
 export { agoraNoAudio, momentoDoEvento, tempoDeSaida, tempoDoEvento } from "./relogio";

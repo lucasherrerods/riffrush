@@ -186,6 +186,74 @@ describe("TelaDeJogo", () => {
     await waitFor(() => expect(audio().resume).toHaveBeenCalled(), { timeout: 4500 });
   }, 8000);
 
+  it("P pausa e despausa como o Esc", async () => {
+    carregarCom([nota(5)]);
+    const { usuario } = abrir();
+    await partidaPronta();
+    await usuario.keyboard("p");
+    expect(await screen.findByRole("heading", { name: "Pausado" })).toBeInTheDocument();
+    await usuario.keyboard("p");
+    expect(await screen.findByRole("timer", { name: "Volta em 3" })).toBeInTheDocument();
+  });
+
+  it("R recomeça a partida na hora, sem passar pelo menu", async () => {
+    carregarCom([nota(0.5)]);
+    const { usuario } = abrir();
+    await partidaPronta();
+    irPara(0.5);
+    await usuario.keyboard("a");
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
+    const fontes = audio().fontes.length;
+    await usuario.keyboard("r");
+    await waitFor(() => expect(audio().fontes.length).toBeGreaterThan(fontes));
+    expect(screen.getByLabelText("Pontos")).toHaveTextContent("0");
+  });
+
+  it("P e R ficam com o jogo quando são teclas de traste", async () => {
+    carregarCom([nota(5)]);
+    const { usuario } = abrir({ teclas: ["KeyP", "KeyR", "KeyJ", "KeyK", "KeyL", "KeyD"] });
+    await partidaPronta();
+    const fontes = audio().fontes.length;
+    await usuario.keyboard("pr");
+    expect(screen.queryByRole("heading", { name: "Pausado" })).toBeNull();
+    expect(audio().fontes.length).toBe(fontes);
+  });
+
+  it("se o áudio voltar sozinho durante a pausa, ele é parado de novo", async () => {
+    carregarCom([nota(5)]);
+    const { usuario } = abrir();
+    await partidaPronta();
+    await usuario.keyboard("{Escape}");
+    await screen.findByRole("heading", { name: "Pausado" });
+    audio().suspend.mockClear();
+    audio().state = "running";
+    await waitFor(() => expect(audio().suspend).toHaveBeenCalled());
+  });
+
+  it("despausar volta a música para onde parou: as notas que passaram com o áudio andando na pausa não contam", async () => {
+    carregarCom(Array.from({ length: 30 }, (_, i) => nota(1.5 + i * 0.1)), 20);
+    const { usuario } = abrir();
+    await partidaPronta();
+    irPara(1);
+    await usuario.keyboard("{Escape}");
+    await screen.findByRole("heading", { name: "Pausado" });
+    // O áudio andou 4 s com a partida pausada.
+    irPara(5);
+    await usuario.click(screen.getByRole("button", { name: /Continuar/ }));
+    await waitFor(() => expect(audio().resume).toHaveBeenCalled(), { timeout: 4500 });
+    expect(audio().fontes.at(-1)!.deslocamento).toBeCloseTo(1, 1);
+    await new Promise((r) => setTimeout(r, 100));
+    expect(screen.queryByRole("heading", { name: /A galera vaiou/ })).toBeNull();
+  }, 8000);
+
+  it("a contagem do começo acaba quando a música começa, mesmo com o atraso calibrado", async () => {
+    carregarCom([nota(5)]);
+    abrir({ atrasoMs: 500 });
+    await partidaPronta();
+    irPara(0.2);
+    await waitFor(() => expect(screen.queryByRole("timer")).toBeNull());
+  });
+
   it("segura as teclas do sistema na partida e solta na pausa e ao sair", async () => {
     carregarCom([nota(5)]);
     const { usuario } = abrir();

@@ -64,6 +64,7 @@ impl ServicosDoRejulgamento {
                 jeito_de_jogar: rejulgada.jeito_de_jogar,
                 jogada_em: partida.enviada_em,
                 replay: partida.replay.clone(),
+                rodada: partida.rodada,
             })
             .await;
         if let Err(erro) = registro {
@@ -270,6 +271,7 @@ mod tests {
             replay,
             enviada_em: chrono::Utc::now(),
             tentativas,
+            rodada: None,
         }
     }
 

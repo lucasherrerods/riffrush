@@ -36,24 +36,11 @@ pub fn assinar_ficha(ficha: &Ficha, segredo: &[u8]) -> String {
 /// e a cada reconexão; mais que isso é alguém martelando a rota.
 pub const FICHAS_POR_MINUTO: u32 = 20;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Janela {
-    pub inicio: DateTime<Utc>,
-    pub contagem: u32,
-}
+pub use crate::shared::limite::Janela;
 
 /// Janela de um minuto por conta: devolve se a ficha pode sair e a janela atualizada.
 pub fn dentro_do_limite(janela: Option<Janela>, agora: DateTime<Utc>) -> (bool, Janela) {
-    match janela {
-        Some(j) if agora - j.inicio < Duration::minutes(1) => {
-            if j.contagem >= FICHAS_POR_MINUTO {
-                (false, j)
-            } else {
-                (true, Janela { contagem: j.contagem + 1, ..j })
-            }
-        }
-        _ => (true, Janela { inicio: agora, contagem: 1 }),
-    }
+    crate::shared::limite::dentro_do_limite(janela, agora, FICHAS_POR_MINUTO, Duration::minutes(1))
 }
 
 #[cfg(test)]
