@@ -22,7 +22,9 @@ export function opcoesDaPartida(c: Configuracoes, celular = ehTelaEstreita()): O
     personagem: c.personagem3d,
     mostrarFps: c.mostrarFps,
     qualidadeDoPalco: c.qualidadeDoPalco,
+    escalaDeRenderizacao: c.escalaDeRenderizacao,
     modoCompetitivo: c.modoCompetitivo,
+    bloquearAtalhos: c.bloquearAtalhos,
   };
 }
 

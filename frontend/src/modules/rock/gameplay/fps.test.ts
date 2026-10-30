@@ -31,3 +31,16 @@ describe("criarContadorDeFps", () => {
     expect(piorQuadroMs).toBe(50);
   });
 });
+
+describe("criarContadorDeFps.reiniciar", () => {
+  it("não conta como quadro lento o tempo em que a aba ficou escondida", () => {
+    const contador = criarContadorDeFps();
+    for (let i = 0; i <= 10; i++) contador.quadro(i * (1000 / 60));
+    // A aba some por 5 s: o navegador para de chamar o loop.
+    contador.reiniciar();
+    let leitura = null;
+    for (let i = 0; i <= 36; i++) leitura = contador.quadro(5000 + i * (1000 / 60)) ?? leitura;
+    expect(leitura?.fps).toBeCloseTo(60, 0);
+    expect(leitura?.piorQuadroMs).toBeLessThan(20);
+  });
+});

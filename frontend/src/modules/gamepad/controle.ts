@@ -1,4 +1,5 @@
 import { marcarComoDoControle, registrarUso } from "./dispositivo";
+import { alvoDaTecla, ativarFoco, moverFoco, type Direcao } from "./foco";
 import { DIRECIONAL, direcoesDoAnalogico, juntarAnalogico, podeSerEscolhido, traduzir, type Mapa, type Modo } from "./mapeamento";
 
 interface Opcoes {
@@ -12,11 +13,17 @@ const INTERVALO_MS = 5;
 const ATRASO_DA_REPETICAO_MS = 400;
 const INTERVALO_DA_REPETICAO_MS = 120;
 
-const apertar = (tipo: "keydown" | "keyup", code: string, repeat = false) => {
+const DIRECAO_DA_SETA: Record<string, Direcao> = { ArrowUp: "cima", ArrowDown: "baixo", ArrowLeft: "esquerda", ArrowRight: "direita" };
+
+const apertar = (tipo: "keydown" | "keyup", code: string, modo: Modo, repeat = false) => {
   const evento = new KeyboardEvent(tipo, { code, key: code, repeat, bubbles: true, cancelable: true });
   marcarComoDoControle(evento);
   registrarUso("controle");
-  window.dispatchEvent(evento);
+  alvoDaTecla().dispatchEvent(evento);
+  // Tecla criada pelo código não clica nem move o foco sozinha. Nos menus, se nenhuma tela a tratou, faz o que o teclado faria.
+  if (modo !== "menu" || tipo !== "keydown" || evento.defaultPrevented) return;
+  if (code === "Enter") ativarFoco();
+  else if (DIRECAO_DA_SETA[code]) moverFoco(DIRECAO_DA_SETA[code]);
 };
 
 let aoCapturar: ((botao: number) => void) | null = null;
@@ -59,13 +66,13 @@ export function iniciarControle({ modo, mapa }: Opcoes) {
       return;
     }
     const traducao = traduzir(antes, agora, emitidos, modoAtual, mapa());
-    for (const { tipo, code } of traducao.eventos) apertar(tipo, code);
+    for (const { tipo, code } of traducao.eventos) apertar(tipo, code, modoAtual);
 
     for (const botao of DIRECIONAL) {
       if (!agora[botao] || modoAtual !== "menu") proximaRepeticao.delete(botao);
       else if (!antes[botao] || !proximaRepeticao.has(botao)) proximaRepeticao.set(botao, decorrido + ATRASO_DA_REPETICAO_MS);
       else if (decorrido >= proximaRepeticao.get(botao)!) {
-        for (const code of traducao.emitidos[botao] ?? []) apertar("keydown", code, true);
+        for (const code of traducao.emitidos[botao] ?? []) apertar("keydown", code, modoAtual, true);
         proximaRepeticao.set(botao, decorrido + INTERVALO_DA_REPETICAO_MS);
       }
     }

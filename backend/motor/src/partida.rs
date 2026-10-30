@@ -388,7 +388,7 @@ pub fn tocar(partida: &mut Partida, pista: u8, tempo: f64) -> bool {
         }
         JeitoDeJogar::Tapping => {
             let acertou = acertar_mais_proxima(partida, pista, tempo);
-            if !acertou {
+            if !acertou && !acabou_de_acertar(partida, pista, tempo) {
                 tocar_em_vazio(partida, Some(pista));
             }
             acertou
@@ -396,7 +396,9 @@ pub fn tocar(partida: &mut Partida, pista: u8, tempo: f64) -> bool {
         JeitoDeJogar::Gamepad => {
             if !acertar_mais_proxima(partida, pista, tempo) {
                 partida.armadas.remove(&pista);
-                tocar_em_vazio(partida, Some(pista));
+                if !acabou_de_acertar(partida, pista, tempo) {
+                    tocar_em_vazio(partida, Some(pista));
+                }
                 return false;
             }
             partida.armadas.insert(pista);
@@ -445,6 +447,18 @@ pub fn palhetar(partida: &mut Partida, tempo: f64) -> bool {
         acertar(partida, indice, tempo);
     }
     true
+}
+
+/// Uma nota da pista já acertada na janela do toque: no gamepad a soltura acerta a próxima nota,
+/// e o aperto que o jogador dá para ela chega depois e não pode contar como toque em vazio.
+fn acabou_de_acertar(partida: &Partida, pista: u8, tempo: f64) -> bool {
+    partida
+        .notas
+        .iter()
+        .rev()
+        .skip_while(|nota| nota.tempo >= tempo + JANELA_DE_ACERTO)
+        .take_while(|nota| nota.tempo > tempo - JANELA_DE_ACERTO)
+        .any(|nota| nota.acertada && nota.pista == pista)
 }
 
 fn acertar_mais_proxima(partida: &mut Partida, pista: u8, tempo: f64) -> bool {
@@ -721,6 +735,18 @@ mod tests {
         assert!(tocar(&mut partida, 0, 1.0));
         soltar(&mut partida, 0, 1.2);
         assert_eq!(partida.acertos, 2);
+    }
+
+    #[test]
+    fn no_gamepad_apertar_a_nota_que_a_soltura_ja_acertou_nao_pune() {
+        let mut partida = criar_partida(&[nota(1.0), nota(1.1)], com_jeito(JeitoDeJogar::Gamepad));
+        assert!(tocar(&mut partida, 0, 1.0));
+        soltar(&mut partida, 0, 1.05);
+        let vida = partida.vida;
+        tocar(&mut partida, 0, 1.1);
+        assert_eq!(partida.sequencia, 2);
+        assert_eq!(partida.vida, vida);
+        assert!(!retirar_eventos(&mut partida).iter().any(|e| matches!(e, Evento::ToqueEmVazio { .. })));
     }
 
     #[test]

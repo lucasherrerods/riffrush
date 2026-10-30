@@ -13,7 +13,10 @@ interface Props {
 export function ConfirmacaoDeTamanho({ titulo, bytes, aoResponder }: Props) {
   useTeclado((evento) => {
     if (evento.code === "Escape") aoResponder(false);
-    else if (evento.code === "Enter") aoResponder(true);
+    else if (evento.code === "Enter") {
+      evento.preventDefault();
+      aoResponder(true);
+    }
   });
 
   return (

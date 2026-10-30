@@ -2,7 +2,7 @@ const REPOSITORIO = "https://github.com/lucasherrerods/riffrush";
 
 export const LINKS = {
   jogarNoNavegador: "https://riffrush.vercel.app",
-  baixar: `${REPOSITORIO}/releases/latest`,
+  baixar: `${REPOSITORIO}/releases/latest/download/RiffRush-setup.exe`,
   github: REPOSITORIO,
 };
 
