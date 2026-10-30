@@ -63,6 +63,8 @@ pub struct PartidaEnviada {
     pub resumo: ResumoDaPartida,
     /// As entradas da partida, comprimidas pelo app.
     pub replay: Option<Vec<u8>>,
+    /// Vem do host da sala, igual para todos que tocaram a música juntos.
+    pub rodada: Option<Uuid>,
 }
 
 /// O que acontece com a partida enviada.
@@ -97,6 +99,7 @@ pub struct PartidaRejulgada {
     pub jeito_de_jogar: JeitoDeJogar,
     pub jogada_em: chrono::DateTime<chrono::Utc>,
     pub replay: Vec<u8>,
+    pub rodada: Option<Uuid>,
 }
 
 /// O XP cai para quem repete o mesmo chart dentro deste tempo.
@@ -152,6 +155,7 @@ impl ServicosDaConta {
                             instrumento: partida.instrumento,
                             replay,
                             enviada_em: agora,
+                            rodada: partida.rodada,
                         })
                         .await?;
                     return Ok(Registro::NaFila { id });
@@ -178,6 +182,7 @@ impl ServicosDaConta {
                 replay: None,
                 precisao: None,
                 jeito_de_jogar: None,
+                rodada: partida.rodada,
             })
             .await?;
         Ok(Registro::Registrada(XpDaPartida {
@@ -209,6 +214,7 @@ impl ServicosDaConta {
                 // O ranking só lê partidas com precisão: sem ela, a partida fica de fora.
                 precisao: vale_para_o_ranking.then_some(partida.precisao),
                 jeito_de_jogar: Some(partida.jeito_de_jogar),
+                rodada: partida.rodada,
             })
             .await?;
         Ok(())
@@ -275,6 +281,8 @@ pub mod fakes {
         pub ultima_precisao: Mutex<Option<f64>>,
         /// (conta, id, xp) de cada partida registrada.
         pub xp_das_partidas: Mutex<Vec<(Uuid, Uuid, u64)>>,
+        /// A rodada da sala de cada partida registrada.
+        pub rodadas: Mutex<Vec<Option<Uuid>>>,
         /// (conta, id, recusada) das partidas que o teste põe na fila.
         pub na_fila: Mutex<Vec<(Uuid, Uuid, bool)>>,
     }
@@ -341,6 +349,7 @@ pub mod fakes {
                 .unwrap()
                 .push((partida.conta_id, partida.musica_id.clone(), partida.jogada_em, partida.id));
             *self.ultima_precisao.lock().unwrap() = partida.precisao;
+            self.rodadas.lock().unwrap().push(partida.rodada);
             self.xp_das_partidas.lock().unwrap().push((partida.conta_id, partida.id, partida.xp_ganho));
             self.partidas.lock().unwrap().push((partida.conta_id, partida.jogada_em, partida.xp_ganho));
             *self.ultimo_replay.lock().unwrap() = partida.replay.clone();
@@ -502,6 +511,7 @@ mod tests {
                 valor_dos_acertos: None,
             },
             replay: None,
+            rodada: None,
         }
     }
 
@@ -574,6 +584,7 @@ mod tests {
             jogada_em: quando,
             replay: vec![2, 0],
             jeito_de_jogar: crate::modules::progresso::JeitoDeJogar::Gamepad,
+            rodada: None,
         }
     }
 
@@ -716,6 +727,35 @@ mod tests {
     }
 
     const MD5: &str = "fb0079d4c2e025d5b8dd70724750a923";
+
+    #[tokio::test]
+    async fn a_rodada_da_sala_chega_ao_banco_na_partida_e_na_fila() {
+        let (servicos, banco, relogio, fila) = super::fakes::servicos_com_fila();
+        let entrada = servicos.entrar_com_google(&pedido("bom")).await.unwrap();
+        let rodada = Some(Uuid::from_u128(77));
+        servicos
+            .registrar_partida(&entrada.token, PartidaEnviada { rodada, ..partida(1, 1) })
+            .await
+            .unwrap();
+        relogio.andar(Duration::minutes(5));
+        let do_encore = PartidaEnviada {
+            musica_id: format!("encore:{MD5}"),
+            replay: Some(vec![2, 0]),
+            rodada,
+            ..partida(10, 10)
+        };
+        servicos.registrar_partida(&entrada.token, do_encore).await.unwrap();
+        servicos
+            .registrar_partida_rejulgada(PartidaRejulgada {
+                rodada,
+                ..rejulgada(9, entrada.conta.id, relogio.agora())
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(fila.0.lock().unwrap()[0].rodada, rodada);
+        assert_eq!(*banco.rodadas.lock().unwrap(), [rodada, rodada]);
+    }
 
     #[tokio::test]
     async fn partida_do_encore_vai_para_a_fila_sem_xp_na_hora() {

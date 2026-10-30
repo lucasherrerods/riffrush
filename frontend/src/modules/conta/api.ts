@@ -57,6 +57,8 @@ export interface PartidaParaAApi {
   valor_dos_acertos?: number;
   /** As entradas da partida comprimidas, em base64. */
   replay?: string;
+  /** Igual para todos que tocaram a música juntos na sala. */
+  rodada_id?: string;
 }
 
 export interface DificuldadeDoPerfil {

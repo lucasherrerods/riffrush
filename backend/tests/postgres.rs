@@ -93,6 +93,7 @@ async fn partida_soma_xp_e_marca_a_ultima() {
         replay: None,
         precisao: None,
         jeito_de_jogar: None,
+        rodada: None,
     };
     assert_eq!(banco.registrar_partida(&partida).await.unwrap().xp_total, 120);
     // A fila pode entregar a mesma partida duas vezes: o mesmo id não soma de novo.
@@ -130,6 +131,7 @@ async fn excluir_apaga_a_conta_com_sessoes_e_partidas() {
         replay: None,
         precisao: None,
         jeito_de_jogar: None,
+        rodada: None,
     };
     banco.registrar_partida(&partida).await.unwrap();
 
@@ -167,6 +169,7 @@ async fn ranking_pega_o_recorde_de_cada_jogador_pelos_pontos() {
         replay: None,
         precisao,
         jeito_de_jogar: None,
+        rodada: None,
     };
     let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -239,6 +242,7 @@ async fn o_ranking_mostra_o_jeito_de_jogar_de_cada_recorde() {
         replay: None,
         precisao: Some(0.9),
         jeito_de_jogar,
+        rodada: None,
     };
     let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -282,6 +286,7 @@ async fn ranking_por_precisao_pega_a_partida_de_mais_precisao_de_cada_jogador() 
         replay: None,
         precisao,
         jeito_de_jogar: None,
+        rodada: None,
     };
     let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -332,6 +337,7 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
         replay: None,
         precisao: None,
         jeito_de_jogar: None,
+        rodada: None,
     };
     for partida in [
         jogar("a", Dificuldade::Expert, 900, false, 0),
@@ -403,6 +409,7 @@ async fn ranking_geral_ordena_por_xp_e_ignora_quem_nao_jogou() {
             replay: None,
             precisao: None,
             jeito_de_jogar: None,
+            rodada: None,
         })
         .await
         .unwrap();
@@ -444,6 +451,7 @@ async fn musicas_mais_jogadas_contam_partidas_e_jogadores_diferentes() {
                 replay: None,
                 precisao: None,
                 jeito_de_jogar: None,
+                rodada: None,
             })
             .await
             .unwrap();
@@ -455,6 +463,56 @@ async fn musicas_mais_jogadas_contam_partidas_e_jogadores_diferentes() {
     assert_eq!(
         (musicas[0].posicao, musicas[0].musica_id.as_str(), musicas[0].partidas, musicas[0].jogadores),
         (1, musica.as_str(), 300, 2)
+    );
+}
+
+#[tokio::test]
+async fn a_rodada_da_sala_conta_uma_partida_so_nas_mais_jogadas() {
+    let Some(banco) = banco().await else { return };
+    let ranking = RankingPostgres(banco.0.clone());
+    let musica = format!("teste:{}", Uuid::new_v4());
+    let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let agora = Utc::now();
+    // 200 rodadas da sala com as duas e 100 partidas solo da Ana: 300 partidas, 400 linhas.
+    let rodadas = (0..200).flat_map(|i| {
+        let rodada = Uuid::new_v4();
+        [(ana.id, Some(rodada), i), (bia.id, Some(rodada), i)]
+    });
+    let solos = (200..300).map(|i| (ana.id, None, i));
+    for (conta, rodada, i) in rodadas.chain(solos) {
+        banco
+            .registrar_partida(&PartidaRegistrada {
+                id: Uuid::new_v4(),
+                conta_id: conta,
+                musica_id: musica.clone(),
+                instrumento: Instrumento::Guitarra,
+                pontos: 10,
+                resumo: ResumoDaPartida {
+                    dificuldade: Dificuldade::Facil,
+                    acertos: 1,
+                    total: 1,
+                    derrota: false,
+                    fantasma: false,
+                    maior_sequencia: None,
+                    valor_dos_acertos: None,
+                },
+                xp_ganho: 0,
+                jogada_em: agora + Duration::seconds(i as i64),
+                replay: None,
+                precisao: None,
+                jeito_de_jogar: None,
+                rodada,
+            })
+            .await
+            .unwrap();
+    }
+
+    let musicas = ranking.musicas(1).await.unwrap();
+
+    assert_eq!(
+        (musicas[0].musica_id.as_str(), musicas[0].partidas, musicas[0].jogadores),
+        (musica.as_str(), 300, 2)
     );
 }
 
@@ -482,6 +540,7 @@ async fn ranking_geral_da_a_posicao_certa_fora_do_top_e_no_empate() {
         replay: None,
         precisao: None,
         jeito_de_jogar: None,
+        rodada: None,
     };
     let primeiro = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let empatado = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -533,6 +592,7 @@ async fn a_linha_do_ranking_abre_a_partida_com_a_maior_sequencia() {
             replay: None,
             precisao: Some(0.9),
             jeito_de_jogar: None,
+            rodada: None,
         })
         .await
         .unwrap();
@@ -582,6 +642,7 @@ async fn so_o_top_10_guarda_replay_e_quem_cai_perde_o_dele() {
         replay: Some(vec![1, replay]),
         precisao: Some(0.9),
         jeito_de_jogar: None,
+        rodada: None,
     };
     let com_replay = || async {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM partidas WHERE musica_id = $1 AND replay IS NOT NULL")
@@ -714,6 +775,7 @@ async fn recordes_pegam_a_melhor_partida_terminada_de_cada_musica() {
         replay: None,
         precisao: Some(pontos as f64 / 1000.0),
         jeito_de_jogar: None,
+        rodada: None,
     };
     for partida in [
         jogar(Instrumento::Guitarra, 500, false, false),
@@ -751,6 +813,7 @@ fn na_fila(conta_id: Uuid, md5: &str, enviada_em: chrono::DateTime<Utc>) -> Part
         instrumento: Instrumento::Baixo,
         replay: vec![2, 1, 2],
         enviada_em,
+        rodada: Some(Uuid::from_u128(7)),
     }
 }
 
@@ -779,6 +842,7 @@ async fn a_fila_reserva_reagenda_desiste_e_conclui() {
         (pegas[0].tentativas, pegas[0].instrumento, pegas[0].replay.as_slice()),
         (1, Instrumento::Baixo, [2, 1, 2].as_slice())
     );
+    assert_eq!(pegas[0].rodada, Some(Uuid::from_u128(7)));
     // Reservadas, não saem de novo.
     assert!(minhas(fila.pegar(1000, agora).await.unwrap()).is_empty());
 
