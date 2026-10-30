@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { abrirLink } from "@/modules/platform";
 import { AudioContextFalso } from "@/test/audioFalso";
@@ -12,7 +12,6 @@ function abrir({ noCelular = false, comLeaderboard = true, chat }: { noCelular?:
     aoJogar: vi.fn(),
     aoMultijogador: vi.fn(),
     aoPersonagem: vi.fn(),
-    aoConfigurar: vi.fn(),
     aoBuscarMusicas: vi.fn(),
     aoLeaderboard: comLeaderboard ? vi.fn() : undefined,
     aoAbrirDocumento: vi.fn(),
@@ -27,7 +26,12 @@ describe("MenuPrincipal", () => {
   it("mostra o nome do jogo e as opções", () => {
     abrir();
     expect(screen.getByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Multiplayer", "Buscar músicas", "Leaderboard", "Personagem", "Configurações"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Multiplayer", "Buscar músicas", "Leaderboard", "Personagem"]);
+  });
+
+  it("sem conta, Configurações fica no menu, porque não há o menu da conta", () => {
+    render(<MenuPrincipal volumeDosEfeitos={0} aoJogar={vi.fn()} aoMultijogador={vi.fn()} aoPersonagem={vi.fn()} aoBuscarMusicas={vi.fn()} aoAbrirDocumento={vi.fn()} aoConfigurar={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Configurações" })).toBeInTheDocument();
   });
 
   it("Enter abre a opção selecionada, que começa em Jogar", async () => {
@@ -37,9 +41,9 @@ describe("MenuPrincipal", () => {
   });
 
   it("as setas trocam a opção selecionada, dando a volta", async () => {
-    const { aoConfigurar, usuario } = abrir();
+    const { aoPersonagem, usuario } = abrir();
     await usuario.keyboard("{ArrowUp}{Enter}");
-    expect(aoConfigurar).toHaveBeenCalled();
+    expect(aoPersonagem).toHaveBeenCalled();
   });
 
   it("marca a opção selecionada para leitores de tela", async () => {
@@ -54,12 +58,24 @@ describe("MenuPrincipal", () => {
     expect(aoMultijogador).toHaveBeenCalled();
   });
 
-  it("com a tela dividida disponível, ela aparece depois do Multiplayer e abre a escolha de dispositivos", async () => {
-    const aoTelaDividida = vi.fn();
-    render(<MenuPrincipal volumeDosEfeitos={0} aoJogar={vi.fn()} aoMultijogador={vi.fn()} aoPersonagem={vi.fn()} aoConfigurar={vi.fn()} aoBuscarMusicas={vi.fn()} aoAbrirDocumento={vi.fn()} aoTelaDividida={aoTelaDividida} />);
-    expect(screen.getAllByRole("button").map((b) => b.textContent).slice(0, 3)).toEqual(["Jogar", "Multiplayer", "Tela dividida"]);
-    await userEvent.click(screen.getByRole("button", { name: "Tela dividida" }));
-    expect(aoTelaDividida).toHaveBeenCalled();
+  it("com o multiplayer local disponível, Multiplayer pergunta se é local ou online", async () => {
+    const aoMultiplayerLocal = vi.fn();
+    const aoMultijogador = vi.fn();
+    render(<MenuPrincipal volumeDosEfeitos={0} aoJogar={vi.fn()} aoMultijogador={aoMultijogador} aoPersonagem={vi.fn()} aoBuscarMusicas={vi.fn()} aoAbrirDocumento={vi.fn()} aoMultiplayerLocal={aoMultiplayerLocal} />);
+    expect(screen.queryByRole("button", { name: "Tela dividida" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Multiplayer" }));
+    const escolha = screen.getByRole("dialog", { name: "Multiplayer" });
+    await userEvent.click(within(escolha).getByRole("button", { name: /Local/ }));
+    expect(aoMultiplayerLocal).toHaveBeenCalled();
+    expect(aoMultijogador).not.toHaveBeenCalled();
+  });
+
+  it("na escolha do multiplayer, Online abre as salas online", async () => {
+    const aoMultijogador = vi.fn();
+    render(<MenuPrincipal volumeDosEfeitos={0} aoJogar={vi.fn()} aoMultijogador={aoMultijogador} aoPersonagem={vi.fn()} aoBuscarMusicas={vi.fn()} aoAbrirDocumento={vi.fn()} aoMultiplayerLocal={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Multiplayer" }));
+    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Online/ }));
+    expect(aoMultijogador).toHaveBeenCalled();
   });
 
   it("clicar abre a opção", async () => {
@@ -76,7 +92,6 @@ describe("MenuPrincipal", () => {
         aoJogar={vi.fn()}
         aoMultijogador={vi.fn()}
         aoPersonagem={vi.fn()}
-        aoConfigurar={vi.fn()}
         aoBuscarMusicas={vi.fn()}
         aoOnline={aoOnline}
         aoAbrirDocumento={vi.fn()}
@@ -122,7 +137,7 @@ describe("MenuPrincipal rodapé", () => {
 describe("MenuPrincipal no celular que entrou pelo QR code", () => {
   it("começa por entrar na sala", () => {
     abrir({ noCelular: true });
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Entrar na sala", "Jogar sozinho", "Buscar músicas", "Leaderboard", "Personagem", "Configurações"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Entrar na sala", "Jogar sozinho", "Buscar músicas", "Leaderboard", "Personagem"]);
   });
 
   it("Enter já leva para a sala", async () => {

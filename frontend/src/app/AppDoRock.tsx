@@ -70,6 +70,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
   const [emRede, setEmRede] = useState<PartidaEmRede | null>(null);
   const [voltarDoPersonagemPara, setVoltarDoPersonagemPara] = useState<Tela>("menu");
   const [voltarDoPerfilPara, setVoltarDoPerfilPara] = useState<Tela>("menu");
+  const [voltarDasConfiguracoesPara, setVoltarDasConfiguracoesPara] = useState<Tela>("menu");
   const [voltarDaBuscaPara, setVoltarDaBuscaPara] = useState<Tela>("menu");
   const [espectando, setEspectando] = useState<PessoaOnline | null>(null);
   const { conta } = useConta();
@@ -310,6 +311,13 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
     salvarConfiguracoes(novas);
   };
 
+  /** Abre do cabeçalho, em qualquer tela: o Voltar leva para onde estava. */
+  const abrirConfiguracoes = () => {
+    if (tela === "configuracoes") return;
+    setVoltarDasConfiguracoesPara(tela);
+    setTela("configuracoes");
+  };
+
   const jogar = async () => {
     const escolhida = musicas[indice];
     void biblioteca.usar(escolhida.id);
@@ -438,6 +446,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
           {contasLigadas && (
             <CartaoDaConta
               mod={souDaModeracao}
+              aoConfigurar={abrirConfiguracoes}
               aoVerPerfil={() => {
                 if (tela === "perfil") return;
                 setVoltarDoPerfilPara(tela);
@@ -466,13 +475,14 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                   setDivididos(null);
                   setTela("selecao");
                 }}
-                aoTelaDividida={estreita ? undefined : () => setTela("telaDividida")}
+                aoMultiplayerLocal={estreita ? undefined : () => setTela("telaDividida")}
+                // Com conta, as configurações ficam no menu da conta; sem ela, não há esse menu.
+                aoConfigurar={contasLigadas && conta ? undefined : abrirConfiguracoes}
                 aoMultijogador={() => setTela("multijogador")}
                 aoPersonagem={() => {
                   setVoltarDoPersonagemPara("menu");
                   setTela("personagem");
                 }}
-                aoConfigurar={() => setTela("configuracoes")}
                 aoLeaderboard={contasLigadas ? () => setTela("leaderboard") : undefined}
                 aoOnline={presencaDisponivel && contasLigadas ? () => setTela("online") : undefined}
                 chat={
@@ -629,7 +639,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
               <TelaDePerfil mod={souDaModeracao} aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />
             )}
             {tela === "configuracoes" && (
-              <TelaDeConfiguracoes configuracoes={configuracoes} aoMudar={mudarConfiguracoes} aoVoltar={() => setTela("menu")} />
+              <TelaDeConfiguracoes configuracoes={configuracoes} aoMudar={mudarConfiguracoes} aoVoltar={() => setTela(voltarDasConfiguracoesPara)} />
             )}
             {tela === "personagem" && (
               <TelaDePersonagem
