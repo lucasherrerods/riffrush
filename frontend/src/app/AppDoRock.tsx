@@ -32,6 +32,8 @@ interface PartidaEmRede {
   dificuldade: Dificuldade;
   instrumento: Instrumento;
   inicio: number;
+  /** Mandada com a partida, para a rodada da sala contar uma vez no ranking. */
+  rodada?: string;
 }
 
 /** O Riff Rush Rock inteiro. A `alavanca` aparece embaixo da logo, na tela inicial. */
@@ -180,7 +182,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
       void biblioteca.guardar([baixada]);
     })
       .then((m) => {
-        setEmRede({ musica: m, dificuldade: sala.dificuldade, instrumento: sala.instrumento, inicio: sala.inicio });
+        setEmRede({ musica: m, dificuldade: sala.dificuldade, instrumento: sala.instrumento, inicio: sala.inicio, rodada: sala.rodada });
         setPartida((p) => p + 1);
         setTela("jogo");
       })
@@ -351,7 +353,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
       if (!configuracoes.bot) {
         // Sem o replay a partida ainda vale: só não dá para assistir depois.
         (gerarReplay ? gerarReplay().catch(() => undefined) : Promise.resolve(undefined))
-          .then((replay) => sessaoDaConta.registrarPartida({ ...r, musicaId: idDoRanking(musicaDaPartida.current) }, replay))
+          .then((replay) => sessaoDaConta.registrarPartida({ ...r, musicaId: idDoRanking(musicaDaPartida.current) }, replay, emRede?.rodada))
           .then((xp) => {
             mostrarXp(xp);
             // Música do Encore: o XP aparece quando o servidor terminar de rejulgar o replay.
@@ -361,7 +363,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
       }
       setTela("resultado");
     },
-    [configuracoes.bot],
+    [configuracoes.bot, emRede?.rodada],
   );
 
   const { importar, progresso } = useImportacao((importadas) => {
