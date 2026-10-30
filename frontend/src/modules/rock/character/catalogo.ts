@@ -37,6 +37,7 @@ export const BASES: Base[] = [
   { id: "baterista", rotulo: "Baterista", arquivo: "/modelos/personagens/baterista.vrm" },
   // Gente de verdade filmada, recortada por scripts/preparar-ator.py a partir de atores/*.json.
   { id: "sorriso", rotulo: "Sorriso (filmado)", arquivo: "/modelos/atores/sorriso", tipo: "video" },
+  { id: "torcida", rotulo: "Torcida (filmado)", arquivo: "/modelos/atores/torcida", tipo: "video" },
 ];
 export const PECAS: Peca[] = [];
 

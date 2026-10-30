@@ -98,6 +98,7 @@ describe("modelo removido", () => {
 describe("tipoDoModelo", () => {
   it("o ator filmado é vídeo; os personagens gerados são VRM", () => {
     expect(tipoDoModelo("sorriso")).toBe("video");
+    expect(tipoDoModelo("torcida")).toBe("video");
     expect(tipoDoModelo("roqueiro")).toBe("vrm");
     expect(tipoDoModelo("nao-existe")).toBe("vrm");
   });
