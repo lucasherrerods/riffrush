@@ -28,11 +28,11 @@ function Opcao({ icone: Icone, titulo, detalhe, aoEscolher }: { icone: LucideIco
   return (
     <button
       onClick={aoEscolher}
-      className="chapa group flex min-h-56 flex-col justify-end gap-4 bg-superficie-elevada p-6 text-left transition-colors outline-none hover:border-primaria focus-visible:border-primaria max-md:min-h-0 max-md:flex-row max-md:items-center max-md:justify-start max-md:gap-4 max-md:p-4"
+      className="chapa group flex min-h-44 flex-col justify-end gap-4 bg-superficie-elevada p-6 text-left transition-colors outline-none hover:border-primaria focus-visible:border-primaria max-md:min-h-0 max-md:flex-row max-md:items-center max-md:justify-start max-md:gap-4 max-md:p-4"
     >
-      <Icone className="mb-auto size-10 text-primaria opacity-70 transition-opacity group-hover:opacity-100 max-md:mb-0 max-md:size-6 max-md:shrink-0" aria-hidden />
+      <Icone className="mb-auto size-8 text-primaria opacity-70 transition-opacity group-hover:opacity-100 max-md:mb-0 max-md:size-6 max-md:shrink-0" aria-hidden />
       <span className="flex flex-col gap-2">
-        <span className="font-titulo text-3xl leading-none tracking-wide uppercase max-md:text-2xl">{titulo}</span>
+        <span className="font-titulo text-2xl leading-none tracking-wide uppercase">{titulo}</span>
         <span className="text-base text-texto-suave">{detalhe}</span>
       </span>
     </button>
