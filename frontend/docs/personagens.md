@@ -203,12 +203,25 @@ Registre a pasta como skin em `PERSONAGENS`, com `tipo: "video"`:
 
 Só a cena `tocando` é obrigatória no manifesto; as que faltam usam ela. O Faísca, por exemplo, tem só uma folha de 39 quadros de 88 × 128 (8 colunas × 5 linhas).
 
+### Card da escolha de personagem
+
+Na tela de personagem, cada personagem aparece como um card vertical, e o escolhido ganha um destaque grande com o ator tocando por cima. Para dar um card a um ator:
+
+1. Faça uma arte **vertical 2:3**: a pessoa de corpo inteiro, em pé, com fundo de palco e luz de show. Deixe espaço acima da cabeça, porque o card é cortado de baixo e dos lados, nunca do topo.
+2. Salve como `assets-fonte/atores/<id>_card.png`, ao lado do vídeo.
+3. Rode `python scripts/preparar-ator.py atores/<id>.json`. O script converte a arte para `public/modelos/atores/<id>/card.webp` (no máximo 1024 px de largura) e registra `"card": "card.webp"` no `manifesto.json`.
+4. Aponte a skin para o card em `PERSONAGENS`:
+
+   ```ts
+   { id: "<skin>", rotulo: "Nome da skin", arquivo: "/modelos/atores/<id>", tipo: "video", card: "/modelos/atores/<id>/card.webp" },
+   ```
+
+Uma skin sem `card` usa o da primeira skin do personagem. Um personagem sem card nenhum continua aparecendo: o card mostra só o nome, e o destaque volta a ser o personagem animado (`cardDoPersonagem` em `catalogo.ts`). Personagens 3D também aceitam `card`.
+
 ### No código
 
 - `character/video.ts`: funções puras que escolhem a cena (`cenaDoAtor`) e o quadro (`quadroDaCena`, `recorteDoQuadro`).
 - `render3d/atorDeVideo.ts`: o ator 2D, com a mesma interface do ator VRM.
 - `render3d/ator.ts › criarAtor`: monta o ator certo conforme o tipo do modelo escolhido.
-
-Cores, corpo e instrumento do criador de personagem não se aplicam a atores filmados: eles aparecem como foram gravados (inclusive com a guitarra imaginária).
 
 **Combine antes com quem foi filmado.** O vídeo original fica só na sua máquina, mas as folhas de sprites vão para o repositório e para quem jogar.

@@ -18,6 +18,12 @@ describe("TelaDePersonagem", () => {
     expect(screen.getByRole("radio", { name: "Clássico" })).toBeChecked();
   });
 
+  it("mostra o card do personagem escolhido em destaque", () => {
+    abrir();
+    expect(screen.getByRole("img", { name: "Arte de Faísca" })).toHaveAttribute("src", "/modelos/atores/faisca/card.webp");
+    expect(screen.getByRole("radiogroup", { name: "Personagens" })).toBeInTheDocument();
+  });
+
   it("não tem mais customização de corpo, cores ou roupa", () => {
     abrir();
     expect(screen.queryByRole("slider")).not.toBeInTheDocument();
