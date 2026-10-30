@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, saidaDeAudio } from "@/modules/audio";
 import { MotorDoMania, iniciarMotorDoMania, velocidadeDosMods } from "./motor";
 import { aplicarEventos, desenharPista, type QuadroDaPista } from "./desenhar";
-import { geometriaDaPista } from "./pista";
+import { geometriaDaPista, type GeometriaDaPista } from "./pista";
 import { colunaDaTecla, teclasDoMapa } from "./teclas";
 
 /** A música começa depois deste respiro, para o jogador se posicionar. */
@@ -155,6 +155,25 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
       window.addEventListener("keydown", aoApertar);
       window.addEventListener("keyup", aoSoltar);
 
+      // O tamanho vem do ResizeObserver e a geometria só muda com ele: ler clientWidth todo quadro força um layout.
+      const tela = canvas.current;
+      const c = tela?.getContext("2d") ?? null;
+      let geometria: GeometriaDaPista | null = null;
+      const medir = () => {
+        if (!tela) return;
+        // Até 2x: mais que isso pesa no celular e não se vê diferença.
+        const escala = Math.min(window.devicePixelRatio || 1, 2);
+        const largura = tela.clientWidth;
+        const altura = tela.clientHeight;
+        tela.width = Math.round(largura * escala);
+        tela.height = Math.round(altura * escala);
+        quadro.escala = escala;
+        geometria = geometriaDaPista(largura, altura, motor.teclas);
+      };
+      medir();
+      const observador = tela && typeof ResizeObserver !== "undefined" ? new ResizeObserver(medir) : null;
+      if (tela) observador?.observe(tela);
+
       let pedido = 0;
       const desenhar = () => {
         quadro.agoraMs = emMs(agoraNoAudio(contexto));
@@ -162,14 +181,9 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
         lerEventos();
         quadro.combo = motor.combo;
         quadro.vida = motor.vida;
-        const tela = canvas.current;
-        const c = tela?.getContext("2d");
-        if (tela && c) {
-          if (tela.width !== tela.clientWidth || tela.height !== tela.clientHeight) {
-            tela.width = tela.clientWidth;
-            tela.height = tela.clientHeight;
-          }
-          desenharPista(c, geometriaDaPista(tela.width, tela.height, motor.teclas), quadro);
+        if (c && geometria) {
+          c.setTransform(quadro.escala ?? 1, 0, 0, quadro.escala ?? 1, 0, 0);
+          desenharPista(c, geometria, quadro);
         }
         if (motor.derrota || (motor.terminou() && quadro.agoraMs > ultimaNotaMs + FOLGA_NO_FIM_MS)) return terminar();
         pedido = requestAnimationFrame(desenhar);
@@ -178,6 +192,7 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
 
       pararTudo = () => {
         cancelAnimationFrame(pedido);
+        observador?.disconnect();
         window.removeEventListener("keydown", aoApertar);
         window.removeEventListener("keyup", aoSoltar);
         try {

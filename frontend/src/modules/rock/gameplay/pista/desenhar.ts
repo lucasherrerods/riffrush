@@ -6,6 +6,29 @@ import type { NotaEmJogo } from "../partida";
 import { pontosDoRaio, pulo, tremor } from "./efeitos";
 import { cordasDaPista, layoutDaPista, projetar, xDaPista, type LayoutDaPista } from "./geometria";
 
+const LADOS = [-1, 1] as const;
+
+/** As chaves do cache de gradientes mudam só com o tamanho e o star power: não montam texto novo todo quadro. */
+let ultimasChaves = { largura: -1, altura: -1, estrela: false, tamanho: "", comEstrela: "" };
+function chavesDoTamanho(largura: number, altura: number, estrela: boolean) {
+  const u = ultimasChaves;
+  if (u.largura !== largura || u.altura !== altura || u.estrela !== estrela) {
+    const tamanho = `${largura}x${altura}`;
+    ultimasChaves = { largura, altura, estrela, tamanho, comEstrela: `${tamanho}:${estrela}` };
+  }
+  return ultimasChaves;
+}
+
+let tamanhoDaFonteDoErro = -1;
+let fonteDoErroGuardada = "";
+function fonteDoErro(tamanho: number) {
+  if (tamanho !== tamanhoDaFonteDoErro) {
+    tamanhoDaFonteDoErro = tamanho;
+    fonteDoErroGuardada = `800 ${tamanho}px sans-serif`;
+  }
+  return fonteDoErroGuardada;
+}
+
 export interface Cena {
   notas: NotaEmJogo[];
   primeira: number;
@@ -114,8 +137,7 @@ export function desenharPista(
   const perto = projetar(layout, ATRAS_DA_LINHA);
   const longe = projetar(layout, 1);
 
-  const tamanho = `${largura}x${altura}`;
-  const comEstrela = `${tamanho}:${cena.estrelaAtiva}`;
+  const { tamanho, comEstrela } = chavesDoTamanho(largura, altura, cena.estrelaAtiva);
   const fundoDaPista = gradienteGuardado(c, `pista:${comEstrela}`, () => {
     const gradiente = c.createLinearGradient(0, longe.y, 0, perto.y);
     gradiente.addColorStop(0, comAlfa(cena.estrelaAtiva ? TRILHO_DA_ESTRELA[0] : cores.fundo, 0));
@@ -164,7 +186,7 @@ export function desenharPista(
     c.globalAlpha = opacidade;
     c.lineWidth = espessura;
     c.beginPath();
-    for (const lado of [-1, 1]) {
+    for (const lado of LADOS) {
       c.moveTo(centro + lado * metade * longe.escala, longe.y);
       c.lineTo(centro + lado * metade * perto.escala, perto.y);
     }
@@ -198,17 +220,17 @@ export function desenharPista(
       c.fillStyle = comAlfa(cores.texto, 0.18);
       c.fill();
     }
-    for (const [cor, deslocamento, fator] of [
-      [comAlfa(cores.fundo, 0.8), grossura * 0.6, 1],
-      [comAlfa(cores.texto, batida.forte ? 0.55 : 0.25), 0, 0.6],
-    ] as const) {
+    // A sombra embaixo e o brilho em cima, sem criar uma lista por traste.
+    const traste = (cor: string, deslocamento: number, fator: number) => {
       c.strokeStyle = cor;
       c.lineWidth = grossura * fator;
       c.beginPath();
       c.moveTo(centro - metade * p.escala, p.y + deslocamento);
       c.lineTo(centro + metade * p.escala, p.y + deslocamento);
       c.stroke();
-    }
+    };
+    traste(comAlfa(cores.fundo, 0.8), grossura * 0.6, 1);
+    traste(comAlfa(cores.texto, batida.forte ? 0.55 : 0.25), 0, 0.6);
   }
 
   desenharCordas(c, layout);
@@ -347,7 +369,7 @@ export function desenharPista(
     const k = idade / DURACAO_DO_ERRO;
     const x = falha.pista === PISTA_ABERTA ? layout.centro : xDaPista(layout, falha.pista, 1);
     c.globalAlpha = 1 - k * k;
-    c.font = `800 ${Math.round(larguraDoTraste * 0.32)}px sans-serif`;
+    c.font = fonteDoErro(Math.round(larguraDoTraste * 0.32));
     c.fillText("ERRO", x, linhaDeBatida - larguraDoTraste * 0.2 - k * 30);
   }
   c.globalAlpha = 1;
@@ -457,17 +479,19 @@ function desenharTrovao(
     const inicio = { x: layout.centro + lado * layout.largura * 0.08 * (i >> 1), y: horizonte - 20 };
     const fim = { x: layout.centro + lado * layout.largura * afastamento, y: layout.linhaDeBatida };
     const pontos = pontosDoRaio(trovao.semente + i, inicio, fim, 9, layout.larguraDoTraste * 0.5);
-    for (const [espessura, cor, opacidade] of [
-      [18, cores.primaria, 0.4],
-      [5, cores.texto, 1],
-    ] as const) {
+    const raio = (espessura: number, cor: string, opacidade: number) => {
       c.globalAlpha = opacidade * (1 - k);
       c.strokeStyle = cor;
       c.lineWidth = espessura;
       c.beginPath();
-      pontos.forEach((p, j) => (j ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)));
+      for (let j = 0; j < pontos.length; j++) {
+        if (j) c.lineTo(pontos[j].x, pontos[j].y);
+        else c.moveTo(pontos[j].x, pontos[j].y);
+      }
       c.stroke();
-    }
+    };
+    raio(18, cores.primaria, 0.4);
+    raio(5, cores.texto, 1);
   }
   c.globalAlpha = 1;
 }

@@ -78,6 +78,13 @@ describe("tema padrão", () => {
 });
 
 describe("comAlfa", () => {
+  it("devolve a mesma cor guardada quando pedida de novo", () => {
+    expect(comAlfa("#ff0000", 0.25)).toBe("rgba(255,0,0,0.25)");
+    expect(comAlfa("#ff0000", 0.25)).toBe("rgba(255,0,0,0.25)");
+    expect(comAlfa("#00ff00", 0.25)).toBe("rgba(0,255,0,0.25)");
+  });
+
+
   it("converte hex em rgba com transparência", () => {
     expect(comAlfa("#0b0b0d", 0.5)).toBe("rgba(11,11,13,0.5)");
   });

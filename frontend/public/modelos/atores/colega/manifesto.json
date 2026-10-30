@@ -4,7 +4,7 @@
   "alturaEmMetros": 1.7,
   "cenas": {
     "parado": {
-      "arquivo": "parado.png",
+      "arquivo": "parado.webp",
       "quadros": 17,
       "colunas": 5,
       "linhas": 4,
@@ -12,7 +12,7 @@
       "altura": 256
     },
     "tocando": {
-      "arquivo": "tocando.png",
+      "arquivo": "tocando.webp",
       "quadros": 42,
       "colunas": 7,
       "linhas": 6,
@@ -20,7 +20,7 @@
       "altura": 256
     },
     "errou": {
-      "arquivo": "errou.png",
+      "arquivo": "errou.webp",
       "quadros": 7,
       "colunas": 3,
       "linhas": 3,
@@ -28,7 +28,7 @@
       "altura": 256
     },
     "vaiado": {
-      "arquivo": "vaiado.png",
+      "arquivo": "vaiado.webp",
       "quadros": 16,
       "colunas": 4,
       "linhas": 4,
@@ -36,7 +36,7 @@
       "altura": 256
     },
     "nitro": {
-      "arquivo": "nitro.png",
+      "arquivo": "nitro.webp",
       "quadros": 22,
       "colunas": 5,
       "linhas": 5,
@@ -44,7 +44,7 @@
       "altura": 256
     },
     "vitoria": {
-      "arquivo": "vitoria.png",
+      "arquivo": "vitoria.webp",
       "quadros": 19,
       "colunas": 5,
       "linhas": 4,

@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/shared/lib/utils";
 import { CORES_DO_MULTIPLICADOR, COR_DA_ESTRELA } from "../cores";
 import { progressoDoMultiplicador } from "../pista/efeitos";
-import amplificador from "./amplificador.png";
+import amplificador from "./amplificador.webp";
 
 interface Props {
   pontos: number;

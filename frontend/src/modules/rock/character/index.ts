@@ -1,5 +1,6 @@
+import { adiar } from "@/shared/lib/adiar";
 export { Avatar } from "./Avatar";
-export { TelaDePersonagem } from "./TelaDePersonagem";
+export const TelaDePersonagem = adiar(() => import("./TelaDePersonagem").then((m) => m.TelaDePersonagem));
 export { PERSONAGEM_PADRAO, carregarPersonagem, migrarPersonagem, salvarPersonagem, type Personagem } from "./personagem";
 export type { Ator, EstadoDoAvatar } from "./render3d/ator";
 export { suportaWebGL } from "./render3d/webgl";

@@ -183,3 +183,13 @@ h1 {
   }
 }
 
+/* No celular, o desfoque e a mistura de cores em camadas da tela inteira pesam na GPU a cada quadro da varredura.
+   O feixe já esmaece de cima para baixo, então sem eles continua parecendo luz. */
+@media (max-width: 767px) {
+  .holofote {
+    filter: none;
+    mix-blend-mode: normal;
+    opacity: 0.8;
+  }
+}
+
