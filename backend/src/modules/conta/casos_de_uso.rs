@@ -1,5 +1,7 @@
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
+use chrono::Duration;
 use uuid::Uuid;
 
 use super::dominio::{hash_do_token, pode_registrar, Conta, DURACAO_DA_SESSAO, TAMANHO_MAXIMO_DO_ID_DA_MUSICA};
@@ -9,6 +11,7 @@ use super::portas::{
 };
 use crate::modules::catalogo::{origem_do_id, Origem};
 use crate::modules::progresso::{nivel_do_xp, validar_replay, xp_da_partida, Instrumento, JeitoDeJogar, Nivel, PartidaInvalida, ResumoDaPartida};
+use crate::shared::limite::{dentro_do_limite, Janela};
 
 /// As portas que os casos de uso da conta usam. O main liga os adaptadores reais; os testes, fakes.
 #[derive(Clone)]
@@ -20,7 +23,14 @@ pub struct ServicosDaConta {
     pub gerador: Arc<dyn Gerador>,
     /// Onde esperam as partidas do Encore até o servidor rejulgar o replay.
     pub fila: Arc<dyn FilaDePartidas>,
+    /// Logins por origem (IP), para ninguém inundar a troca de código com o Google.
+    pub janelas_do_login: Arc<Mutex<HashMap<String, Janela>>>,
 }
+
+pub const LOGINS_POR_JANELA: u32 = 20;
+pub const JANELA_DO_LOGIN: Duration = Duration::minutes(10);
+/// Acima disso, as janelas vencidas são jogadas fora para o mapa não crescer sem fim.
+const JANELAS_GUARDADAS: usize = 10_000;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ErroDaConta {
@@ -113,6 +123,22 @@ pub struct XpDaPartida {
 }
 
 impl ServicosDaConta {
+    /// Conta um login da origem; acima do limite, a troca de código nem chega ao Google.
+    pub fn contar_login(&self, origem: &str) -> Result<(), ErroDaConta> {
+        let agora = self.relogio.agora();
+        let mut janelas = self.janelas_do_login.lock().unwrap_or_else(|envenenado| envenenado.into_inner());
+        if janelas.len() > JANELAS_GUARDADAS {
+            janelas.retain(|_, j| agora - j.inicio < JANELA_DO_LOGIN);
+        }
+        let (passa, janela) = dentro_do_limite(janelas.get(origem).copied(), agora, LOGINS_POR_JANELA, JANELA_DO_LOGIN);
+        janelas.insert(origem.to_string(), janela);
+        if passa {
+            Ok(())
+        } else {
+            Err(ErroDaConta::RapidoDemais)
+        }
+    }
+
     pub async fn entrar_com_google(&self, pedido: &PedidoDeLogin) -> Result<Entrada, ErroDaConta> {
         let perfil = self.login.trocar_codigo(pedido).await?;
         let conta = self.contas.entrar(&perfil, self.gerador.id()).await?;
@@ -483,6 +509,7 @@ pub mod fakes {
             relogio: relogio.clone(),
             gerador: Arc::new(GeradorEmSequencia::default()),
             fila: fila.clone(),
+            janelas_do_login: Default::default(),
         };
         (servicos, banco, relogio, fila)
     }
@@ -522,6 +549,18 @@ mod tests {
             replay: None,
             rodada: None,
         }
+    }
+
+    #[tokio::test]
+    async fn o_login_tem_limite_por_origem_e_libera_quando_a_janela_passa() {
+        let (servicos, _, relogio) = servicos();
+        for _ in 0..LOGINS_POR_JANELA {
+            servicos.contar_login("1.2.3.4").unwrap();
+        }
+        assert!(matches!(servicos.contar_login("1.2.3.4"), Err(ErroDaConta::RapidoDemais)));
+        servicos.contar_login("5.6.7.8").unwrap();
+        relogio.andar(JANELA_DO_LOGIN);
+        servicos.contar_login("1.2.3.4").unwrap();
     }
 
     #[tokio::test]
