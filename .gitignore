@@ -22,3 +22,4 @@ Thumbs.db
 frontend/assets-fonte/
 
 backend/relay/.wrangler/
+frontend/release/
