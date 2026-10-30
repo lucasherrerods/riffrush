@@ -149,6 +149,8 @@ const MAXIMO_DE_TROVOES = 4;
 const SINCRONIA_DO_VIDEO = 0.15;
 /** Pular para o fim exato terminaria o replay na hora: a barra para um pouco antes. */
 const FOLGA_DO_FIM = 0.5;
+/** Quantos segundos cada seta pula no replay. */
+const SALTO_DAS_SETAS: Record<string, number> = { ArrowLeft: -5, ArrowRight: 5 };
 const INTERVALO_DO_ENVIO_MS = 125;
 const nada = () => {};
 /** Em telas mais estreitas os painéis encostam na pista em vez de sair da tela. */
@@ -466,9 +468,10 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     };
     const estrela = () => !replay && gravador.ativarEstrela();
     /** Só no replay gravado: refaz a partida no instante escolhido e recomeça o áudio dali, pausado ou não. */
-    const irPara = (fracao: number) => {
+    const irPara = (fracao: number) => irParaOTempo(fracao * duracao);
+    const irParaOTempo = (tempo: number) => {
       if (!replay || !opcoesDoReplay || replay.ateAgora !== undefined || terminou) return;
-      const alvo = Math.max(0, Math.min(fracao * duracao, duracao - FOLGA_DO_FIM));
+      const alvo = Math.max(0, Math.min(tempo, duracao - FOLGA_DO_FIM));
       const refeita = partidaNoInstante(carregada.notas, opcoesDoReplay, replay.entradas, alvo);
       partida.motor.free();
       partida = refeita.partida;
@@ -521,6 +524,12 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         if (retomada) pausar();
         else if (pausadoAgora || (inicioEmRede !== undefined && pausadoNaTela.current)) continuar();
         else pausar();
+        return;
+      }
+      // No replay as setas pulam na música, pausado ou não.
+      if (replay && SALTO_DAS_SETAS[evento.code]) {
+        evento.preventDefault();
+        irParaOTempo(tempoDaMusica(agoraNoAudio(audio)) + SALTO_DAS_SETAS[evento.code]);
         return;
       }
       if (pausadoAgora || terminou) return;

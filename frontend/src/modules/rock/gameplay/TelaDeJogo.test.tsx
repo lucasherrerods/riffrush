@@ -328,6 +328,33 @@ describe("TelaDeJogo", () => {
     await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
   });
 
+  it("no replay, as setas avançam e voltam 5 segundos", async () => {
+    const notas = [nota(1), nota(7, 1)];
+    carregarCom(notas, 20);
+    const replay: Replay = {
+      semFalha: false,
+      fantasma: false,
+      semAberta: false,
+      jeito: "gamepad",
+      puneToqueEmVazio: true,
+      velocidade: 1,
+      hashDoChart: await hashDoChart(notas),
+      entradas: [
+        { tempo: 1, tipo: "tocar", pista: 0 },
+        { tempo: 7, tipo: "tocar", pista: 1 },
+      ],
+    };
+    const { usuario } = abrir({}, undefined, replay);
+    await partidaPronta();
+    irPara(3);
+    await usuario.keyboard("{ArrowRight}");
+    expect(audio().fontes.at(-1)!.deslocamento).toBeCloseTo(8);
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("100"));
+    await usuario.keyboard("{ArrowLeft}");
+    expect(audio().fontes.at(-1)!.deslocamento).toBeCloseTo(3, 0);
+    await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
+  });
+
   it("jogando de verdade, a barra da música só mostra o progresso", async () => {
     carregarCom([nota(1)]);
     abrir();
