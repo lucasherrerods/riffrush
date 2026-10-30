@@ -4,7 +4,7 @@ import { IndicadorDeVolume, definirVolumeGeral, useVolumeGeral } from "@/modules
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/rock/character";
 import { iniciarControle, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
-import { EntradaDaPartida, TelaDeJogo, type Resultado, desempacotarReplay, type Replay, type OpcoesDaPartida } from "@/modules/rock/gameplay";
+import { EntradaDaPartida, TelaDeJogo, type JogadorLocal, type Resultado, desempacotarReplay, type Replay, type OpcoesDaPartida } from "@/modules/rock/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/rock/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
 import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
@@ -15,6 +15,7 @@ import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClien
 import { ChatGlobal, TelaDeEspectador, TelaOnline, presenca, presencaDisponivel, transmitirPartida, usePresenca, useSouDaModeracao, type PessoaOnline } from "@/modules/presenca";
 import { JanelaDoChart, TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, sortearChartOficial, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/rock/search";
 import { TelaDeResultado, anotarRecorde, definirRecordes, recordeDe, useRecordes } from "@/modules/rock/results";
+import { EscolhaDeDispositivos, ResultadoDaTelaDividida, eventoDoJogador, opcoesDoJogador, type DispositivoDoJogador, type ResultadoDoJogador } from "@/modules/rock/splitscreen";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { PainelDeRanking, PlacarAoVivo, buscarMaisJogadaAleatoria, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
@@ -23,7 +24,7 @@ import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { mesmasOpcoes, opcoesDaPartida } from "./opcoes";
 
-type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "espectador";
+type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "espectador" | "telaDividida" | "resultadoDividido";
 
 interface PartidaEmRede {
   musica: Musica;
@@ -56,6 +57,9 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
   const [assistindo, setAssistindo] = useState<{ replay: Replay; dificuldade: Dificuldade; instrumento: Instrumento } | null>(null);
   const [resultado, setResultado] = useState<{ resultado: Resultado; recordeNovo: boolean } | null>(null);
   const [xpDaPartida, setXpDaPartida] = useState<RegistroDaPartida | null>(null);
+  // Tela dividida: os dispositivos de cada jogador, da escolha até sair para o menu.
+  const [divididos, setDivididos] = useState<DispositivoDoJogador[] | null>(null);
+  const [resultadosDivididos, setResultadosDivididos] = useState<ResultadoDoJogador[] | null>(null);
   const partidaAtual = useRef(0);
   const [partida, setPartida] = useState(0);
   /** A entrada com o trovão: `segurando` enquanto a partida ainda não monta por baixo dela. */
@@ -222,7 +226,16 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
     else presenca.desligar();
   }, [online]);
   // A partida só vai ao ar quando dá para quem assiste ter a mesma música: as do jogo e as do Encore.
-  const transmitindo = online && configuracoes.permitirEspectadores && tela === "jogo" && !emRede && !assistindo && !configuracoes.bot && podeTocarOnline(musica);
+  const transmitindo = online && configuracoes.permitirEspectadores && tela === "jogo" && !emRede && !assistindo && !divididos && !configuracoes.bot && podeTocarOnline(musica);
+  const jogadoresLocais = useMemo<JogadorLocal[] | undefined>(
+    () => divididos?.map((dispositivo, i) => ({ nome: `P${i + 1}`, opcoes: opcoesDoJogador(opcoes, dispositivo), aceitaEvento: (evento: Event) => eventoDoJogador(evento, dispositivo) })),
+    [divididos, opcoes],
+  );
+  // Sem ranking nem XP: na tela dividida o placar é só entre quem está jogando.
+  const terminarDividido = useCallback((resultados: Resultado[]) => {
+    setResultadosDivididos(resultados.map((resultado, i) => ({ nome: `P${i + 1}`, resultado })));
+    setTela("resultadoDividido");
+  }, []);
   useEffect(() => {
     presenca.definirEstado(
       tela === "jogo" && !assistindo
@@ -430,7 +443,11 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                 volumeDosEfeitos={configuracoes.volumeDosEfeitos}
                 noCelular={ehClienteWebDaSala()}
                 alavanca={alavanca}
-                aoJogar={() => setTela("selecao")}
+                aoJogar={() => {
+                  setDivididos(null);
+                  setTela("selecao");
+                }}
+                aoTelaDividida={estreita ? undefined : () => setTela("telaDividida")}
                 aoMultijogador={() => setTela("multijogador")}
                 aoPersonagem={() => {
                   setVoltarDoPersonagemPara("menu");
@@ -477,7 +494,10 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                 aoDificuldade={setDificuldade}
                 aoInstrumento={setInstrumento}
                 aoJogar={jogar}
-                aoVoltar={() => setTela("menu")}
+                aoVoltar={() => {
+                  setDivididos(null);
+                  setTela("menu");
+                }}
                 aoImportar={(arquivos) => void importar(arquivos)}
                 sortearMusica={contasLigadas ? buscarMaisJogadaAleatoria : undefined}
                 sortearOficial={sortearOficial}
@@ -629,7 +649,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                 instrumento={instrumentoDaPartida}
                 opcoes={opcoes}
                 personagem={personagemEmJogo}
-                recorde={assistindo ? undefined : recordeDe(recordes, idDoRanking(musica), dificuldadeDaPartida, instrumentoDaPartida)?.pontos}
+                recorde={assistindo || divididos ? undefined : recordeDe(recordes, idDoRanking(musica), dificuldadeDaPartida, instrumentoDaPartida)?.pontos}
                 replay={assistindo?.replay}
                 rede={
                   emRede && conexao.sala
@@ -637,12 +657,26 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                     : undefined
                 }
                 // Em rede o canto mostra a sala; sozinho, o ranking global da música.
-                placar={contasLigadas && !emRede && !assistindo ? (pontos) => <PlacarAoVivo musicaId={idDoRanking(musica)} dificuldade={dificuldadeDaPartida} instrumento={instrumentoDaPartida} pontos={pontos} /> : undefined}
+                placar={contasLigadas && !emRede && !assistindo && !divididos ? (pontos) => <PlacarAoVivo musicaId={idDoRanking(musica)} dificuldade={dificuldadeDaPartida} instrumento={instrumentoDaPartida} pontos={pontos} /> : undefined}
                 aoSair={assistindo ? sairDoReplay : () => setTela(emRede ? "multijogador" : "selecao")}
                 aoTerminar={assistindo ? sairDoReplay : terminar}
                 transmissao={transmissao}
                 espectadores={transmissao ? espectadores : 0}
+                jogadores={jogadoresLocais}
+                aoTerminarJuntos={terminarDividido}
               />
+            )}
+            {tela === "telaDividida" && (
+              <EscolhaDeDispositivos
+                aoComecar={(jogadores) => {
+                  setDivididos(jogadores);
+                  setTela("selecao");
+                }}
+                aoVoltar={() => setTela("menu")}
+              />
+            )}
+            {tela === "resultadoDividido" && resultadosDivididos && (
+              <ResultadoDaTelaDividida titulo={musica.titulo} artista={musica.artista} resultados={resultadosDivididos} aoRepetir={jogar} aoContinuar={() => setTela("selecao")} />
             )}
             {tela === "resultado" && resultado && (
               <TelaDeResultado

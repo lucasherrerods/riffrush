@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
-import { Play, Radio, Search, Settings2, Shirt, Trophy, Users, type LucideIcon } from "lucide-react";
+import { Columns2, Play, Radio, Search, Settings2, Shirt, Trophy, Users, type LucideIcon } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Documento } from "@/modules/legal";
 import { abrirLink } from "@/modules/platform";
@@ -15,6 +15,8 @@ interface Props {
   noCelular?: boolean;
   aoJogar: () => void;
   aoMultijogador: () => void;
+  /** Só no computador: vários jogadores na mesma tela. */
+  aoTelaDividida?: () => void;
   aoPersonagem: () => void;
   aoConfigurar: () => void;
   aoBuscarMusicas: () => void;
@@ -38,7 +40,7 @@ interface Item {
 const URL_DO_PROJETO = "https://github.com/lucasherrerods/riffrush";
 const URL_DA_LANDING = "https://playriffrush.vercel.app";
 
-export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca }: Props) {
+export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoTelaDividida, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca }: Props) {
   const [selecionado, setSelecionado] = useState(0);
   const buscar: Item = { rotulo: "Buscar músicas", icone: Search, acao: aoBuscarMusicas };
   const comuns: Item[] = [
@@ -52,6 +54,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
     : [
         { rotulo: "Jogar", icone: Play, acao: aoJogar },
         { rotulo: "Multiplayer", icone: Users, acao: aoMultijogador },
+        ...(aoTelaDividida ? [{ rotulo: "Tela dividida", icone: Columns2, acao: aoTelaDividida }] : []),
         buscar,
         ...comuns,
       ];

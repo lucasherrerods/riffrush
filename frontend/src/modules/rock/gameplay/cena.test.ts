@@ -24,4 +24,8 @@ describe("cenaDaPartida", () => {
   it("com o personagem desligado, ele some do palco e do HUD", () => {
     expect(cenaDaPartida({ ...normal, personagem: false })).toMatchObject({ palco: true, personagem: false });
   });
+
+  it("na tela dividida a GPU fica para as pistas: sem palco, personagem nem clipe", () => {
+    expect(cenaDaPartida({ ...normal, jogadores: 2 })).toEqual({ palco: false, personagem: false, video: false });
+  });
 });

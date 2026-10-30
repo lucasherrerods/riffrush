@@ -817,4 +817,50 @@ describe("TelaDeJogo e as estrelas", () => {
     await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
     expect(screen.queryByText("RECORDE BATIDO!")).not.toBeInTheDocument();
   });
+
+  describe("na tela dividida", () => {
+    const soTeclado = (e: Event) => e instanceof KeyboardEvent;
+    const jogadores = [
+      { nome: "P1", opcoes: { ...OPCOES_PADRAO_DA_PARTIDA, teclas: ["KeyA", "KeyS", "KeyD", "KeyF", "KeyG", "KeyV"] }, aceitaEvento: soTeclado },
+      { nome: "P2", opcoes: { ...OPCOES_PADRAO_DA_PARTIDA, teclas: ["KeyH", "KeyJ", "KeyK", "KeyL", "Semicolon", "KeyN"] }, aceitaEvento: soTeclado },
+    ];
+    function abrirDividida() {
+      const aoTerminarJuntos = vi.fn();
+      render(
+        <TelaDeJogo
+          musica={MUSICAS_DE_TESTE[0]}
+          dificuldade="medio"
+          opcoes={OPCOES_PADRAO_DA_PARTIDA}
+          personagem={PERSONAGEM_PADRAO}
+          aoSair={vi.fn()}
+          aoTerminar={vi.fn()}
+          jogadores={jogadores}
+          aoTerminarJuntos={aoTerminarJuntos}
+        />,
+      );
+      return { aoTerminarJuntos, usuario: userEvent.setup() };
+    }
+
+    it("desenha uma pista por jogador e cada uma ouve só as suas teclas", async () => {
+      carregarCom([nota(0.5)]);
+      const { usuario } = abrirDividida();
+      await partidaPronta();
+      expect(screen.getAllByRole("button", { name: "Traste Verde" })).toHaveLength(2);
+      irPara(0.5);
+      await usuario.keyboard("a");
+      const [p1, p2] = screen.getAllByLabelText("Pontos");
+      await waitFor(() => expect(p1).toHaveTextContent("50"));
+      expect(p2).toHaveTextContent("0");
+      expect(screen.getByText("P2")).toBeInTheDocument();
+    });
+
+    it("entrega o resultado de todos quando a música termina", async () => {
+      carregarCom([nota(0.5)], 1);
+      const { aoTerminarJuntos } = abrirDividida();
+      await partidaPronta();
+      irPara(1.2);
+      await waitFor(() => expect(aoTerminarJuntos).toHaveBeenCalledOnce());
+      expect(aoTerminarJuntos.mock.calls[0][0]).toHaveLength(2);
+    });
+  });
 });

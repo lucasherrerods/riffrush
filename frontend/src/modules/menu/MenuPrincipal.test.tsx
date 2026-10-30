@@ -54,6 +54,14 @@ describe("MenuPrincipal", () => {
     expect(aoMultijogador).toHaveBeenCalled();
   });
 
+  it("com a tela dividida disponível, ela aparece depois do Multiplayer e abre a escolha de dispositivos", async () => {
+    const aoTelaDividida = vi.fn();
+    render(<MenuPrincipal volumeDosEfeitos={0} aoJogar={vi.fn()} aoMultijogador={vi.fn()} aoPersonagem={vi.fn()} aoConfigurar={vi.fn()} aoBuscarMusicas={vi.fn()} aoAbrirDocumento={vi.fn()} aoTelaDividida={aoTelaDividida} />);
+    expect(screen.getAllByRole("button").map((b) => b.textContent).slice(0, 3)).toEqual(["Jogar", "Multiplayer", "Tela dividida"]);
+    await userEvent.click(screen.getByRole("button", { name: "Tela dividida" }));
+    expect(aoTelaDividida).toHaveBeenCalled();
+  });
+
   it("clicar abre a opção", async () => {
     const { aoPersonagem, usuario } = abrir();
     await usuario.click(screen.getByRole("button", { name: "Personagem" }));
