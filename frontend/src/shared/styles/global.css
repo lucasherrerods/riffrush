@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
 @import "@fontsource/bebas-neue";
-@import "@fontsource/rubik-dirt";
+@import "./fontes/rubik-dirt.css";
 @import "./identidade.css";
 
 @custom-variant dark (&:is(.dark *));
