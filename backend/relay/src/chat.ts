@@ -52,7 +52,7 @@ export type Comando =
 /** O que a API avisa quando a moderação bane ou desbane alguém (as denúncias e os banidos ficam no banco). */
 export type AvisoDaApi = { tipo: "banir" | "desbanir"; id: string };
 
-const ID_DA_CONTA = /^[0-9a-f-]{36}$/;
+export const ID_DA_CONTA = /^[0-9a-f-]{36}$/;
 
 export function lerAvisoDaApi(corpo: string): AvisoDaApi | null {
   try {

@@ -38,7 +38,7 @@ import {
   PROTOCOLO_DO_JOGO,
   avisoDeEspectadores,
   fichaDoPedido,
-  lerEstado,
+  lerComandoDaPresenca,
   lerMensagemDaTransmissao,
   verificarFicha,
   type MensagemDaPresenca,
@@ -283,14 +283,18 @@ export class Presenca extends DurableObject<Env> {
     const limite = dentroDoLimite(this.janelas.get(socket) ?? { inicio: 0, contagem: 0 }, Date.now());
     this.janelas.set(socket, limite.janela);
     if (!limite.passa) return;
-    let estado;
-    try {
-      estado = lerEstado(JSON.parse(mensagem)?.estado);
-    } catch {
+    const comando = lerComandoDaPresenca(mensagem);
+    if (!comando) return;
+    const atual = socket.deserializeAttachment() as PessoaOnline;
+    if (comando.tipo === "convite") {
+      const { id, nome, avatar } = atual;
+      const convite = JSON.stringify({ tipo: "convite", de: { id, nome, avatar }, codigo: comando.codigo } satisfies MensagemDaPresenca);
+      for (const destino of this.ctx.getWebSockets(PESSOA)) {
+        if ((destino.deserializeAttachment() as PessoaOnline).id === comando.para) enviar(destino, convite);
+      }
       return;
     }
-    if (!estado) return;
-    const pessoa: PessoaOnline = { ...(socket.deserializeAttachment() as PessoaOnline), estado };
+    const pessoa: PessoaOnline = { ...atual, estado: comando.estado };
     socket.serializeAttachment(pessoa);
     this.paraTodos({ tipo: "pessoa", pessoa });
   }
