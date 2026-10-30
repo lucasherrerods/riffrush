@@ -1,3 +1,3 @@
 export { BotaoDeAmigos } from "./BotaoDeAmigos";
 export { ConvitesDeAmigos } from "./ConvitesDeAmigos";
-export { PainelDeAmigos } from "./PainelDeAmigos";
+export { PainelDeAmigos, useIdsDosAmigos } from "./PainelDeAmigos";

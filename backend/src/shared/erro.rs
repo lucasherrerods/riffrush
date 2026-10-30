@@ -36,6 +36,23 @@ impl ErroDaApi {
     }
 }
 
+/// As rejeições do próprio axum (query ou JSON que não leem) saem em texto puro. Aqui viram o mesmo
+/// formato `{ "erro": ... }` das outras respostas, sem repetir para o cliente o detalhe da desserialização.
+pub async fn padronizar_rejeicoes(resposta: Response) -> Response {
+    let em_json = resposta
+        .headers()
+        .get(axum::http::header::CONTENT_TYPE)
+        .is_some_and(|tipo| tipo.as_bytes().starts_with(b"application/json"));
+    let rejeicao = matches!(
+        resposta.status(),
+        StatusCode::BAD_REQUEST | StatusCode::UNPROCESSABLE_ENTITY | StatusCode::UNSUPPORTED_MEDIA_TYPE | StatusCode::PAYLOAD_TOO_LARGE
+    );
+    if rejeicao && !em_json {
+        return (resposta.status(), Json(json!({ "erro": "pedido inválido" }))).into_response();
+    }
+    resposta
+}
+
 impl IntoResponse for ErroDaApi {
     fn into_response(self) -> Response {
         // O detalhe do erro interno vai para o log, nunca para o cliente.

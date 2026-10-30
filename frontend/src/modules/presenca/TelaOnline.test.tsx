@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { PessoaOnline } from "./protocolo";
 import { TelaOnline } from "./TelaOnline";
@@ -10,12 +10,13 @@ const ana: PessoaOnline = {
   estado: { tipo: "tocando", musica: "encore:abc", titulo: "Paint It Black", artista: "The Rolling Stones", dificuldade: "expert", instrumento: "baixo", transmitindo: true },
 };
 const bia: PessoaOnline = { id: "b", nome: "Bia", avatar: null, estado: { tipo: "menu" } };
+const caio: PessoaOnline = { id: "c", nome: "Caio", avatar: null, estado: { tipo: "multiplayer", sala: { jogadores: 3, online: true } } };
 
 function abrir(extra: Partial<Parameters<typeof TelaOnline>[0]> = {}) {
   const props = {
     logado: true,
     euId: "eu",
-    presenca: { conectada: true, pessoas: [bia, ana] },
+    presenca: { conectada: true, pessoas: [bia, ana, caio] },
     mostrarOnline: true,
     permitirEspectadores: true,
     aoMudar: vi.fn(),
@@ -31,7 +32,7 @@ describe("TelaOnline", () => {
   it("lista quem está online com o que cada um está fazendo", () => {
     abrir();
     expect(screen.getByText("Tocando Paint It Black – The Rolling Stones · Expert · Baixo")).toBeInTheDocument();
-    expect(screen.getByText("No menu")).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "Pessoas online" })).getByText("No menu")).toBeInTheDocument();
   });
 
   it("assistir só aparece para quem está transmitindo, e entrega a pessoa", async () => {
@@ -67,5 +68,30 @@ describe("TelaOnline", () => {
   it("enquanto conecta, avisa", () => {
     abrir({ presenca: { conectada: false, pessoas: [] } });
     expect(screen.getByText("Conectando...")).toBeInTheDocument();
+  });
+
+  it("mostra quantos estão online e filtra por onde cada um está", async () => {
+    const { usuario } = abrir();
+    expect(screen.getByText("3 online")).toBeInTheDocument();
+    await usuario.click(screen.getByRole("tab", { name: /Em sala/ }));
+    expect(screen.getByText("Caio")).toBeInTheDocument();
+    expect(screen.getByText("Em sala online · 3 jogadores")).toBeInTheDocument();
+    expect(screen.queryByText("Ana")).not.toBeInTheDocument();
+  });
+
+  it("busca pelo nome e avisa quando ninguém bate", async () => {
+    const { usuario } = abrir();
+    await usuario.type(screen.getByRole("textbox", { name: "Buscar pessoas" }), "bi");
+    expect(screen.getByText("Bia")).toBeInTheDocument();
+    expect(screen.queryByText("Ana")).not.toBeInTheDocument();
+    await usuario.type(screen.getByRole("textbox", { name: "Buscar pessoas" }), "zzz");
+    expect(screen.getByText("Ninguém por aqui.")).toBeInTheDocument();
+  });
+
+  it("amigos aparecem primeiro e com a marca de amigo", () => {
+    abrir({ amigos: new Set(["b"]) });
+    const nomes = screen.getAllByRole("listitem").map((item) => item.textContent);
+    expect(nomes[0]).toContain("Bia");
+    expect(nomes[0]).toContain("Amigo");
   });
 });

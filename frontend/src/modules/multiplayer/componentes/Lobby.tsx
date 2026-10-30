@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { Check, ChevronDown, ChevronUp, Crown, Globe, Heart, Loader2, Play, Shuffle, Smartphone, Users } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Crown, Globe, Heart, Loader2, Dices, Play, Smartphone, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar } from "@/modules/rock/character";
 import { PainelDeChat } from "@/modules/chat";
@@ -27,11 +27,11 @@ interface Props {
   endereco: string;
   musicas: Musica[];
   volumeDosEfeitos: number;
-  /** Sorteia uma das mais jogadas; sem ele (contas desligadas), o botão não aparece. */
-  sortearMusica?: (musicas: Musica[]) => Promise<Musica>;
+  /** Sorteia e baixa um chart oficial com essa dificuldade e instrumento; sem ele, o botão não aparece. */
+  sortearAleatoria?: (dificuldade: Dificuldade, instrumento: Instrumento) => Promise<Musica>;
 }
 
-export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos, sortearMusica }: Props) {
+export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos, sortearAleatoria }: Props) {
   const preparo = useMusicaDaSala(sala, musicas, endereco);
   useSeguirMusica(preparo.tipo === "pronta" ? (preparo.musica ?? null) : null);
   // Na LAN, escolher uma música importada envia o arquivo, e isso pode falhar.
@@ -62,10 +62,10 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos,
   };
   const [sorteando, setSorteando] = useState(false);
   const sortear = async () => {
-    if (!sortearMusica) return;
+    if (!sortearAleatoria) return;
     setSorteando(true);
     try {
-      const sorteada = await sortearMusica(musicas);
+      const sorteada = await sortearAleatoria(sala.dificuldade, sala.instrumento);
       tocarEfeito("selecionar", volumeDosEfeitos);
       escolherNaSala(sorteada, sala.dificuldade);
     } catch (erro) {
@@ -178,9 +178,9 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos,
                   <Button variant={soFavoritas ? "default" : "outline"} size="sm" aria-pressed={soFavoritas} onClick={() => setSoFavoritas(!soFavoritas)}>
                     <Heart className={cn(soFavoritas ? "fill-current" : "opacity-70")} /> Favoritos
                   </Button>
-                  {sortearMusica && (
-                    <Button variant="outline" size="sm" disabled={sorteando} onClick={() => void sortear()}>
-                      <Shuffle className="opacity-70" /> Aleatório
+                  {sortearAleatoria && (
+                    <Button variant="outline" size="sm" disabled={sorteando} onClick={() => void sortear()} aria-label="Aleatória">
+                      {sorteando ? <Loader2 className="animate-spin opacity-70" /> : <Dices className="opacity-70" />} Aleatória
                     </Button>
                   )}
                 </div>

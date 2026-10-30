@@ -19,12 +19,7 @@ export function separarPorPresenca(amigos: PessoaDaAmizade[], pessoas: PessoaOnl
   return { online: online.sort(porNome), offline: offline.sort((a, b) => vistoEm(b) - vistoEm(a) || porNome(a, b)) };
 }
 
-const semAcento = (texto: string) => texto.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
-
-export function filtrarPorNome<T extends { nome: string }>(lista: T[], busca: string): T[] {
-  const termo = semAcento(busca);
-  return termo ? lista.filter((p) => semAcento(p.nome).includes(termo)) : lista;
-}
+export { filtrarPorNome } from "@/shared/lib/busca";
 
 const MINUTO = 60_000;
 const HORA = 60 * MINUTO;
@@ -46,3 +41,13 @@ export function vistoHa(visto: string | null, agora: Date): string {
 
 /** Convidar só faz sentido de uma sala online e para quem não está no meio de uma música. */
 export const convitePodeSair = (codigoDaSala: string | undefined, estado: EstadoOnline) => !!codigoDaSala && estado.tipo !== "tocando";
+
+/**
+ * Os pedidos de amizade que chegaram desde a busca anterior. Sem busca anterior (o app acabou de abrir),
+ * nenhum é novo: os que já esperavam aparecem no contador do botão de amigos.
+ */
+export function pedidosNovos(anteriores: PessoaDaAmizade[] | null, atuais: PessoaDaAmizade[]): PessoaDaAmizade[] {
+  if (!anteriores) return [];
+  const vistos = new Set(anteriores.map((p) => p.conta_id));
+  return atuais.filter((p) => !vistos.has(p.conta_id));
+}

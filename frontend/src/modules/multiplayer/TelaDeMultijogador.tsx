@@ -1,6 +1,6 @@
-import { ArrowLeft, Download, Loader2, LogOut } from "lucide-react";
+import { ArrowLeft, Download, Loader2, LogOut, UserPlus } from "lucide-react";
 import type { Personagem } from "@/modules/rock/character";
-import type { Musica } from "@/modules/rock/songs";
+import type { Dificuldade, Instrumento, Musica } from "@/modules/rock/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
 import { Lobby } from "./componentes/Lobby";
@@ -16,10 +16,13 @@ interface Props {
   aoEditarPersonagem: () => void;
   /** Abre a busca de músicas sem sair da sala. */
   aoBuscarMusicas: () => void;
-  sortearMusica?: (musicas: Musica[]) => Promise<Musica>;
+  /** Sorteia e baixa um chart oficial para a sala. */
+  sortearAleatoria?: (dificuldade: Dificuldade, instrumento: Instrumento) => Promise<Musica>;
+  /** Abre a lista de amigos para chamar alguém. Só a sala online alcança os amigos. */
+  aoConvidarAmigos?: () => void;
 }
 
-export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVoltar, aoEditarPersonagem, aoBuscarMusicas, sortearMusica }: Props) {
+export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVoltar, aoEditarPersonagem, aoBuscarMusicas, sortearAleatoria, aoConvidarAmigos }: Props) {
   const { sala, info, erro, online, codigo, endereco } = useConexao();
   const musicasDaSala = online ? musicas.filter(podeTocarOnline) : musicas;
 
@@ -35,6 +38,11 @@ export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVo
         </Button>
         <h1 className="titulo-de-tela">Multiplayer</h1>
         <div className="flex-1" />
+        {sala && online && aoConvidarAmigos && (
+          <Button variant="ghost" aria-label="Convidar amigos" onClick={aoConvidarAmigos}>
+            <UserPlus className="opacity-70" /> <span className="max-md:hidden">Convidar amigos</span>
+          </Button>
+        )}
         {sala && (
           <Button variant="ghost" aria-label="Baixar músicas" onClick={aoBuscarMusicas}>
             <Download className="opacity-70" /> <span className="max-md:hidden">Baixar músicas</span>
@@ -59,7 +67,7 @@ export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVo
           <Loader2 className="animate-spin" aria-hidden /> Conectando na sala...
         </p>
       )}
-      {sala && sala.status !== "conectando" && <Lobby sala={sala} info={info} codigo={codigo} endereco={endereco} musicas={musicasDaSala} volumeDosEfeitos={volumeDosEfeitos} sortearMusica={sortearMusica} />}
+      {sala && sala.status !== "conectando" && <Lobby sala={sala} info={info} codigo={codigo} endereco={endereco} musicas={musicasDaSala} volumeDosEfeitos={volumeDosEfeitos} sortearAleatoria={sortearAleatoria} />}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 use axum::extract::{FromRequestParts, Path, State};
 use axum::http::request::Parts;
+use axum::http::HeaderMap;
 use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -117,9 +118,20 @@ pub struct RespostaDoLogin {
     conta: RespostaDaConta,
 }
 
+/// O IP de quem chamou. Em produção a API fica atrás da Cloudflare, que preenche o `CF-Connecting-IP`; o
+/// `X-Forwarded-For` é do proxy do Render. Sem nenhum dos dois, todos dividem o mesmo limite.
+fn origem_do_pedido(cabecalhos: &HeaderMap) -> String {
+    let ler = |nome: &str| cabecalhos.get(nome).and_then(|v| v.to_str().ok()).map(str::trim).filter(|v| !v.is_empty());
+    ler("cf-connecting-ip")
+        .or_else(|| ler("x-forwarded-for").and_then(|v| v.split(',').next()).map(str::trim))
+        .unwrap_or("sem-ip")
+        .to_string()
+}
+
 /// Troca o código que o Google devolveu (fluxo PKCE) por uma sessão.
-#[utoipa::path(post, path = "/auth/google", request_body = CorpoDoLogin, responses((status = 200, body = RespostaDoLogin), (status = 401)))]
-pub async fn entrar(State(estado): State<EstadoDoApp>, Json(corpo): Json<CorpoDoLogin>) -> Result<Json<RespostaDoLogin>, ErroDaApi> {
+#[utoipa::path(post, path = "/auth/google", request_body = CorpoDoLogin, responses((status = 200, body = RespostaDoLogin), (status = 401), (status = 429)))]
+pub async fn entrar(State(estado): State<EstadoDoApp>, cabecalhos: HeaderMap, Json(corpo): Json<CorpoDoLogin>) -> Result<Json<RespostaDoLogin>, ErroDaApi> {
+    estado.conta.contar_login(&origem_do_pedido(&cabecalhos))?;
     let pedido = PedidoDeLogin {
         codigo: corpo.codigo,
         verificador: corpo.verificador,
@@ -279,4 +291,27 @@ pub fn rotas() -> Router<EstadoDoApp> {
         .route("/eu", get(eu).delete(excluir))
         .route("/partidas", post(registrar_partida))
         .route("/partidas/{id}/xp", get(situacao_da_partida))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn com(pares: &[(&'static str, &'static str)]) -> HeaderMap {
+        let mut cabecalhos = HeaderMap::new();
+        for (nome, valor) in pares {
+            cabecalhos.insert(*nome, valor.parse().unwrap());
+        }
+        cabecalhos
+    }
+
+    #[test]
+    fn a_origem_vem_da_cloudflare_antes_do_proxy() {
+        assert_eq!(
+            origem_do_pedido(&com(&[("cf-connecting-ip", "1.1.1.1"), ("x-forwarded-for", "2.2.2.2")])),
+            "1.1.1.1"
+        );
+        assert_eq!(origem_do_pedido(&com(&[("x-forwarded-for", "2.2.2.2, 10.0.0.1")])), "2.2.2.2");
+        assert_eq!(origem_do_pedido(&HeaderMap::new()), "sem-ip");
+    }
 }

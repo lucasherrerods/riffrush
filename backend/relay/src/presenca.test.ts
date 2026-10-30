@@ -30,6 +30,13 @@ describe("verificarFicha", () => {
 });
 
 describe("lerEstado", () => {
+  it("aceita quem está numa sala, com quantos jogadores, mas sem o código", () => {
+    expect(lerEstado({ tipo: "multiplayer" })).toEqual({ tipo: "multiplayer" });
+    expect(lerEstado({ tipo: "multiplayer", sala: { jogadores: 2, online: true, codigo: "ABCD" } })).toEqual({ tipo: "multiplayer", sala: { jogadores: 2, online: true } });
+    expect(lerEstado({ tipo: "multiplayer", sala: { jogadores: 9, online: true } })).toEqual({ tipo: "multiplayer" });
+    expect(lerEstado({ tipo: "multiplayer", sala: "x" })).toEqual({ tipo: "multiplayer" });
+  });
+
   it("aceita o menu e a música que está tocando", () => {
     expect(lerEstado({ tipo: "menu" })).toEqual({ tipo: "menu" });
     const tocando = { tipo: "tocando", musica: "encore:abc", titulo: "Paint It Black", artista: "The Rolling Stones", dificuldade: "expert", instrumento: "guitarra", transmitindo: true };

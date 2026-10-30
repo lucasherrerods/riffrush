@@ -28,12 +28,15 @@ vi.mock("./loja", async () => {
   return { listaDeAmigos: new ListaDeAmigos(api as unknown as ApiDosAmigos, () => "t") };
 });
 
+const presencaFalsa = vi.hoisted(() => ({ estadoDaAna: { tipo: "selecao" } as import("@/modules/presenca").EstadoOnline }));
+
 vi.mock("@/modules/presenca", async (original) => ({
   ...(await original<typeof import("@/modules/presenca")>()),
-  usePresenca: () => ({ conectada: true, pessoas: [{ id: "a", nome: "AnaRock", avatar: null, estado: { tipo: "selecao" } }] }),
+  usePresenca: () => ({ conectada: true, pessoas: [{ id: "a", nome: "AnaRock", avatar: null, estado: presencaFalsa.estadoDaAna }] }),
 }));
 
 beforeEach(() => {
+  presencaFalsa.estadoDaAna = { tipo: "selecao" };
   api.listas.mockResolvedValue(listas);
 });
 
@@ -81,6 +84,19 @@ describe("PainelDeAmigos", () => {
     await usuario.type(screen.getByRole("textbox", { name: "Código do amigo" }), "riff-xyz234");
     await usuario.click(screen.getByRole("button", { name: "Enviar pedido" }));
     await waitFor(() => expect(api.pedir).toHaveBeenCalledWith("t", { codigo: "riff-xyz234" }));
+  });
+
+  it("assiste à partida do amigo que está transmitindo", async () => {
+    presencaFalsa.estadoDaAna = { tipo: "tocando", musica: "m", titulo: "T", artista: "A", dificuldade: "expert", instrumento: "guitarra", transmitindo: true };
+    const { aoAssistir, usuario } = abrir({ aoAssistir: vi.fn() });
+    await usuario.click(await screen.findByRole("button", { name: "Assistir AnaRock" }));
+    expect(aoAssistir).toHaveBeenCalledWith({ id: "a", nome: "AnaRock", avatar: null, estado: presencaFalsa.estadoDaAna });
+  });
+
+  it("sem transmissão, não aparece o botão de assistir", async () => {
+    abrir({ aoAssistir: vi.fn() });
+    await screen.findByText("Online (1)");
+    expect(screen.queryByRole("button", { name: /Assistir/ })).not.toBeInTheDocument();
   });
 });
 
