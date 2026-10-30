@@ -4,7 +4,7 @@ import { Eye, Loader2, Pause, Skull } from "lucide-react";
 import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, pausarAudio, retomarAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
 import { suportaWebGL, type Personagem } from "@/modules/rock/character";
 import { cenaDaPartida } from "./cena";
-import { Palco, type EstadoDoPalco, type QualidadeDoPalco } from "@/modules/rock/stage";
+import { Palco, type EstadoDoPalco } from "@/modules/rock/stage";
 import { DIFICULDADES, INSTRUMENTOS, carregarMusica, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada } from "@/modules/rock/songs";
 import { bloquearTeclasDoSistema, ehAtalhoDoNavegador } from "@/modules/platform";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
@@ -14,7 +14,6 @@ import { ehArrasteParaCima } from "./gesto";
 import { MenuDePausa } from "./componentes/MenuDePausa";
 import { NumeroDaContagem } from "./componentes/NumeroDaContagem";
 import { criarLojaDoHud, useLoja, type LojaDoHud } from "./lojaDoHud";
-import type { JeitoDeJogar } from "./partida";
 import { CONTROLE_VAZIO, HUD_INICIAL, PistaDoJogador, type ControleDoJogador, type FimDoJogador, type Hud, type RelogioDaPartida } from "./PistaDoJogador";
 import { opcoesPeloNumeroDeJogadores, viewportsDaTela } from "./telaDividida";
 import { hashDoChart, type EventoDaTransmissao, type Replay } from "./replay";
@@ -23,65 +22,11 @@ import { layoutDaPista } from "./pista/geometria";
 import type { EstadoDoJogador } from "./rede";
 import type { Resultado } from "./resultado";
 import { noTempoReal, rotuloDaVelocidade } from "./velocidade";
+import type { JogadorLocal, OpcoesDaPartida } from "./opcoesDaPartida";
 
-/** O que a partida precisa saber das configurações do jogador. */
-export interface OpcoesDaPartida {
-  teclas: string[];
-  teclaDaEstrela: string;
-  rotuloDaTeclaDaEstrela: string;
-  /** Com um controle conectado, o nome do botão aparece embaixo de cada traste. */
-  rotulosDosTrastes?: string[];
-  /** Segundos que a nota leva do horizonte até a linha de batida. */
-  antecedencia: number;
-  volumeDaMusica: number;
-  volumeDosEfeitos: number;
-  atrasoMs: number;
-  semFalha: boolean;
-  /** A nota aberta vira verde. O hash continua o do chart original, então replay, ranking e ao vivo seguem valendo. */
-  semAberta: boolean;
-  /** Velocidade da música (1 é a normal). */
-  velocidadeDaMusica: number;
-  /** Como as teclas viram notas. Vai no replay, e a API rejulga com ele. */
-  jeitoDeJogar: JeitoDeJogar;
-  /** Na palhetada, a tecla que toca o acorde. O direcional do controle chega como `PALHETA_DO_CONTROLE`. */
-  teclaDaPalheta: string;
-  bot: boolean;
-  efeitos: boolean;
-  /** Mostra o personagem 3D no palco e no HUD. */
-  personagem: boolean;
-  mostrarFps: boolean;
-  qualidadeDoPalco: QualidadeDoPalco;
-  /** Fração da resolução nativa em que a pista é desenhada. */
-  escalaDeRenderizacao: number;
-  modoCompetitivo: boolean;
-  /** Na tela dividida com muitas pistas: só o raio e o pulo, sem brilhos nem explosões. */
-  soEfeitosLeves?: boolean;
-  /** No desktop, segura as teclas Windows, Alt e Alt+Tab e os atalhos do navegador enquanto se joga. */
-  bloquearAtalhos: boolean;
-}
+// Os testes e o módulo leem daqui; a definição fica num arquivo leve, para a tela da partida poder ser baixada só na hora de jogar.
+export { OPCOES_PADRAO_DA_PARTIDA, type JogadorLocal, type OpcoesDaPartida } from "./opcoesDaPartida";
 
-export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
-  teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL", "KeyD"],
-  teclaDaEstrela: "Space",
-  rotuloDaTeclaDaEstrela: "Espaço",
-  antecedencia: 1.46,
-  volumeDaMusica: 0.8,
-  volumeDosEfeitos: 0.5,
-  atrasoMs: 0,
-  semFalha: false,
-  semAberta: false,
-  velocidadeDaMusica: 1,
-  jeitoDeJogar: "gamepad",
-  teclaDaPalheta: "Enter",
-  bot: false,
-  efeitos: true,
-  personagem: true,
-  mostrarFps: false,
-  qualidadeDoPalco: "media",
-  escalaDeRenderizacao: 1,
-  modoCompetitivo: false,
-  bloquearAtalhos: true,
-};
 
 
 /** Ao despausar, a música volta depois de 3, 2, 1. */
@@ -122,12 +67,6 @@ interface Props {
   aoTerminarJuntos?: (resultados: Resultado[]) => void;
 }
 
-/** Um jogador da tela dividida: as teclas dele e como reconhecer o que é dele. */
-export interface JogadorLocal {
-  nome: string;
-  opcoes: OpcoesDaPartida;
-  aceitaEvento: (evento: Event) => boolean;
-}
 
 const ENTRADA = 2.5;
 const SINCRONIA_DO_VIDEO = 0.15;

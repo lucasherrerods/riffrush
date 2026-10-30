@@ -16,6 +16,8 @@ export interface Skin extends Opcao<string> {
   arquivo: string;
   /** "video": pessoa filmada em 2D. Sem tipo, é um VRM. */
   tipo?: "vrm" | "video";
+  /** Arte vertical 2:3 do personagem em pé no palco, mostrada na escolha de personagem. */
+  card?: string;
 }
 
 export interface DefinicaoDePersonagem extends Opcao<string> {
@@ -25,7 +27,7 @@ export interface DefinicaoDePersonagem extends Opcao<string> {
 
 /** O primeiro é o padrão. */
 export const PERSONAGENS: DefinicaoDePersonagem[] = [
-  { id: "faisca", rotulo: "Faísca", instrumento: "guitarra", skins: [{ id: "classico", rotulo: "Clássico", arquivo: "/modelos/atores/faisca", tipo: "video" }] },
+  { id: "faisca", rotulo: "Faísca", instrumento: "guitarra", skins: [{ id: "classico", rotulo: "Clássico", arquivo: "/modelos/atores/faisca", tipo: "video", card: "/modelos/atores/faisca/card.webp" }] },
 ];
 
 export const definicaoDoPersonagem = ({ personagem }: { personagem: string }) => PERSONAGENS.find((p) => p.id === personagem) ?? PERSONAGENS[0];
@@ -33,6 +35,11 @@ export const instrumentoDoPersonagem = (escolha: { personagem: string }) => defi
 export function skinDoPersonagem(escolha: { personagem: string; skin: string }) {
   const { skins } = definicaoDoPersonagem(escolha);
   return skins.find((s) => s.id === escolha.skin) ?? skins[0];
+}
+
+/** Card da skin escolhida; sem ele, o da primeira skin. Sem nenhum, a tela mostra só o nome. */
+export function cardDoPersonagem({ skins }: DefinicaoDePersonagem, skin?: string) {
+  return skins.find((s) => s.id === skin)?.card ?? skins[0]?.card ?? null;
 }
 
 export const INSTRUMENTOS: Opcao<Instrumento>[] = [

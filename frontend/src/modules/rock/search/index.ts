@@ -1,4 +1,5 @@
-export { TelaDeBuscaDeMusicas } from "./TelaDeBuscaDeMusicas";
+import { adiar } from "@/shared/lib/adiar";
+export const TelaDeBuscaDeMusicas = adiar(() => import("./TelaDeBuscaDeMusicas").then((m) => m.TelaDeBuscaDeMusicas));
 export { JanelaDoChart } from "./JanelaDoChart";
 export type { OpcoesDeBaixar } from "./useBaixarDoEncore";
 export { baixarDoEncore, baixarSng } from "./download";

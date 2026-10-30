@@ -1,3 +1,4 @@
+import { adiar } from "@/shared/lib/adiar";
 export { criarBot, jogarSozinho, type Bot } from "./bot";
 export { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ABERTA, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "./cores";
 export {
@@ -22,7 +23,9 @@ export { layoutDaPista, type LayoutDaPista } from "./pista/geometria";
 export { resultadoDaPartida, valorDosAcertos, type Resultado } from "./resultado";
 export { codigoDaEntrada, desempacotarReplay, emTicks, entradaDoCodigo, hashDoChart, type EntradaDoReplay, type EventoDaTransmissao, type Replay } from "./replay";
 export type { EstadoDoJogador } from "./rede";
-export { OPCOES_PADRAO_DA_PARTIDA, TelaDeJogo, type JogadorLocal, type OpcoesDaPartida } from "./TelaDeJogo";
+export { OPCOES_PADRAO_DA_PARTIDA, type JogadorLocal, type OpcoesDaPartida } from "./opcoesDaPartida";
+// A partida só é baixada na hora de jogar.
+export const TelaDeJogo = adiar(() => import("./TelaDeJogo").then((m) => m.TelaDeJogo));
 export { EntradaDaPartida } from "./componentes/EntradaDaPartida";
 export { IconeDoJeito, NOMES_DOS_JEITOS } from "./componentes/IconeDoJeito";
 export { MedidorDeVida } from "./componentes/MedidorDeVida";

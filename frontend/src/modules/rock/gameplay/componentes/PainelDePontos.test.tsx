@@ -57,7 +57,7 @@ describe("PainelDePontos", () => {
     const { container } = render(<PainelDePontos {...base} />);
     const imagem = container.querySelector("img");
     expect(imagem).toHaveAttribute("alt", "");
-    expect(imagem?.getAttribute("src")).toMatch(/amplificador.*\.png/);
+    expect(imagem?.getAttribute("src")).toMatch(/amplificador.*.webp/);
     expect(screen.getByTestId("grade")).toContainElement(imagem);
   });
 

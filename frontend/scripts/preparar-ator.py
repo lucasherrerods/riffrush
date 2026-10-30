@@ -5,6 +5,7 @@ Uso: python scripts/preparar-ator.py atores/<id>.json
 Para cada cena da receita: extrai os quadros do vídeo, recorta a pessoa do fundo (rembg),
 enquadra todas as cenas do mesmo jeito (os pés sempre no mesmo lugar), reduz a resolução e as cores
 e monta uma folha de sprites. Sai em public/modelos/atores/<id>/ com um manifesto.json.
+Se existir <id>_card.png ao lado do vídeo, ele vira o card.webp da escolha de personagem.
 
 Requer: ffmpeg no PATH e `pip install "rembg[cpu]" pillow numpy scipy`. Detalhes em docs/personagens.md.
 """
@@ -109,6 +110,22 @@ def folha(quadros):
     return imagem, colunas, linhas
 
 
+LARGURA_MAXIMA_DO_CARD = 1024
+
+
+def preparar_card(pasta_do_video: Path, ator: str, destino: Path):
+    """Converte a arte vertical do ator em webp, sem passar da largura máxima. Devolve o nome do arquivo ou None."""
+    origem = pasta_do_video / f"{ator}_card.png"
+    if not origem.exists():
+        return None
+    imagem = Image.open(origem).convert("RGB")
+    if imagem.width > LARGURA_MAXIMA_DO_CARD:
+        altura = round(imagem.height * LARGURA_MAXIMA_DO_CARD / imagem.width)
+        imagem = imagem.resize((LARGURA_MAXIMA_DO_CARD, altura), Image.Resampling.LANCZOS)
+    imagem.save(destino / "card.webp", quality=82)
+    return "card.webp"
+
+
 def main():
     if len(sys.argv) < 2:
         sys.exit("Uso: python scripts/preparar-ator.py atores/<id>.json")
@@ -133,15 +150,20 @@ def main():
     for cena, lista in recortes.items():
         quadros = [estilizar(q, caixa, receita["altura"], receita["cores"]) for q in lista]
         imagem, colunas, linhas = folha(quadros)
-        imagem.save(destino / f"{cena}.png", optimize=True)
+        # WebP com transparência: cerca de 80% menor que o PNG, sem diferença visível no recorte.
+        imagem.save(destino / f"{cena}.webp", "WEBP", quality=88, method=6, alpha_quality=90)
         manifesto["cenas"][cena] = {
-            "arquivo": f"{cena}.png",
+            "arquivo": f"{cena}.webp",
             "quadros": len(quadros),
             "colunas": colunas,
             "linhas": linhas,
             "largura": quadros[0].width,
             "altura": quadros[0].height,
         }
+    card = preparar_card(video.parent, receita["id"], destino)
+    if card:
+        manifesto["card"] = card
+        print(f"card: {card}")
     (destino / "manifesto.json").write_text(json.dumps(manifesto, indent=2, ensure_ascii=False), encoding="utf-8")
     total = sum(f.stat().st_size for f in destino.iterdir()) / 1024
     print(f"{destino}: {total:.0f} KB")
