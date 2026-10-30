@@ -55,6 +55,11 @@ export interface Sprites {
   brilho(cor: string): CanvasImageSource;
   /** Ruído e arranhões que deixam o braço com cara de gasto. */
   textura(): CanvasImageSource;
+  /**
+   * Uma parte que quase não muda (o braço, as cordas), desenhada uma vez num canvas fora da tela, em pixels do aparelho.
+   * Só é redesenhada quando a `versao` ou o tamanho mudam. Sem ela, tudo é desenhado direto no quadro.
+   */
+  camada?(nome: string, versao: number, largura: number, altura: number, escala: number, desenhar: (c: CanvasRenderingContext2D) => void): CanvasImageSource;
 }
 
 /** Tamanho do sprite de nota comparado com o raio da nota. */
@@ -71,15 +76,13 @@ const ATRAS_DA_LINHA = -0.12;
 const TAMANHO_DO_FADE = 0.15;
 
 /** Gradientes só mudam com o tamanho da tela ou o star power: criar um a cada quadro pesa no canvas. */
-const gradientes = new Map<string, CanvasGradient>();
-let contextoDosGradientes: CanvasRenderingContext2D | null = null;
+/** Um cache por contexto: na tela dividida as pistas se alternam a cada quadro e não podem apagar o cache uma da outra. */
+const gradientesPorContexto = new WeakMap<CanvasRenderingContext2D, Map<string, CanvasGradient>>();
 const MAXIMO_DE_GRADIENTES = 32;
 
 function gradienteGuardado(c: CanvasRenderingContext2D, chave: string, criar: () => CanvasGradient) {
-  if (contextoDosGradientes !== c) {
-    gradientes.clear();
-    contextoDosGradientes = c;
-  }
+  let gradientes = gradientesPorContexto.get(c);
+  if (!gradientes) gradientesPorContexto.set(c, (gradientes = new Map()));
   let gradiente = gradientes.get(chave);
   if (!gradiente) {
     // Tamanhos antigos (a janela foi redimensionada) não voltam: limpa tudo de uma vez.
@@ -138,72 +141,81 @@ export function desenharPista(
   const longe = projetar(layout, 1);
 
   const { tamanho, comEstrela } = chavesDoTamanho(largura, altura, cena.estrelaAtiva);
-  const fundoDaPista = gradienteGuardado(c, `pista:${comEstrela}`, () => {
-    const gradiente = c.createLinearGradient(0, longe.y, 0, perto.y);
-    gradiente.addColorStop(0, comAlfa(cena.estrelaAtiva ? TRILHO_DA_ESTRELA[0] : cores.fundo, 0));
-    gradiente.addColorStop(0.25, cena.estrelaAtiva ? comAlfa(TRILHO_DA_ESTRELA[1], 0.9) : comAlfa(cores.superficie, 0.95));
-    gradiente.addColorStop(1, comAlfa(cena.estrelaAtiva ? TRILHO_DA_ESTRELA[2] : cores.fundo, 0.98));
-    return gradiente;
-  });
-  const contornoDoBraco = () => {
-    c.beginPath();
-    c.moveTo(centro - metade * longe.escala, longe.y);
-    c.lineTo(centro + metade * longe.escala, longe.y);
-    c.lineTo(centro + metade * perto.escala, perto.y);
-    c.lineTo(centro - metade * perto.escala, perto.y);
-    c.closePath();
-  };
-  c.fillStyle = fundoDaPista;
-  contornoDoBraco();
-  c.fill();
+  // O braço (fundo, textura, luz e trilhos) só muda com o tamanho, o star power e o multiplicador.
+  const desenharBraco = (c: CanvasRenderingContext2D) => {
+    const fundoDaPista = gradienteGuardado(c, `pista:${comEstrela}`, () => {
+      const gradiente = c.createLinearGradient(0, longe.y, 0, perto.y);
+      gradiente.addColorStop(0, comAlfa(cena.estrelaAtiva ? TRILHO_DA_ESTRELA[0] : cores.fundo, 0));
+      gradiente.addColorStop(0.25, cena.estrelaAtiva ? comAlfa(TRILHO_DA_ESTRELA[1], 0.9) : comAlfa(cores.superficie, 0.95));
+      gradiente.addColorStop(1, comAlfa(cena.estrelaAtiva ? TRILHO_DA_ESTRELA[2] : cores.fundo, 0.98));
+      return gradiente;
+    });
+    const contornoDoBraco = () => {
+      c.beginPath();
+      c.moveTo(centro - metade * longe.escala, longe.y);
+      c.lineTo(centro + metade * longe.escala, longe.y);
+      c.lineTo(centro + metade * perto.escala, perto.y);
+      c.lineTo(centro - metade * perto.escala, perto.y);
+      c.closePath();
+    };
+    c.fillStyle = fundoDaPista;
+    contornoDoBraco();
+    c.fill();
 
-  // Textura gasta e a luz quente do palco batendo perto da linha de batida, só dentro do braço.
-  const textura = sprites.textura();
-  if (padraoDoBraco?.textura !== textura || padraoDoBraco.contexto !== c) {
-    padraoDoBraco = { textura, contexto: c, valor: c.createPattern(textura, "repeat") };
-  }
-  c.save();
-  contornoDoBraco();
-  c.clip();
-  if (padraoDoBraco.valor) {
-    c.globalAlpha = 0.6;
-    c.fillStyle = padraoDoBraco.valor;
-    c.fillRect(centro - metade * perto.escala, longe.y, metade * perto.escala * 2, perto.y - longe.y);
-    c.globalAlpha = 1;
-  }
-  c.fillStyle = gradienteGuardado(c, `luz:${comEstrela}`, () => {
-    const luz = c.createRadialGradient(centro, linhaDeBatida, 0, centro, linhaDeBatida, layout.largura * 0.9);
-    luz.addColorStop(0, comAlfa(cena.estrelaAtiva ? COR_DA_ESTRELA : cores.destaque, 0.16));
-    luz.addColorStop(1, comAlfa(cores.destaque, 0));
-    return luz;
-  });
-  c.fillRect(centro - metade * perto.escala, longe.y, metade * perto.escala * 2, perto.y - longe.y);
-  c.restore();
-
-  // Trilhos na cor do multiplicador. O brilho é uma linha larga e translúcida, mais leve que shadowBlur.
-  const corDoTrilho = cena.estrelaAtiva ? COR_DA_ESTRELA : CORES_DO_MULTIPLICADOR[Math.min(3, cena.multiplicador - 1)];
-  const trilhos = (espessura: number, opacidade: number) => {
-    c.globalAlpha = opacidade;
-    c.lineWidth = espessura;
-    c.beginPath();
-    for (const lado of LADOS) {
-      c.moveTo(centro + lado * metade * longe.escala, longe.y);
-      c.lineTo(centro + lado * metade * perto.escala, perto.y);
+    // Textura gasta e a luz quente do palco batendo perto da linha de batida, só dentro do braço.
+    const textura = sprites.textura();
+    if (padraoDoBraco?.textura !== textura || padraoDoBraco.contexto !== c) {
+      padraoDoBraco = { textura, contexto: c, valor: c.createPattern(textura, "repeat") };
     }
-    c.stroke();
-  };
-  // Trilho de cromo com bisel; a cor do multiplicador fica num filete por cima.
-  if (enfeites) {
+    c.save();
+    contornoDoBraco();
+    c.clip();
+    if (padraoDoBraco.valor) {
+      c.globalAlpha = 0.6;
+      c.fillStyle = padraoDoBraco.valor;
+      c.fillRect(centro - metade * perto.escala, longe.y, metade * perto.escala * 2, perto.y - longe.y);
+      c.globalAlpha = 1;
+    }
+    c.fillStyle = gradienteGuardado(c, `luz:${comEstrela}`, () => {
+      const luz = c.createRadialGradient(centro, linhaDeBatida, 0, centro, linhaDeBatida, layout.largura * 0.9);
+      luz.addColorStop(0, comAlfa(cena.estrelaAtiva ? COR_DA_ESTRELA : cores.destaque, 0.16));
+      luz.addColorStop(1, comAlfa(cores.destaque, 0));
+      return luz;
+    });
+    c.fillRect(centro - metade * perto.escala, longe.y, metade * perto.escala * 2, perto.y - longe.y);
+    c.restore();
+
+    // Trilhos na cor do multiplicador. O brilho é uma linha larga e translúcida, mais leve que shadowBlur.
+    const corDoTrilho = cena.estrelaAtiva ? COR_DA_ESTRELA : CORES_DO_MULTIPLICADOR[Math.min(3, cena.multiplicador - 1)];
+    const trilhos = (espessura: number, opacidade: number) => {
+      c.globalAlpha = opacidade;
+      c.lineWidth = espessura;
+      c.beginPath();
+      for (const lado of LADOS) {
+        c.moveTo(centro + lado * metade * longe.escala, longe.y);
+        c.lineTo(centro + lado * metade * perto.escala, perto.y);
+      }
+      c.stroke();
+    };
+    // Trilho de cromo com bisel; a cor do multiplicador fica num filete por cima.
+    if (enfeites) {
+      c.strokeStyle = corDoTrilho;
+      trilhos(16, 0.1);
+    }
+    c.strokeStyle = cores.fundo;
+    trilhos(10, 0.9);
+    c.strokeStyle = cores.textoSuave;
+    trilhos(6, 1);
     c.strokeStyle = corDoTrilho;
-    trilhos(16, 0.1);
-  }
-  c.strokeStyle = cores.fundo;
-  trilhos(10, 0.9);
-  c.strokeStyle = cores.textoSuave;
-  trilhos(6, 1);
-  c.strokeStyle = corDoTrilho;
-  trilhos(2.5, 1);
-  c.globalAlpha = 1;
+    trilhos(2.5, 1);
+    c.globalAlpha = 1;
+
+  };
+  const corDoMultiplicador = Math.min(3, cena.multiplicador - 1);
+  const versaoDoBraco = (cena.estrelaAtiva ? 1 : 0) | (corDoMultiplicador << 1) | (enfeites ? 8 : 0);
+  const escala = c.getTransform?.()?.a ?? 1;
+  if (sprites.camada) c.drawImage(sprites.camada("braco", versaoDoBraco, largura, altura, escala, desenharBraco), 0, 0, largura, altura);
+  else desenharBraco(c);
 
   // Trastes: cada batida é uma barra de metal, com a sombra embaixo e o brilho em cima.
   for (let b = primeiroAPartirDe(cena.batidas, tempo + antecedencia * ATRAS_DA_LINHA); b < cena.batidas.length; b++) {
@@ -233,7 +245,8 @@ export function desenharPista(
     traste(comAlfa(cores.texto, batida.forte ? 0.55 : 0.25), 0, 0.6);
   }
 
-  desenharCordas(c, layout);
+  if (sprites.camada) c.drawImage(sprites.camada("cordas", 0, largura, altura, escala, (camada) => desenharCordas(camada, layout)), 0, 0, largura, altura);
+  else desenharCordas(c, layout);
 
   // Botões da linha de batida
   for (let pista = 0; pista < 5; pista++) {
