@@ -183,7 +183,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   pausadoNaTela.current = pausado;
   const [derrota, setDerrota] = useState(false);
   const [rodada, setRodada] = useState(0);
-  const [fps, setFps] = useState<LeituraDeFps | null>(null);
+  // O FPS fica numa loja: a leitura nova re-renderiza só o contador, não a tela com todas as pistas.
+  const lojaDoFps = useMemo(() => criarLojaDoHud<{ leitura: LeituraDeFps | null }>({ leitura: null }), []);
   const [tamanho, setTamanho] = useState({ largura: window.innerWidth, altura: window.innerHeight });
   // A música e a pista recomeçam juntas: as duas dependem só da sessão.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -380,7 +381,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     const aCadaQuadro = (agora: number) => {
       quadro = requestAnimationFrame(aCadaQuadro);
       const leitura = contadorDeFps.quadro(agora);
-      if (opcoes.mostrarFps && leitura !== null) setFps(leitura);
+      if (opcoes.mostrarFps && leitura !== null) lojaDoFps.definir({ leitura });
       const tempo = relogio.agora();
       const clipe = video.current;
       if (clipe && !terminou && !pausadoAgora && tempo >= 0 && performance.now() - ultimaSincroniaDoVideo > 500) {
@@ -533,7 +534,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
                 {opcoes.bot && !replay && <span className="ml-2 rounded bg-estrela px-2 font-black text-fundo">BOT</span>}
                 {velocidade !== 1 && <span className="ml-2 rounded bg-superficie-elevada px-2 font-black">{rotuloDaVelocidade(velocidade)}</span>}
                 {replay && <span className="ml-2 rounded bg-primaria px-2 font-black">{replay.ateAgora === undefined ? "REPLAY" : "AO VIVO"}</span>}
-                {opcoes.mostrarFps && <span className="ml-2 font-mono tabular-nums">{fps ? Math.round(fps.fps) : "–"} FPS{fps && ` · ${Math.round(fps.piorQuadroMs)} ms`}</span>}
+                {opcoes.mostrarFps && <ContadorDeFps loja={lojaDoFps} />}
               </p>
             </div>
             <ProgressoDaMusica loja={loja} aoIrPara={replay && replay.ateAgora === undefined ? (fracao) => controles.current.irPara(fracao) : undefined} />
@@ -588,7 +589,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
 
 /** No replay gravado a barra também é um controle: clicar ou arrastar leva a partida para aquele ponto. */
 function ProgressoDaMusica({ loja, aoIrPara }: { loja: LojaDoHud<Hud>; aoIrPara?: (fracao: number) => void }) {
-  const { progresso } = useLoja(loja);
+  const progresso = useLoja(loja, (h) => h.progresso);
   return (
     <div className={cn("relative flex-1", aoIrPara && "py-2")}>
       <div className="h-1.5 overflow-hidden rounded-full bg-superficie-elevada" aria-label="Progresso da música">
@@ -612,8 +613,13 @@ function ProgressoDaMusica({ loja, aoIrPara }: { loja: LojaDoHud<Hud>; aoIrPara?
   );
 }
 
+function ContadorDeFps({ loja }: { loja: LojaDoHud<{ leitura: LeituraDeFps | null }> }) {
+  const fps = useLoja(loja, (l) => l.leitura);
+  return <span className="ml-2 font-mono tabular-nums">{fps ? Math.round(fps.fps) : "–"} FPS{fps && ` · ${Math.round(fps.piorQuadroMs)} ms`}</span>;
+}
+
 /** Só o placar re-renderiza quando os pontos mudam. */
 function PlacarDaPartida({ loja, placar }: { loja: LojaDoHud<Hud>; placar: (pontos: number) => ReactNode }) {
-  const { pontos } = useLoja(loja);
+  const pontos = useLoja(loja, (h) => h.pontos);
   return <>{placar(pontos)}</>;
 }

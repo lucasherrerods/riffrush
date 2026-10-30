@@ -15,10 +15,21 @@ export function croma(hex: string) {
   return Math.max(...c) - Math.min(...c);
 }
 
+/** As cores já montadas: o canvas pede as mesmas dezenas de vezes por quadro. */
+const coresComAlfa = new Map<string, Map<number, string>>();
+/** Uma opacidade que varia sem parar (um esmaecimento) não pode encher a memória. */
+const MAXIMO_POR_COR = 256;
+
 /** Cor hex com transparência, para o canvas, que não lê variáveis CSS. */
 export function comAlfa(hex: string, alfa: number) {
+  let porAlfa = coresComAlfa.get(hex);
+  const guardada = porAlfa?.get(alfa);
+  if (guardada !== undefined) return guardada;
   const [r, g, b] = canais(hex).map((c) => Math.round(c * 255));
-  return `rgba(${r},${g},${b},${Math.max(0, alfa)})`;
+  const cor = `rgba(${r},${g},${b},${Math.max(0, alfa)})`;
+  if (!porAlfa) coresComAlfa.set(hex, (porAlfa = new Map()));
+  if (porAlfa.size < MAXIMO_POR_COR) porAlfa.set(alfa, cor);
+  return cor;
 }
 
 const paraVariavel = (nome: string) => `--cor-${nome.replace(/[A-Z]/g, (letra) => `-${letra.toLowerCase()}`)}`;

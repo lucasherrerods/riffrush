@@ -348,6 +348,17 @@ export function PistaDoJogador(props: Props) {
     window.addEventListener("keydown", aoApertar);
     window.addEventListener("keyup", aoSoltar);
 
+    let opacidadeEscrita = -1;
+    // O recorde quase nunca muda: a conta das estrelas dele não precisa rodar todo quadro.
+    let recordeDasEstrelas = -1;
+    let estrelasDoRecordeGuardadas = 0;
+    const estrelasDoRecorde = (recorde: number) => {
+      if (recorde !== recordeDasEstrelas) {
+        recordeDasEstrelas = recorde;
+        estrelasDoRecordeGuardadas = progressoDasEstrelas(recorde, carregada.notas.length);
+      }
+      return estrelasDoRecordeGuardadas;
+    };
     const desenhar = () => {
       quadro = requestAnimationFrame(desenhar);
       const tempo = relogio.agora();
@@ -371,6 +382,7 @@ export function PistaDoJogador(props: Props) {
         }
       }
 
+      // Um objeto novo por quadro de propósito: o ator do palco compara o pulso e a reação com o quadro anterior.
       atuais.current.estadoDoPalco.current = {
         personagem: atuais.current.personagem,
         tocando: tempo >= 0 && !partida.derrota,
@@ -385,8 +397,12 @@ export function PistaDoJogador(props: Props) {
       };
 
       const elemento = canvas.current;
-      // Com palco, a pista some na abertura para a cena dominar e volta até a música começar.
-      if (elemento) elemento.style.opacity = atuais.current.comPalco ? String(opacidadeDaPista(tempo, entrada)) : "1";
+      // Com palco, a pista some na abertura para a cena dominar e volta até a música começar. Só escreve quando muda.
+      const opacidade = atuais.current.comPalco ? opacidadeDaPista(tempo, entrada) : 1;
+      if (elemento && opacidade !== opacidadeEscrita) {
+        opacidadeEscrita = opacidade;
+        elemento.style.opacity = String(opacidade);
+      }
       if (contexto2d && elemento) {
         const escala = escalaDoCanvas(window.devicePixelRatio, opcoes.escalaDeRenderizacao);
         const { largura, altura } = medida;
@@ -440,7 +456,7 @@ export function PistaDoJogador(props: Props) {
         pulso: partida.acertos,
         fantasma: partida.fantasma,
         estrelas: Math.round(progressoDasEstrelas(partida.pontos, carregada.notas.length) * 100) / 100,
-        estrelasDoRecorde: progressoDasEstrelas(recorde ?? 0, carregada.notas.length),
+        estrelasDoRecorde: estrelasDoRecorde(recorde ?? 0),
         reacao,
         julgamento,
       });
@@ -582,11 +598,9 @@ interface PropsDoHud {
   aoEstrela: () => void;
 }
 
-/** Tudo que muda junto com o placar: só este pedaço re-renderiza a cada quadro, não a tela inteira. */
+/** Tudo que muda junto com o placar. Cada pedaço lê da loja só o que mostra, então só ele re-renderiza. */
 function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, personagem, bpm, aoEstrela }: PropsDoHud) {
-  const hud = useLoja(loja);
-  const avatarDoJogador = (className: string) =>
-    personagem && <Avatar personagem={personagem} tocando={hud.contagem === 0 && !derrota} bpm={bpm} pulso={hud.pulso} triste={hud.vida < 0.25} reacao={hud.reacao} className={className} />;
+  const avatarDoJogador = (className: string) => personagem && <AvatarDoHud loja={loja} personagem={personagem} derrota={derrota} bpm={bpm} className={className} />;
 
   return (
     <>
@@ -597,26 +611,15 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
         style={estreita ? undefined : { left: Math.max(layout.centro - layout.largura / 2 - 24, LARGURA_DO_PAINEL + MARGEM_DO_HUD) }}
       >
         {/* O aviso fica no painel, acima da precisão, e não em cima da pista: não tapa as notas que vêm chegando. */}
-        <PainelDePontos
-          pontos={hud.pontos}
-          sequencia={hud.sequencia}
-          multiplicador={hud.multiplicador}
-          precisao={hud.precisao}
-          estrelaAtiva={hud.estrelaAtiva}
+        <PlacarDoHud
+          loja={loja}
           compacto={estreita}
-          aviso={<AvisoDeAcerto julgamento={hud.julgamento} />}
+          aviso={<AvisoDoHud loja={loja} />}
           lateral={
             estreita && (
               <div className="flex items-start gap-2">
                 {avatarDoJogador("h-14 w-auto")}
-                {/* Os pinos do star power e a barra de vida: tocar neles ativa o star power. */}
-                <button aria-label={`Ativar star power (${Math.round(hud.estrela * 100)}%)`} onClick={aoEstrela} className="-mr-2 flex w-32 flex-col items-center">
-                  <MedidorCompacto vida={hud.vida} estrela={hud.estrela} estrelaAtiva={hud.estrelaAtiva} className="w-full" />
-                  {/* Com o star power pronto, a seta lembra que arrastar para cima o solta. */}
-                  {hud.estrela >= 0.5 && !hud.estrelaAtiva && (
-                    <ChevronsUp data-parte="seta-do-star-power" aria-label="Arraste para cima para soltar o star power" className="mt-6 size-10 animate-bounce text-estrela" />
-                  )}
-                </button>
+                <StarPowerCompacto loja={loja} aoEstrela={aoEstrela} />
               </div>
             )
           }
@@ -628,15 +631,56 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
           {/* Com o palco, o personagem já está em cena atrás da pista. */}
           {!comPalco && avatarDoJogador("mb-2 h-44 w-auto")}
           <div className="flex items-end gap-4">
-            <BarraDeEstrelas progresso={hud.estrelas} recorde={hud.estrelasDoRecorde} />
-            <MedidorDeRock vida={hud.vida} estrela={hud.estrela} estrelaAtiva={hud.estrelaAtiva} fantasma={hud.fantasma} className="w-64" />
+            <EstrelasDoHud loja={loja} />
+            <MedidorDoHud loja={loja} />
           </div>
         </div>
       )}
 
-      <AnimatePresence>
-        {hud.contagem > 0 && !pausado && <NumeroDaContagem key={hud.contagem} valor={hud.contagem} />}
-      </AnimatePresence>
+      <ContagemDoHud loja={loja} pausado={pausado} />
     </>
   );
+}
+
+function PlacarDoHud({ loja, ...resto }: { loja: LojaDoHud<Hud>; compacto: boolean; aviso: React.ReactNode; lateral: React.ReactNode }) {
+  const h = useLoja(loja, (h) => ({ pontos: h.pontos, sequencia: h.sequencia, multiplicador: h.multiplicador, precisao: h.precisao, estrelaAtiva: h.estrelaAtiva }));
+  return <PainelDePontos {...h} {...resto} />;
+}
+
+function AvisoDoHud({ loja }: { loja: LojaDoHud<Hud> }) {
+  return <AvisoDeAcerto julgamento={useLoja(loja, (h) => h.julgamento)} />;
+}
+
+function AvatarDoHud({ loja, personagem, derrota, bpm, className }: { loja: LojaDoHud<Hud>; personagem: Personagem; derrota: boolean; bpm: number; className: string }) {
+  const h = useLoja(loja, (h) => ({ contando: h.contagem > 0, pulso: h.pulso, triste: h.vida < 0.25, reacao: h.reacao }));
+  return <Avatar personagem={personagem} tocando={!h.contando && !derrota} bpm={bpm} pulso={h.pulso} triste={h.triste} reacao={h.reacao} className={className} />;
+}
+
+/** Os pinos do star power e a barra de vida: tocar neles ativa o star power. */
+function StarPowerCompacto({ loja, aoEstrela }: { loja: LojaDoHud<Hud>; aoEstrela: () => void }) {
+  const h = useLoja(loja, (h) => ({ vida: h.vida, estrela: h.estrela, estrelaAtiva: h.estrelaAtiva }));
+  return (
+    <button aria-label={`Ativar star power (${Math.round(h.estrela * 100)}%)`} onClick={aoEstrela} className="-mr-2 flex w-32 flex-col items-center">
+      <MedidorCompacto vida={h.vida} estrela={h.estrela} estrelaAtiva={h.estrelaAtiva} className="w-full" />
+      {/* Com o star power pronto, a seta lembra que arrastar para cima o solta. */}
+      {h.estrela >= 0.5 && !h.estrelaAtiva && (
+        <ChevronsUp data-parte="seta-do-star-power" aria-label="Arraste para cima para soltar o star power" className="mt-6 size-10 animate-bounce text-estrela" />
+      )}
+    </button>
+  );
+}
+
+function EstrelasDoHud({ loja }: { loja: LojaDoHud<Hud> }) {
+  const h = useLoja(loja, (h) => ({ progresso: h.estrelas, recorde: h.estrelasDoRecorde }));
+  return <BarraDeEstrelas progresso={h.progresso} recorde={h.recorde} />;
+}
+
+function MedidorDoHud({ loja }: { loja: LojaDoHud<Hud> }) {
+  const h = useLoja(loja, (h) => ({ vida: h.vida, estrela: h.estrela, estrelaAtiva: h.estrelaAtiva, fantasma: h.fantasma }));
+  return <MedidorDeRock {...h} className="w-64" />;
+}
+
+function ContagemDoHud({ loja, pausado }: { loja: LojaDoHud<Hud>; pausado: boolean }) {
+  const contagem = useLoja(loja, (h) => h.contagem);
+  return <AnimatePresence>{contagem > 0 && !pausado && <NumeroDaContagem key={contagem} valor={contagem} />}</AnimatePresence>;
 }

@@ -1,4 +1,4 @@
-import { geometriaDaPista, notasVisiveis, yDaNota } from "./pista";
+import { geometriaDaPista, notasVisiveis, primeiraVisivel, yDaNota } from "./pista";
 
 describe("geometriaDaPista", () => {
   it("centraliza as colunas e põe a linha de julgamento perto da base", () => {
@@ -29,4 +29,14 @@ it("notasVisiveis devolve só as que estão na tela agora, incluindo notas longa
   const notas = [0, 100, -1, 1, 900, -1, 2, 1000, 3000, 3, 5000, -1];
   expect(notasVisiveis(notas, 2000, 500, 200)).toEqual([2]);
   expect(notasVisiveis(notas, 950, 500, 200)).toEqual([1, 2]);
+});
+
+it("primeiraVisivel anda só para a frente e para na primeira nota que ainda aparece", () => {
+  const notas = [0, 100, -1, 1, 900, -1, 2, 1000, 3000, 3, 5000, -1];
+  expect(primeiraVisivel(notas, 950, 200, 0)).toBe(1);
+  // A nota longa ainda aparece: o cursor para nela, mesmo com a cabeça já passada.
+  expect(primeiraVisivel(notas, 2000, 200, 1)).toBe(2);
+  // Começa de onde parou, sem voltar.
+  expect(primeiraVisivel(notas, 4000, 200, 2)).toBe(3);
+  expect(notasVisiveis(notas, 2000, 500, 200, 2)).toEqual(notasVisiveis(notas, 2000, 500, 200));
 });
