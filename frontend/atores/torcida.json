@@ -1,0 +1,12 @@
+{
+  "nome": "Turquesa (Torcida)",
+  "video": "../assets-fonte/atores/torcida.mp4",
+  "cenas": {
+    "parado": [0.5, 2.0],
+    "tocando": [12.2, 14.15],
+    "errou": [11.6, 12.1],
+    "vaiado": [2.7, 3.7],
+    "nitro": [12.05, 14.05],
+    "vitoria": [13.55, 15.05]
+  }
+}

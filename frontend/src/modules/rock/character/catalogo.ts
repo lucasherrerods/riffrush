@@ -28,6 +28,7 @@ export interface DefinicaoDePersonagem extends Opcao<string> {
 /** O primeiro é o padrão. */
 export const PERSONAGENS: DefinicaoDePersonagem[] = [
   { id: "faisca", rotulo: "Faísca", instrumento: "guitarra", skins: [{ id: "classico", rotulo: "Clássico", arquivo: "/modelos/atores/faisca", tipo: "video", card: "/modelos/atores/faisca/card.webp" }] },
+  { id: "turquesa", rotulo: "Turquesa", instrumento: "guitarra", skins: [{ id: "torcida", rotulo: "Torcida", arquivo: "/modelos/atores/torcida", tipo: "video", card: "/modelos/atores/torcida/card.webp" }] },
 ];
 
 export const definicaoDoPersonagem = ({ personagem }: { personagem: string }) => PERSONAGENS.find((p) => p.id === personagem) ?? PERSONAGENS[0];
