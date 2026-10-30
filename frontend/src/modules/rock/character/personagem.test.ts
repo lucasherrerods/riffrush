@@ -21,8 +21,8 @@ describe("carregarPersonagem", () => {
   });
 
   it("devolve o personagem salvo", () => {
-    salvarPersonagem({ ...PERSONAGEM_PADRAO, nome: "Vitor", personagem: "baterista", skin: "padrao" });
-    expect(carregarPersonagem()).toMatchObject({ nome: "Vitor", personagem: "baterista" });
+    salvarPersonagem({ ...PERSONAGEM_PADRAO, nome: "Vitor" });
+    expect(carregarPersonagem()).toEqual({ ...PERSONAGEM_PADRAO, nome: "Vitor" });
   });
 
   it("ignora dados corrompidos", () => {
@@ -39,7 +39,7 @@ describe("migrarPersonagem", () => {
 
   it("troca personagem ou skin que não existem pelo padrão", () => {
     expect(migrarPersonagem({ versao: 4, nome: "Caio", personagem: "nao-existe", skin: "x" })).toEqual({ ...PERSONAGEM_PADRAO, nome: "Caio" });
-    expect(migrarPersonagem({ versao: 4, nome: "Caio", personagem: "baterista", skin: "x" })).toMatchObject({ personagem: "baterista", skin: "padrao" });
+    expect(migrarPersonagem({ versao: 4, nome: "Caio", personagem: "faisca", skin: "x" })).toMatchObject({ personagem: "faisca", skin: "classico" });
   });
 
   it("devolve o padrão para o que não é um objeto", () => {

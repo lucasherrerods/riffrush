@@ -24,19 +24,12 @@ describe("TelaDePersonagem", () => {
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
   });
 
-  it("trocar de personagem troca o instrumento da prévia", async () => {
-    const { usuario } = abrir();
-    await usuario.click(screen.getByRole("radio", { name: "Baterista" }));
-    expect(screen.getByRole("img", { name: "Personagem Rockstar" })).toHaveAttribute("data-instrumento", "bateria");
-  });
-
-  it("salva o personagem escolhido", async () => {
+  it("salva o nome com o personagem escolhido", async () => {
     const { aoSalvar, usuario } = abrir();
     await usuario.clear(screen.getByLabelText("Nome"));
     await usuario.type(screen.getByLabelText("Nome"), "Vitor");
-    await usuario.click(screen.getByRole("radio", { name: "Baixista" }));
     await usuario.click(screen.getByRole("button", { name: /Salvar/ }));
-    expect(aoSalvar).toHaveBeenCalledWith({ versao: 4, nome: "Vitor", personagem: "baixista", skin: "padrao" });
+    expect(aoSalvar).toHaveBeenCalledWith({ versao: 4, nome: "Vitor", personagem: "faisca", skin: "classico" });
   });
 
   it("não deixa salvar sem nome", async () => {

@@ -26,10 +26,6 @@ export interface DefinicaoDePersonagem extends Opcao<string> {
 /** O primeiro é o padrão. */
 export const PERSONAGENS: DefinicaoDePersonagem[] = [
   { id: "faisca", rotulo: "Faísca", instrumento: "guitarra", skins: [{ id: "classico", rotulo: "Clássico", arquivo: "/modelos/atores/faisca", tipo: "video" }] },
-  { id: "baixista", rotulo: "Baixista", instrumento: "baixo", skins: [{ id: "padrao", rotulo: "Padrão", arquivo: "/modelos/personagens/baixista.vrm" }] },
-  { id: "tecladista", rotulo: "Tecladista", instrumento: "keytar", skins: [{ id: "padrao", rotulo: "Padrão", arquivo: "/modelos/personagens/tecladista.vrm" }] },
-  { id: "baterista", rotulo: "Baterista", instrumento: "bateria", skins: [{ id: "padrao", rotulo: "Padrão", arquivo: "/modelos/personagens/baterista.vrm" }] },
-  { id: "vocalista", rotulo: "Vocalista", instrumento: "vocal", skins: [{ id: "padrao", rotulo: "Padrão", arquivo: "/modelos/personagens/vocalista.vrm" }] },
 ];
 
 export const definicaoDoPersonagem = ({ personagem }: { personagem: string }) => PERSONAGENS.find((p) => p.id === personagem) ?? PERSONAGENS[0];
