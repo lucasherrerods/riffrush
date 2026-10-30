@@ -1,5 +1,5 @@
 import {
-  lerAvisoDeEspectadores, aplicarMensagem, entradasDoLote, entradasParaOLote, ordenarPessoas, urlDaPresenca, urlDaTransmissao, type PessoaOnline } from "./protocolo";
+  lerAvisoDeEspectadores, lerConvite, aplicarMensagem, entradasDoLote, entradasParaOLote, ordenarPessoas, urlDaPresenca, urlDaTransmissao, type PessoaOnline } from "./protocolo";
 
 const pessoa = (id: string, nome: string, estado: PessoaOnline["estado"] = { tipo: "menu" }): PessoaOnline => ({ id, nome, avatar: null, estado });
 const tocando = (transmitindo: boolean): PessoaOnline["estado"] => ({
@@ -70,5 +70,17 @@ describe("lerAvisoDeEspectadores", () => {
     expect(lerAvisoDeEspectadores(JSON.stringify({ tipo: "fim" }))).toBeNull();
     expect(lerAvisoDeEspectadores(JSON.stringify({ tipo: "espectadores", quantos: -1 }))).toBeNull();
     expect(lerAvisoDeEspectadores("{quebrado")).toBeNull();
+  });
+});
+
+describe("lerConvite", () => {
+  it("lê o convite do relay e ignora o resto", () => {
+    expect(lerConvite(JSON.stringify({ tipo: "convite", de: { id: "a", nome: "Ana", avatar: null }, codigo: "ABCDE" }))).toEqual({
+      de: { id: "a", nome: "Ana", avatar: null },
+      codigo: "ABCDE",
+    });
+    expect(lerConvite(JSON.stringify({ tipo: "lista", pessoas: [] }))).toBeNull();
+    expect(lerConvite(JSON.stringify({ tipo: "convite", de: { id: 3 }, codigo: "ABCDE" }))).toBeNull();
+    expect(lerConvite("{")).toBeNull();
   });
 });

@@ -422,7 +422,16 @@ pub mod fakes {
                     avatar: None,
                     email: Some("lucas@exemplo.com".into()),
                 }),
-                _ => Err(ErroDeLogin::Recusado),
+                // Outras pessoas, para os testes que precisam de mais de uma conta.
+                outro => match outro.strip_prefix("pessoa:") {
+                    Some(nome) => Ok(PerfilDoGoogle {
+                        sub: format!("google-{nome}"),
+                        nome: nome.into(),
+                        avatar: None,
+                        email: None,
+                    }),
+                    None => Err(ErroDeLogin::Recusado),
+                },
             }
         }
     }
