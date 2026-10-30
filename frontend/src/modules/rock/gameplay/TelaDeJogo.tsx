@@ -24,8 +24,7 @@ import { NOMES_DAS_PISTAS } from "./cores";
 import { avancar, criarPartida, multiplicador, precisao, retirarEventos, type JeitoDeJogar, type Julgamento } from "./partida";
 import { aplicarEntradas, criarGravador, empacotarReplay, hashDoChart, type EventoDaTransmissao, type Replay } from "./replay";
 import { desenharPista, type Cena } from "./pista/desenhar";
-import { forcaDoTrovao } from "./pista/efeitos";
-import { especialUtilizavel } from "./pinos";
+import { trovaoDoEvento } from "./pista/efeitos";
 import { criarContadorDeFps, type LeituraDeFps } from "./fps";
 import { layoutDaPista } from "./pista/geometria";
 import { criarSprites } from "./pista/sprites";
@@ -367,16 +366,16 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
 
     const tratarEventos = (tempo: number) => {
       for (const evento of retirarEventos(partida)) {
+        const forca = trovaoDoEvento(evento.tipo);
+        if (forca) {
+          ultimoTrovao = tempo;
+          trovoes.push({ tempo, forca, semente: Math.floor(tempo * 1000) });
+          if (trovoes.length > MAXIMO_DE_TROVOES) trovoes.shift();
+        }
         if (evento.tipo === "acerto") {
           explosoes.push({ pista: evento.nota.pista, tempo });
           julgamento = { julgamento: evento.julgamento, tempo };
           if (explosoes.length > MAXIMO_DE_EXPLOSOES) explosoes.shift();
-          const forca = forcaDoTrovao(partida.sequencia);
-          if (forca && especialUtilizavel(partida.estrela, partida.estrelaAtiva)) {
-            ultimoTrovao = tempo;
-            trovoes.push({ tempo, forca, semente: partida.sequencia });
-            if (trovoes.length > MAXIMO_DE_TROVOES) trovoes.shift();
-          }
         } else if (evento.tipo === "erro") {
           reagir("errou");
           falhas.push({ pista: evento.nota.pista, tempo });

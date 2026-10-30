@@ -1,16 +1,14 @@
-import { estiloDoJulgamento, forcaDoTrovao, pontosDoRaio, progressoDoMultiplicador, tremor, pulo } from "./efeitos";
+import { estiloDoJulgamento, trovaoDoEvento, pontosDoRaio, progressoDoMultiplicador, tremor, pulo } from "./efeitos";
 
-describe("forcaDoTrovao", () => {
-  it("não troveja fora dos marcos de combo", () => {
-    for (const sequencia of [0, 1, 24, 26, 49, 51, 99]) expect(forcaDoTrovao(sequencia)).toBe(0);
+describe("trovaoDoEvento", () => {
+  it("troveja forte quando o star power fica pronto para usar", () => {
+    expect(trovaoDoEvento("estrelaPronta")).toBe(3);
   });
 
-  it("troveja mais forte conforme o combo cresce", () => {
-    expect(forcaDoTrovao(25)).toBe(1);
-    expect(forcaDoTrovao(50)).toBe(2);
-    expect(forcaDoTrovao(100)).toBe(3);
-    expect(forcaDoTrovao(150)).toBe(3);
-    expect(forcaDoTrovao(125)).toBe(0);
+  it("não troveja nos outros eventos", () => {
+    expect(trovaoDoEvento("acerto")).toBe(0);
+    expect(trovaoDoEvento("sequencia")).toBe(0);
+    expect(trovaoDoEvento("estrelaAtivada")).toBe(0);
   });
 });
 
@@ -67,13 +65,13 @@ describe("pulo", () => {
   it("sobe a pista e volta ao lugar", () => {
     expect(pulo(-0.1)).toBe(0);
     expect(pulo(0)).toBe(0);
-    expect(pulo(0.15)).toBeLessThan(-5);
-    expect(pulo(0.35)).toBe(0);
+    expect(pulo(0.2)).toBeLessThan(-25);
+    expect(pulo(0.45)).toBe(0);
     expect(pulo(2)).toBe(0);
   });
 
-  it("é leve: no máximo 12 px", () => {
-    const alturas = Array.from({ length: 40 }, (_, i) => pulo(i * 0.01));
-    expect(Math.min(...alturas)).toBeGreaterThanOrEqual(-12);
+  it("não passa de 40 px", () => {
+    const alturas = Array.from({ length: 50 }, (_, i) => pulo(i * 0.01));
+    expect(Math.min(...alturas)).toBeGreaterThanOrEqual(-40);
   });
 });
