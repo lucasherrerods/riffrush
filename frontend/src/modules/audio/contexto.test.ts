@@ -17,4 +17,16 @@ describe("obterContextoDeAudio", () => {
     obterContextoDeAudio();
     expect(contexto.resume).toHaveBeenCalled();
   });
+
+  it("na pausa da partida não religa o áudio, até ela acabar", async () => {
+    const { obterContextoDeAudio, pausarAudio, retomarAudio } = await importar();
+    const contexto = obterContextoDeAudio() as unknown as AudioContextFalso;
+    pausarAudio();
+    expect(contexto.suspend).toHaveBeenCalled();
+    contexto.state = "suspended";
+    obterContextoDeAudio();
+    expect(contexto.resume).not.toHaveBeenCalled();
+    retomarAudio();
+    expect(contexto.resume).toHaveBeenCalled();
+  });
 });
