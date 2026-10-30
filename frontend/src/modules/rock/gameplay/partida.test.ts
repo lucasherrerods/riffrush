@@ -1,5 +1,5 @@
 import { PISTA_ABERTA, type Nota } from "@/modules/rock/songs";
-import { JANELA_DE_ACERTO, ativarEstrela, janelaDoMotor, avancar, criarPartida, julgar, multiplicador, precisao, retirarEventos, soltar, tocar } from "./partida";
+import { JANELA_DE_ACERTO, acertar, ativarEstrela, janelaDoMotor, avancar, criarPartida, julgar, multiplicador, precisao, retirarEventos, soltar, tocar } from "./partida";
 
 const nota = (tempo: number, pista = 0, extra: Partial<Nota> = {}): Nota => ({ tempo, pista, frase: -1, duracao: 0, ...extra });
 
@@ -418,5 +418,27 @@ describe("independência dos frames", () => {
     expect(base.acertos).toBeGreaterThan(150);
     expect(base.erros).toBeGreaterThan(10);
     for (const fps of [60, 144, 37]) expect(jogar(1 / fps)).toEqual(base);
+  });
+});
+
+describe("espelho das notas", () => {
+  it("um salto grande no tempo marca como perdidas todas as notas que passaram", () => {
+    const partida = criarPartida(Array.from({ length: 50 }, (_, i) => nota(1 + i * 0.1)), { semFalha: true });
+    avancar(partida, 30);
+    expect(partida.notas.every((n) => n.perdida)).toBe(true);
+  });
+
+  it("a nota acertada direto pelo bot aparece no espelho, mesmo longe do tempo da partida", () => {
+    const partida = criarPartida([nota(1), nota(50)]);
+    avancar(partida, 0.5);
+    acertar(partida, partida.notas[1], 50);
+    expect(partida.notas[1].acertada).toBe(true);
+  });
+
+  it("o multiplicador e a precisão vêm no mesmo pacote do motor", () => {
+    const partida = criarPartida([nota(1)]);
+    expect(multiplicador(partida)).toBe(partida.motor.multiplicador());
+    tocar(partida, 0, 1);
+    expect(precisao(partida)).toBe(partida.motor.precisao());
   });
 });

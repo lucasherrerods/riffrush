@@ -36,3 +36,10 @@ Problemas encontrados de passagem, fora do escopo da mudança que estava sendo f
 - **O que se viu:** em 29/10/2026, na `main`, o clippy falha com `very complex type used` (`type_complexity`). O CI não roda o clippy nessa pasta, então passa.
 - **Suspeita:** tipo aninhado (Arc/Mutex/Option…) escrito direto no campo, sem um `type` com nome.
 - **Próximo passo:** extrair o tipo para um `type` com nome e, se fizer sentido, ligar o clippy do `src-tauri` no CI.
+
+## Teste instável: `a_rodada_da_sala_conta_uma_partida_so_nas_mais_jogadas`
+
+- **Onde:** `backend/tests/postgres.rs:514`, no job "Testes do backend" do CI.
+- **O que se viu:** em 30/10/2026, no PR #198 (que só mexe no app e no `motor/wasm`), o teste falhou no `assert_eq!` e passou ao rodar o job de novo, sem mudança no código.
+- **Suspeita:** as "mais jogadas" leem partidas do banco inteiro, e outros testes rodando em paralelo no mesmo Postgres colocam partidas que entram na conta.
+- **Próximo passo:** ver se o teste filtra pelas próprias músicas ou contas (como os do ranking fazem com `teste:{uuid}`) e isolar os dados dele.
