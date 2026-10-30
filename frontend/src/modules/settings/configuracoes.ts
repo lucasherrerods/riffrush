@@ -2,6 +2,7 @@ import { BOTAO_DA_ESTRELA_PADRAO, BOTOES_DOS_TRASTES_PADRAO } from "@/modules/ga
 import type { JeitoDeJogar } from "@/modules/rock/gameplay";
 import type { ModoDeJanela } from "@/modules/platform";
 import type { QualidadeDoPalco } from "@/modules/rock/stage";
+import { ehTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 
 export interface Configuracoes {
   /** Códigos das teclas dos 5 trastes e da nota aberta, nesta ordem (KeyboardEvent.code). */
@@ -73,12 +74,15 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   escalaDeRenderizacao: 1,
   modoDeJanela: "janela",
   resolucaoDaJanela: null,
-  modoCompetitivo: true,
+  modoCompetitivo: false,
   mostrarOnline: null,
   permitirEspectadores: true,
   chatGlobal: null,
   bloquearAtalhos: true,
 };
+
+/** No celular a tela é pequena demais para o palco: lá o modo competitivo começa ligado. */
+export const configuracoesPadrao = (estreita = ehTelaEstreita()): Configuracoes => ({ ...CONFIGURACOES_PADRAO, modoCompetitivo: estreita });
 
 const CHAVE = "riffrush.configuracoes";
 export const INDICE_DA_ESTRELA = 6;
@@ -87,12 +91,13 @@ export const INDICE_DA_PALHETA = 7;
 /** Configurações salvas antes da nota aberta têm só os 5 trastes: a aberta entra com o padrão. */
 const completar = <T>(salvos: T[], padrao: T[]) => [...salvos, ...padrao.slice(salvos.length)];
 
-export function carregarConfiguracoes(): Configuracoes {
+export function carregarConfiguracoes(estreita = ehTelaEstreita()): Configuracoes {
+  const padrao = configuracoesPadrao(estreita);
   try {
-    const salvas: Configuracoes = { ...CONFIGURACOES_PADRAO, ...JSON.parse(localStorage.getItem(CHAVE) ?? "{}") };
+    const salvas: Configuracoes = { ...padrao, ...JSON.parse(localStorage.getItem(CHAVE) ?? "{}") };
     return { ...salvas, teclas: completar(salvas.teclas, CONFIGURACOES_PADRAO.teclas), botoesDoControle: completar(salvas.botoesDoControle, CONFIGURACOES_PADRAO.botoesDoControle) };
   } catch {
-    return CONFIGURACOES_PADRAO;
+    return padrao;
   }
 }
 

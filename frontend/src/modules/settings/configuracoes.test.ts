@@ -1,4 +1,4 @@
-import { CONFIGURACOES_PADRAO, INDICE_DA_PALHETA, antecedenciaDasNotas, carregarConfiguracoes, nomeDaTecla, salvarConfiguracoes, trocarBotao, trocarTecla } from "./configuracoes";
+import { CONFIGURACOES_PADRAO, INDICE_DA_PALHETA, configuracoesPadrao, antecedenciaDasNotas, carregarConfiguracoes, nomeDaTecla, salvarConfiguracoes, trocarBotao, trocarTecla } from "./configuracoes";
 
 beforeEach(() => localStorage.clear());
 
@@ -121,9 +121,16 @@ describe("personagem e FPS", () => {
     expect(carregarConfiguracoes()).toMatchObject({ atrasoMs: 40, personagem3d: true, mostrarFps: false });
   });
 
-  it("o modo competitivo começa ligado, inclusive para quem já tinha configurações salvas", () => {
-    expect(CONFIGURACOES_PADRAO.modoCompetitivo).toBe(true);
+  it("o modo competitivo começa desligado no computador e ligado no celular", () => {
+    expect(configuracoesPadrao(false).modoCompetitivo).toBe(false);
+    expect(configuracoesPadrao(true).modoCompetitivo).toBe(true);
+  });
+
+  it("quem não escolheu o modo competitivo recebe o padrão da tela, e quem escolheu mantém", () => {
     localStorage.setItem("riffrush.configuracoes", JSON.stringify({ atrasoMs: 40 }));
-    expect(carregarConfiguracoes().modoCompetitivo).toBe(true);
+    expect(carregarConfiguracoes(false).modoCompetitivo).toBe(false);
+    expect(carregarConfiguracoes(true).modoCompetitivo).toBe(true);
+    localStorage.setItem("riffrush.configuracoes", JSON.stringify({ modoCompetitivo: true }));
+    expect(carregarConfiguracoes(false).modoCompetitivo).toBe(true);
   });
 });
