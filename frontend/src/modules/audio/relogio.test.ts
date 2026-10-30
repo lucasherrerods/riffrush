@@ -23,6 +23,13 @@ describe("tempoDeSaida", () => {
     expect(tempoDeSaida(tocando({ outputLatency: 0, baseLatency: 0.02 }), 0)).toBeCloseTo(9.98);
   });
 
+  // Logo depois de voltar da pausa, o timestamp ainda é o de antes dela: somar o tempo do sistema
+  // desde então pulava a música para frente, e todas as notas que passaram viravam erro de uma vez.
+  it("ignora o timestamp velho que deixaria o tempo longe do áudio de verdade", () => {
+    const voltandoDaPausa = tocando({ timestamp: { contextTime: 9.9, performanceTime: 1000 } });
+    expect(tempoDeSaida(voltandoDaPausa, 61_000)).toBeCloseTo(9.95);
+  });
+
   it("fica parado enquanto o áudio está suspenso (pausa)", () => {
     const pausado = tocando({ state: "suspended", timestamp: { contextTime: 9.9, performanceTime: 1000 } });
     expect(tempoDeSaida(pausado, 1000)).toBeCloseTo(tempoDeSaida(pausado, 5000));

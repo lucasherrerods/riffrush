@@ -8,6 +8,8 @@ export interface EstadoDoAudio {
 }
 
 const ATRASO_MAXIMO_DO_EVENTO = 0.1;
+/** Mais longe do currentTime que isso, o timestamp é de antes de uma pausa e não vale. */
+const DESVIO_MAXIMO_DO_TIMESTAMP = 0.2;
 
 /**
  * Posição do áudio que está saindo no alto-falante agora, em segundos.
@@ -15,10 +17,12 @@ const ATRASO_MAXIMO_DO_EVENTO = 0.1;
  */
 export function tempoDeSaida(audio: EstadoDoAudio, agoraPerformance: number) {
   const { contextTime, performanceTime } = audio.timestamp ?? {};
+  const peloCurrentTime = audio.currentTime - (audio.outputLatency || audio.baseLatency || 0);
   if (audio.state === "running" && contextTime && performanceTime) {
-    return contextTime + (agoraPerformance - performanceTime) / 1000;
+    const peloTimestamp = contextTime + (agoraPerformance - performanceTime) / 1000;
+    if (Math.abs(peloTimestamp - peloCurrentTime) <= DESVIO_MAXIMO_DO_TIMESTAMP) return peloTimestamp;
   }
-  return audio.currentTime - (audio.outputLatency || audio.baseLatency || 0);
+  return peloCurrentTime;
 }
 
 /** Instante em que o evento de input aconteceu, no relógio do áudio. */
