@@ -24,6 +24,16 @@ export function geometriaDaPista(largura: number, altura: number, teclas: number
   };
 }
 
+/**
+ * O índice da primeira nota que ainda pode aparecer, a partir de `desde`: pula só as que já saíram da tela.
+ * Como a música só anda para a frente, o desenho guarda esse cursor e não percorre as notas passadas a cada quadro.
+ */
+export function primeiraVisivel(notas: ArrayLike<number>, agoraMs: number, margemMs: number, desde: number) {
+  let i = desde;
+  while (i < notas.length / 3 && Math.max(notas[i * 3 + 1], notas[i * 3 + 2]) < agoraMs - margemMs) i++;
+  return i;
+}
+
 /** Altura da nota na tela. `rolagemMs` é quanto tempo a nota leva do topo até a linha de julgamento. */
 export const yDaNota = (tempoMs: number, agoraMs: number, rolagemMs: number, yDoJulgamento: number) =>
   yDoJulgamento - ((tempoMs - agoraMs) / rolagemMs) * yDoJulgamento;
@@ -32,9 +42,9 @@ export const yDaNota = (tempoMs: number, agoraMs: number, rolagemMs: number, yDo
  * Índices das notas que aparecem agora: as que ainda não passaram do fundo e já entraram pelo topo.
  * `notas` vem do motor em trios [coluna, tempo, fim (-1 se é simples)]; `margemMs` cobre o pedaço abaixo da linha.
  */
-export function notasVisiveis(notas: ArrayLike<number>, agoraMs: number, rolagemMs: number, margemMs: number): number[] {
+export function notasVisiveis(notas: ArrayLike<number>, agoraMs: number, rolagemMs: number, margemMs: number, desde = 0): number[] {
   const visiveis: number[] = [];
-  for (let i = 0; i < notas.length / 3; i++) {
+  for (let i = desde; i < notas.length / 3; i++) {
     const tempo = notas[i * 3 + 1];
     const fim = notas[i * 3 + 2];
     if (tempo > agoraMs + rolagemMs) break;

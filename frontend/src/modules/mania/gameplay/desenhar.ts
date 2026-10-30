@@ -1,6 +1,6 @@
 import { comAlfa } from "@/shared/styles/tokens";
 import { CORES_DA_PISTA, CORES_DOS_JULGAMENTOS, coresDasColunas } from "../tema";
-import { notasVisiveis, yDaNota, type GeometriaDaPista } from "./pista";
+import { primeiraVisivel, yDaNota, type GeometriaDaPista } from "./pista";
 
 /** Estado de cada nota para o desenho, montado a partir dos eventos do motor. */
 export const ESPERANDO = 0;
@@ -40,22 +40,82 @@ export interface QuadroDaPista {
   julgamento?: { codigo: number; emMs: number };
   combo: number;
   vida: number;
+  /** Pixels do aparelho por pixel da pista (o devicePixelRatio): o sprite da nota nasce nessa resolução. */
+  escala?: number;
+  /** O cursor das notas que ainda aparecem: o desenho anda com ele em vez de percorrer a música toda. */
+  primeira?: number;
+}
+
+/** Brilho da nota, desenhado uma vez no sprite: `shadowBlur` a cada nota pesa demais no celular. */
+const BRILHO = 8;
+
+interface Recursos {
+  cores: string[];
+  luzes: (CanvasGradient | null)[];
+  notas: (CanvasImageSource | null)[];
+  fonteDoCombo: string;
+  fonteDoJulgamento: string;
+}
+
+/** O que só depende do tamanho da pista, guardado por geometria: a tela troca de geometria só ao redimensionar. */
+const recursosPorGeometria = new WeakMap<GeometriaDaPista, Recursos>();
+
+function recursos(g: GeometriaDaPista): Recursos {
+  let r = recursosPorGeometria.get(g);
+  if (!r) {
+    r = {
+      cores: coresDasColunas(g.teclas),
+      luzes: Array(g.teclas).fill(null),
+      notas: Array(g.teclas).fill(null),
+      fonteDoCombo: `${Math.round(g.larguraDaColuna * 0.55)}px "Bebas Neue", sans-serif`,
+      fonteDoJulgamento: `${Math.round(g.larguraDaColuna * 0.5)}px "Bebas Neue", sans-serif`,
+    };
+    recursosPorGeometria.set(g, r);
+  }
+  return r;
+}
+
+function luzDaColuna(c: CanvasRenderingContext2D, g: GeometriaDaPista, r: Recursos, coluna: number) {
+  let luz = r.luzes[coluna];
+  if (!luz) {
+    luz = c.createLinearGradient(0, g.yDoJulgamento, 0, g.yDoJulgamento - g.altura * 0.4);
+    luz.addColorStop(0, comAlfa(r.cores[coluna], 0.28));
+    luz.addColorStop(1, comAlfa(r.cores[coluna], 0));
+    r.luzes[coluna] = luz;
+  }
+  return luz;
+}
+
+/** A nota com o brilho em volta, num canvas fora da tela. `null` onde não há canvas 2D (testes). */
+function spriteDaNota(r: Recursos, coluna: number, largura: number, altura: number, escala: number): CanvasImageSource | null {
+  const guardado = r.notas[coluna];
+  if (guardado !== null) return guardado;
+  const sprite = typeof document === "undefined" ? null : document.createElement("canvas");
+  const c = sprite?.getContext("2d");
+  if (!sprite || !c) return null;
+  sprite.width = Math.ceil((largura + BRILHO * 4) * escala);
+  sprite.height = Math.ceil((altura + BRILHO * 4) * escala);
+  c.scale(escala, escala);
+  c.shadowColor = r.cores[coluna];
+  c.shadowBlur = BRILHO * escala;
+  c.fillStyle = r.cores[coluna];
+  c.fillRect(BRILHO * 2, BRILHO * 2, largura, altura);
+  r.notas[coluna] = sprite;
+  return sprite;
 }
 
 export function desenharPista(c: CanvasRenderingContext2D, g: GeometriaDaPista, q: QuadroDaPista) {
   const { x, larguraDaColuna: largura, teclas, yDoJulgamento, altura } = g;
   const larguraDaPista = largura * teclas;
-  const corDas = coresDasColunas(teclas);
+  const r = recursos(g);
+  const corDas = r.cores;
   c.clearRect(0, 0, c.canvas.width, c.canvas.height);
 
   for (let coluna = 0; coluna < teclas; coluna++) {
     c.fillStyle = coluna % 2 ? CORES_DA_PISTA.colunaAlternada : CORES_DA_PISTA.fundo;
     c.fillRect(x + coluna * largura, 0, largura, altura);
     if (q.apertadas[coluna]) {
-      const luz = c.createLinearGradient(0, yDoJulgamento, 0, yDoJulgamento - altura * 0.4);
-      luz.addColorStop(0, comAlfa(corDas[coluna], 0.28));
-      luz.addColorStop(1, comAlfa(corDas[coluna], 0));
-      c.fillStyle = luz;
+      c.fillStyle = luzDaColuna(c, g, r, coluna);
       c.fillRect(x + coluna * largura, 0, largura, yDoJulgamento);
     }
   }
@@ -64,11 +124,14 @@ export function desenharPista(c: CanvasRenderingContext2D, g: GeometriaDaPista, 
 
   const altaDaNota = Math.max(10, Math.round(largura * 0.28));
   const margemMs = (q.rolagemMs * (altura - yDoJulgamento)) / yDoJulgamento;
-  for (const i of notasVisiveis(q.notas, q.agoraMs, q.rolagemMs, margemMs)) {
-    if (q.estados[i] === TERMINADA) continue;
+  q.primeira = primeiraVisivel(q.notas, q.agoraMs, margemMs, q.primeira ?? 0);
+  const total = q.notas.length / 3;
+  for (let i = q.primeira; i < total; i++) {
     const coluna = q.notas[i * 3];
     const tempo = q.notas[i * 3 + 1];
     const fim = q.notas[i * 3 + 2];
+    if (tempo > q.agoraMs + q.rolagemMs) break;
+    if (q.estados[i] === TERMINADA || Math.max(tempo, fim) < q.agoraMs - margemMs) continue;
     const xDaNota = x + coluna * largura + 2;
     const cor = corDas[coluna];
     // A nota segurada fica presa na linha de julgamento até a ponta.
@@ -78,11 +141,15 @@ export function desenharPista(c: CanvasRenderingContext2D, g: GeometriaDaPista, 
       c.fillStyle = comAlfa(cor, q.estados[i] === SEGURANDO ? 0.75 : 0.45);
       c.fillRect(xDaNota + largura * 0.15, yPonta, largura * 0.7 - 4, yCabeca - yPonta);
     }
-    c.shadowColor = cor;
-    c.shadowBlur = 8;
-    c.fillStyle = cor;
-    c.fillRect(xDaNota, yCabeca - altaDaNota, largura - 4, altaDaNota);
-    c.shadowBlur = 0;
+    const sprite = spriteDaNota(r, coluna, largura - 4, altaDaNota, q.escala ?? 1);
+    if (sprite) c.drawImage(sprite, xDaNota - BRILHO * 2, yCabeca - altaDaNota - BRILHO * 2, largura - 4 + BRILHO * 4, altaDaNota + BRILHO * 4);
+    else {
+      c.shadowColor = cor;
+      c.shadowBlur = BRILHO;
+      c.fillStyle = cor;
+      c.fillRect(xDaNota, yCabeca - altaDaNota, largura - 4, altaDaNota);
+      c.shadowBlur = 0;
+    }
   }
 
   for (let coluna = 0; coluna < teclas; coluna++) {
@@ -103,14 +170,14 @@ export function desenharPista(c: CanvasRenderingContext2D, g: GeometriaDaPista, 
   c.textAlign = "center";
   if (q.combo > 0) {
     c.fillStyle = comAlfa(CORES_DA_PISTA.linhaDeJulgamento, 0.85);
-    c.font = `${Math.round(largura * 0.55)}px "Bebas Neue", sans-serif`;
+    c.font = r.fonteDoCombo;
     c.fillText(String(q.combo), centro, altura * 0.38);
   }
   const passado = q.julgamento ? q.agoraMs - q.julgamento.emMs : Infinity;
   if (q.julgamento && passado < DURACAO_DO_JULGAMENTO_MS) {
     c.globalAlpha = 1 - passado / DURACAO_DO_JULGAMENTO_MS;
     c.fillStyle = CORES_DOS_JULGAMENTOS[q.julgamento.codigo];
-    c.font = `${Math.round(largura * 0.5)}px "Bebas Neue", sans-serif`;
+    c.font = r.fonteDoJulgamento;
     c.fillText(NOMES_DOS_JULGAMENTOS[q.julgamento.codigo], centro, altura * 0.5);
     c.globalAlpha = 1;
   }

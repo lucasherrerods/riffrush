@@ -163,6 +163,21 @@ export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoP
   if (ator) cena.add(ator.raiz);
   const camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.1, 60);
 
+  // Reaproveitados a cada quadro, para não deixar lixo para o coletor no meio da música.
+  const tamanho = new THREE.Vector2();
+  const tom = new THREE.Color();
+  const alvo = new THREE.Vector3();
+  // O tamanho vem do ResizeObserver: ler clientWidth no loop força um layout por quadro.
+  const medida = { largura: canvas.clientWidth, altura: canvas.clientHeight };
+  const observador =
+    typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(([entrada]) => {
+          medida.largura = entrada.contentRect.width;
+          medida.altura = entrada.contentRect.height;
+        });
+  observador?.observe(canvas);
+
   let quadro = 0;
   let ultimoQuadro = 0;
   const desenhar = (agora: number) => {
@@ -172,31 +187,33 @@ export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoP
     ultimoQuadro = agora;
 
     const estado = lerEstado();
-    const largura = canvas.clientWidth;
-    const altura = canvas.clientHeight;
+    const largura = observador ? Math.round(medida.largura) : canvas.clientWidth;
+    const altura = observador ? Math.round(medida.altura) : canvas.clientHeight;
     if (!largura || !altura) return;
-    const tamanho = renderizador.getSize(new THREE.Vector2());
+    renderizador.getSize(tamanho);
     if (tamanho.x !== largura || tamanho.y !== altura) renderizador.setSize(largura, altura, false);
 
     ator?.atualizar(estado);
     ator?.animar(agora, dt);
 
     const plano = planoDaCamera(estado.tempo, estado.entrada, ator?.altura() ?? 1.6);
-    camera.aspect = largura / altura;
     camera.position.set(...plano.posicao);
     camera.lookAt(...plano.alvo);
-    camera.updateProjectionMatrix();
+    if (camera.aspect !== largura / altura) {
+      camera.aspect = largura / altura;
+      camera.updateProjectionMatrix();
+    }
 
     const luzes = luzesDoPalco({ tempo: estado.tempo, bpm: estado.bpm, desdeTrovao: estado.desdeTrovao, estrelaAtiva: estado.estrelaAtiva });
     holofotes.forEach((holofote, i) => {
       const cor = luzes.cor === "estrela" ? corDaEstrela : holofote.cor;
-      const tom = cor.clone().lerp(branco, luzes.clarao);
+      tom.copy(cor).lerp(branco, luzes.clarao);
       holofote.luz.color.copy(tom);
       holofote.material.color.copy(tom);
       holofote.luz.intensity = (40 + 120 * luzes.clarao) * luzes.intensidade * luzes.foco;
       holofote.material.opacity = (0.05 + 0.12 * luzes.clarao) * luzes.intensidade * luzes.foco + 0.02;
       // Os holofotes varrem o palco, cada um no seu ritmo.
-      const alvo = new THREE.Vector3(Math.sin(estado.tempo * 0.7 + i * 1.7) * 1.8, 0, Math.cos(estado.tempo * 0.5 + i) * 0.8);
+      alvo.set(Math.sin(estado.tempo * 0.7 + i * 1.7) * 1.8, 0, Math.cos(estado.tempo * 0.5 + i) * 0.8);
       holofote.luz.target.position.copy(alvo);
       holofote.feixe.lookAt(alvo);
     });
@@ -211,6 +228,7 @@ export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoP
   return {
     descartar() {
       cancelAnimationFrame(quadro);
+      observador?.disconnect();
       ator?.descartar();
       cena.traverse((objeto) => {
         if (objeto instanceof THREE.Mesh) {

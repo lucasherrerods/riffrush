@@ -10,6 +10,11 @@ interface Avatar {
   camera: THREE.PerspectiveCamera;
   ator: Ator;
   enquadrado: boolean;
+  /** Pego uma vez: pedir o contexto todo quadro custa à toa. */
+  contexto: CanvasRenderingContext2D | null;
+  /** O tamanho na tela, do ResizeObserver: ler clientWidth no loop força um layout. */
+  medida: { largura: number; altura: number };
+  observador: ResizeObserver | null;
 }
 
 /** 30 quadros por segundo bastam para o personagem e deixam a GPU para a pista. */
@@ -20,6 +25,7 @@ let renderizador: THREE.WebGLRenderer | undefined;
 const avatares = new Set<Avatar>();
 let quadro = 0;
 let ultimoQuadro = 0;
+const tamanhoDoBuffer = new THREE.Vector2();
 
 /** Corpo inteiro no quadro, olhando para o meio do personagem. */
 function enquadrar(camera: THREE.PerspectiveCamera, altura: number) {
@@ -43,28 +49,30 @@ function desenhar(agora: number) {
       avatar.enquadrado = true;
     }
     const proporcao = Math.min(window.devicePixelRatio || 1, 2);
-    const largura = Math.round(destino.clientWidth * proporcao);
-    const altura = Math.round(destino.clientHeight * proporcao);
+    const largura = Math.round((avatar.observador ? avatar.medida.largura : destino.clientWidth) * proporcao);
+    const altura = Math.round((avatar.observador ? avatar.medida.altura : destino.clientHeight) * proporcao);
     if (!largura || !altura) continue;
     if (destino.width !== largura || destino.height !== altura) {
       destino.width = largura;
       destino.height = altura;
     }
-    const tamanho = renderizador.getSize(new THREE.Vector2());
-    if (tamanho.x < largura || tamanho.y < altura) renderizador.setSize(Math.max(tamanho.x, largura), Math.max(tamanho.y, altura), false);
+    renderizador.getSize(tamanhoDoBuffer);
+    if (tamanhoDoBuffer.x < largura || tamanhoDoBuffer.y < altura) renderizador.setSize(Math.max(tamanhoDoBuffer.x, largura), Math.max(tamanhoDoBuffer.y, altura), false);
 
     ator.animar(agora, dt);
 
     // Todos os avatares usam o mesmo contexto WebGL: cada um é desenhado num canto do buffer e copiado para o seu canvas.
-    const alturaDoBuffer = renderizador.getSize(new THREE.Vector2()).y;
-    avatar.camera.aspect = largura / altura;
-    avatar.camera.updateProjectionMatrix();
+    const alturaDoBuffer = renderizador.getSize(tamanhoDoBuffer).y;
+    if (avatar.camera.aspect !== largura / altura) {
+      avatar.camera.aspect = largura / altura;
+      avatar.camera.updateProjectionMatrix();
+    }
     renderizador.setViewport(0, 0, largura, altura);
     renderizador.setScissor(0, 0, largura, altura);
     renderizador.setScissorTest(true);
     renderizador.clear();
     renderizador.render(avatar.cena, avatar.camera);
-    const contexto = destino.getContext("2d");
+    const contexto = (avatar.contexto ??= destino.getContext("2d"));
     if (!contexto) continue;
     contexto.clearRect(0, 0, largura, altura);
     contexto.drawImage(renderizador.domElement, 0, alturaDoBuffer - altura, largura, altura, 0, 0, largura, altura);
@@ -90,7 +98,16 @@ export function registrarAvatar(destino: HTMLCanvasElement, estado: EstadoDoAvat
   ator.raiz.rotation.y = -0.35;
   const cena = criarCena();
   cena.add(ator.raiz);
-  const avatar: Avatar = { destino, cena, camera: new THREE.PerspectiveCamera(CAMPO_DE_VISAO, 3 / 4, 0.1, 20), ator, enquadrado: false };
+  const medida = { largura: destino.clientWidth, altura: destino.clientHeight };
+  const observador =
+    typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(([entrada]) => {
+          medida.largura = entrada.contentRect.width;
+          medida.altura = entrada.contentRect.height;
+        });
+  observador?.observe(destino);
+  const avatar: Avatar = { destino, cena, camera: new THREE.PerspectiveCamera(CAMPO_DE_VISAO, 3 / 4, 0.1, 20), ator, enquadrado: false, contexto: null, medida, observador };
   avatares.add(avatar);
   if (!quadro) quadro = requestAnimationFrame(desenhar);
 
@@ -98,6 +115,7 @@ export function registrarAvatar(destino: HTMLCanvasElement, estado: EstadoDoAvat
     atualizar: (novo: EstadoDoAvatar) => ator.atualizar(novo),
     remover() {
       avatares.delete(avatar);
+      observador?.disconnect();
       ator.descartar();
       if (!avatares.size) {
         cancelAnimationFrame(quadro);
