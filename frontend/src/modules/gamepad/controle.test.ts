@@ -146,4 +146,67 @@ describe("iniciarControle", () => {
     parar();
     ouvinte.parar();
   });
+
+  describe("nos menus", () => {
+    const apertarA = (botoes: { pressed: boolean }[]) => {
+      botoes[BOTOES.A].pressed = true;
+      proximoQuadro();
+      botoes[BOTOES.A].pressed = false;
+      proximoQuadro();
+    };
+
+    function botaoEmFoco() {
+      const botao = document.createElement("button");
+      const clique = vi.fn();
+      botao.addEventListener("click", clique);
+      document.body.append(botao);
+      botao.focus();
+      return { botao, clique };
+    }
+    afterEach(() => document.body.replaceChildren());
+
+    it("o A aperta o botão em foco", () => {
+      const { botoes } = controleFalso();
+      const { clique } = botaoEmFoco();
+      const parar = iniciarControle({ modo: () => "menu", mapa: () => MAPA });
+      apertarA(botoes);
+      expect(clique).toHaveBeenCalledOnce();
+      parar();
+    });
+
+    it("a tecla nasce no elemento em foco, para abas e listas a ouvirem", () => {
+      const { botoes } = controleFalso();
+      const { botao } = botaoEmFoco();
+      const noBotao = vi.fn();
+      botao.addEventListener("keydown", noBotao);
+      const ouvinte = ouvirTeclas();
+      const parar = iniciarControle({ modo: () => "menu", mapa: () => MAPA });
+      apertarA(botoes);
+      expect(noBotao).toHaveBeenCalledOnce();
+      expect(ouvinte.teclas).toContain("keydown:Enter");
+      parar();
+      ouvinte.parar();
+    });
+
+    it("se a tela já tratou o Enter, o A não aperta também o botão em foco", () => {
+      const { botoes } = controleFalso();
+      const { clique } = botaoEmFoco();
+      const tratar = (e: KeyboardEvent) => e.preventDefault();
+      window.addEventListener("keydown", tratar);
+      const parar = iniciarControle({ modo: () => "menu", mapa: () => MAPA });
+      apertarA(botoes);
+      expect(clique).not.toHaveBeenCalled();
+      parar();
+      window.removeEventListener("keydown", tratar);
+    });
+
+    it("no jogo o A não aperta botão nenhum", () => {
+      const { botoes } = controleFalso();
+      const { clique } = botaoEmFoco();
+      const parar = iniciarControle({ modo: () => "jogo", mapa: () => MAPA });
+      apertarA(botoes);
+      expect(clique).not.toHaveBeenCalled();
+      parar();
+    });
+  });
 });
