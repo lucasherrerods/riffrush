@@ -24,12 +24,14 @@ describe("opcoesPeloNumeroDeJogadores", () => {
     const duas = opcoesPeloNumeroDeJogadores(opcoes, 2);
     expect(duas.personagem).toBe(false);
     expect(duas.efeitos).toBe(true);
+    expect(duas.soEfeitosLeves).toBeFalsy();
     expect(duas.escalaDeRenderizacao).toBe(1);
   });
 
-  it("com três ou mais, desliga os efeitos e baixa a resolução da pista", () => {
+  it("com três ou mais, fica só com os efeitos leves (raio e pulo) e baixa a resolução da pista", () => {
     const quatro = opcoesPeloNumeroDeJogadores(opcoes, 4);
-    expect(quatro.efeitos).toBe(false);
+    expect(quatro.efeitos).toBe(true);
+    expect(quatro.soEfeitosLeves).toBe(true);
     expect(quatro.escalaDeRenderizacao).toBeLessThan(1);
   });
 

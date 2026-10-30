@@ -54,6 +54,8 @@ export interface OpcoesDaPartida {
   /** Fração da resolução nativa em que a pista é desenhada. */
   escalaDeRenderizacao: number;
   modoCompetitivo: boolean;
+  /** Na tela dividida com muitas pistas: só o raio e o pulo, sem brilhos nem explosões. */
+  soEfeitosLeves?: boolean;
   /** No desktop, segura as teclas Windows, Alt e Alt+Tab e os atalhos do navegador enquanto se joga. */
   bloquearAtalhos: boolean;
 }

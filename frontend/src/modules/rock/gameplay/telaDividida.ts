@@ -9,7 +9,7 @@ export interface Viewport {
 /** As pistas são altas e estreitas: lado a lado aproveitam a tela melhor que empilhadas. */
 export const viewportsDaTela = (jogadores: number): Viewport[] => Array.from({ length: jogadores }, (_, i) => ({ esquerda: i / jogadores, largura: 1 / jogadores }));
 
-/** A partir de três pistas os efeitos saem e a pista desenha em resolução menor, para manter os quadros. */
+/** A partir de três pistas ficam só os efeitos leves (raio e pulo) e a pista desenha em resolução menor, para manter os quadros. */
 const JOGADORES_PARA_ECONOMIZAR = 3;
 const ESCALA_COM_MUITOS_JOGADORES = 0.75;
 
@@ -20,7 +20,7 @@ export function opcoesPeloNumeroDeJogadores(opcoes: OpcoesDaPartida, jogadores: 
   return {
     ...opcoes,
     personagem: false,
-    efeitos: opcoes.efeitos && !economizar,
+    soEfeitosLeves: economizar,
     escalaDeRenderizacao: economizar ? Math.min(opcoes.escalaDeRenderizacao, ESCALA_COM_MUITOS_JOGADORES) : opcoes.escalaDeRenderizacao,
   };
 }

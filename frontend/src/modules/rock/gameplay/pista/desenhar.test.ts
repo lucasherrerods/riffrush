@@ -31,9 +31,9 @@ function cena(notas: Nota[], extra: Partial<Cena> = {}): Cena {
   };
 }
 
-function desenhar(c: Cena, tempo = 0, efeitos = true) {
+function desenhar(c: Cena, tempo = 0, efeitos = true, soLeves = false) {
   const canvas = criarCanvasFalso();
-  desenharPista(canvas.contexto, 1200, 800, tempo, 2, c, efeitos, sprites);
+  desenharPista(canvas.contexto, 1200, 800, tempo, 2, c, efeitos, sprites, soLeves);
   return canvas;
 }
 
@@ -183,5 +183,16 @@ describe("desenharPista", () => {
     expect(deslocamentos(tremendo, 1.05)).toBeGreaterThan(0);
     expect(deslocamentos(tremendo, 3)).toBe(0);
     expect(deslocamentos(tremendo, 1.05, false)).toBe(0);
+  });
+
+  it("só com os efeitos leves, o raio e o pulo continuam e as explosões saem", () => {
+    const tracos = (c: Cena, soLeves: boolean) => desenhar(c, 1.05, true, soLeves).chamadas.filter((ch) => ch.metodo === "stroke").length;
+    const comTrovao = cena([], { trovoes: [{ tempo: 1, forca: 2, semente: 9 }] });
+    expect(tracos(comTrovao, true)).toBeGreaterThan(tracos(cena([]), true));
+    const tremendo = cena([], { estrelaAtiva: true, estrelaDesde: 1 });
+    expect(desenhar(tremendo, 1.05, true, true).chamadas.some((ch) => ch.metodo === "translate")).toBe(true);
+    const comExplosao = cena([], { explosoes: [{ pista: 0, tempo: 1 }] });
+    expect(tracos(comExplosao, true)).toBe(tracos(cena([]), true));
+    expect(tracos(comExplosao, false)).toBeGreaterThan(tracos(cena([]), false));
   });
 });

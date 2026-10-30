@@ -416,6 +416,7 @@ export function PistaDoJogador(props: Props) {
           },
           opcoes.efeitos,
           sprites,
+          opcoes.soEfeitosLeves,
         );
       }
 
