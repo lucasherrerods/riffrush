@@ -14,9 +14,32 @@ vi.mock("@/modules/presenca", async (original) => ({
     },
   },
 }));
-vi.mock("./loja", () => ({
-  listaDeAmigos: { estado: () => ({ listas: { amigos: [{ conta_id: "amiga" }] } }) },
-}));
+const lista = vi.hoisted(() => {
+  const ouvintes = new Set<() => void>();
+  const api = { aceitar: vi.fn(async () => undefined), desfazer: vi.fn(async () => undefined) };
+  const estado = { listas: { amigos: [{ conta_id: "amiga" }], recebidos: [] as { conta_id: string; nome: string; avatar: null }[] } };
+  return {
+    api,
+    estado,
+    /** Como se a busca periódica trouxesse estes pedidos. */
+    receber(recebidos: typeof estado.listas.recebidos) {
+      estado.listas = { ...estado.listas, recebidos };
+      for (const ouvinte of ouvintes) ouvinte();
+    },
+    listaDeAmigos: {
+      estado: () => estado,
+      inscrever: (ouvinte: () => void) => (ouvintes.add(ouvinte), () => ouvintes.delete(ouvinte)),
+      agir: (acao: (a: typeof api, token: string) => Promise<unknown>) => acao(api, "t"),
+    },
+  };
+});
+vi.mock("./loja", () => ({ listaDeAmigos: lista.listaDeAmigos }));
+vi.mock("@/shared/ui/avisos", () => ({ avisar: { success: vi.fn(), error: vi.fn() } }));
+
+beforeEach(() => {
+  lista.estado.listas = { amigos: [{ conta_id: "amiga" }], recebidos: [] };
+  vi.clearAllMocks();
+});
 
 const convite = (id: string, codigo = "ABCDE"): ConviteParaSala => ({ de: { id, nome: "AnaRock", avatar: null }, codigo });
 const chegar = (c: ConviteParaSala) => act(() => ouvir.ouvinte!(c));
@@ -44,5 +67,28 @@ describe("ConvitesDeAmigos", () => {
     expect(screen.getByText("FGHJK")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText("ABCDE")).not.toBeInTheDocument());
     await waitFor(() => expect(screen.queryByText("FGHJK")).not.toBeInTheDocument());
+  });
+
+  it("pedido de amizade novo aparece com aceitar e recusar", async () => {
+    render(<ConvitesDeAmigos aoEntrar={vi.fn()} />);
+    act(() => lista.receber([{ conta_id: "gabi", nome: "GabiStrings", avatar: null }]));
+    expect(screen.getByRole("alert")).toHaveTextContent("GabiStrings quer ser seu amigo");
+    await userEvent.click(screen.getByRole("button", { name: "Aceitar" }));
+    expect(lista.api.aceitar).toHaveBeenCalledWith("t", "gabi");
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  });
+
+  it("recusar o pedido desfaz a amizade pedida", async () => {
+    render(<ConvitesDeAmigos aoEntrar={vi.fn()} />);
+    act(() => lista.receber([{ conta_id: "gabi", nome: "GabiStrings", avatar: null }]));
+    await userEvent.click(screen.getByRole("button", { name: "Recusar" }));
+    expect(lista.api.desfazer).toHaveBeenCalledWith("t", "gabi");
+  });
+
+  it("pedidos que já esperavam quando o app abriu não viram aviso", () => {
+    lista.estado.listas = { amigos: [], recebidos: [{ conta_id: "velho", nome: "Antigo", avatar: null }] };
+    render(<ConvitesDeAmigos aoEntrar={vi.fn()} />);
+    act(() => lista.receber([{ conta_id: "velho", nome: "Antigo", avatar: null }]));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

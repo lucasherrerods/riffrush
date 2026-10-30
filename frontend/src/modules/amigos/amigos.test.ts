@@ -1,6 +1,6 @@
 import type { PessoaOnline } from "@/modules/presenca";
 import type { PessoaDaAmizade } from "./api";
-import { convitePodeSair, filtrarPorNome, separarPorPresenca, vistoHa } from "./amigos";
+import { convitePodeSair, filtrarPorNome, pedidosNovos, separarPorPresenca, vistoHa } from "./amigos";
 
 const amigo = (conta_id: string, nome: string, visto_em: string | null = null): PessoaDaAmizade => ({ conta_id, nome, avatar: null, nivel: 1, visto_em, desde: "2026-10-01T00:00:00Z" });
 const online = (id: string, estado: PessoaOnline["estado"] = { tipo: "menu" }): PessoaOnline => ({ id, nome: "?", avatar: null, estado });
@@ -49,5 +49,18 @@ describe("convitePodeSair", () => {
     expect(convitePodeSair("ABCDE", { tipo: "multiplayer" })).toBe(true);
     expect(convitePodeSair(undefined, { tipo: "menu" })).toBe(false);
     expect(convitePodeSair("ABCDE", { tipo: "tocando", musica: "m", titulo: "t", artista: "a", dificuldade: "facil", instrumento: "guitarra", transmitindo: false })).toBe(false);
+  });
+});
+
+describe("pedidosNovos", () => {
+  const de = (conta_id: string) => ({ conta_id }) as PessoaDaAmizade;
+
+  it("a primeira busca só marca o que já esperava, sem avisar", () => {
+    expect(pedidosNovos(null, [de("a")])).toEqual([]);
+  });
+
+  it("avisa só os pedidos que não estavam na busca anterior", () => {
+    expect(pedidosNovos([de("a")], [de("a"), de("b")]).map((p) => p.conta_id)).toEqual(["b"]);
+    expect(pedidosNovos([de("a"), de("b")], [de("b")])).toEqual([]);
   });
 });
