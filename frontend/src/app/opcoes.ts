@@ -24,6 +24,7 @@ export function opcoesDaPartida(c: Configuracoes, celular = ehTelaEstreita()): O
     qualidadeDoPalco: c.qualidadeDoPalco,
     escalaDeRenderizacao: c.escalaDeRenderizacao,
     modoCompetitivo: c.modoCompetitivo,
+    bloquearAtalhos: c.bloquearAtalhos,
   };
 }
 

@@ -46,6 +46,8 @@ export interface Configuracoes {
   permitirEspectadores: boolean;
   /** O chat global no canto do menu principal (precisa de conta). `null` enquanto a pessoa não leu as regras: nada liga sem ela aceitar. */
   chatGlobal: boolean | null;
+  /** No desktop, durante a partida, segura a tecla Windows, o Alt, o Alt+Tab e os atalhos do navegador. */
+  bloquearAtalhos: boolean;
 }
 
 export const CONFIGURACOES_PADRAO: Configuracoes = {
@@ -75,6 +77,7 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   mostrarOnline: null,
   permitirEspectadores: true,
   chatGlobal: null,
+  bloquearAtalhos: true,
 };
 
 const CHAVE = "riffrush.configuracoes";

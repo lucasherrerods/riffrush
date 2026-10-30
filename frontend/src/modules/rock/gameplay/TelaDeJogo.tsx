@@ -7,6 +7,7 @@ import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "
 import { cenaDaPartida } from "./cena";
 import { Palco, escalaDoCanvas, opacidadeDaPista, type EstadoDoPalco, type QualidadeDoPalco } from "@/modules/rock/stage";
 import { DIFICULDADES, INSTRUMENTOS, PISTA_ABERTA, carregarMusica, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada } from "@/modules/rock/songs";
+import { bloquearTeclasDoSistema, ehAtalhoDoNavegador } from "@/modules/platform";
 import { ehTelaEstreita, useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -62,6 +63,8 @@ export interface OpcoesDaPartida {
   /** Fração da resolução nativa em que a pista é desenhada. */
   escalaDeRenderizacao: number;
   modoCompetitivo: boolean;
+  /** No desktop, segura as teclas Windows, Alt e Alt+Tab e os atalhos do navegador enquanto se joga. */
+  bloquearAtalhos: boolean;
 }
 
 /** Ao vivo, as entradas vão em lotes: um por segundo poupa a cota do relay e chega bem antes de quem assiste precisar. */
@@ -87,6 +90,7 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   qualidadeDoPalco: "media",
   escalaDeRenderizacao: 1,
   modoCompetitivo: false,
+  bloquearAtalhos: true,
 };
 
 
@@ -245,6 +249,22 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     setUrlDoVideo(url);
     return () => URL.revokeObjectURL(url);
   }, [musica]);
+
+  // Na pausa e no replay o jogador pode querer sair da janela: o bloqueio vale só com a partida rodando.
+  const segurarTeclas = opcoes.bloquearAtalhos && carregada !== null && !replay && !pausado && !derrota;
+  useEffect(() => {
+    if (!segurarTeclas) return;
+    void bloquearTeclasDoSistema(true);
+    const aoApertar = (evento: KeyboardEvent) => ehAtalhoDoNavegador(evento) && evento.preventDefault();
+    const semMenu = (evento: Event) => evento.preventDefault();
+    window.addEventListener("keydown", aoApertar);
+    window.addEventListener("contextmenu", semMenu);
+    return () => {
+      void bloquearTeclasDoSistema(false);
+      window.removeEventListener("keydown", aoApertar);
+      window.removeEventListener("contextmenu", semMenu);
+    };
+  }, [segurarTeclas]);
 
   useEffect(() => {
     const aoRedimensionar = () => setTamanho({ largura: window.innerWidth, altura: window.innerHeight });
