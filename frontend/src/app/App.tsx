@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { IDENTIDADE_DO_MANIA, TelaDoMania } from "@/modules/mania";
 import { AlavancaDeModo } from "@/modules/menu";
 import { IDENTIDADE_DO_ROCK } from "@/modules/rock";
 import { definirTema } from "@/shared/styles/tema";
 import { TEMAS } from "@/shared/styles/tokens";
+import { TelaCarregando } from "@/shared/ui/TelaCarregando";
 import { AppDoRock } from "./AppDoRock";
 import { MANIA_LIGADO, trocarModo, useModo } from "./modo";
 
@@ -18,5 +19,11 @@ export function App({ maniaLigado = MANIA_LIGADO }: { maniaLigado?: boolean } = 
     document.title = identidade.nome;
   }, [identidade]);
   const alavanca = maniaLigado ? <AlavancaDeModo modo={modo} aoTrocar={trocarModo} /> : undefined;
-  return modo === "mania" ? <TelaDoMania alavanca={alavanca} /> : <AppDoRock alavanca={alavanca} />;
+  return modo === "mania" ? (
+    <Suspense fallback={<TelaCarregando />}>
+      <TelaDoMania alavanca={alavanca} />
+    </Suspense>
+  ) : (
+    <AppDoRock alavanca={alavanca} />
+  );
 }

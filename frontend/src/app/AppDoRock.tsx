@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { IndicadorDeVolume, definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/rock/character";
@@ -23,6 +23,7 @@ import { BotaoDeAmigos, ConvitesDeAmigos, PainelDeAmigos } from "@/modules/amigo
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
+import { TelaCarregando } from "@/shared/ui/TelaCarregando";
 import { mesmasOpcoes, opcoesDaPartida } from "./opcoes";
 
 type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "espectador" | "telaDividida" | "resultadoDividido";
@@ -428,6 +429,8 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
 
   return (
     <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
+      {/* As telas menos usadas chegam só quando abertas: a abertura do jogo baixa menos código. */}
+      <Suspense fallback={<TelaCarregando />}>
       {!(naPista && configuracoes.modoCompetitivo) && <Fundo tocando={naPista} />}
       {entrada && tela === "jogo" && (
         <EntradaDaPartida
@@ -753,6 +756,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
       <ProgressoDaImportacao progresso={progresso} />
       {contasLigadas && <ConvitesDeAmigos aoEntrar={entrarNaSalaDoAmigo} />}
       <Avisos />
+      </Suspense>
     </main>
   );
 }

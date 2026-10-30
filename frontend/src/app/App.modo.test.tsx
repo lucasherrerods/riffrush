@@ -9,11 +9,12 @@ vi.mock("./AppDoRock", () => ({ AppDoRock: ({ alavanca }: { alavanca?: React.Rea
 
 afterEach(() => act(() => trocarModo("rock")));
 
-it("monta o jogo do modo ativo", () => {
+it("monta o jogo do modo ativo", async () => {
   render(<App />);
   expect(screen.getByText("jogo do rock")).toBeInTheDocument();
   act(() => trocarModo("mania"));
-  expect(screen.getByRole("heading", { name: "Riff Rush Mania" })).toBeInTheDocument();
+  // O Mania é baixado só quando aparece.
+  expect(await screen.findByRole("heading", { name: "Riff Rush Mania" }, { timeout: 5000 })).toBeInTheDocument();
   act(() => trocarModo("rock"));
   expect(screen.getByText("jogo do rock")).toBeInTheDocument();
 });
@@ -31,7 +32,7 @@ it("troca o tema e o nome da janela junto com o modo", () => {
 it("com o Mania ligado, girar a alavanca troca o jogo inteiro e girar de novo volta", async () => {
   render(<App maniaLigado />);
   await userEvent.click(screen.getByRole("switch", { name: "Modo de jogo: Rock" }));
-  expect(screen.getByRole("heading", { name: "Riff Rush Mania" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Riff Rush Mania" }, { timeout: 5000 })).toBeInTheDocument();
   expect(lerTema()).toBe(TEMAS.mania);
   await userEvent.click(screen.getByRole("switch", { name: "Modo de jogo: Mania" }));
   expect(screen.getByText("jogo do rock")).toBeInTheDocument();
