@@ -54,7 +54,7 @@ function naSala(souHost: boolean, extra: Partial<EstadoDaSala> = {}): EstadoDaSa
   };
 }
 
-function abrir(conexao: sala.Conexao, musicas = MUSICAS_DE_TESTE) {
+function abrir(conexao: sala.Conexao, musicas = MUSICAS_DE_TESTE, aoConvidarAmigos?: () => void) {
   vi.mocked(sala.useConexao).mockReturnValue(conexao);
   const aoVoltar = vi.fn();
   const aoBuscarMusicas = vi.fn();
@@ -66,6 +66,7 @@ function abrir(conexao: sala.Conexao, musicas = MUSICAS_DE_TESTE) {
       aoVoltar={aoVoltar}
       aoEditarPersonagem={vi.fn()}
       aoBuscarMusicas={aoBuscarMusicas}
+      aoConvidarAmigos={aoConvidarAmigos}
     />,
   );
   return { aoVoltar, aoBuscarMusicas, usuario: userEvent.setup() };
@@ -315,5 +316,17 @@ describe("na sala", () => {
     const { usuario } = abrir({ sala: naSala(false), endereco: "" });
     await usuario.click(screen.getByRole("button", { name: /Sair da sala/ }));
     expect(sala.sairDaSala).toHaveBeenCalled();
+  });
+
+  it("na sala online, chama os amigos pelo botão do topo", async () => {
+    const aoConvidarAmigos = vi.fn();
+    const { usuario } = abrir({ sala: naSala(true), endereco: "", online: true, codigo: "K7QXM" }, MUSICAS_DE_TESTE, aoConvidarAmigos);
+    await usuario.click(screen.getByRole("button", { name: "Convidar amigos" }));
+    expect(aoConvidarAmigos).toHaveBeenCalled();
+  });
+
+  it("sem quem chamar (sala da LAN), o botão de convidar não aparece", () => {
+    abrir({ sala: naSala(true), endereco: "192.168.0.2" });
+    expect(screen.queryByRole("button", { name: "Convidar amigos" })).not.toBeInTheDocument();
   });
 });

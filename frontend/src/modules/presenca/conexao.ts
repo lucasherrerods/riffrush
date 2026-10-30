@@ -69,8 +69,11 @@ export class ConexaoDePresenca {
 
   /** Onde a pessoa está agora; vai de novo a cada reconexão. */
   definirEstado(onde: EstadoOnline) {
+    // A tela manda o estado a cada mudança da sala: só vale avisar o relay quando ele muda de fato.
+    const mensagem = JSON.stringify({ estado: onde });
+    if (mensagem === JSON.stringify({ estado: this.onde })) return;
     this.onde = onde;
-    this.socket.enviar(JSON.stringify({ estado: onde }));
+    this.socket.enviar(mensagem);
   }
 
   private mudar(estado: EstadoDaPresenca) {

@@ -1,7 +1,7 @@
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
-import { Check, Copy, Ellipsis, Search, Send, UserPlus, Users, X } from "lucide-react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Check, Copy, Ellipsis, Eye, Search, Send, UserPlus, Users, X } from "lucide-react";
 import { FotoDaConta } from "@/modules/conta";
-import { descreverEstado, usePresenca } from "@/modules/presenca";
+import { descreverEstado, podeAssistir, usePresenca, type PessoaOnline } from "@/modules/presenca";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu";
@@ -17,10 +17,21 @@ interface Props {
   /** O código da sala online em que a pessoa está: com ele, dá para chamar os amigos. */
   salaParaConvidar?: string;
   aoConvidar: (contaId: string, codigo: string) => void;
+  /** Abre a partida ao vivo do amigo, como na tela Online. */
+  aoAssistir?: (pessoa: PessoaOnline) => void;
 }
 
 export function useAmigos() {
   return useSyncExternalStore(listaDeAmigos.inscrever, listaDeAmigos.estado);
+}
+
+/** Os ids das contas amigas, para outras telas destacarem os amigos. Carrega a lista quando liga. */
+export function useIdsDosAmigos(ligado: boolean): ReadonlySet<string> {
+  const { listas } = useAmigos();
+  useEffect(() => {
+    if (ligado) void listaDeAmigos.recarregar();
+  }, [ligado]);
+  return useMemo(() => new Set(listas?.amigos.map((amigo) => amigo.conta_id)), [listas]);
 }
 
 /** Roda a ação na API e avisa o resultado; o erro vem com a mensagem da API. */
@@ -32,7 +43,7 @@ function agir(acao: (api: ApiDosAmigos, token: string) => Promise<unknown>, suce
 }
 
 /** A lista de amigos ao lado da tela: quem está online, pedidos e sugestões. */
-export function PainelDeAmigos({ aoFechar, salaParaConvidar, aoConvidar }: Props) {
+export function PainelDeAmigos({ aoFechar, salaParaConvidar, aoConvidar, aoAssistir }: Props) {
   const { listas, sugestoes } = useAmigos();
   const [aba, setAba] = useState("amigos");
   const [adicionando, setAdicionando] = useState(false);
@@ -68,7 +79,7 @@ export function PainelDeAmigos({ aoFechar, salaParaConvidar, aoConvidar }: Props
           <TabsTrigger value="sugestoes">Sugestões</TabsTrigger>
         </TabsList>
         <TabsContent value="amigos" className="flex min-h-0 flex-col gap-4">
-          {listas ? <AbaDeAmigos amigos={listas.amigos} salaParaConvidar={salaParaConvidar} aoConvidar={aoConvidar} /> : <Carregando />}
+          {listas ? <AbaDeAmigos amigos={listas.amigos} salaParaConvidar={salaParaConvidar} aoConvidar={aoConvidar} aoAssistir={aoAssistir} /> : <Carregando />}
         </TabsContent>
         <TabsContent value="solicitacoes" className="flex min-h-0 flex-col gap-4">
           {listas ? <AbaDePedidos recebidos={listas.recebidos} enviados={listas.enviados} bloqueados={listas.bloqueados} /> : <Carregando />}
@@ -98,7 +109,7 @@ export function Contador({ valor }: { valor: number }) {
 
 const Carregando = () => <p className="m-auto text-base text-texto-suave">Carregando...</p>;
 
-function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar }: { amigos: PessoaDaAmizade[] } & Pick<Props, "salaParaConvidar" | "aoConvidar">) {
+function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar, aoAssistir }: { amigos: PessoaDaAmizade[] } & Pick<Props, "salaParaConvidar" | "aoConvidar" | "aoAssistir">) {
   const presenca = usePresenca();
   const [busca, setBusca] = useState("");
   const [agora] = useState(() => new Date());
@@ -115,6 +126,16 @@ function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar }: { amigos: PessoaD
         <Secao titulo={`Online (${online.length})`} online>
           {online.map((amigo) => (
             <LinhaDeAmigo key={amigo.conta_id} pessoa={amigo} online detalhe={descreverEstado(amigo.estado)}>
+              {aoAssistir && podeAssistir(amigo.estado) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-label={`Assistir ${amigo.nome}`}
+                  onClick={() => aoAssistir({ id: amigo.conta_id, nome: amigo.nome, avatar: amigo.avatar, estado: amigo.estado })}
+                >
+                  <Eye className="opacity-70" /> Assistir
+                </Button>
+              )}
               {convitePodeSair(salaParaConvidar, amigo.estado) && (
                 <Button variant="outline" size="sm" onClick={() => convidar(amigo, salaParaConvidar!, aoConvidar)}>
                   Convidar

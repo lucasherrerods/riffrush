@@ -19,7 +19,7 @@ import { EscolhaDeDispositivos, ResultadoDaTelaDividida, eventoDoJogador, opcoes
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { PainelDeRanking, PlacarAoVivo, buscarMaisJogadaAleatoria, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
-import { BotaoDeAmigos, ConvitesDeAmigos, PainelDeAmigos } from "@/modules/amigos";
+import { BotaoDeAmigos, ConvitesDeAmigos, PainelDeAmigos, useIdsDosAmigos } from "@/modules/amigos";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -256,11 +256,21 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
         : tela === "selecao"
           ? { tipo: "selecao" }
           : tela === "multijogador"
-            ? { tipo: "multiplayer" }
+            ? {
+                tipo: "multiplayer",
+                ...(conexao.sala &&
+                  conexao.sala.status !== "conectando" && { sala: { jogadores: Math.max(1, conexao.sala.jogadores.length), online: !!conexao.online } }),
+              }
             : { tipo: "menu" },
     );
-  }, [tela, assistindo, musica, dificuldadeDaPartida, instrumentoDaPartida, transmitindo]);
+  }, [tela, assistindo, musica, dificuldadeDaPartida, instrumentoDaPartida, transmitindo, conexao]);
   const [amigosAbertos, setAmigosAbertos] = useState(false);
+  const idsDosAmigos = useIdsDosAmigos(contasLigadas && !!conta && tela === "online");
+  const assistir = useCallback((pessoa: PessoaOnline) => {
+    setAmigosAbertos(false);
+    setEspectando(pessoa);
+    setTela("espectador");
+  }, []);
   // Só dá para chamar amigos de uma sala online: a da LAN eles não alcançam.
   const salaParaConvidar = conexao.online && conexao.sala ? conexao.codigo : undefined;
   const entrarNaSalaDoAmigo = useCallback(
@@ -581,14 +591,12 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
               <TelaOnline
                 logado={!!conta}
                 euId={conta?.id ?? null}
+                amigos={idsDosAmigos}
                 presenca={estadoDaPresenca}
                 mostrarOnline={configuracoes.mostrarOnline}
                 permitirEspectadores={configuracoes.permitirEspectadores}
                 aoMudar={(preferencias) => mudarConfiguracoes({ ...configuracoes, ...preferencias })}
-                aoAssistir={(pessoa) => {
-                  setEspectando(pessoa);
-                  setTela("espectador");
-                }}
+                aoAssistir={assistir}
                 aoVoltar={() => setTela("menu")}
               />
             )}
@@ -663,6 +671,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                 musicas={musicas}
                 volumeDosEfeitos={configuracoes.volumeDosEfeitos}
                 sortearMusica={contasLigadas ? buscarMaisJogadaAleatoria : undefined}
+                aoConvidarAmigos={contasLigadas && salaParaConvidar ? () => setAmigosAbertos(true) : undefined}
                 aoVoltar={() => setTela("menu")}
                 aoEditarPersonagem={() => {
                   setVoltarDoPersonagemPara("multijogador");
@@ -746,7 +755,13 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
               transition={{ duration: 0.15 }}
               className="absolute inset-y-0 right-0 z-30 p-4 max-md:inset-x-0 max-md:p-2"
             >
-              <PainelDeAmigos aoFechar={() => setAmigosAbertos(false)} salaParaConvidar={salaParaConvidar} aoConvidar={(contaId, codigo) => presenca.convidar(contaId, codigo)} />
+              <PainelDeAmigos
+                aoFechar={() => setAmigosAbertos(false)}
+                salaParaConvidar={salaParaConvidar}
+                aoConvidar={(contaId, codigo) => presenca.convidar(contaId, codigo)}
+                // Dentro de uma sala, assistir tiraria a pessoa dela.
+                aoAssistir={conexao.sala ? undefined : assistir}
+              />
             </motion.div>
           )}
         </AnimatePresence>

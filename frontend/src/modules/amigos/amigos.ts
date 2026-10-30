@@ -19,12 +19,7 @@ export function separarPorPresenca(amigos: PessoaDaAmizade[], pessoas: PessoaOnl
   return { online: online.sort(porNome), offline: offline.sort((a, b) => vistoEm(b) - vistoEm(a) || porNome(a, b)) };
 }
 
-const semAcento = (texto: string) => texto.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
-
-export function filtrarPorNome<T extends { nome: string }>(lista: T[], busca: string): T[] {
-  const termo = semAcento(busca);
-  return termo ? lista.filter((p) => semAcento(p.nome).includes(termo)) : lista;
-}
+export { filtrarPorNome } from "@/shared/lib/busca";
 
 const MINUTO = 60_000;
 const HORA = 60 * MINUTO;
