@@ -20,7 +20,13 @@ export interface ManifestoDoAtor {
   nome: string;
   fps: number;
   alturaEmMetros: number;
-  cenas: Record<NomeDaCena, CenaDoAtor>;
+  /** Só "tocando" é obrigatória; as cenas que faltam usam ela. */
+  cenas: Partial<Record<NomeDaCena, CenaDoAtor>> & { tocando: CenaDoAtor };
+}
+
+export function dadosDaCena(cenas: ManifestoDoAtor["cenas"], cena: NomeDaCena) {
+  const dados = cenas[cena];
+  return dados ? { nome: cena, dados } : { nome: "tocando" as NomeDaCena, dados: cenas.tocando };
 }
 
 const CENA_DA_REACAO: Record<TipoDeReacao, NomeDaCena> = {
