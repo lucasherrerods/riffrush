@@ -1,8 +1,6 @@
 //! O Mania pela API inteira (com fakes), o adaptador do Postgres contra um banco de verdade (com `DATABASE_URL`)
 //! e o adaptador do osu! contra um servidor de mentira na própria máquina.
 
-mod comum;
-
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -262,7 +260,10 @@ async fn o_adaptador_do_osu_recusa_outro_modo_e_falha_sem_credenciais() {
 }
 
 async fn banco() -> Option<PgPool> {
-    comum::banco_migrado().await
+    let url = std::env::var("DATABASE_URL").ok()?;
+    let pool = PgPool::connect(&url).await.expect("o DATABASE_URL não conecta");
+    sqlx::migrate!("./migrations").run(&pool).await.expect("as migrações falharam");
+    Some(pool)
 }
 
 async fn nova_conta(pool: &PgPool, nome: &str) -> Uuid {
