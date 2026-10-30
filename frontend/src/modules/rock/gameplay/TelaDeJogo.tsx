@@ -22,7 +22,7 @@ import { progressoDasEstrelas } from "./estrelas";
 import { criarLojaDoHud, useLoja, type LojaDoHud } from "./lojaDoHud";
 import { NOMES_DAS_PISTAS } from "./cores";
 import { avancar, criarPartida, multiplicador, precisao, retirarEventos, type JeitoDeJogar, type Julgamento } from "./partida";
-import { aplicarEntradas, criarGravador, empacotarReplay, hashDoChart, type EventoDaTransmissao, type Replay } from "./replay";
+import { aplicarEntradas, criarGravador, empacotarReplay, hashDoChart, partidaNoInstante, type EventoDaTransmissao, type Replay } from "./replay";
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { forcaDoTrovao } from "./pista/efeitos";
 import { criarContadorDeFps, type LeituraDeFps } from "./fps";
@@ -147,6 +147,10 @@ const MAXIMO_DE_EXPLOSOES = 20;
 const ALTURA_DA_FAIXA_ABERTA = 64;
 const MAXIMO_DE_TROVOES = 4;
 const SINCRONIA_DO_VIDEO = 0.15;
+/** Pular para o fim exato terminaria o replay na hora: a barra para um pouco antes. */
+const FOLGA_DO_FIM = 0.5;
+/** Quantos segundos cada seta pula no replay. */
+const SALTO_DAS_SETAS: Record<string, number> = { ArrowLeft: -5, ArrowRight: 5 };
 const INTERVALO_DO_ENVIO_MS = 125;
 const nada = () => {};
 /** Em telas mais estreitas os painéis encostam na pista em vez de sair da tela. */
@@ -161,9 +165,10 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   recordeAtual.current = recorde;
   const canvas = useRef<HTMLCanvasElement>(null);
   const video = useRef<HTMLVideoElement>(null);
-  const controles = useRef<{ pausar: () => void; continuar: () => void; desistir: () => void; apertar: (pista: number, evento: Event) => void; largar: (pista: number) => void; estrela: () => void }>({
+  const controles = useRef<{ pausar: () => void; continuar: () => void; desistir: () => void; apertar: (pista: number, evento: Event) => void; largar: (pista: number) => void; estrela: () => void; irPara: (fracao: number) => void }>({
     pausar: nada,
     continuar: nada,
+    irPara: nada,
     desistir: nada,
     apertar: nada,
     largar: nada,
@@ -250,22 +255,27 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     const ganho = audio.createGain();
     ganho.gain.value = opcoes.volumeDaMusica;
     ganho.connect(saidaDeAudio());
-    const fonte = audio.createBufferSource();
-    fonte.buffer = carregada.audio;
-    // A partida roda no tempo real: só o áudio (e o vídeo) toca na velocidade escolhida.
-    fonte.playbackRate.value = velocidade;
-    fonte.connect(ganho);
+    const criarFonte = () => {
+      const nova = audio.createBufferSource();
+      nova.buffer = carregada.audio;
+      // A partida roda no tempo real: só o áudio (e o vídeo) toca na velocidade escolhida.
+      nova.playbackRate.value = velocidade;
+      nova.connect(ganho);
+      return nova;
+    };
+    let fonte = criarFonte();
     // Em rede a música começa no instante combinado; quem carregou atrasado entra no meio.
     const agora = audio.currentTime;
-    const inicio = inicioEmRede === undefined ? agora + ENTRADA : agora + (inicioEmRede - performance.now()) / 1000;
+    let inicio = inicioEmRede === undefined ? agora + ENTRADA : agora + (inicioEmRede - performance.now()) / 1000;
     if (inicio > agora + 0.05) fonte.start(inicio);
     else fonte.start(agora + 0.05, (agora + 0.05 - inicio) * velocidade);
     const duracao = noTempoReal(carregada.duracao, velocidade);
     const batidas = carregada.batidas.map((b) => ({ ...b, tempo: noTempoReal(b.tempo, velocidade) }));
 
     // Em rede ninguém sai da música: quem zera a vida vira fantasma e segue pontuando.
-    const partida = replay
-      ? criarPartida(carregada.notas, { semFalha: replay.semFalha, fantasma: replay.fantasma, semAberta: replay.semAberta, velocidade, jeito: replay.jeito, puneToqueEmVazio: replay.puneToqueEmVazio })
+    const opcoesDoReplay = replay && { semFalha: replay.semFalha, fantasma: replay.fantasma, semAberta: replay.semAberta, velocidade, jeito: replay.jeito, puneToqueEmVazio: replay.puneToqueEmVazio };
+    let partida = opcoesDoReplay
+      ? criarPartida(carregada.notas, opcoesDoReplay)
       : criarPartida(carregada.notas, { semFalha: opcoes.semFalha, fantasma: inicioEmRede !== undefined, semAberta: opcoes.semAberta, velocidade, jeito: opcoes.jeitoDeJogar });
     const bot = opcoes.bot && !replay ? criarBot() : null;
     const gravador = criarGravador(partida);
@@ -454,7 +464,31 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       aoTerminar(resultadoDaPartida(partida, musica.id, dificuldade, instrumento));
     };
     const estrela = () => !replay && gravador.ativarEstrela();
-    Object.assign(controles.current, { pausar, continuar, desistir, estrela });
+    /** Só no replay gravado: refaz a partida no instante escolhido e recomeça o áudio dali, pausado ou não. */
+    const irPara = (fracao: number) => irParaOTempo(fracao * duracao);
+    const irParaOTempo = (tempo: number) => {
+      if (!replay || !opcoesDoReplay || replay.ateAgora !== undefined || terminou) return;
+      const alvo = Math.max(0, Math.min(tempo, duracao - FOLGA_DO_FIM));
+      const refeita = partidaNoInstante(carregada.notas, opcoesDoReplay, replay.entradas, alvo);
+      partida.motor.free();
+      partida = refeita.partida;
+      proximaEntrada = refeita.proximaEntrada;
+      refeita.apertados.forEach((apertado, i) => (apertados[i] = apertado));
+      explosoes.length = falhas.length = trovoes.length = 0;
+      julgamento = null;
+      estrelaDesde = partida.estrelaAtiva ? alvo : null;
+      try {
+        fonte.stop();
+      } catch {
+        // Ainda não tinha começado.
+      }
+      fonte = criarFonte();
+      const quando = audio.currentTime + 0.05;
+      fonte.start(quando, alvo * velocidade);
+      inicio = quando - alvo;
+      if (video.current) video.current.currentTime = alvo * velocidade;
+    };
+    Object.assign(controles.current, { pausar, continuar, desistir, estrela, irPara });
 
     /** Teclado e toque apertam do mesmo jeito: o instante vem do próprio evento. */
     const apertar = (pista: number, evento: Event) => {
@@ -487,6 +521,12 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         if (retomada) pausar();
         else if (pausadoAgora || (inicioEmRede !== undefined && pausadoNaTela.current)) continuar();
         else pausar();
+        return;
+      }
+      // No replay as setas pulam na música, pausado ou não.
+      if (replay && SALTO_DAS_SETAS[evento.code]) {
+        evento.preventDefault();
+        irParaOTempo(tempoDaMusica(agoraNoAudio(audio)) + SALTO_DAS_SETAS[evento.code]);
         return;
       }
       if (pausadoAgora || terminou) return;
@@ -716,7 +756,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
                 {opcoes.mostrarFps && <span className="ml-2 font-mono tabular-nums">{fps ? Math.round(fps.fps) : "–"} FPS{fps && ` · ${Math.round(fps.piorQuadroMs)} ms`}</span>}
               </p>
             </div>
-            <ProgressoDaMusica loja={loja} />
+            <ProgressoDaMusica loja={loja} aoIrPara={replay && replay.ateAgora === undefined ? (fracao) => controles.current.irPara(fracao) : undefined} />
             {espectadores > 0 && (
               <span
                 role="status"
@@ -864,11 +904,28 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   );
 }
 
-function ProgressoDaMusica({ loja }: { loja: LojaDoHud<Hud> }) {
+/** No replay gravado a barra também é um controle: clicar ou arrastar leva a partida para aquele ponto. */
+function ProgressoDaMusica({ loja, aoIrPara }: { loja: LojaDoHud<Hud>; aoIrPara?: (fracao: number) => void }) {
   const { progresso } = useLoja(loja);
   return (
-    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-superficie-elevada" aria-label="Progresso da música">
-      <div className="h-full bg-primaria" style={{ width: `${progresso * 100}%` }} />
+    <div className={cn("relative flex-1", aoIrPara && "py-2")}>
+      <div className="h-1.5 overflow-hidden rounded-full bg-superficie-elevada" aria-label="Progresso da música">
+        <div className="h-full bg-primaria" style={{ width: `${progresso * 100}%` }} />
+      </div>
+      {aoIrPara && (
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.001}
+          value={progresso}
+          onChange={(e) => aoIrPara(Number(e.target.value))}
+          // As teclas são do jogo (o Esc pausa): a barra não fica com o foco depois do clique.
+          onPointerUp={(e) => e.currentTarget.blur()}
+          aria-label="Posição da música"
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        />
+      )}
     </div>
   );
 }
