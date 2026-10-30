@@ -122,6 +122,10 @@ interface Props {
   aoAtualizarRede?: (estado: EstadoDoJogador) => void;
   transmissao?: (evento: EventoDaTransmissao) => void;
   aoFim: (fim: FimDoJogador) => void;
+  /** Na tela dividida, a pista só ouve as teclas do próprio jogador. Sem ele, ouve todas. */
+  aceitaEvento?: (evento: Event) => boolean;
+  /** As faixas de piano embaixo dos trastes, no celular. Sem ele, seguem `estreita`. */
+  comFaixasDeToque?: boolean;
 }
 
 /** A pista e o HUD de um jogador, com a própria partida. O áudio e o relógio vêm de fora, da tela. */
@@ -323,7 +327,7 @@ export function PistaDoJogador(props: Props) {
 
     // O Esc e as setas do replay são da tela; aqui ficam só as teclas que tocam.
     const aoApertar = (evento: KeyboardEvent) => {
-      if (evento.code === "Escape" || relogio.pausado() || terminou) return;
+      if (evento.code === "Escape" || relogio.pausado() || terminou || atuais.current.aceitaEvento?.(evento) === false) return;
       const pista = opcoes.teclas.indexOf(evento.code);
       if (ehPalheta(evento)) {
         evento.preventDefault();
@@ -337,6 +341,7 @@ export function PistaDoJogador(props: Props) {
       }
     };
     const aoSoltar = (evento: KeyboardEvent) => {
+      if (atuais.current.aceitaEvento?.(evento) === false) return;
       const pista = opcoes.teclas.indexOf(evento.code);
       if (pista >= 0) largar(pista);
     };
@@ -411,6 +416,7 @@ export function PistaDoJogador(props: Props) {
           },
           opcoes.efeitos,
           sprites,
+          opcoes.soEfeitosLeves,
         );
       }
 
@@ -500,7 +506,7 @@ export function PistaDoJogador(props: Props) {
       </div>
 
       {/* No celular, faixas como teclas de piano marcam, logo abaixo dos trastes, onde o dedo pode tocar. */}
-      {estreita && (
+      {(props.comFaixasDeToque ?? estreita) && (
         <div
           aria-hidden
           className="pointer-events-none absolute inset-x-0 flex border-t border-texto/40"

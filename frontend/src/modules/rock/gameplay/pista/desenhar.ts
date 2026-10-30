@@ -90,7 +90,11 @@ export function desenharPista(
   cena: Cena,
   efeitos: boolean,
   sprites: Sprites,
+  /** Na tela dividida com muitas pistas: só o raio e o pulo, sem brilhos nem explosões. */
+  soLeves = false,
 ) {
+  // O raio e o pulo são poucos traços; o brilho dos trastes e as explosões é que pesam.
+  const enfeites = efeitos && !soLeves;
   c.clearRect(0, 0, largura, altura);
   const layout = layoutDaPista(largura, altura);
   const { centro, linhaDeBatida, larguraDoTraste } = layout;
@@ -167,7 +171,7 @@ export function desenharPista(
     c.stroke();
   };
   // Trilho de cromo com bisel; a cor do multiplicador fica num filete por cima.
-  if (efeitos) {
+  if (enfeites) {
     c.strokeStyle = corDoTrilho;
     trilhos(16, 0.1);
   }
@@ -215,7 +219,7 @@ export function desenharPista(
     const raio = larguraDoTraste * 0.34;
     const cor = CORES_DAS_PISTAS[pista];
     const apertado = cena.apertados[pista];
-    if (apertado && efeitos) {
+    if (apertado && enfeites) {
       const tamanho = larguraDoTraste * 1.3;
       c.globalAlpha = 0.55;
       c.drawImage(sprites.brilho(cor), x - tamanho / 2, linhaDeBatida - tamanho / 2, tamanho, tamanho);
@@ -246,7 +250,7 @@ export function desenharPista(
   }
 
   // A tecla da aberta acende a linha de batida inteira, de ponta a ponta.
-  if (cena.apertados[PISTA_ABERTA] && efeitos) {
+  if (cena.apertados[PISTA_ABERTA] && enfeites) {
     const largura = larguraDoTraste * 5.4;
     const altura = larguraDoTraste * 0.9;
     c.globalAlpha = 0.6;
@@ -310,10 +314,10 @@ export function desenharPista(
       const escala = (larguraDoTraste * 5 * p.escala) / SPRITE_DA_ABERTA.barra;
       const largura = SPRITE_DA_ABERTA.largura * escala;
       const alturaDoSprite = SPRITE_DA_ABERTA.altura * escala;
-      c.drawImage(sprites.aberta(cor, estrela, efeitos, nota.tipo), layout.centro - largura / 2, p.y - alturaDoSprite / 2, largura, alturaDoSprite);
+      c.drawImage(sprites.aberta(cor, estrela, enfeites, nota.tipo), layout.centro - largura / 2, p.y - alturaDoSprite / 2, largura, alturaDoSprite);
       continue;
     }
-    const sprite = sprites.nota(cor, estrela, efeitos, nota.tipo);
+    const sprite = sprites.nota(cor, estrela, enfeites, nota.tipo);
     const escala = (larguraDoTraste * 0.36 * p.escala) / SPRITE_DA_NOTA.raio;
     const largura = SPRITE_DA_NOTA.largura * escala;
     const alturaDoSprite = SPRITE_DA_NOTA.altura * escala;
@@ -350,7 +354,7 @@ export function desenharPista(
 
   // Sem efeitos não há tremor, então não há transformação para desfazer.
   if (!efeitos) return;
-  for (const explosao of cena.explosoes) {
+  for (const explosao of soLeves ? [] : cena.explosoes) {
     const idade = tempo - explosao.tempo;
     if (idade < 0 || idade > DURACAO_DA_EXPLOSAO) continue;
     const k = idade / DURACAO_DA_EXPLOSAO;

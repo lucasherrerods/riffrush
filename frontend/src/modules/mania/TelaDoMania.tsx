@@ -15,6 +15,7 @@ import { carregarConfiguracoesDoMania, salvarConfiguracoesDoMania } from "./sett
 import { JanelaDeConfiguracoesMania } from "./settings/JanelaDeConfiguracoesMania";
 import type { FiltrosDaBusca, MapaDaBusca, baixarOsz } from "./busca/api";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
+import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 
 type Tela = { nome: "selecao" } | { nome: "busca" } | { nome: "jogo"; mapa: MapaParaJogar } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado };
 
@@ -32,6 +33,7 @@ interface Props {
 export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
   const { conjuntos, importar, guardarBaixado, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
   const [tela, setTela] = useState<Tela>({ nome: "selecao" });
+  useAtualizacaoAutomatica(tela.nome === "jogo");
   const [mods, setMods] = useState(0);
   const [opcoes, setOpcoes] = useState<OpcoesDoMania>(carregarConfiguracoesDoMania);
   const [configurando, setConfigurando] = useState(false);

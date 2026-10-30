@@ -16,6 +16,7 @@ import { NumeroDaContagem } from "./componentes/NumeroDaContagem";
 import { criarLojaDoHud, useLoja, type LojaDoHud } from "./lojaDoHud";
 import type { JeitoDeJogar } from "./partida";
 import { CONTROLE_VAZIO, HUD_INICIAL, PistaDoJogador, type ControleDoJogador, type FimDoJogador, type Hud, type RelogioDaPartida } from "./PistaDoJogador";
+import { opcoesPeloNumeroDeJogadores, viewportsDaTela } from "./telaDividida";
 import { hashDoChart, type EventoDaTransmissao, type Replay } from "./replay";
 import { criarContadorDeFps, type LeituraDeFps } from "./fps";
 import { layoutDaPista } from "./pista/geometria";
@@ -53,6 +54,8 @@ export interface OpcoesDaPartida {
   /** Fração da resolução nativa em que a pista é desenhada. */
   escalaDeRenderizacao: number;
   modoCompetitivo: boolean;
+  /** Na tela dividida com muitas pistas: só o raio e o pulo, sem brilhos nem explosões. */
+  soEfeitosLeves?: boolean;
   /** No desktop, segura as teclas Windows, Alt e Alt+Tab e os atalhos do navegador enquanto se joga. */
   bloquearAtalhos: boolean;
 }
@@ -110,6 +113,17 @@ interface Props {
   placar?: (pontos: number) => ReactNode;
   /** Quantas pessoas estão assistindo a transmissão. Com alguém, aparece o olho no canto. */
   espectadores?: number;
+  /** Tela dividida: com dois ou mais, uma pista para cada um, com a mesma música. */
+  jogadores?: JogadorLocal[];
+  /** Na tela dividida, o resultado de cada jogador, na ordem de `jogadores`, quando a música acaba. */
+  aoTerminarJuntos?: (resultados: Resultado[]) => void;
+}
+
+/** Um jogador da tela dividida: as teclas dele e como reconhecer o que é dele. */
+export interface JogadorLocal {
+  nome: string;
+  opcoes: OpcoesDaPartida;
+  aceitaEvento: (evento: Event) => boolean;
 }
 
 const ENTRADA = 2.5;
@@ -120,7 +134,9 @@ const FOLGA_DO_FIM = 0.5;
 const SALTO_DAS_SETAS: Record<string, number> = { ArrowLeft: -5, ArrowRight: 5 };
 const nada = () => {};
 
-export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar, replay, transmissao, espectadores = 0 }: Props) {
+export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar, replay, transmissao, espectadores = 0, jogadores, aoTerminarJuntos }: Props) {
+  const divididos = jogadores && jogadores.length > 1 ? jogadores : null;
+  const quantos = divididos?.length ?? 1;
   // O replay toca na velocidade em que foi gravado, não na das configurações de quem assiste.
   const velocidade = replay?.velocidade ?? opcoes.velocidadeDaMusica;
   const video = useRef<HTMLVideoElement>(null);
@@ -130,14 +146,16 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     irPara: nada,
     desistir: nada,
   });
-  const jogador = useRef<ControleDoJogador>({ ...CONTROLE_VAZIO });
+  // Um controle por pista; o da primeira é o do jogador sozinho.
+  const controlesDasPistas = useMemo(() => Array.from({ length: quantos }, () => ({ current: { ...CONTROLE_VAZIO } as ControleDoJogador })), [quantos]);
+  const jogador = controlesDasPistas[0];
   // O relógio é um objeto só: a pista o recebe uma vez e lê o que a música preencher a cada sessão.
   const [relogio] = useState<RelogioDaPartida>(() => ({ agora: () => -ENTRADA, doEvento: () => -ENTRADA, pausado: () => true }));
-  const fimDoJogador = useRef<(fim: FimDoJogador) => void>(nada);
+  const fimDoJogador = useRef<(fim: FimDoJogador, pista: number) => void>(nada);
   const estreita = useTelaEstreita();
   const inicioDoArraste = useRef<{ x: number; y: number } | null>(null);
   const [comWebGL] = useState(suportaWebGL);
-  const cena = cenaDaPartida({ modoCompetitivo: opcoes.modoCompetitivo, efeitos: opcoes.efeitos, personagem: opcoes.personagem, comWebGL, estreita });
+  const cena = cenaDaPartida({ modoCompetitivo: opcoes.modoCompetitivo, efeitos: opcoes.efeitos, personagem: opcoes.personagem, comWebGL, estreita, jogadores: quantos });
   const comPalco = cena.palco;
   const estadoDoPalco = useRef<EstadoDoPalco>({
     personagem,
@@ -156,7 +174,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   const [carregada, setCarregada] = useState<MusicaCarregada | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [urlDoVideo, setUrlDoVideo] = useState<string | null>(null);
-  const [loja] = useState(() => criarLojaDoHud<Hud>(HUD_INICIAL));
+  const lojas = useMemo(() => Array.from({ length: quantos }, () => criarLojaDoHud<Hud>(HUD_INICIAL)), [quantos]);
+  const loja = lojas[0];
   const [pausado, setPausado] = useState(false);
   /** Ao despausar: segundos que faltam para a música voltar (3, 2, 1), ou 0. */
   const [retomando, setRetomando] = useState(0);
@@ -168,7 +187,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   const [tamanho, setTamanho] = useState({ largura: window.innerWidth, altura: window.innerHeight });
   // A música e a pista recomeçam juntas: as duas dependem só da sessão.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const sessao = useMemo(() => ({}), [carregada, rodada, opcoes, musica.id, dificuldade, instrumento, aoTerminar, inicioEmRede, replay]);
+  const sessao = useMemo(() => ({}), [carregada, rodada, opcoes, musica.id, dificuldade, instrumento, aoTerminar, inicioEmRede, replay, jogadores]);
 
   useEffect(() => {
     let cancelado = false;
@@ -249,7 +268,16 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       pausado: () => pausadoAgora,
     });
 
-    fimDoJogador.current = (fim) => {
+    // Na tela dividida ninguém é vaiado (vira fantasma): a partida acaba quando a música acaba para todos.
+    const resultados: Resultado[] = [];
+    let terminaram = 0;
+    fimDoJogador.current = (fim, pista) => {
+      if (divididos) {
+        if (!fim.derrota) resultados[pista] = fim.resultado;
+        if (++terminaram < divididos.length) return;
+        terminou = true;
+        return aoTerminarJuntos?.(resultados);
+      }
       terminou = true;
       video.current?.pause();
       if (fim.derrota) {
@@ -386,7 +414,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     setPausado(false);
     setRetomando(0);
     setDerrota(false);
-    loja.definir(HUD_INICIAL);
+    for (const l of lojas) l.definir(HUD_INICIAL);
     setRodada((r) => r + 1);
   };
 
@@ -395,6 +423,24 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     .filter(Boolean)
     .join(" · ");
   const layout = layoutDaPista(tamanho.largura, tamanho.altura);
+
+  // O que é igual em todas as pistas: a música, o relógio e a pausa.
+  const pistaComum = (carregada: MusicaCarregada) => ({
+    sessao,
+    carregada,
+    musica,
+    dificuldade,
+    instrumento,
+    velocidade,
+    entrada: ENTRADA,
+    relogio,
+    comPalco,
+    personagem,
+    estadoDoPalco,
+    pausado,
+    derrota,
+    replay,
+  });
 
   if (erro) {
     return (
@@ -435,34 +481,49 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       {carregada && (
         <>
           {/* A rodada recomeça a pista do zero, com os avisos limpos. */}
-          <PistaDoJogador
-            key={rodada}
-            sessao={sessao}
-            carregada={carregada}
-            musica={musica}
-            dificuldade={dificuldade}
-            instrumento={instrumento}
-            opcoes={opcoes}
-            velocidade={velocidade}
-            entrada={ENTRADA}
-            relogio={relogio}
-            controle={jogador}
-            loja={loja}
-            layout={layout}
-            estreita={estreita}
-            comPalco={comPalco}
-            personagemDoHud={cena.personagem ? personagem : null}
-            personagem={personagem}
-            estadoDoPalco={estadoDoPalco}
-            pausado={pausado}
-            derrota={derrota}
-            recorde={recorde}
-            replay={replay}
-            emRede={inicioEmRede !== undefined}
-            aoAtualizarRede={rede?.aoAtualizar}
-            transmissao={transmissao}
-            aoFim={(fim) => fimDoJogador.current(fim)}
-          />
+          {divididos ? (
+            viewportsDaTela(quantos).map((viewport, i) => (
+              <div
+                key={`${rodada}-${i}`}
+                data-parte="viewport"
+                className={cn("absolute inset-y-0 overflow-hidden", i > 0 && "border-l border-borda")}
+                style={{ left: `${viewport.esquerda * 100}%`, width: `${viewport.largura * 100}%` }}
+              >
+                <PistaDoJogador
+                  {...pistaComum(carregada)}
+                  opcoes={opcoesPeloNumeroDeJogadores(divididos[i].opcoes, quantos)}
+                  controle={controlesDasPistas[i]}
+                  loja={lojas[i]}
+                  layout={layoutDaPista(tamanho.largura * viewport.largura, tamanho.altura)}
+                  // A coluna é estreita: o HUD compacto cabe nela, mas as faixas de toque do celular não fazem sentido.
+                  estreita
+                  comFaixasDeToque={false}
+                  personagemDoHud={null}
+                  recorde={undefined}
+                  emRede
+                  aceitaEvento={divididos[i].aceitaEvento}
+                  aoFim={(fim) => fimDoJogador.current(fim, i)}
+                />
+                <span className="pointer-events-none absolute bottom-2 left-2 rounded-sm bg-superficie-elevada px-2 font-titulo text-lg tracking-wide">{divididos[i].nome}</span>
+              </div>
+            ))
+          ) : (
+            <PistaDoJogador
+              key={rodada}
+              {...pistaComum(carregada)}
+              opcoes={opcoes}
+              controle={jogador}
+              loja={loja}
+              layout={layout}
+              estreita={estreita}
+              personagemDoHud={cena.personagem ? personagem : null}
+              recorde={recorde}
+              emRede={inicioEmRede !== undefined}
+              aoAtualizarRede={rede?.aoAtualizar}
+              transmissao={transmissao}
+              aoFim={(fim) => fimDoJogador.current(fim, 0)}
+            />
+          )}
 
           <header className={cn("absolute top-0 right-0 left-0 flex items-center", estreita ? "gap-2 px-3 pt-1" : "gap-4 px-6 pt-4")}>
             <div className="min-w-0">
