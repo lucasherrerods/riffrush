@@ -27,6 +27,7 @@ fn app() -> Router {
     let conta = servicos().0;
     riffrush_api::app(
         EstadoDoApp {
+            amizade: riffrush_api::modules::amizade::fakes::servicos_de_amizade(conta.clone(), Default::default()).0,
             mania: riffrush_api::modules::mania::fakes::servicos_vazios(conta.clone()),
             banco: Arc::new(BancoOk),
             ranking: servicos_do_ranking(conta.clone()).0,

@@ -2,6 +2,7 @@
 //! (o CI sobe um Postgres); sem ela, os testes passam sem fazer nada.
 
 use chrono::{Duration, Utc};
+use riffrush_api::modules::amizade::{AmizadesPostgres, Relacao, RepositorioDeAmizades, Vinculo};
 use riffrush_api::modules::catalogo::{CatalogoPostgres, DadosDaMusica, RepositorioDoCatalogo};
 use riffrush_api::modules::conta::{
     ContasPostgres, FilaDePartidas, PartidaNaFila, PartidaRegistrada, PerfilDoGoogle, RepositorioDeContas, RepositorioDeSessoes,
@@ -822,4 +823,54 @@ async fn o_limite_do_encore_e_contado_no_banco_e_libera_quando_a_janela_passa() 
     // Outra instância, com outra conexão, vê o mesmo limite.
     assert!(!RejulgamentoPostgres(banco.0.clone()).pedir(agora + Duration::seconds(2)).await.unwrap());
     assert!(limite.pedir(agora + Duration::seconds(41)).await.unwrap());
+}
+
+#[tokio::test]
+async fn amizades_pedem_aceitam_bloqueiam_e_sugerem_amigos_de_amigos() {
+    let Some(banco) = banco().await else { return };
+    let amizades = AmizadesPostgres(banco.0.clone());
+    let agora = Utc::now();
+    let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+    let beto = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+    let caio = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+
+    let codigo = format!("RIFF-{}", Uuid::new_v4().simple().to_string()[..6].to_uppercase());
+    assert_eq!(amizades.guardar_codigo(ana, &codigo).await.unwrap().as_deref(), Some(codigo.as_str()));
+    // Código de outra conta não é guardado; a conta que já tem código fica com o dela.
+    assert_eq!(amizades.guardar_codigo(beto, &codigo).await.unwrap(), None);
+    assert_eq!(amizades.guardar_codigo(ana, "RIFF-OUTRO2").await.unwrap().as_deref(), Some(codigo.as_str()));
+    assert_eq!(amizades.conta_do_codigo(&codigo).await.unwrap(), Some(ana));
+    amizades.marcar_visto(ana, agora).await.unwrap();
+
+    amizades.criar_pedido(ana, beto, agora).await.unwrap();
+    // O pedido cruzado não cria uma segunda linha para o mesmo par.
+    amizades.criar_pedido(beto, ana, agora).await.unwrap();
+    assert_eq!(amizades.relacao(ana, beto).await.unwrap(), Relacao::PedidoEnviado);
+    assert_eq!(amizades.relacao(beto, ana).await.unwrap(), Relacao::PedidoRecebido);
+    assert_eq!(amizades.contagens(ana, beto).await.unwrap().enviados_de_quem_pede, 1);
+    assert!(!amizades.aceitar(ana, caio, agora).await.unwrap());
+    assert!(amizades.aceitar(ana, beto, agora).await.unwrap());
+    assert_eq!(amizades.relacao(beto, ana).await.unwrap(), Relacao::Amigos);
+    let do_beto = amizades.pessoas(beto).await.unwrap();
+    assert_eq!(do_beto.len(), 1);
+    assert_eq!(do_beto[0].vinculo, Vinculo::Amigo);
+    assert!(do_beto[0].visto_em.is_some());
+
+    amizades.criar_pedido(caio, beto, agora).await.unwrap();
+    amizades.aceitar(caio, beto, agora).await.unwrap();
+    let sugestoes = amizades.sugestoes(ana, 10).await.unwrap();
+    assert_eq!(sugestoes.len(), 1);
+    assert_eq!((sugestoes[0].conta_id, sugestoes[0].amigos_em_comum), (caio, 1));
+
+    amizades.bloquear(caio, ana, agora).await.unwrap();
+    assert!(amizades.sugestoes(ana, 10).await.unwrap().is_empty());
+    assert_eq!(amizades.relacao(ana, caio).await.unwrap(), Relacao::FoiBloqueado);
+    assert_eq!(amizades.pessoas(caio).await.unwrap()[1].vinculo, Vinculo::Bloqueado);
+    amizades.desbloquear(caio, ana).await.unwrap();
+    assert_eq!(amizades.relacao(ana, caio).await.unwrap(), Relacao::Nenhuma);
+
+    amizades.desfazer(beto, ana).await.unwrap();
+    assert_eq!(amizades.relacao(ana, beto).await.unwrap(), Relacao::Nenhuma);
+    banco.excluir(ana).await.unwrap();
+    assert_eq!(amizades.conta_do_codigo(&codigo).await.unwrap(), None);
 }
