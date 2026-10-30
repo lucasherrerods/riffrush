@@ -76,7 +76,7 @@ npm run dev         # só a versão web
 npm test            # roda os testes uma vez
 npm run test:watch  # testes em modo watch
 npm run build       # typecheck + build web (também é a versão servida aos celulares)
-npm run lancar -- 0.2.0   # sobe a versão e gera release/RiffRush-setup.exe para a release do GitHub
+npm run lancar -- 0.2.0   # sobe a versão e gera em release/ o instalador assinado e o latest.json do updater
 npm run motor       # recompila os motores (backend/motor e backend/motor-mania) para WASM; `npm run motor -- mania` só um
 cargo test --manifest-path src-tauri/Cargo.toml   # testes do lado Rust do app
 ```
