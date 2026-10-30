@@ -15,7 +15,7 @@ import { Calibracao } from "./componentes/Calibracao";
 import { LinhaDeOpcao } from "./componentes/LinhaDeOpcao";
 import { LinhaDeSlider } from "./componentes/LinhaDeSlider";
 import { SeletorDeJeitoDeJogar } from "./componentes/SeletorDeJeitoDeJogar";
-import { CONFIGURACOES_PADRAO, INDICE_DA_ESTRELA, INDICE_DA_PALHETA, nomeDaTecla, trocarBotao, trocarTecla, type Configuracoes } from "./configuracoes";
+import { configuracoesPadrao, INDICE_DA_ESTRELA, INDICE_DA_PALHETA, nomeDaTecla, trocarBotao, trocarTecla, type Configuracoes } from "./configuracoes";
 
 interface Props {
   configuracoes: Configuracoes;
@@ -112,7 +112,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
         </Button>
         <h1 className="titulo-de-tela">Configurações</h1>
         <div className="flex-1" />
-        <Button variant="ghost" aria-label="Restaurar padrão" onClick={() => aoMudar(CONFIGURACOES_PADRAO)}>
+        <Button variant="ghost" aria-label="Restaurar padrão" onClick={() => aoMudar(configuracoesPadrao())}>
           <RotateCcw className="opacity-70" /> <span className="max-md:sr-only">Restaurar padrão</span>
         </Button>
       </header>
