@@ -10,8 +10,10 @@ describe("catálogo", () => {
     expect(skinDoPersonagem(PERSONAGEM_PADRAO)).toMatchObject({ arquivo: "/modelos/atores/faisca", tipo: "video" });
   });
 
-  it("a Torcida é uma guitarrista filmada", () => {
-    const escolha = { personagem: "torcida", skin: "classico" };
+  it("a Turquesa é uma guitarrista filmada", () => {
+    const escolha = { personagem: "turquesa", skin: "torcida" };
+    expect(PERSONAGENS.find((p) => p.id === "turquesa")?.rotulo).toBe("Turquesa");
+    expect(skinDoPersonagem(escolha).rotulo).toBe("Torcida");
     expect(instrumentoDoPersonagem(escolha)).toBe("guitarra");
     expect(skinDoPersonagem(escolha)).toMatchObject({ arquivo: "/modelos/atores/torcida", tipo: "video", card: "/modelos/atores/torcida/card.webp" });
   });
