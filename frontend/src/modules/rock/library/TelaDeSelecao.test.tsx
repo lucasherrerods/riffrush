@@ -31,7 +31,7 @@ beforeEach(() => {
 });
 
 describe("TelaDeSelecao", () => {
-  it("o botão de oficial aleatória pede a dificuldade e o instrumento escolhidos e fica ocupado até baixar", async () => {
+  it("o botão Aleatória pede a dificuldade e o instrumento escolhidos e fica ocupado até baixar", async () => {
     let terminar = () => {};
     const sortearOficial = vi.fn(() => new Promise<void>((r) => (terminar = r)));
     render(
@@ -54,7 +54,7 @@ describe("TelaDeSelecao", () => {
         sortearOficial={sortearOficial}
       />,
     );
-    const botao = screen.getByRole("button", { name: /Oficial aleatória/ });
+    const botao = screen.getByRole("button", { name: "Aleatória" });
     await userEvent.click(botao);
     expect(sortearOficial).toHaveBeenCalledWith("dificil", "baixo");
     expect(botao).toBeDisabled();
@@ -62,36 +62,9 @@ describe("TelaDeSelecao", () => {
     await waitFor(() => expect(botao).toBeEnabled());
   });
 
-  it("a aleatória do top 50 seleciona a música sorteada", async () => {
-    const sortearMusica = vi.fn(() => Promise.resolve(MUSICAS_DE_TESTE[2]));
-    const aoSelecionar = vi.fn();
-    render(
-      <TelaDeSelecao
-        musicas={MUSICAS_DE_TESTE}
-        indice={0}
-        dificuldade="medio"
-        instrumento="guitarra"
-        personagem={PERSONAGEM_PADRAO}
-        volumeDosEfeitos={0}
-        velocidadeDaMusica={1}
-        aoSelecionar={aoSelecionar}
-        aoDificuldade={vi.fn()}
-        aoInstrumento={vi.fn()}
-        aoJogar={vi.fn()}
-        aoVoltar={vi.fn()}
-        aoImportar={vi.fn()}
-        aoRemover={vi.fn()}
-        aoVelocidadeDaMusica={vi.fn()}
-        sortearMusica={sortearMusica}
-      />,
-    );
-    await userEvent.click(screen.getByRole("button", { name: /Aleatório/ }));
-    expect(aoSelecionar).toHaveBeenCalledWith(2);
-  });
-
-  it("sem contas, não mostra a aleatória do top 50", () => {
+  it("só existe um botão de música aleatória", () => {
     abrir();
-    expect(screen.queryByRole("button", { name: /Aleatório/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Aleatório|Oficial aleatória/ })).toBeNull();
   });
 
   it("o botão Buscar músicas, ao lado do de importar, abre a busca", async () => {

@@ -1,3 +1,4 @@
+import { semAcento } from "@/shared/lib/busca";
 import type { MusicaNoRanking } from "./api";
 
 export type OrdemDasMusicas = "partidas" | "jogadores" | "recorde" | "nome";
@@ -14,11 +15,9 @@ export interface FiltroDasMusicas {
   ordem: OrdemDasMusicas;
 }
 
-const semAcento = (texto: string) => texto.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
-
 /** A lista de músicas do leaderboard depois da busca e da ordem escolhidas. A API já manda por mais partidas. */
 export function filtrarMusicas(musicas: MusicaNoRanking[], { busca, ordem }: FiltroDasMusicas, nome: (m: MusicaNoRanking) => string) {
-  const procurado = semAcento(busca.trim());
+  const procurado = semAcento(busca);
   const achadas = procurado ? musicas.filter((m) => semAcento(nome(m)).includes(procurado)) : [...musicas];
   if (ordem === "jogadores") return achadas.sort((a, b) => b.jogadores - a.jogadores || b.partidas - a.partidas);
   if (ordem === "recorde") return achadas.sort((a, b) => (b.recorde?.precisao ?? -1) - (a.recorde?.precisao ?? -1));

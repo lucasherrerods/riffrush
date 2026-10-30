@@ -10,8 +10,14 @@ import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
 export type EstadoOnline =
   | { tipo: "menu" }
   | { tipo: "selecao" }
-  | { tipo: "multiplayer" }
+  | { tipo: "multiplayer"; sala?: SalaNoEstado }
   | { tipo: "tocando"; musica: string; titulo: string; artista: string; dificuldade: Dificuldade; instrumento: Instrumento; transmitindo: boolean };
+
+/** A sala em que a pessoa está, para a lista mostrar "Em sala". */
+export interface SalaNoEstado {
+  jogadores: number;
+  online: boolean;
+}
 
 export interface PessoaOnline {
   id: string;

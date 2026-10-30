@@ -37,8 +37,16 @@ export function fichaDoPedido(pedido: Request): { ficha: string; peloProtocolo: 
 export type EstadoOnline =
   | { tipo: "menu" }
   | { tipo: "selecao" }
-  | { tipo: "multiplayer" }
+  | { tipo: "multiplayer"; sala?: SalaNoEstado }
   | { tipo: "tocando"; musica: string; titulo: string; artista: string; dificuldade: string; instrumento: string; transmitindo: boolean };
+
+/** A sala em que a pessoa está, para a lista mostrar "Em sala". Sem o código, que só vai no convite. */
+export interface SalaNoEstado {
+  jogadores: number;
+  online: boolean;
+}
+
+const MAXIMO_DE_JOGADORES = 4;
 
 export type PessoaOnline = Pessoa & { estado: EstadoOnline };
 
@@ -85,10 +93,21 @@ export async function verificarFicha(ficha: string, segredo: string, agoraEmSegu
 
 const texto = (valor: unknown, maximo = TAMANHO_MAXIMO_DO_TEXTO) => (typeof valor === "string" ? valor.slice(0, maximo) : null);
 
+function lerSala(valor: unknown): SalaNoEstado | null {
+  const sala = valor as Record<string, unknown> | null;
+  const jogadores = sala?.jogadores;
+  if (typeof jogadores !== "number" || !Number.isInteger(jogadores) || jogadores < 1 || jogadores > MAXIMO_DE_JOGADORES) return null;
+  return { jogadores, online: sala?.online === true };
+}
+
 /** O estado vem do app: só passa o formato conhecido, com os textos cortados. */
 export function lerEstado(valor: unknown): EstadoOnline | null {
   const estado = valor as Record<string, unknown> | null;
-  if (estado?.tipo === "menu" || estado?.tipo === "selecao" || estado?.tipo === "multiplayer") return { tipo: estado.tipo };
+  if (estado?.tipo === "menu" || estado?.tipo === "selecao") return { tipo: estado.tipo };
+  if (estado?.tipo === "multiplayer") {
+    const sala = lerSala(estado.sala);
+    return sala ? { tipo: "multiplayer", sala } : { tipo: "multiplayer" };
+  }
   if (estado?.tipo !== "tocando") return null;
   const musica = texto(estado.musica, ID_DA_MUSICA_MAXIMO);
   const titulo = texto(estado.titulo);

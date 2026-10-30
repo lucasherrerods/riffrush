@@ -39,6 +39,17 @@ describe("ConexaoDePresenca", () => {
     expect(socket().enviadas.at(-1)).toEqual({ estado: tocando });
   });
 
+  it("o mesmo estado de novo não vai ao relay", async () => {
+    const { conexao } = montar();
+    conexao.ligar();
+    await umInstante();
+    socket().abrir();
+    const naSala = { tipo: "multiplayer", sala: { jogadores: 2, online: true } } as const;
+    conexao.definirEstado(naSala);
+    conexao.definirEstado({ tipo: "multiplayer", sala: { jogadores: 2, online: true } });
+    expect(socket().enviadas).toEqual([{ estado: { tipo: "menu" } }, { estado: naSala }]);
+  });
+
   it("convida pela mesma conexão e avisa quem ouve os convites, sem mexer na lista", async () => {
     const { conexao } = montar();
     const recebidos = vi.fn();
