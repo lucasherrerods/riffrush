@@ -1,0 +1,15 @@
+/*
+ * A Rubik Dirt só aparece nos letreiros (o h1 de cada tela, em caixa alta, e o aviso de acerto).
+ * Recortada com o fonttools só com as maiúsculas, os números, a pontuação e as maiúsculas acentuadas do português:
+ * cada letra dela é um desenho pesado, e o arquivo latino inteiro tem 310 KB. O que ficar de fora cai na Bebas Neue,
+ * a próxima de --font-letreiro. Para regerar:
+ * python -m fontTools.subset rubik-dirt-latin-400-normal.woff2 --unicodes="U+0020-0060,U+007B-007E,U+00C0-00C3,U+00C7,U+00C9-00CA,U+00CD,U+00D3-00D5,U+00DA,U+00DC" --flavor=woff2 --layout-features='*'
+ */
+@font-face {
+  font-family: "Rubik Dirt";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(./rubik-dirt-letreiro.woff2) format("woff2");
+  unicode-range: U+0020-0060, U+007B-007E, U+00C0-00C3, U+00C7, U+00C9-00CA, U+00CD, U+00D3-00D5, U+00DA, U+00DC;
+}
