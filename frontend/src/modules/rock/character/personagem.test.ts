@@ -13,7 +13,7 @@ describe("catálogo", () => {
   it("a Torcida é uma guitarrista filmada", () => {
     const escolha = { personagem: "torcida", skin: "classico" };
     expect(instrumentoDoPersonagem(escolha)).toBe("guitarra");
-    expect(skinDoPersonagem(escolha)).toMatchObject({ arquivo: "/modelos/atores/torcida", tipo: "video" });
+    expect(skinDoPersonagem(escolha)).toMatchObject({ arquivo: "/modelos/atores/torcida", tipo: "video", card: "/modelos/atores/torcida/card.webp" });
   });
 
   it("todo personagem tem um instrumento e ao menos uma skin", () => {
