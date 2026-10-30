@@ -65,6 +65,7 @@ describe("MenuPrincipal", () => {
     expect(screen.queryByRole("button", { name: "Tela dividida" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Multiplayer" }));
     const escolha = screen.getByRole("dialog", { name: "Multiplayer" });
+    expect(within(escolha).queryByText(/Como vocês vão jogar/)).toBeNull();
     await userEvent.click(within(escolha).getByRole("button", { name: /Local/ }));
     expect(aoMultiplayerLocal).toHaveBeenCalled();
     expect(aoMultijogador).not.toHaveBeenCalled();
