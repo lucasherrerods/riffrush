@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use riffrush_api::modules::amizade::{AmizadesPostgres, ServicosDeAmizade};
 use riffrush_api::modules::catalogo::{CatalogoPostgres, Encore, ServicosDoCatalogo};
@@ -23,6 +24,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     let config = Config::do_ambiente()?;
+    // Sem tempo limite, um Google ou osu! travado deixava os pedidos pendurados para sempre.
+    let http = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(20))
+        .build()?;
     let banco = PgPoolOptions::new().max_connections(5).connect(&config.url_do_banco).await?;
     sqlx::migrate!("./migrations").run(&banco).await?;
 
@@ -41,14 +47,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .google_desktop
                 .clone()
                 .map(|(client_id, client_secret)| CredenciaisDoGoogle { client_id, client_secret }),
-            http: reqwest::Client::new(),
+            http: http.clone(),
         }),
         relogio: relogio.clone(),
         gerador: Arc::new(GeradorAleatorio),
         fila: rejulgamento.clone(),
+        janelas_do_login: Default::default(),
     };
     // Um Encore só: a busca dos nomes e os downloads dos charts dividem o mesmo limite de pedidos.
-    let encore = Arc::new(Encore::novo(reqwest::Client::new(), relogio.clone(), rejulgamento.clone()));
+    let encore = Arc::new(Encore::novo(http.clone(), relogio.clone(), rejulgamento.clone()));
     let catalogo = ServicosDoCatalogo {
         repositorio: Arc::new(CatalogoPostgres(banco.clone())),
         encore: encore.clone(),
@@ -67,7 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let moderacao = ServicosDeModeracao {
         repositorio: Arc::new(ModeracaoPostgres(banco.clone())),
         relay: Arc::new(RelayHttp {
-            http: reqwest::Client::new(),
+            http: http.clone(),
             url: config.url_do_relay.clone(),
             segredo: segredo_do_relay.clone(),
             relogio: conta.relogio.clone(),
@@ -94,7 +101,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let servicos_do_mania = ServicosDoMania {
         repositorio: Arc::new(ManiaPostgres(banco.clone())),
         fonte: Arc::new(Osu::novo(
-            reqwest::Client::new(),
+            http.clone(),
             config
                 .osu
                 .clone()

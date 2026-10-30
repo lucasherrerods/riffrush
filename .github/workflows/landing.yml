@@ -11,6 +11,10 @@ concurrency:
   group: landing-${{ github.ref }}
   cancel-in-progress: true
 
+# Os jobs só leem o código: o token do GitHub não precisa de escrita.
+permissions:
+  contents: read
+
 jobs:
   landing:
     name: Testes e build da landing

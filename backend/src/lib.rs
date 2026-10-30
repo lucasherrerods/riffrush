@@ -1,10 +1,16 @@
 pub mod modules;
 pub mod shared;
 
-use axum::http::{HeaderValue, Method};
+use std::time::Duration;
+
+use axum::http::{header, HeaderValue, Method, StatusCode};
+use axum::middleware::map_response;
 use axum::routing::get;
 use axum::{Json, Router};
+use tower::limit::ConcurrencyLimitLayer;
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use tower_http::set_header::SetResponseHeaderLayer;
+use tower_http::timeout::TimeoutLayer;
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 
@@ -67,14 +73,17 @@ impl utoipa::Modify for Token {
     }
 }
 
+const PEDIDOS_AO_MESMO_TEMPO: usize = 64;
+/// Bem acima de qualquer rota normal; o login espera o Google, que tem 20 s no cliente HTTP.
+const TEMPO_MAXIMO_DO_PEDIDO: Duration = Duration::from_secs(30);
+
 /// O app inteiro, sem rede: o main serve, os testes de integração chamam direto.
 pub fn app(estado: EstadoDoApp, origens_permitidas: &[String]) -> Router {
     let origens: Vec<HeaderValue> = origens_permitidas.iter().filter_map(|o| o.parse().ok()).collect();
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::list(origens))
         .allow_methods([Method::GET, Method::POST, Method::DELETE])
-        .allow_headers([axum::http::header::CONTENT_TYPE, axum::http::header::AUTHORIZATION])
-        .allow_credentials(true);
+        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION]);
 
     Router::new()
         .merge(modules::saude::rotas())
@@ -87,6 +96,18 @@ pub fn app(estado: EstadoDoApp, origens_permitidas: &[String]) -> Router {
         .merge(modules::amizade::rotas())
         .route("/openapi.json", get(|| async { Json(Documentacao::openapi()) }))
         .with_state(estado)
+        .layer(map_response(shared::erro::padronizar_rejeicoes))
+        // O pool do banco tem poucas conexões: além disso os pedidos esperam na fila, e quem demora demais cai.
+        .layer(ConcurrencyLimitLayer::new(PEDIDOS_AO_MESMO_TEMPO))
+        .layer(TimeoutLayer::with_status_code(StatusCode::GATEWAY_TIMEOUT, TEMPO_MAXIMO_DO_PEDIDO))
+        .layer(SetResponseHeaderLayer::if_not_present(
+            header::X_CONTENT_TYPE_OPTIONS,
+            HeaderValue::from_static("nosniff"),
+        ))
+        .layer(SetResponseHeaderLayer::if_not_present(
+            header::STRICT_TRANSPORT_SECURITY,
+            HeaderValue::from_static("max-age=31536000; includeSubDomains"),
+        ))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
 }
