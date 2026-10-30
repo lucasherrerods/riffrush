@@ -1,6 +1,6 @@
 import { BOTAO_DA_ESTRELA_PADRAO, BOTOES, BOTOES_DOS_TRASTES_PADRAO } from "./mapeamento";
 import { capturarBotao, iniciarControle } from "./controle";
-import { dispositivoAtual, registrarUso } from "./dispositivo";
+import { dispositivoAtual, indiceDoControle, registrarUso } from "./dispositivo";
 
 function controleFalso() {
   const botoes = Array.from({ length: 17 }, () => ({ pressed: false }));
@@ -33,7 +33,49 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function doisControles() {
+  const criar = (index: number) => ({ index, buttons: Array.from({ length: 17 }, () => ({ pressed: false })), axes: [0, 0, 0, 0] });
+  const controles = [criar(0), criar(1)];
+  vi.stubGlobal("navigator", { ...navigator, getGamepads: () => controles });
+  return controles;
+}
+
 describe("iniciarControle", () => {
+  it("o controle desligado com um botão apertado solta a tecla", () => {
+    const controles = doisControles();
+    const ouvinte = ouvirTeclas();
+    const parar = iniciarControle({ modo: () => "jogo", mapa: () => MAPA });
+
+    controles[1].buttons[BOTOES.RT].pressed = true;
+    proximoQuadro();
+    controles.pop();
+    proximoQuadro();
+
+    expect(ouvinte.teclas).toEqual(["keydown:KeyK", "keyup:KeyK"]);
+    parar();
+    ouvinte.parar();
+  });
+
+  it("cada controle aperta as próprias teclas, marcadas com o índice dele", () => {
+    const [primeiro, segundo] = doisControles();
+    const vistos: string[] = [];
+    const ouvir = (e: KeyboardEvent) => vistos.push(`${e.type}:${e.code}:${indiceDoControle(e)}`);
+    window.addEventListener("keydown", ouvir);
+    window.addEventListener("keyup", ouvir);
+    const parar = iniciarControle({ modo: () => "jogo", mapa: () => MAPA });
+
+    segundo.buttons[BOTOES.RT].pressed = true;
+    primeiro.buttons[BOTOES.LT].pressed = true;
+    proximoQuadro();
+    segundo.buttons[BOTOES.RT].pressed = false;
+    proximoQuadro();
+
+    expect(vistos).toEqual(["keydown:KeyA:0", "keydown:KeyK:1", "keyup:KeyK:1"]);
+    parar();
+    window.removeEventListener("keydown", ouvir);
+    window.removeEventListener("keyup", ouvir);
+  });
+
   it("transforma os botões do controle em teclas na janela", () => {
     const { botoes } = controleFalso();
     const ouvinte = ouvirTeclas();

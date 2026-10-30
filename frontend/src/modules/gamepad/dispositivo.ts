@@ -13,15 +13,18 @@ export const rotuloDoComando = (comando: Comando, dispositivo: Dispositivo) => R
 
 let atual: Dispositivo = "teclado";
 const ouvintes = new Set<() => void>();
-/** O controle vira teclas simuladas; essas não podem trazer as dicas de volta para o teclado. */
-const doControle = new WeakSet<Event>();
+/** O controle vira teclas simuladas; essas não podem trazer as dicas de volta para o teclado. Guarda o índice do controle de cada uma. */
+const doControle = new WeakMap<Event, number>();
 
-export function marcarComoDoControle(evento: Event) {
-  doControle.add(evento);
+export function marcarComoDoControle(evento: Event, indice = 0) {
+  doControle.set(evento, indice);
 }
 
 /** O evento é uma tecla simulada pelo controle, e não do teclado. */
 export const veioDoControle = (evento: Event) => doControle.has(evento);
+
+/** O índice (`Gamepad.index`) do controle que simulou a tecla; no teclado, nada. */
+export const indiceDoControle = (evento: Event) => doControle.get(evento);
 
 export function registrarUso(dispositivo: Dispositivo) {
   if (dispositivo === atual) return;

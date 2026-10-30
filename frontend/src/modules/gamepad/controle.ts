@@ -12,9 +12,9 @@ const INTERVALO_MS = 5;
 const ATRASO_DA_REPETICAO_MS = 400;
 const INTERVALO_DA_REPETICAO_MS = 120;
 
-const apertar = (tipo: "keydown" | "keyup", code: string, repeat = false) => {
+const apertar = (indice: number, tipo: "keydown" | "keyup", code: string, repeat = false) => {
   const evento = new KeyboardEvent(tipo, { code, key: code, repeat, bubbles: true, cancelable: true });
-  marcarComoDoControle(evento);
+  marcarComoDoControle(evento, indice);
   registrarUso("controle");
   window.dispatchEvent(evento);
 };
@@ -32,20 +32,29 @@ export function capturarBotao(aoEscolher: (botao: number) => void) {
   };
 }
 
-/** Lê o controle e transforma os botões em teclas, então todo o jogo funciona sem mudar nada. */
-export function iniciarControle({ modo, mapa }: Opcoes) {
-  let antes: boolean[] = [];
-  let emitidos: string[][] = [];
-  let direcoes = [false, false, false, false];
-  let decorrido = 0;
-  const proximaRepeticao = new Map<number, number>();
+interface EstadoDoControle {
+  antes: boolean[];
+  emitidos: string[][];
+  direcoes: boolean[];
+  proximaRepeticao: Map<number, number>;
+}
 
-  const ler = () => {
-    decorrido += INTERVALO_MS;
-    const controle = Array.from(navigator.getGamepads?.() ?? []).find((c) => c);
-    const modoAtual = modo();
-    direcoes = direcoesDoAnalogico(controle?.axes ?? [], direcoes);
-    const agora = juntarAnalogico(controle ? controle.buttons.map((b) => b.pressed) : [], direcoes, modoAtual);
+const estadoNovo = (): EstadoDoControle => ({ antes: [], emitidos: [], direcoes: [false, false, false, false], proximaRepeticao: new Map() });
+
+/**
+ * Lê os controles e transforma os botões em teclas, então todo o jogo funciona sem mudar nada.
+ * Cada controle tem o próprio estado, e as teclas dele saem marcadas com o índice, para a tela dividida separar os jogadores.
+ */
+export function iniciarControle({ modo, mapa }: Opcoes) {
+  const estados = new Map<number, EstadoDoControle>();
+  let decorrido = 0;
+
+  const lerControle = (controle: Gamepad, indice: number, modoAtual: Modo) => {
+    const estado = estados.get(indice) ?? estadoNovo();
+    estados.set(indice, estado);
+    const { antes } = estado;
+    estado.direcoes = direcoesDoAnalogico(controle.axes ?? [], estado.direcoes);
+    const agora = juntarAnalogico(controle.buttons.map((b) => b.pressed), estado.direcoes, modoAtual);
     if (aoCapturar) {
       const escolhido = agora.findIndex((apertado, botao) => apertado && !antes[botao] && podeSerEscolhido(botao));
       if (escolhido >= 0) {
@@ -55,23 +64,41 @@ export function iniciarControle({ modo, mapa }: Opcoes) {
         escolher(escolhido);
       }
       // O botão escolhido continua apertado: o próximo quadro já o vê como segurado e não o transforma em tecla.
-      antes = agora;
+      estado.antes = agora;
       return;
     }
-    const traducao = traduzir(antes, agora, emitidos, modoAtual, mapa());
-    for (const { tipo, code } of traducao.eventos) apertar(tipo, code);
+    const traducao = traduzir(antes, agora, estado.emitidos, modoAtual, mapa());
+    for (const { tipo, code } of traducao.eventos) apertar(indice, tipo, code);
 
     for (const botao of DIRECIONAL) {
-      if (!agora[botao] || modoAtual !== "menu") proximaRepeticao.delete(botao);
-      else if (!antes[botao] || !proximaRepeticao.has(botao)) proximaRepeticao.set(botao, decorrido + ATRASO_DA_REPETICAO_MS);
-      else if (decorrido >= proximaRepeticao.get(botao)!) {
-        for (const code of traducao.emitidos[botao] ?? []) apertar("keydown", code, true);
-        proximaRepeticao.set(botao, decorrido + INTERVALO_DA_REPETICAO_MS);
+      if (!agora[botao] || modoAtual !== "menu") estado.proximaRepeticao.delete(botao);
+      else if (!antes[botao] || !estado.proximaRepeticao.has(botao)) estado.proximaRepeticao.set(botao, decorrido + ATRASO_DA_REPETICAO_MS);
+      else if (decorrido >= estado.proximaRepeticao.get(botao)!) {
+        for (const code of traducao.emitidos[botao] ?? []) apertar(indice, "keydown", code, true);
+        estado.proximaRepeticao.set(botao, decorrido + INTERVALO_DA_REPETICAO_MS);
       }
     }
 
-    antes = agora;
-    emitidos = traducao.emitidos;
+    estado.antes = agora;
+    estado.emitidos = traducao.emitidos;
+  };
+
+  const ler = () => {
+    decorrido += INTERVALO_MS;
+    const modoAtual = modo();
+    const vistos = new Set<number>();
+    Array.from(navigator.getGamepads?.() ?? []).forEach((controle, posicao) => {
+      if (!controle) return;
+      const indice = controle.index ?? posicao;
+      vistos.add(indice);
+      lerControle(controle, indice, modoAtual);
+    });
+    // O controle desligado com um botão apertado solta as teclas dele, para nada ficar preso.
+    for (const indice of [...estados.keys()].filter((i) => !vistos.has(i))) {
+      const solto = estados.get(indice)!.antes.map(() => ({ pressed: false }));
+      lerControle({ buttons: solto, axes: [] } as unknown as Gamepad, indice, modoAtual);
+      estados.delete(indice);
+    }
   };
   const relogio = setInterval(ler, INTERVALO_MS);
   return () => clearInterval(relogio);
