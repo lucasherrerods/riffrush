@@ -10,7 +10,7 @@ use riffrush_api::modules::conta::{
 use riffrush_api::modules::moderacao::{Denuncia, ModeracaoPostgres, RepositorioDeModeracao, Situacao};
 use riffrush_api::modules::perfil::{PerfilPostgres, RepositorioDoPerfil};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar, ResumoDaPartida};
-use riffrush_api::modules::ranking::{Ordem, RankingPostgres, RepositorioDoRanking};
+use riffrush_api::modules::ranking::{MusicaPopular, Ordem, RankingPostgres, RepositorioDoRanking};
 use riffrush_api::modules::rejulgamento::{CacheDeCharts, ChartGuardado, FilaDoRejulgamento, LimiteDePedidos, RejulgamentoPostgres, PEDIDOS_AO_ENCORE};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -421,11 +421,16 @@ async fn ranking_geral_ordena_por_xp_e_ignora_quem_nao_jogou() {
     assert_eq!(linhas.iter().map(|l| (l.posicao, l.conta_id)).collect::<Vec<_>>(), [(1, jogador.id)]);
 }
 
+/// Os testes rodam juntos no mesmo banco e outros também criam músicas populares: cada um procura a sua no topo, em vez de exigir o 1º lugar.
+async fn da_musica(ranking: &RankingPostgres, musica: &str) -> MusicaPopular {
+    let musicas = ranking.musicas(1000).await.unwrap();
+    musicas.into_iter().find(|m| m.musica_id == musica).expect("a música do teste está no topo")
+}
+
 #[tokio::test]
 async fn musicas_mais_jogadas_contam_partidas_e_jogadores_diferentes() {
     let Some(banco) = banco().await else { return };
     let ranking = RankingPostgres(banco.0.clone());
-    // Música só deste teste, com partidas suficientes para ficar no topo do banco de testes.
     let musica = format!("teste:{}", Uuid::new_v4());
     let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -458,13 +463,9 @@ async fn musicas_mais_jogadas_contam_partidas_e_jogadores_diferentes() {
             .unwrap();
     }
 
-    let musicas = ranking.musicas(1).await.unwrap();
+    let musica_no_topo = da_musica(&ranking, &musica).await;
 
-    assert_eq!(musicas.len(), 1);
-    assert_eq!(
-        (musicas[0].posicao, musicas[0].musica_id.as_str(), musicas[0].partidas, musicas[0].jogadores),
-        (1, musica.as_str(), 300, 2)
-    );
+    assert_eq!((musica_no_topo.partidas, musica_no_topo.jogadores), (300, 2));
 }
 
 #[tokio::test]
@@ -509,12 +510,9 @@ async fn a_rodada_da_sala_conta_uma_partida_so_nas_mais_jogadas() {
             .unwrap();
     }
 
-    let musicas = ranking.musicas(1).await.unwrap();
+    let musica_no_topo = da_musica(&ranking, &musica).await;
 
-    assert_eq!(
-        (musicas[0].musica_id.as_str(), musicas[0].partidas, musicas[0].jogadores),
-        (musica.as_str(), 300, 2)
-    );
+    assert_eq!((musica_no_topo.partidas, musica_no_topo.jogadores), (300, 2));
 }
 
 #[tokio::test]
