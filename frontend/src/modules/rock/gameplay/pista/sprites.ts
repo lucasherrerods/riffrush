@@ -28,6 +28,9 @@ export function criarSprites(): Sprites {
     return cache.get(chave)!;
   };
 
+  /** As camadas que quase não mudam, uma por nome, com o que foi usado para desenhá-las. */
+  const camadas = new Map<string, { canvas: HTMLCanvasElement; versao: number; largura: number; altura: number; escala: number }>();
+
   return {
     nota: (cor, estrela, brilho, tipo) =>
       lembrar(`nota:${cor}:${estrela}:${brilho}:${tipo ?? "comum"}`, () =>
@@ -203,5 +206,21 @@ export function criarSprites(): Sprites {
           c.fillRect(0, 0, TAMANHO_DO_BRILHO, TAMANHO_DO_BRILHO);
         }),
       ),
+    camada: (nome, versao, largura, altura, escala, desenhar) => {
+      let camada = camadas.get(nome);
+      if (!camada) camadas.set(nome, (camada = { canvas: document.createElement("canvas"), versao: -1, largura: -1, altura: -1, escala: -1 }));
+      if (camada.versao !== versao || camada.largura !== largura || camada.altura !== altura || camada.escala !== escala) {
+        Object.assign(camada, { versao, largura, altura, escala });
+        // Trocar o tamanho do canvas já limpa o que estava desenhado.
+        camada.canvas.width = Math.max(1, Math.round(largura * escala));
+        camada.canvas.height = Math.max(1, Math.round(altura * escala));
+        const c = camada.canvas.getContext("2d");
+        if (c) {
+          c.setTransform(escala, 0, 0, escala, 0, 0);
+          desenhar(c);
+        }
+      }
+      return camada.canvas;
+    },
   };
 }

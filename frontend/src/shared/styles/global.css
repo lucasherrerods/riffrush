@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
 @import "@fontsource/bebas-neue";
-@import "@fontsource/rubik-dirt";
+@import "./fontes/rubik-dirt.css";
 @import "./identidade.css";
 
 @custom-variant dark (&:is(.dark *));
@@ -113,6 +113,31 @@ body {
   }
   to {
     transform: rotateX(62deg) translateY(70px);
+  }
+}
+
+/* O julgamento do último acerto: aparece grande, assenta e some (ver AvisoDeAcerto). */
+.aviso-de-acerto {
+  opacity: 0;
+  animation: aviso-de-acerto ease-out forwards;
+}
+
+@keyframes aviso-de-acerto {
+  0% {
+    opacity: 0;
+    transform: scale(1.5) skewX(-6deg);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1) skewX(-6deg);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1) skewX(-6deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95) skewX(-6deg);
   }
 }
 

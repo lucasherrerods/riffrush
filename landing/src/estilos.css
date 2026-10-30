@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "@fontsource-variable/geist";
 @import "@fontsource/bebas-neue";
-@import "@fontsource/rubik-dirt";
+@import "../../frontend/src/shared/styles/fontes/rubik-dirt.css";
 @import "../../frontend/src/shared/styles/identidade.css";
 
 @source "../../frontend/src/shared/ui/IconeGithub.tsx";

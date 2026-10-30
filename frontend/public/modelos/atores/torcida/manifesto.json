@@ -1,0 +1,56 @@
+{
+  "nome": "Turquesa (Torcida)",
+  "fps": 12,
+  "alturaEmMetros": 1.778,
+  "cenas": {
+    "parado": {
+      "arquivo": "parado.webp",
+      "quadros": 18,
+      "colunas": 5,
+      "linhas": 4,
+      "largura": 149,
+      "altura": 256
+    },
+    "tocando": {
+      "arquivo": "tocando.webp",
+      "quadros": 24,
+      "colunas": 5,
+      "linhas": 5,
+      "largura": 149,
+      "altura": 256
+    },
+    "errou": {
+      "arquivo": "errou.webp",
+      "quadros": 6,
+      "colunas": 3,
+      "linhas": 2,
+      "largura": 149,
+      "altura": 256
+    },
+    "vaiado": {
+      "arquivo": "vaiado.webp",
+      "quadros": 12,
+      "colunas": 4,
+      "linhas": 3,
+      "largura": 149,
+      "altura": 256
+    },
+    "nitro": {
+      "arquivo": "nitro.webp",
+      "quadros": 24,
+      "colunas": 5,
+      "linhas": 5,
+      "largura": 149,
+      "altura": 256
+    },
+    "vitoria": {
+      "arquivo": "vitoria.webp",
+      "quadros": 18,
+      "colunas": 5,
+      "linhas": 4,
+      "largura": 149,
+      "altura": 256
+    }
+  },
+  "card": "card.webp"
+}

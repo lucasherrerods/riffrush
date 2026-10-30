@@ -83,6 +83,9 @@ export interface Partida {
   eventos: Evento[];
   /** Onde as regras rodam. */
   motor: MotorDaPartida;
+  /** Vêm no mesmo pacote do `sincronizar`: o HUD lê todo quadro sem chamar o WASM de novo. */
+  multiplicadorAtual: number;
+  precisaoAtual: number;
 }
 
 const ACERTADA = 1;
@@ -121,6 +124,8 @@ export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false
   const partida: Partida = {
     notas: notas.map((n, i) => ({ ...n, tempo: grade[i * 3], duracao: grade[i * 3 + 1], pista: grade[i * 3 + 2], acertada: false, perdida: false, segurando: false, solta: false, segurouAte: grade[i * 3] })),
     primeira: 0,
+    multiplicadorAtual: 1,
+    precisaoAtual: 0,
     tempo: null,
     pontos: 0,
     sequencia: 0,
@@ -165,6 +170,8 @@ function sincronizar(partida: Partida) {
   partida.derrota = proximo() === 1;
   partida.fantasma = proximo() === 1;
   partida.primeira = proximo();
+  partida.multiplicadorAtual = proximo();
+  partida.precisaoAtual = proximo();
   for (let n = proximo(); n > 0; n--) {
     const nota = partida.notas[proximo()];
     const bandeiras = proximo();
@@ -192,10 +199,10 @@ export function retirarEventos(partida: Partida) {
   return partida.eventos.splice(0);
 }
 
-export const multiplicador = (partida: Partida) => partida.motor.multiplicador();
+export const multiplicador = (partida: Partida) => partida.multiplicadorAtual;
 
 /** Valor dos acertos sobre o máximo das notas que já passaram (0 a 1). No fim da música, vale para o chart inteiro. */
-export const precisao = (partida: Partida) => partida.motor.precisao();
+export const precisao = (partida: Partida) => partida.precisaoAtual;
 
 /** Marca a nota como acertada no instante `tempo`, sem olhar a janela de acerto (o bot usa). */
 export function acertar(partida: Partida, nota: NotaEmJogo, tempo: number) {

@@ -38,6 +38,34 @@ function desenhar(c: Cena, tempo = 0, efeitos = true, soLeves = false) {
 }
 
 describe("desenharPista", () => {
+  it("com camadas, o braço e as cordas são desenhados uma vez e reaproveitados até algo deles mudar", () => {
+    const desenhos: string[] = [];
+    const comCamadas: Sprites = {
+      ...sprites,
+      camada: (nome, versao, _largura, _altura, _escala, desenhar) => {
+        const guardada = `${nome}:${versao}`;
+        if (!desenhos.includes(guardada)) {
+          desenhos.push(guardada);
+          desenhar(criarCanvasFalso().contexto);
+        }
+        return { tipo: "camada", nome } as unknown as CanvasImageSource;
+      },
+    };
+    const quadro = (extra: Partial<Cena> = {}) => {
+      const canvas = criarCanvasFalso();
+      desenharPista(canvas.contexto, 1200, 800, 0, 2, cena([], extra), true, comCamadas);
+      return canvas;
+    };
+    const primeiro = quadro();
+    quadro();
+    expect(desenhos).toEqual(["braco:8", "cordas:0"]);
+    // O braço e as cordas chegam ao quadro como imagens, sem os traços das cordas no contexto da tela.
+    expect(primeiro.desenhos()).toEqual(expect.arrayContaining([expect.objectContaining({ nome: "braco" }), expect.objectContaining({ nome: "cordas" })]));
+    // O multiplicador troca a cor do trilho: só o braço é redesenhado.
+    quadro({ multiplicador: 2 });
+    expect(desenhos).toEqual(["braco:8", "cordas:0", "braco:10"]);
+  });
+
   // Bug: a luz, o cromo dos botões e o fade eram gradientes novos a cada quadro, 7 por quadro.
   it("no mesmo tamanho, o quadro seguinte reaproveita todos os gradientes", () => {
     const canvas = criarCanvasFalso();

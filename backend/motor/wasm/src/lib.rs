@@ -28,6 +28,10 @@ pub struct MotorDaPartida {
     /// O que o app já tem de cada nota (bandeiras e até onde o sustain rendeu), para mandar só o que mudou.
     enviadas: Vec<(u8, f64)>,
     frases_enviadas: Vec<i32>,
+    /// A primeira nota que ainda importava na última sincronização: antes dela nada muda mais.
+    primeira_enviada: usize,
+    /// Notas acertadas direto pelo app (o bot), que podem estar fora da janela que a sincronização olha.
+    forcadas: Vec<usize>,
 }
 
 #[wasm_bindgen]
@@ -76,6 +80,8 @@ impl MotorDaPartida {
             partida,
             enviadas,
             frases_enviadas: Vec::new(),
+            primeira_enviada: 0,
+            forcadas: Vec::new(),
         }
     }
 
@@ -108,6 +114,7 @@ impl MotorDaPartida {
     pub fn acertar(&mut self, indice: usize, tempo: f64) {
         if indice < self.partida.notas.len() {
             motor::acertar(&mut self.partida, indice, tempo);
+            self.forcadas.push(indice);
         }
     }
 
@@ -120,9 +127,9 @@ impl MotorDaPartida {
     }
 
     /// O que mudou desde a última chamada, na ordem:
-    /// - 17 números do estado: tempo (NaN antes de começar), pontos, sequência, maior sequência, acertos,
+    /// - 19 números do estado: tempo (NaN antes de começar), pontos, sequência, maior sequência, acertos,
     ///   perfeitos, ótimos, bons, valor dos acertos, erros, vida, ticks de star power, barra de star power (0 a 1),
-    ///   star power ativo, derrota, fantasma e a primeira nota que ainda importa;
+    ///   star power ativo, derrota, fantasma, a primeira nota que ainda importa, o multiplicador e a precisão;
     /// - quantas notas mudaram e, para cada uma, índice, bandeiras e até onde o sustain rendeu;
     /// - quantos eventos e, para cada um, código e dois valores;
     /// - quantas frases falharam e cada uma.
@@ -146,19 +153,38 @@ impl MotorDaPartida {
             f64::from(u8::from(p.derrota)),
             f64::from(u8::from(p.fantasma)),
             p.primeira as f64,
+            motor::multiplicador(p),
+            motor::precisao(p),
         ];
 
         let posicao_da_contagem = saida.len();
         saida.push(0.0);
         let mut mudadas = 0.0;
-        for (indice, (nota, enviada)) in p.notas.iter().zip(self.enviadas.iter_mut()).enumerate() {
+        let mut conferir = |indice: usize, saida: &mut Vec<f64>| {
+            let nota = &p.notas[indice];
             let atual = (bandeiras(nota), nota.segurou_ate);
+            let enviada = &mut self.enviadas[indice];
             if atual != *enviada {
                 *enviada = atual;
                 saida.extend([indice as f64, f64::from(atual.0), atual.1]);
                 mudadas += 1.0;
             }
+        };
+        // Só muda o que está entre a primeira nota que ainda importava e o fim da janela de acerto:
+        // as de trás já foram julgadas e as da frente ainda não chegaram. Percorrer a música toda a cada toque pesa.
+        let limite = p.tempo.map_or(f64::NEG_INFINITY, |t| t + motor::JANELA_DE_ACERTO + 0.001);
+        let inicio = self.primeira_enviada.min(p.primeira);
+        let mut indice = inicio;
+        while indice < p.notas.len() && p.notas[indice].tempo <= limite {
+            conferir(indice, &mut saida);
+            indice += 1;
         }
+        for forcada in std::mem::take(&mut self.forcadas) {
+            if forcada < inicio || forcada >= indice {
+                conferir(forcada, &mut saida);
+            }
+        }
+        self.primeira_enviada = p.primeira;
         saida[posicao_da_contagem] = mudadas;
 
         let eventos = motor::retirar_eventos(&mut self.partida);
