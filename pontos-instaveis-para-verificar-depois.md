@@ -9,6 +9,20 @@ Problemas encontrados de passagem, fora do escopo da mudança que estava sendo f
 - **Suspeita:** o resultado depende do estado do banco ou da ordem/concorrência dos testes (por exemplo, outras contas e partidas criadas por testes que rodam ao mesmo tempo no mesmo Postgres, ou desempate por horário).
 - **Próximo passo:** rodar `cargo test --test postgres ranking_geral` várias vezes seguidas com `DATABASE_URL` e ver se o teste isola os próprios dados.
 
+## Migrações concorrentes nos testes do Mania
+
+- **Onde:** `backend/tests/mania.rs` (função `banco()`), job "Testes do backend" do CI.
+- **O que se viu:** em 30/10/2026, no CI do PR de amigos, três testes falharam em `as migrações falharam`: um com `duplicate key value violates unique constraint "_sqlx_migrations_pkey"` e os outros com `VersionMismatch`. É o primeiro arquivo de teste a usar o Postgres vazio. Na rodada anterior do mesmo PR, os mesmos testes passaram.
+- **Suspeita:** os testes do arquivo rodam em paralelo, e cada um chama `sqlx::migrate!().run()` ao mesmo tempo num banco ainda sem as migrações, então dois tentam gravar a mesma versão.
+- **Próximo passo:** aplicar as migrações uma vez antes dos testes (passo próprio no CI ou um `OnceCell` compartilhado em `banco()`) e conferir se `tests/postgres.rs` tem o mesmo risco.
+
+## Teste instável: `a_rodada_da_sala_conta_uma_partida_so_nas_mais_jogadas`
+
+- **Onde:** `backend/tests/postgres.rs`, job "Testes do backend" do CI.
+- **O que se viu:** em 30/10/2026, no CI do PR de amigos (com a `main` mesclada), o teste comparou `musicas[0]` e encontrou outra música `teste:...` com os mesmos números (300 partidas, 2 jogadores). Na `main` o mesmo teste tinha passado.
+- **Suspeita:** o teste lê o topo das mais jogadas do banco inteiro, e outro teste que roda ao mesmo tempo no mesmo Postgres cria uma música com a mesma contagem; no empate, a ordem muda.
+- **Próximo passo:** procurar a música do próprio teste na lista em vez de usar a posição 0, ou dar ao teste uma contagem que nenhum outro cria.
+
 ## Teste instável: `carregarMusica (embutidas)`
 
 - **Onde:** `frontend/src/modules/rock/songs/carregamento.test.ts`, na suíte inteira do frontend (`npm test`).

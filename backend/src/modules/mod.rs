@@ -1,3 +1,4 @@
+pub mod amizade;
 pub mod catalogo;
 pub mod conta;
 pub mod mania;

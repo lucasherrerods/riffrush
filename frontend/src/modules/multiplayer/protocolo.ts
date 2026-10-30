@@ -62,7 +62,8 @@ export type Mensagem =
   | { tipo: "sala"; jogadores: Jogador[]; musica: MusicaNaRede; dificuldade: Dificuldade; instrumento?: Instrumento; prontos: number[] }
   /** O convidado já tem a música `musicaId` e está (ou deixou de estar) pronto para começar. */
   | { tipo: "pronto"; musicaId: string; pronto: boolean }
-  | { tipo: "comecar"; musica: MusicaNaRede; dificuldade: Dificuldade; instrumento?: Instrumento }
+  /** `rodada` junta as partidas desta largada, para o ranking contar uma vez só. Versões antigas não mandam. */
+  | { tipo: "comecar"; musica: MusicaNaRede; dificuldade: Dificuldade; instrumento?: Instrumento; rodada?: string }
   | ({ tipo: "estado" } & EstadoDoJogador)
   | { tipo: "chat"; texto: string };
 
@@ -94,6 +95,8 @@ export interface EstadoDaSala {
   partidas: number;
   /** Instante (performance.now) em que a música começa para todos. */
   inicio: number;
+  /** A largada atual, que cada jogador manda junto com a partida. */
+  rodada?: string;
   chat: MensagemDaSala[];
   /** O limite do chat de cada jogador, contado por quem recebe: um cliente modificado não inunda a sala. */
   baldesDoChat: Record<number, Balde>;
@@ -194,6 +197,8 @@ export function reduzir(estado: EstadoDaSala, de: number, mensagem: Mensagem, ag
           adversarios: {},
           partidas: estado.partidas + 1,
           inicio: agora + ATRASO_DO_INICIO_MS,
+          // A API recusaria a partida com um id malformado: um host modificado não tira o XP de ninguém.
+          rodada: typeof mensagem.rodada === "string" && ID_DA_RODADA.test(mensagem.rodada) ? mensagem.rodada : undefined,
         },
         enviar: [],
       };
@@ -255,6 +260,8 @@ export function transferirHost(estado: EstadoDaSala, id: number): Reacao {
 /** Todos os convidados já têm a música e deram pronto. O host não precisa: ele dá a largada. */
 export const todosProntos = (estado: EstadoDaSala) => estado.jogadores.every((j) => j.id === estado.hostId || estado.prontos.includes(j.id));
 
-export function comecarPartida(estado: EstadoDaSala): Mensagem[] {
-  return estado.souHost && todosProntos(estado) ? [{ tipo: "comecar", musica: estado.musica, dificuldade: estado.dificuldade, instrumento: estado.instrumento }] : [];
+const ID_DA_RODADA = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function comecarPartida(estado: EstadoDaSala, rodada: string = crypto.randomUUID()): Mensagem[] {
+  return estado.souHost && todosProntos(estado) ? [{ tipo: "comecar", musica: estado.musica, dificuldade: estado.dificuldade, instrumento: estado.instrumento, rodada }] : [];
 }

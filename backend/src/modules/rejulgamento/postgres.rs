@@ -27,6 +27,7 @@ struct LinhaPendente {
     replay: Vec<u8>,
     enviada_em: DateTime<Utc>,
     tentativas: i32,
+    rodada_id: Option<Uuid>,
 }
 
 impl LinhaPendente {
@@ -41,6 +42,7 @@ impl LinhaPendente {
             replay: self.replay,
             enviada_em: self.enviada_em,
             tentativas: u32::try_from(self.tentativas).unwrap_or(0),
+            rodada: self.rodada_id,
         })
     }
 }
@@ -49,8 +51,8 @@ impl LinhaPendente {
 impl FilaDePartidas for RejulgamentoPostgres {
     async fn enfileirar(&self, partida: PartidaNaFila) -> Result<(), FalhaExterna> {
         sqlx::query(
-            "INSERT INTO partidas_pendentes (id, conta_id, md5, dificuldade, instrumento, replay, enviada_em, tentar_em)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $7)",
+            "INSERT INTO partidas_pendentes (id, conta_id, md5, dificuldade, instrumento, replay, enviada_em, tentar_em, rodada_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8)",
         )
         .bind(partida.id)
         .bind(partida.conta_id)
@@ -59,6 +61,7 @@ impl FilaDePartidas for RejulgamentoPostgres {
         .bind(partida.instrumento.como_texto())
         .bind(&partida.replay)
         .bind(partida.enviada_em)
+        .bind(partida.rodada)
         .execute(&self.0)
         .await
         .map(|_| ())
@@ -75,7 +78,7 @@ impl FilaDoRejulgamento for RejulgamentoPostgres {
              WHERE id IN (SELECT id FROM partidas_pendentes
                           WHERE desistiu_por IS NULL AND tentar_em <= $1
                           ORDER BY enviada_em LIMIT $3 FOR UPDATE SKIP LOCKED)
-             RETURNING id, conta_id, md5, dificuldade, instrumento, replay, enviada_em, tentativas",
+             RETURNING id, conta_id, md5, dificuldade, instrumento, replay, enviada_em, tentativas, rodada_id",
         )
         .bind(agora)
         .bind(agora + RESERVA)

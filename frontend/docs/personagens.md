@@ -6,14 +6,16 @@ Como criar novos personagens 3D para o Riff Rush sem abrir o Blender, e como ele
 
 ## Visão geral
 
-Os personagens são arquivos **VRM 1.0** (um `.glb` com o esqueleto humanoide e as expressões descritas na extensão `VRMC_vrm`). O jogo carrega o VRM com `@pixiv/three-vrm`, aplica as animações da Mixamo por retarget (`render3d/retarget.ts`) e pinta as partes pelas cores escolhidas no criador de personagem.
+Os personagens são arquivos **VRM 1.0** (um `.glb` com o esqueleto humanoide e as expressões descritas na extensão `VRMC_vrm`). O jogo carrega o VRM com `@pixiv/three-vrm`, aplica as animações da Mixamo por retarget (`render3d/retarget.ts`) e encaixa o instrumento do personagem nas mãos.
+
+Não existe customização livre (cores, corpo, peças): cada personagem do catálogo (`PERSONAGENS` em `catalogo.ts`) toca um instrumento e pode ter algumas **skins**, que são versões do mesmo personagem. O jogador escolhe o personagem e a skin.
 
 Há dois caminhos para ter um personagem novo:
 
 | Caminho | Quando usar |
 |---|---|
 | **Gerador procedural** (`scripts/gerar-personagem.mjs`) | Personagens estilizados no visual do jogo, feitos a partir de uma receita JSON. Rápido para criar a banda inteira. |
-| **VRoid Studio / Booth** | Quando quiser um personagem anime detalhado. Exporte em `.vrm` e registre em `BASES`. |
+| **VRoid Studio / Booth** | Quando quiser um personagem anime detalhado. Exporte em `.vrm` e registre como skin em `PERSONAGENS`. |
 
 Os dois produzem o mesmo tipo de arquivo, então o resto do jogo não muda.
 
@@ -29,10 +31,10 @@ Os dois produzem o mesmo tipo de arquivo, então o resto do jogo não muda.
    ```
 
    O arquivo sai em `public/modelos/personagens/<id>.vrm`, e o script mostra triângulos e tamanho.
-3. Registre em `BASES` em `src/modules/rock/character/catalogo.ts`:
+3. Registre em `PERSONAGENS` em `src/modules/rock/character/catalogo.ts`, como um personagem novo ou uma skin de um que já existe:
 
    ```ts
-   { id: "<id>", rotulo: "Nome no menu", arquivo: "/modelos/personagens/<id>.vrm" },
+   { id: "<id>", rotulo: "Nome no menu", instrumento: "baixo", skins: [{ id: "padrao", rotulo: "Padrão", arquivo: "/modelos/personagens/<id>.vrm" }] },
    ```
 
 O script só usa o Node, sem dependências. Cada personagem fica com **8–11 mil triângulos e 330–400 KB**.
@@ -193,11 +195,13 @@ python scripts/preparar-ator.py atores/<id>.json
 
 O script recorta a pessoa com dois modelos de IA (cada um erra em quadros diferentes), descarta o que fica solto (cadeiras, gente passando atrás), enquadra todas as cenas do mesmo jeito e gera `public/modelos/atores/<id>/` com uma folha `.png` por cena e o `manifesto.json`. Na primeira vez ele baixa os modelos (~350 MB).
 
-Registre em `BASES` com `tipo: "video"`:
+Registre a pasta como skin em `PERSONAGENS`, com `tipo: "video"`:
 
 ```ts
-{ id: "<id>", rotulo: "Nome (filmado)", arquivo: "/modelos/atores/<id>", tipo: "video" },
+{ id: "<skin>", rotulo: "Nome da skin", arquivo: "/modelos/atores/<id>", tipo: "video" },
 ```
+
+Só a cena `tocando` é obrigatória no manifesto; as que faltam usam ela. O Faísca, por exemplo, tem só uma folha de 39 quadros de 88 × 128 (8 colunas × 5 linhas).
 
 ### No código
 

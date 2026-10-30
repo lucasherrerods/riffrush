@@ -6,9 +6,10 @@ export function NumeroDaContagem({ valor }: { valor: number }) {
     <motion.p
       role="timer"
       aria-label={`Volta em ${valor}`}
-      initial={{ scale: 2, opacity: 0 }}
+      // Entra rápido e sai sem animação: o número precisa estar certo no instante em que a música começa.
+      initial={{ scale: 1.6, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 0.5, opacity: 0 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
       className="pointer-events-none absolute inset-0 flex items-center justify-center text-8xl font-black"
     >
       {valor}

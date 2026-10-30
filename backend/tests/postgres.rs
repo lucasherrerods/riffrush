@@ -2,6 +2,7 @@
 //! (o CI sobe um Postgres); sem ela, os testes passam sem fazer nada.
 
 use chrono::{Duration, Utc};
+use riffrush_api::modules::amizade::{AmizadesPostgres, Relacao, RepositorioDeAmizades, Vinculo};
 use riffrush_api::modules::catalogo::{CatalogoPostgres, DadosDaMusica, RepositorioDoCatalogo};
 use riffrush_api::modules::conta::{
     ContasPostgres, FilaDePartidas, PartidaNaFila, PartidaRegistrada, PerfilDoGoogle, RepositorioDeContas, RepositorioDeSessoes,
@@ -93,6 +94,7 @@ async fn partida_soma_xp_e_marca_a_ultima() {
         replay: None,
         precisao: None,
         jeito_de_jogar: None,
+        rodada: None,
     };
     assert_eq!(banco.registrar_partida(&partida).await.unwrap().xp_total, 120);
     // A fila pode entregar a mesma partida duas vezes: o mesmo id não soma de novo.
@@ -130,6 +132,7 @@ async fn excluir_apaga_a_conta_com_sessoes_e_partidas() {
         replay: None,
         precisao: None,
         jeito_de_jogar: None,
+        rodada: None,
     };
     banco.registrar_partida(&partida).await.unwrap();
 
@@ -167,6 +170,7 @@ async fn ranking_pega_o_recorde_de_cada_jogador_pelos_pontos() {
         replay: None,
         precisao,
         jeito_de_jogar: None,
+        rodada: None,
     };
     let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -239,6 +243,7 @@ async fn o_ranking_mostra_o_jeito_de_jogar_de_cada_recorde() {
         replay: None,
         precisao: Some(0.9),
         jeito_de_jogar,
+        rodada: None,
     };
     let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -282,6 +287,7 @@ async fn ranking_por_precisao_pega_a_partida_de_mais_precisao_de_cada_jogador() 
         replay: None,
         precisao,
         jeito_de_jogar: None,
+        rodada: None,
     };
     let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -332,6 +338,7 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
         replay: None,
         precisao: None,
         jeito_de_jogar: None,
+        rodada: None,
     };
     for partida in [
         jogar("a", Dificuldade::Expert, 900, false, 0),
@@ -403,6 +410,7 @@ async fn ranking_geral_ordena_por_xp_e_ignora_quem_nao_jogou() {
             replay: None,
             precisao: None,
             jeito_de_jogar: None,
+            rodada: None,
         })
         .await
         .unwrap();
@@ -444,6 +452,7 @@ async fn musicas_mais_jogadas_contam_partidas_e_jogadores_diferentes() {
                 replay: None,
                 precisao: None,
                 jeito_de_jogar: None,
+                rodada: None,
             })
             .await
             .unwrap();
@@ -455,6 +464,56 @@ async fn musicas_mais_jogadas_contam_partidas_e_jogadores_diferentes() {
     assert_eq!(
         (musicas[0].posicao, musicas[0].musica_id.as_str(), musicas[0].partidas, musicas[0].jogadores),
         (1, musica.as_str(), 300, 2)
+    );
+}
+
+#[tokio::test]
+async fn a_rodada_da_sala_conta_uma_partida_so_nas_mais_jogadas() {
+    let Some(banco) = banco().await else { return };
+    let ranking = RankingPostgres(banco.0.clone());
+    let musica = format!("teste:{}", Uuid::new_v4());
+    let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let agora = Utc::now();
+    // 200 rodadas da sala com as duas e 100 partidas solo da Ana: 300 partidas, 400 linhas.
+    let rodadas = (0..200).flat_map(|i| {
+        let rodada = Uuid::new_v4();
+        [(ana.id, Some(rodada), i), (bia.id, Some(rodada), i)]
+    });
+    let solos = (200..300).map(|i| (ana.id, None, i));
+    for (conta, rodada, i) in rodadas.chain(solos) {
+        banco
+            .registrar_partida(&PartidaRegistrada {
+                id: Uuid::new_v4(),
+                conta_id: conta,
+                musica_id: musica.clone(),
+                instrumento: Instrumento::Guitarra,
+                pontos: 10,
+                resumo: ResumoDaPartida {
+                    dificuldade: Dificuldade::Facil,
+                    acertos: 1,
+                    total: 1,
+                    derrota: false,
+                    fantasma: false,
+                    maior_sequencia: None,
+                    valor_dos_acertos: None,
+                },
+                xp_ganho: 0,
+                jogada_em: agora + Duration::seconds(i as i64),
+                replay: None,
+                precisao: None,
+                jeito_de_jogar: None,
+                rodada,
+            })
+            .await
+            .unwrap();
+    }
+
+    let musicas = ranking.musicas(1).await.unwrap();
+
+    assert_eq!(
+        (musicas[0].musica_id.as_str(), musicas[0].partidas, musicas[0].jogadores),
+        (musica.as_str(), 300, 2)
     );
 }
 
@@ -482,6 +541,7 @@ async fn ranking_geral_da_a_posicao_certa_fora_do_top_e_no_empate() {
         replay: None,
         precisao: None,
         jeito_de_jogar: None,
+        rodada: None,
     };
     let primeiro = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let empatado = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -533,6 +593,7 @@ async fn a_linha_do_ranking_abre_a_partida_com_a_maior_sequencia() {
             replay: None,
             precisao: Some(0.9),
             jeito_de_jogar: None,
+            rodada: None,
         })
         .await
         .unwrap();
@@ -582,6 +643,7 @@ async fn so_o_top_10_guarda_replay_e_quem_cai_perde_o_dele() {
         replay: Some(vec![1, replay]),
         precisao: Some(0.9),
         jeito_de_jogar: None,
+        rodada: None,
     };
     let com_replay = || async {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM partidas WHERE musica_id = $1 AND replay IS NOT NULL")
@@ -714,6 +776,7 @@ async fn recordes_pegam_a_melhor_partida_terminada_de_cada_musica() {
         replay: None,
         precisao: Some(pontos as f64 / 1000.0),
         jeito_de_jogar: None,
+        rodada: None,
     };
     for partida in [
         jogar(Instrumento::Guitarra, 500, false, false),
@@ -751,6 +814,7 @@ fn na_fila(conta_id: Uuid, md5: &str, enviada_em: chrono::DateTime<Utc>) -> Part
         instrumento: Instrumento::Baixo,
         replay: vec![2, 1, 2],
         enviada_em,
+        rodada: Some(Uuid::from_u128(7)),
     }
 }
 
@@ -779,6 +843,7 @@ async fn a_fila_reserva_reagenda_desiste_e_conclui() {
         (pegas[0].tentativas, pegas[0].instrumento, pegas[0].replay.as_slice()),
         (1, Instrumento::Baixo, [2, 1, 2].as_slice())
     );
+    assert_eq!(pegas[0].rodada, Some(Uuid::from_u128(7)));
     // Reservadas, não saem de novo.
     assert!(minhas(fila.pegar(1000, agora).await.unwrap()).is_empty());
 
@@ -822,4 +887,56 @@ async fn o_limite_do_encore_e_contado_no_banco_e_libera_quando_a_janela_passa() 
     // Outra instância, com outra conexão, vê o mesmo limite.
     assert!(!RejulgamentoPostgres(banco.0.clone()).pedir(agora + Duration::seconds(2)).await.unwrap());
     assert!(limite.pedir(agora + Duration::seconds(41)).await.unwrap());
+}
+
+#[tokio::test]
+async fn amizades_pedem_aceitam_bloqueiam_e_sugerem_amigos_de_amigos() {
+    let Some(banco) = banco().await else { return };
+    let amizades = AmizadesPostgres(banco.0.clone());
+    let agora = Utc::now();
+    let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+    let beto = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+    let caio = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+
+    let codigo = format!("RIFF-{}", Uuid::new_v4().simple().to_string()[..6].to_uppercase());
+    assert_eq!(amizades.guardar_codigo(ana, &codigo).await.unwrap().as_deref(), Some(codigo.as_str()));
+    // Código de outra conta não é guardado; a conta que já tem código fica com o dela.
+    assert_eq!(amizades.guardar_codigo(beto, &codigo).await.unwrap(), None);
+    assert_eq!(amizades.guardar_codigo(ana, "RIFF-OUTRO2").await.unwrap().as_deref(), Some(codigo.as_str()));
+    assert_eq!(amizades.conta_do_codigo(&codigo).await.unwrap(), Some(ana));
+    amizades.marcar_visto(ana, agora).await.unwrap();
+
+    amizades.criar_pedido(ana, beto, agora).await.unwrap();
+    // O pedido cruzado não cria uma segunda linha para o mesmo par.
+    amizades.criar_pedido(beto, ana, agora).await.unwrap();
+    assert_eq!(amizades.relacao(ana, beto).await.unwrap(), Relacao::PedidoEnviado);
+    assert_eq!(amizades.relacao(beto, ana).await.unwrap(), Relacao::PedidoRecebido);
+    assert_eq!(amizades.contagens(ana, beto).await.unwrap().enviados_de_quem_pede, 1);
+    assert!(!amizades.aceitar(ana, caio, agora).await.unwrap());
+    assert!(amizades.aceitar(ana, beto, agora).await.unwrap());
+    assert_eq!(amizades.relacao(beto, ana).await.unwrap(), Relacao::Amigos);
+    let do_beto = amizades.pessoas(beto).await.unwrap();
+    assert_eq!(do_beto.len(), 1);
+    assert_eq!(do_beto[0].vinculo, Vinculo::Amigo);
+    assert!(do_beto[0].visto_em.is_some());
+
+    amizades.criar_pedido(caio, beto, agora).await.unwrap();
+    amizades.aceitar(caio, beto, agora).await.unwrap();
+    let sugestoes = amizades.sugestoes(ana, 10).await.unwrap();
+    assert_eq!(sugestoes.len(), 1);
+    assert_eq!((sugestoes[0].conta_id, sugestoes[0].amigos_em_comum), (caio, 1));
+
+    amizades.bloquear(caio, ana, agora).await.unwrap();
+    assert!(amizades.sugestoes(ana, 10).await.unwrap().is_empty());
+    assert_eq!(amizades.relacao(ana, caio).await.unwrap(), Relacao::FoiBloqueado);
+    // Todas as contas do teste têm o mesmo nome: acha pela conta, não pela posição.
+    let da_ana = amizades.pessoas(caio).await.unwrap().into_iter().find(|p| p.conta_id == ana).unwrap();
+    assert_eq!(da_ana.vinculo, Vinculo::Bloqueado);
+    amizades.desbloquear(caio, ana).await.unwrap();
+    assert_eq!(amizades.relacao(ana, caio).await.unwrap(), Relacao::Nenhuma);
+
+    amizades.desfazer(beto, ana).await.unwrap();
+    assert_eq!(amizades.relacao(ana, beto).await.unwrap(), Relacao::Nenhuma);
+    banco.excluir(ana).await.unwrap();
+    assert_eq!(amizades.conta_do_codigo(&codigo).await.unwrap(), None);
 }

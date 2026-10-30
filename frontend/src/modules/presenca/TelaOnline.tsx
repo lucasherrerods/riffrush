@@ -1,10 +1,10 @@
 import { ArrowLeft, Eye, Loader2, Radio, UserRound } from "lucide-react";
-import { DIFICULDADES, INSTRUMENTOS } from "@/modules/rock/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";
 import { Switch } from "@/shared/ui/switch";
 import type { EstadoDaPresenca } from "./conexao";
+import { descreverEstado } from "./descrever";
 import { ordenarPessoas, type PessoaOnline } from "./protocolo";
 
 export interface PreferenciasOnline {
@@ -109,7 +109,7 @@ function Lista({ presenca, euId, aoAssistir }: { presenca: EstadoDaPresenca; euI
           )}
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-base font-bold">{pessoa.nome}</span>
-            <span className="truncate text-base text-texto-suave">{descrever(pessoa)}</span>
+            <span className="truncate text-base text-texto-suave">{descreverEstado(pessoa.estado)}</span>
           </span>
           {pessoa.estado.tipo === "tocando" && pessoa.estado.transmitindo && (
             <Button variant="outline" onClick={() => aoAssistir(pessoa)} aria-label={`Assistir ${pessoa.nome}`}>
@@ -120,11 +120,4 @@ function Lista({ presenca, euId, aoAssistir }: { presenca: EstadoDaPresenca; euI
       ))}
     </ul>
   );
-}
-
-function descrever({ estado }: PessoaOnline) {
-  if (estado.tipo === "menu") return "No menu";
-  const dificuldade = DIFICULDADES.find((d) => d.id === estado.dificuldade)?.rotulo ?? estado.dificuldade;
-  const instrumento = estado.instrumento === "guitarra" ? "" : ` · ${INSTRUMENTOS.find((i) => i.id === estado.instrumento)?.rotulo ?? estado.instrumento}`;
-  return `Tocando ${estado.titulo} – ${estado.artista} · ${dificuldade}${instrumento}`;
 }

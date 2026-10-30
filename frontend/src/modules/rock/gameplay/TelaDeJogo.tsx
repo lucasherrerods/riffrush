@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Eye, Loader2, Pause, Skull } from "lucide-react";
-import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
+import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, pausarAudio, retomarAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
 import { suportaWebGL, type Personagem } from "@/modules/rock/character";
 import { cenaDaPartida } from "./cena";
 import { Palco, type EstadoDoPalco } from "@/modules/rock/stage";
@@ -31,6 +31,9 @@ export { OPCOES_PADRAO_DA_PARTIDA, type JogadorLocal, type OpcoesDaPartida } fro
 
 /** Ao despausar, a música volta depois de 3, 2, 1. */
 const SEGUNDOS_PARA_RETOMAR = 3;
+/** Atalhos fixos: P pausa como o Esc e R recomeça. Valem só quando não são teclas do jogo. */
+const TECLA_DE_PAUSA = "KeyP";
+const TECLA_DE_RECOMECAR = "KeyR";
 interface Props {
   musica: Musica;
   dificuldade: Dificuldade;
@@ -198,12 +201,14 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     const atraso = opcoes.atrasoMs / 1000;
     const tempoDaMusica = (tempoDoAudio: number) => tempoDoAudio - inicio - atraso;
     let pausadoAgora = false;
+    /** Onde a música parou. Na pausa o relógio fica nela, mesmo se o áudio voltar a andar sozinho. */
+    let posicaoNaPausa = 0;
     let terminou = false;
     let quadro = 0;
     let ultimaSincroniaDoVideo = 0;
     Object.assign(relogio, {
-      agora: () => tempoDaMusica(agoraNoAudio(audio)),
-      doEvento: (evento: Event) => tempoDaMusica(momentoDoEvento(audio, evento)),
+      agora: () => (pausadoAgora ? posicaoNaPausa - atraso : tempoDaMusica(agoraNoAudio(audio))),
+      doEvento: (evento: Event) => (pausadoAgora ? posicaoNaPausa - atraso : tempoDaMusica(momentoDoEvento(audio, evento))),
       pausado: () => pausadoAgora,
     });
 
@@ -247,8 +252,9 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         return setPausado(true);
       }
       if (pausadoAgora) return;
+      posicaoNaPausa = agoraNoAudio(audio) - inicio;
       pausadoAgora = true;
-      void audio.suspend();
+      pausarAudio();
       video.current?.pause();
       setPausado(true);
       transmitirPausa(true);
@@ -262,8 +268,10 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
           if (falta > 1) return contar(falta - 1);
           retomada = null;
           setRetomando(0);
+          // O áudio pode ter andado na pausa (o celular retoma sozinho): volta a música para onde parou.
+          if (Math.abs(agoraNoAudio(audio) - inicio - posicaoNaPausa) > 0.05) tocarDe(posicaoNaPausa);
           pausadoAgora = false;
-          void audio.resume();
+          retomarAudio();
           transmitirPausa(false);
         }, 1000);
       };
@@ -280,6 +288,10 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       if (!replay || replay.ateAgora !== undefined || terminou) return;
       const alvo = Math.max(0, Math.min(tempo, duracao - FOLGA_DO_FIM));
       jogador.current.refazerEm(alvo);
+      tocarDe(alvo);
+    };
+    /** Recomeça o áudio no segundo `alvo` da música; antes do zero, espera o que falta para ela começar. */
+    function tocarDe(alvo: number) {
       try {
         fonte.stop();
       } catch {
@@ -287,14 +299,24 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       }
       fonte = criarFonte();
       const quando = audio.currentTime + 0.05;
-      fonte.start(quando, alvo * velocidade);
+      if (alvo >= 0) fonte.start(quando, alvo * velocidade);
+      else fonte.start(quando - alvo);
       inicio = quando - alvo;
-      if (video.current) video.current.currentTime = alvo * velocidade;
-    };
+      if (video.current) video.current.currentTime = Math.max(0, alvo) * velocidade;
+    }
     Object.assign(controles.current, { pausar, continuar, desistir, irPara });
 
+    const teclaDoJogo = (codigo: string) => opcoes.teclas.includes(codigo) || codigo === opcoes.teclaDaEstrela || codigo === opcoes.teclaDaPalheta;
+    const atalhoFixo = (evento: KeyboardEvent, codigo: string) =>
+      evento.code === codigo && !evento.repeat && !evento.ctrlKey && !evento.metaKey && !evento.altKey && !teclaDoJogo(codigo);
     const aoApertar = (evento: KeyboardEvent) => {
-      if (evento.code === "Escape") {
+      if (atalhoFixo(evento, TECLA_DE_RECOMECAR)) {
+        // Em rede a partida é da sala, e o replay não se recomeça.
+        if (inicioEmRede !== undefined || replay) return;
+        evento.preventDefault();
+        return atalhos.current.recomecar();
+      }
+      if (evento.code === "Escape" || atalhoFixo(evento, TECLA_DE_PAUSA)) {
         evento.preventDefault();
         if (retomada) pausar();
         else if (pausadoAgora || (inicioEmRede !== undefined && pausadoNaTela.current)) continuar();
@@ -320,6 +342,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       quadro = requestAnimationFrame(aCadaQuadro);
       const leitura = contadorDeFps.quadro(agora);
       if (opcoes.mostrarFps && leitura !== null) setFps(leitura);
+      // Algo de fora (o sistema, outro som do jogo) pode religar o áudio com a partida pausada.
+      if (pausadoAgora && audio.state === "running") void audio.suspend();
       const tempo = relogio.agora();
       const clipe = video.current;
       if (clipe && !terminou && !pausadoAgora && tempo >= 0 && performance.now() - ultimaSincroniaDoVideo > 500) {
@@ -344,7 +368,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       }
       ganho.disconnect();
       video.current?.pause();
-      void audio.resume();
+      retomarAudio();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessao]);
@@ -356,6 +380,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     for (const l of lojas) l.definir(HUD_INICIAL);
     setRodada((r) => r + 1);
   };
+  const atalhos = useRef({ recomecar });
+  atalhos.current.recomecar = recomecar;
 
   // A guitarra é o padrão e não aparece; os outros instrumentos vêm antes da dificuldade.
   const rotuloDaDificuldade = [instrumento !== "guitarra" && INSTRUMENTOS.find((i) => i.id === instrumento)?.rotulo, DIFICULDADES.find((d) => d.id === dificuldade)?.rotulo]

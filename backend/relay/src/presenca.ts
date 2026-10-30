@@ -1,6 +1,7 @@
 // Partes puras da lista de quem está online e da transmissão ao vivo das partidas.
 
-import { TAMANHO_MAXIMO_DA_MENSAGEM } from "./regras";
+import { ID_DA_CONTA } from "./chat";
+import { TAMANHO_MAXIMO_DA_MENSAGEM, codigoValido } from "./regras";
 
 export interface Pessoa {
   id: string;
@@ -29,15 +30,27 @@ export function fichaDoPedido(pedido: Request): { ficha: string; peloProtocolo: 
   return { ficha: new URL(pedido.url).searchParams.get("ficha") ?? "", peloProtocolo: false };
 }
 
-/** Onde a pessoa está. A música vai com o id do ranking, para quem assiste achar a mesma. */
+/**
+ * Onde a pessoa está. A música vai com o id do ranking, para quem assiste achar a mesma.
+ * O código da sala não vai no estado: a lista é de todos, e a sala só chega a quem foi convidado.
+ */
 export type EstadoOnline =
   | { tipo: "menu" }
+  | { tipo: "selecao" }
+  | { tipo: "multiplayer" }
   | { tipo: "tocando"; musica: string; titulo: string; artista: string; dificuldade: string; instrumento: string; transmitindo: boolean };
 
 export type PessoaOnline = Pessoa & { estado: EstadoOnline };
 
 /** O que o relay manda para quem está na lista. */
-export type MensagemDaPresenca = { tipo: "lista"; pessoas: PessoaOnline[] } | { tipo: "pessoa"; pessoa: PessoaOnline } | { tipo: "saiu"; id: string };
+export type MensagemDaPresenca =
+  | { tipo: "lista"; pessoas: PessoaOnline[] }
+  | { tipo: "pessoa"; pessoa: PessoaOnline }
+  | { tipo: "saiu"; id: string }
+  | { tipo: "convite"; de: Pessoa; codigo: string };
+
+/** O que o app manda pela presença: o estado novo ou um convite para a sala em que está. */
+export type ComandoDaPresenca = { tipo: "estado"; estado: EstadoOnline } | { tipo: "convite"; para: string; codigo: string };
 
 const TAMANHO_MAXIMO_DO_TEXTO = 80;
 const ID_DA_MUSICA_MAXIMO = 200;
@@ -75,7 +88,7 @@ const texto = (valor: unknown, maximo = TAMANHO_MAXIMO_DO_TEXTO) => (typeof valo
 /** O estado vem do app: só passa o formato conhecido, com os textos cortados. */
 export function lerEstado(valor: unknown): EstadoOnline | null {
   const estado = valor as Record<string, unknown> | null;
-  if (estado?.tipo === "menu") return { tipo: "menu" };
+  if (estado?.tipo === "menu" || estado?.tipo === "selecao" || estado?.tipo === "multiplayer") return { tipo: estado.tipo };
   if (estado?.tipo !== "tocando") return null;
   const musica = texto(estado.musica, ID_DA_MUSICA_MAXIMO);
   const titulo = texto(estado.titulo);
@@ -84,6 +97,27 @@ export function lerEstado(valor: unknown): EstadoOnline | null {
   const instrumento = texto(estado.instrumento, 20);
   if (musica === null || titulo === null || artista === null || dificuldade === null || instrumento === null) return null;
   return { tipo: "tocando", musica, titulo, artista, dificuldade, instrumento, transmitindo: estado.transmitindo === true };
+}
+
+/**
+ * O relay não sabe quem é amigo de quem: o convite chega a qualquer conta online,
+ * e o app de quem recebe mostra só os que vêm de amigos.
+ */
+export function lerComandoDaPresenca(texto: string): ComandoDaPresenca | null {
+  let dados: Record<string, unknown> | null;
+  try {
+    dados = JSON.parse(texto);
+  } catch {
+    return null;
+  }
+  if (dados?.tipo === "convite") {
+    const { para, codigo } = dados;
+    if (typeof para !== "string" || !ID_DA_CONTA.test(para) || typeof codigo !== "string" || !codigoValido(codigo)) return null;
+    return { tipo: "convite", para, codigo };
+  }
+  // Sem `tipo`, é o estado, como mandam as versões antigas do app.
+  const estado = lerEstado(dados?.estado);
+  return estado ? { tipo: "estado", estado } : null;
 }
 
 /** As velocidades da música que o jogo oferece (as mesmas do motor da partida). */

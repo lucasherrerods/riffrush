@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/shared/lib/utils";
+import { instrumentoDoPersonagem } from "./catalogo";
 import type { Personagem } from "./personagem";
 import type { Reacao } from "./reacao";
 import type { registrarAvatar } from "./render3d/renderizador";
@@ -19,7 +20,7 @@ interface Props {
   reacao?: Reacao | null;
 }
 
-/** Personagem 3D em cel-shading. Sem WebGL (ou nos testes) fica só a moldura vazia com o nome. */
+/** Personagem 3D em cel-shading ou filmado. Sem WebGL (ou nos testes) fica só a moldura vazia com o nome. */
 export function Avatar({ personagem, className, tocando = false, bpm = 120, pulso = 0, triste = false, reacao = null }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const registro = useRef<ReturnType<typeof registrarAvatar>>(null);
@@ -50,5 +51,5 @@ export function Avatar({ personagem, className, tocando = false, bpm = 120, puls
   });
 
   // width/height dão a proporção 3:4, para "w-auto" funcionar com a altura vinda da classe.
-  return <canvas ref={canvas} role="img" aria-label={`Personagem ${personagem.nome}`} data-instrumento={personagem.instrumento} data-reacao={reacao?.tipo} width={300} height={400} className={cn("aspect-[3/4]", className)} />;
+  return <canvas ref={canvas} role="img" aria-label={`Personagem ${personagem.nome}`} data-instrumento={instrumentoDoPersonagem(personagem)} data-reacao={reacao?.tipo} width={300} height={400} className={cn("aspect-[3/4]", className)} />;
 }
