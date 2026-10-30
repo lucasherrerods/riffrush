@@ -3,8 +3,8 @@ import { ArrowLeft, Gamepad2, Keyboard, Monitor, RotateCcw, Volume2 } from "luci
 import { capturarBotao, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
 import { CORES_DAS_PISTAS, COR_DA_ABERTA, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "@/modules/rock/gameplay";
 import { PISTA_ABERTA } from "@/modules/rock/songs";
-import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
-import { QUALIDADES_DO_PALCO } from "@/modules/rock/stage";
+import { MODOS_DE_JANELA, definirTelaCheia, ehJanelaNativa, estaEmTelaCheia, monitorAtual, resolucoesDisponiveis } from "@/modules/platform";
+import { ESCALA_MINIMA_DE_RENDERIZACAO, QUALIDADES_DO_PALCO } from "@/modules/rock/stage";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
@@ -33,13 +33,19 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
   const [trocandoNoControle, setTrocandoNoControle] = useState<number | null>(null);
   const comControle = useControleConectado();
   const [telaCheia, setTelaCheia] = useState(false);
+  const [nativa] = useState(ehJanelaNativa);
+  const [resolucoes, setResolucoes] = useState<ReturnType<typeof resolucoesDisponiveis>>([]);
   const mudar = (parcial: Partial<Configuracoes>) => aoMudar({ ...configuracoes, ...parcial });
 
   useEffect(() => {
     estaEmTelaCheia()
       .then(setTelaCheia)
       .catch(() => {});
-  }, []);
+    if (!nativa) return;
+    monitorAtual()
+      .then((monitor) => monitor && setResolucoes(resolucoesDisponiveis(monitor)))
+      .catch(() => {});
+  }, [nativa]);
 
   useEffect(() => {
     if (trocandoNoControle === null) return;
@@ -235,9 +241,23 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
           </TabsContent>
 
           <TabsContent value="video" className="flex flex-col gap-2">
-            <LinhaDeOpcao rotulo="Tela cheia" dica={estreita ? undefined : "Atalho: F11"} para="tela-cheia">
-              <Switch id="tela-cheia" checked={telaCheia} onCheckedChange={(ligada) => void alternarTelaCheia(ligada)} />
-            </LinhaDeOpcao>
+            {nativa ? (
+              <div className="flex flex-col gap-3 py-2">
+                <GrupoDeOpcoes titulo="Modo de exibição (F11 alterna a tela cheia)" opcoes={MODOS_DE_JANELA} valor={configuracoes.modoDeJanela} aoEscolher={(modoDeJanela) => mudar({ modoDeJanela })} />
+                {configuracoes.modoDeJanela === "janela" && resolucoes.length > 0 && (
+                  <GrupoDeOpcoes
+                    titulo="Resolução da janela"
+                    opcoes={[{ id: "livre", rotulo: "Livre" }, ...resolucoes]}
+                    valor={configuracoes.resolucaoDaJanela ?? "livre"}
+                    aoEscolher={(id) => mudar({ resolucaoDaJanela: id === "livre" ? null : id })}
+                  />
+                )}
+              </div>
+            ) : (
+              <LinhaDeOpcao rotulo="Tela cheia" dica={estreita ? undefined : "Atalho: F11"} para="tela-cheia">
+                <Switch id="tela-cheia" checked={telaCheia} onCheckedChange={(ligada) => void alternarTelaCheia(ligada)} />
+              </LinhaDeOpcao>
+            )}
             <LinhaDeOpcao rotulo="Modo competitivo" dica={estreita ? "Só a pista, o placar e o clipe na partida" : "Só a pista, o placar e o clipe na partida. Atalho: Shift+Tab"} para="modo-competitivo">
               <Switch id="modo-competitivo" checked={configuracoes.modoCompetitivo} onCheckedChange={(modoCompetitivo) => mudar({ modoCompetitivo })} />
             </LinhaDeOpcao>
@@ -261,6 +281,16 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
                 aoEscolher={(qualidadeDoPalco) => mudar({ qualidadeDoPalco })}
               />
             </div>
+            <LinhaDeSlider
+              rotulo="Escala de renderização"
+              dica="Abaixe se a pista engasgar em telas grandes"
+              valor={configuracoes.escalaDeRenderizacao}
+              minimo={ESCALA_MINIMA_DE_RENDERIZACAO}
+              maximo={1}
+              passo={0.05}
+              formatar={porcentagem}
+              aoMudar={(escalaDeRenderizacao) => mudar({ escalaDeRenderizacao })}
+            />
           </TabsContent>
         </div>
       </Tabs>

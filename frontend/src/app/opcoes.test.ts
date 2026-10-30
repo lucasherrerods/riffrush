@@ -19,6 +19,11 @@ describe("opcoesDaPartida", () => {
     expect(opcoesDaPartida(CONFIGURACOES_PADRAO)).toMatchObject({ personagem: true, mostrarFps: false });
   });
 
+  it("leva a escala de renderização da pista, que começa em 100%", () => {
+    expect(opcoesDaPartida(CONFIGURACOES_PADRAO).escalaDeRenderizacao).toBe(1);
+    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, escalaDeRenderizacao: 0.5 }).escalaDeRenderizacao).toBe(0.5);
+  });
+
   it("leva a qualidade do palco, que começa na média", () => {
     expect(opcoesDaPartida(CONFIGURACOES_PADRAO).qualidadeDoPalco).toBe("media");
     expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, qualidadeDoPalco: "leve" }).qualidadeDoPalco).toBe("leve");

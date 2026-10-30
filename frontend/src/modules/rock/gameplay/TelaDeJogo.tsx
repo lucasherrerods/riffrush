@@ -5,7 +5,7 @@ import { PALHETA_DO_CONTROLE, veioDoControle } from "@/modules/gamepad";
 import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
 import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "@/modules/rock/character";
 import { cenaDaPartida } from "./cena";
-import { Palco, opacidadeDaPista, type EstadoDoPalco, type QualidadeDoPalco } from "@/modules/rock/stage";
+import { Palco, escalaDoCanvas, opacidadeDaPista, type EstadoDoPalco, type QualidadeDoPalco } from "@/modules/rock/stage";
 import { DIFICULDADES, INSTRUMENTOS, PISTA_ABERTA, carregarMusica, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada } from "@/modules/rock/songs";
 import { ehTelaEstreita, useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
@@ -59,6 +59,8 @@ export interface OpcoesDaPartida {
   personagem: boolean;
   mostrarFps: boolean;
   qualidadeDoPalco: QualidadeDoPalco;
+  /** Fração da resolução nativa em que a pista é desenhada. */
+  escalaDeRenderizacao: number;
   modoCompetitivo: boolean;
 }
 
@@ -83,6 +85,7 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   personagem: true,
   mostrarFps: false,
   qualidadeDoPalco: "media",
+  escalaDeRenderizacao: 1,
   modoCompetitivo: false,
 };
 
@@ -606,7 +609,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       // Com palco, a pista some na abertura para a cena dominar e volta até a música começar.
       if (elemento) elemento.style.opacity = comPalcoAgora.current ? String(opacidadeDaPista(tempo, ENTRADA)) : "1";
       if (contexto2d && elemento) {
-        const escala = Math.min(2, window.devicePixelRatio || 1);
+        const escala = escalaDoCanvas(window.devicePixelRatio, opcoes.escalaDeRenderizacao);
         const { largura, altura } = medida;
         if (elemento.width !== Math.round(largura * escala) || elemento.height !== Math.round(altura * escala)) {
           elemento.width = Math.round(largura * escala);
