@@ -168,7 +168,10 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
     const sala = conexao.sala;
     if (!sala || sala.partidas === partidasVistas.current) return;
     partidasVistas.current = sala.partidas;
-    resolverMusica(sala.musica, musicas, conexao.endereco)
+    resolverMusica(sala.musica, musicas, conexao.endereco, fetch, (baixada) => {
+      setMusicas((atuais) => juntarMusicas(atuais, [baixada]));
+      void biblioteca.guardar([baixada]);
+    })
       .then((m) => {
         setEmRede({ musica: m, dificuldade: sala.dificuldade, instrumento: sala.instrumento, inicio: sala.inicio });
         setPartida((p) => p + 1);

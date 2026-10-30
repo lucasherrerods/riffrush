@@ -17,6 +17,33 @@ function getStringFromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
 }
+/**
+ * O tempo arredondado para a grade da partida (1 ms).
+ * @param {number} tempo
+ * @returns {number}
+ */
+export function quantizar(tempo) {
+    const ret = wasm.quantizar(tempo);
+    return ret;
+}
+
+/**
+ * 0 é perfeito, 1 ótimo e 2 bom.
+ * @param {number} distancia
+ * @returns {number}
+ */
+export function julgar(distancia) {
+    const ret = wasm.julgar(distancia);
+    return ret;
+}
+
+/**
+ * @returns {number}
+ */
+export function janela_de_acerto() {
+    const ret = wasm.janela_de_acerto();
+    return ret;
+}
 
 let cachedFloat64ArrayMemory0 = null;
 
@@ -30,6 +57,16 @@ function getFloat64ArrayMemory0() {
 function getArrayF64FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return getFloat64ArrayMemory0().subarray(ptr / 8, ptr / 8 + len);
+}
+/**
+ * As velocidades da música que o jogo oferece.
+ * @returns {Float64Array}
+ */
+export function velocidades() {
+    const ret = wasm.velocidades();
+    var v1 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    return v1;
 }
 
 let WASM_VECTOR_LEN = 0;
@@ -62,44 +99,6 @@ function passArray32ToWasm0(arg, malloc) {
     getUint32ArrayMemory0().set(arg, ptr / 4);
     WASM_VECTOR_LEN = arg.length;
     return ptr;
-}
-/**
- * O tempo arredondado para a grade da partida (1 ms).
- * @param {number} tempo
- * @returns {number}
- */
-export function quantizar(tempo) {
-    const ret = wasm.quantizar(tempo);
-    return ret;
-}
-
-/**
- * 0 é perfeito, 1 ótimo e 2 bom.
- * @param {number} distancia
- * @returns {number}
- */
-export function julgar(distancia) {
-    const ret = wasm.julgar(distancia);
-    return ret;
-}
-
-/**
- * As velocidades da música que o jogo oferece.
- * @returns {Float64Array}
- */
-export function velocidades() {
-    const ret = wasm.velocidades();
-    var v1 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
-    return v1;
-}
-
-/**
- * @returns {number}
- */
-export function janela_de_acerto() {
-    const ret = wasm.janela_de_acerto();
-    return ret;
 }
 
 const MotorDaPartidaFinalization = (typeof FinalizationRegistry === 'undefined')

@@ -28,8 +28,17 @@ async function baixarArquivo(rede: Exclude<MusicaNaRede, { tipo: "embutida" }>, 
   return new File([conteudo], rede.nomeDoArquivo, { type: conteudo.type });
 }
 
-/** Transforma a música da sala numa música jogável, baixando quando o jogador ainda não tem. */
-export async function resolverMusica(rede: MusicaNaRede, locais: Musica[], enderecoDoHost: string, baixar: typeof fetch = fetch): Promise<Musica> {
+/**
+ * Transforma a música da sala numa música jogável, baixando quando o jogador ainda não tem.
+ * `aoBaixar` recebe só a que acabou de ser baixada, para ela ficar no catálogo.
+ */
+export async function resolverMusica(
+  rede: MusicaNaRede,
+  locais: Musica[],
+  enderecoDoHost: string,
+  baixar: typeof fetch = fetch,
+  aoBaixar?: (musica: Musica) => void,
+): Promise<Musica> {
   // O mesmo .sng baixado por dois jogadores gera o mesmo id (nome e tamanho), então quem já tem usa o seu.
   const local = locais.find((m) => m.id === rede.id);
   if (local) return local;
@@ -47,5 +56,6 @@ export async function resolverMusica(rede: MusicaNaRede, locais: Musica[], ender
     ...(rede.md5DoEncore && { md5DoEncore: rede.md5DoEncore }),
   };
   baixadas.set(rede.id, musica);
+  aoBaixar?.(musica);
   return musica;
 }
