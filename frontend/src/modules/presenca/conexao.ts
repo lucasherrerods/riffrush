@@ -1,4 +1,4 @@
-import { aplicarMensagem, urlDaPresenca, type EstadoOnline, type PessoaOnline } from "./protocolo";
+import { aplicarMensagem, lerConvite, urlDaPresenca, type ConviteParaSala, type EstadoOnline, type PessoaOnline } from "./protocolo";
 import { SocketComFicha, type DependenciasDoSocket } from "./socketComFicha";
 
 export interface EstadoDaPresenca {
@@ -17,6 +17,7 @@ export interface DependenciasDaPresenca extends DependenciasDoSocket {
 export class ConexaoDePresenca {
   private estadoAtual: EstadoDaPresenca = { conectada: false, pessoas: [] };
   private ouvintes = new Set<() => void>();
+  private ouvintesDeConvite = new Set<(convite: ConviteParaSala) => void>();
   private socket: SocketComFicha;
   private onde: EstadoOnline = { tipo: "menu" };
 
@@ -27,7 +28,11 @@ export class ConexaoDePresenca {
         this.socket.enviar(JSON.stringify({ estado: this.onde }));
         this.mudar({ ...this.estadoAtual, conectada: true });
       },
-      aoReceber: (texto) => this.mudar({ ...this.estadoAtual, pessoas: aplicarMensagem(this.estadoAtual.pessoas, texto) }),
+      aoReceber: (texto) => {
+        const convite = lerConvite(texto);
+        if (convite) for (const ouvinte of this.ouvintesDeConvite) ouvinte(convite);
+        else this.mudar({ ...this.estadoAtual, pessoas: aplicarMensagem(this.estadoAtual.pessoas, texto) });
+      },
       aoCair: () => this.mudar({ conectada: false, pessoas: [] }),
     });
   }
@@ -40,6 +45,18 @@ export class ConexaoDePresenca {
   };
 
   estado = () => this.estadoAtual;
+
+  ouvirConvites = (ouvinte: (convite: ConviteParaSala) => void) => {
+    this.ouvintesDeConvite.add(ouvinte);
+    return () => {
+      this.ouvintesDeConvite.delete(ouvinte);
+    };
+  };
+
+  /** Chama a conta para a sala online. Sem conexão, o convite não sai. */
+  convidar(para: string, codigo: string) {
+    this.socket.enviar(JSON.stringify({ tipo: "convite", para, codigo }));
+  }
 
   ligar() {
     if (this.deps.urlDoRelay) this.socket.ligar();

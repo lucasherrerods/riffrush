@@ -11,7 +11,7 @@ import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, se
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
 import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa, estaEmTelaCheia, modoDoF11 } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
-import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
+import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, entrarNaSalaOnline, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { ChatGlobal, TelaDeEspectador, TelaOnline, presenca, presencaDisponivel, transmitirPartida, usePresenca, useSouDaModeracao, type PessoaOnline } from "@/modules/presenca";
 import { JanelaDoChart, TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, sortearChartOficial, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/rock/search";
 import { TelaDeResultado, anotarRecorde, definirRecordes, recordeDe, useRecordes } from "@/modules/rock/results";
@@ -19,6 +19,7 @@ import { EscolhaDeDispositivos, ResultadoDaTelaDividida, eventoDoJogador, opcoes
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { PainelDeRanking, PlacarAoVivo, buscarMaisJogadaAleatoria, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
+import { BotaoDeAmigos, PainelDeAmigos, useConvitesDeAmigos } from "@/modules/amigos";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -248,9 +249,25 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
             instrumento: instrumentoDaPartida,
             transmitindo,
           }
-        : { tipo: "menu" },
+        : tela === "selecao"
+          ? { tipo: "selecao" }
+          : tela === "multijogador"
+            ? { tipo: "multiplayer" }
+            : { tipo: "menu" },
     );
   }, [tela, assistindo, musica, dificuldadeDaPartida, instrumentoDaPartida, transmitindo]);
+  const [amigosAbertos, setAmigosAbertos] = useState(false);
+  // Só dá para chamar amigos de uma sala online: a da LAN eles não alcançam.
+  const salaParaConvidar = conexao.online && conexao.sala ? conexao.codigo : undefined;
+  const entrarNaSalaDoAmigo = useCallback(
+    (codigo: string) => {
+      entrarNaSalaOnline(codigo, personagemEmJogo);
+      setAmigosAbertos(false);
+      setTela("multijogador");
+    },
+    [personagemEmJogo],
+  );
+  useConvitesDeAmigos(entrarNaSalaDoAmigo);
   /** Quantas pessoas estão assistindo a partida transmitida agora. */
   const [espectadores, setEspectadores] = useState(0);
   // Uma transmissão por partida: recomeçar a música dentro dela manda um início novo pela mesma.
@@ -416,6 +433,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
       )}
       {!naPista && (
         <CabecalhoDoPlayerDeMusica volume={volumeGeral} aoMudarVolume={definirVolumeGeral}>
+          {contasLigadas && <BotaoDeAmigos aberto={amigosAbertos} aoAlternar={() => setAmigosAbertos((abertos) => !abertos)} />}
           {contasLigadas && (
             <CartaoDaConta
               mod={souDaModeracao}
@@ -704,6 +722,19 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
               />
             )}
           </motion.div>
+        </AnimatePresence>
+        <AnimatePresence>
+          {amigosAbertos && !naPista && contasLigadas && (
+            <motion.div
+              initial={{ opacity: 0, x: 24 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 24 }}
+              transition={{ duration: 0.15 }}
+              className="absolute inset-y-0 right-0 z-30 p-4 max-md:inset-x-0 max-md:p-2"
+            >
+              <PainelDeAmigos aoFechar={() => setAmigosAbertos(false)} salaParaConvidar={salaParaConvidar} aoConvidar={(contaId, codigo) => presenca.convidar(contaId, codigo)} />
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
       <IndicadorDeVolume />
