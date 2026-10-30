@@ -43,6 +43,26 @@ describe("medirAtraso", () => {
     expect(medirAtraso(batidas, toquesCom(0.24))).toBe(200);
   });
 
+  it("perto da metade do intervalo, toques que caem dos dois lados da fronteira contam como o mesmo atraso", () => {
+    // Variação humana em volta de -230 ms: parte dos toques fica mais perto da batida anterior.
+    const variacao = [0, 0.03, -0.03, 0.04, 0.03, -0.02, 0.035, 0.03, -0.01, 0.04, 0.03, 0.025, 0.03, 0.04, -0.02, 0.03];
+    const toques = batidas.map((b, i) => b - 0.23 + variacao[i]);
+    expect(medirAtraso(batidas, toques)).toBe(-200);
+  });
+
+  it("na fronteira, o lado vem do centro dos toques, e não de quantos passaram para o outro lado", () => {
+    // Centro em -245 ms: os toques de -265 ms ficam mais perto da batida anterior (+235 ms).
+    const variacao = [0, 0.02, -0.02, -0.02, -0.02, 0.02, -0.02, -0.02, 0.02, -0.02, -0.02, 0.03, -0.02, -0.02, 0.02, -0.01];
+    const toques = batidas.map((b, i) => b - 0.24 + variacao[i]);
+    expect(medirAtraso(batidas, toques)).toBe(-200);
+  });
+
+  it("o mesmo vale para atrasos positivos perto da fronteira", () => {
+    const variacao = [0, -0.03, 0.03, -0.04, -0.03, 0.02, -0.035, -0.03, 0.01, -0.04, -0.03, -0.025, -0.03, -0.04, 0.02, -0.03];
+    const toques = batidas.map((b, i) => b + 0.23 + variacao[i]);
+    expect(medirAtraso(batidas, toques)).toBe(200);
+  });
+
   it("não mede com menos de 4 toques válidos", () => {
     expect(medirAtraso(batidas, toquesCom(0.03).slice(4, 7))).toBeNull();
   });
