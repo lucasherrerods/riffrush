@@ -1,4 +1,4 @@
-import { PROTOCOLO_DO_JOGO, avisoDeEspectadores, fichaDoPedido, lerEstado, lerMensagemDaTransmissao, linkDoChartConfere, verificarFicha } from "./presenca";
+import { PROTOCOLO_DO_JOGO, avisoDeEspectadores, fichaDoPedido, lerComandoDaPresenca, lerEstado, lerMensagemDaTransmissao, linkDoChartConfere, verificarFicha } from "./presenca";
 
 // A mesma ficha do teste da API (backend/src/modules/presenca/dominio.rs): os dois lados precisam concordar.
 const FICHA_COM_NIVEL =
@@ -42,6 +42,23 @@ describe("lerEstado", () => {
     expect(lerEstado({ tipo: "hackeando" })).toBeNull();
     expect(lerEstado(null)).toBeNull();
     expect(lerEstado({ tipo: "tocando", musica: 3 })).toBeNull();
+  });
+});
+
+describe("lerComandoDaPresenca", () => {
+  const amiga = "00000000-0000-0000-0000-000000000007";
+
+  it("lê o estado das versões antigas e os novos da seleção e do multiplayer", () => {
+    expect(lerComandoDaPresenca(JSON.stringify({ estado: { tipo: "menu" } }))).toEqual({ tipo: "estado", estado: { tipo: "menu" } });
+    expect(lerComandoDaPresenca(JSON.stringify({ estado: { tipo: "selecao" } }))).toEqual({ tipo: "estado", estado: { tipo: "selecao" } });
+    expect(lerComandoDaPresenca(JSON.stringify({ estado: { tipo: "multiplayer", codigo: "ABCD" } }))).toEqual({ tipo: "estado", estado: { tipo: "multiplayer" } });
+  });
+
+  it("lê o convite com conta e sala válidas", () => {
+    expect(lerComandoDaPresenca(JSON.stringify({ tipo: "convite", para: amiga, codigo: "ABCDE" }))).toEqual({ tipo: "convite", para: amiga, codigo: "ABCDE" });
+    expect(lerComandoDaPresenca(JSON.stringify({ tipo: "convite", para: "../x", codigo: "ABCDE" }))).toBeNull();
+    expect(lerComandoDaPresenca(JSON.stringify({ tipo: "convite", para: amiga, codigo: "nao vale" }))).toBeNull();
+    expect(lerComandoDaPresenca("{quebrado")).toBeNull();
   });
 });
 

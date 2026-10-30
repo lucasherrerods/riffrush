@@ -131,7 +131,7 @@ export class SessaoDaConta {
   }
 
   /** Manda a partida para a API e devolve o XP ganho, ou a vaga na fila de validação. Sem conta, não manda nada. */
-  async registrarPartida(resultado: Resultado, replay?: Uint8Array): Promise<RegistroDaPartida | null> {
+  async registrarPartida(resultado: Resultado, replay?: Uint8Array, rodada?: string): Promise<RegistroDaPartida | null> {
     const token = this.ambiente.local.getItem(CHAVE_DO_TOKEN);
     if (!token || !this.estadoAtual.conta) return null;
     const xp = await this.ambiente.api.registrarPartida(token, {
@@ -146,6 +146,7 @@ export class SessaoDaConta {
       maior_sequencia: resultado.maiorSequencia,
       ...(resultado.julgamentos && { valor_dos_acertos: valorDosAcertos(resultado.julgamentos) }),
       ...(replay && { replay: emBase64(replay) }),
+      ...(rodada && { rodada_id: rodada }),
     });
     if ("pendente" in xp) return xp;
     this.somarXp(xp);

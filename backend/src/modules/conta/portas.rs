@@ -25,6 +25,8 @@ pub struct PartidaRegistrada {
     pub precisao: Option<f64>,
     /// Só as partidas que o servidor rejulgou sabem: vem do replay.
     pub jeito_de_jogar: Option<JeitoDeJogar>,
+    /// A mesma para as partidas de uma música tocada junto na sala. Solo fica sem.
+    pub rodada: Option<Uuid>,
 }
 
 /// Uma partida de chart do Encore à espera do servidor rejulgar o replay.
@@ -36,6 +38,7 @@ pub struct PartidaNaFila {
     pub instrumento: Instrumento,
     pub replay: Vec<u8>,
     pub enviada_em: DateTime<Utc>,
+    pub rodada: Option<Uuid>,
 }
 
 #[async_trait]

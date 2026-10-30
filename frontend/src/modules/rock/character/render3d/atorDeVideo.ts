@@ -1,8 +1,8 @@
 import * as THREE from "three";
-import { BASES } from "../catalogo";
+import { skinDoPersonagem } from "../catalogo";
 import { migrarPersonagem } from "../personagem";
 import { novaReacao, type TipoDeReacao } from "../reacao";
-import { cenaDoAtor, quadroDaCena, recorteDoQuadro, type ManifestoDoAtor, type NomeDaCena } from "../video";
+import { cenaDoAtor, dadosDaCena, quadroDaCena, recorteDoQuadro, type ManifestoDoAtor, type NomeDaCena } from "../video";
 import type { Ator, EstadoDoAvatar } from "./ator";
 
 const manifestos = new Map<string, Promise<ManifestoDoAtor>>();
@@ -53,12 +53,12 @@ export function criarAtorDeVideo(estadoInicial: EstadoDoAvatar): Ator {
   let removido = false;
 
   const personagem = migrarPersonagem(estadoInicial.personagem);
-  const pasta = (BASES.find((b) => b.id === personagem.base) ?? BASES[0]).arquivo;
+  const pasta = skinDoPersonagem(personagem).arquivo;
   void carregarManifesto(pasta)
     .then((carregado) => {
       if (removido) return;
       manifesto = carregado;
-      for (const [nome, cena] of Object.entries(carregado.cenas)) texturas.set(nome as NomeDaCena, texturaDaFolha(`${pasta}/${cena.arquivo}`));
+      for (const [nome, cena] of Object.entries(carregado.cenas)) if (cena) texturas.set(nome as NomeDaCena, texturaDaFolha(`${pasta}/${cena.arquivo}`));
     })
     .catch((erro) => console.error("[ator filmado]", erro));
 
@@ -77,14 +77,14 @@ export function criarAtorDeVideo(estadoInicial: EstadoDoAvatar): Ator {
     animar(agora) {
       if (!manifesto) return;
       const desdeReacao = reacao ? (agora - reacao.inicio) / 1000 : 0;
-      const { cena, repetir } = cenaDoAtor({ tocando: estado.tocando, triste: estado.triste, reacao: reacao?.tipo ?? null, desdeReacao });
+      const { cena: pedida, repetir } = cenaDoAtor({ tocando: estado.tocando, triste: estado.triste, reacao: reacao?.tipo ?? null, desdeReacao });
+      const { nome: cena, dados } = dadosDaCena(manifesto.cenas, pedida);
       // Trocou de cena, ou a mesma reação veio de novo (outro erro): recomeça do primeiro quadro.
       const contador = reacao && !repetir ? reacao.contador : -1;
       if (cena !== cenaAtual || contador !== contadorDaCena) {
         cenaAtual = cena;
         contadorDaCena = contador;
         inicioDaCena = reacao && !repetir ? reacao.inicio : agora;
-        const dados = manifesto.cenas[cena];
         material.map = texturas.get(cena) ?? null;
         material.needsUpdate = true;
         const altura = manifesto.alturaEmMetros;
@@ -93,7 +93,6 @@ export function criarAtorDeVideo(estadoInicial: EstadoDoAvatar): Ator {
         plano.position.y = altura / 2;
         plano.visible = true;
       }
-      const dados = manifesto.cenas[cena];
       const mapa = material.map;
       if (!mapa) return;
       const recorte = recorteDoQuadro(dados, quadroDaCena(dados, (agora - inicioDaCena) / 1000, manifesto.fps, repetir));

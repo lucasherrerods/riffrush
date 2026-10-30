@@ -39,6 +39,20 @@ describe("ConexaoDePresenca", () => {
     expect(socket().enviadas.at(-1)).toEqual({ estado: tocando });
   });
 
+  it("convida pela mesma conexão e avisa quem ouve os convites, sem mexer na lista", async () => {
+    const { conexao } = montar();
+    const recebidos = vi.fn();
+    conexao.ouvirConvites(recebidos);
+    conexao.ligar();
+    await umInstante();
+    socket().abrir();
+    conexao.convidar("b", "ABCDE");
+    expect(socket().enviadas.at(-1)).toEqual({ tipo: "convite", para: "b", codigo: "ABCDE" });
+    socket().entregar({ tipo: "convite", de: { id: "a", nome: "Ana", avatar: null }, codigo: "ABCDE" });
+    expect(recebidos).toHaveBeenCalledWith({ de: { id: "a", nome: "Ana", avatar: null }, codigo: "ABCDE" });
+    expect(conexao.estado().pessoas).toEqual([]);
+  });
+
   it("a rede caiu: limpa a lista e tenta de novo, com ficha nova", async () => {
     const { conexao, esperas, pedirFicha } = montar();
     conexao.ligar();

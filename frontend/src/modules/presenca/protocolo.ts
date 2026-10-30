@@ -3,9 +3,14 @@ import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
 
 // O mesmo contrato do relay (backend/relay/src/presenca.ts), que é publicado à parte.
 
-/** Onde a pessoa está. A música vai com o id do ranking, para quem assiste achar a mesma. */
+/**
+ * Onde a pessoa está. A música vai com o id do ranking, para quem assiste achar a mesma.
+ * O código da sala não vai no estado: ele só chega a quem foi convidado.
+ */
 export type EstadoOnline =
   | { tipo: "menu" }
+  | { tipo: "selecao" }
+  | { tipo: "multiplayer" }
   | { tipo: "tocando"; musica: string; titulo: string; artista: string; dificuldade: Dificuldade; instrumento: Instrumento; transmitindo: boolean };
 
 export interface PessoaOnline {
@@ -16,6 +21,22 @@ export interface PessoaOnline {
 }
 
 type MensagemDaPresenca = { tipo: "lista"; pessoas: PessoaOnline[] } | { tipo: "pessoa"; pessoa: PessoaOnline } | { tipo: "saiu"; id: string };
+
+/** Alguém chamando para a sala online em que está. O relay entrega a qualquer conta: quem filtra os amigos é o app. */
+export interface ConviteParaSala {
+  de: { id: string; nome: string; avatar: string | null };
+  codigo: string;
+}
+
+export function lerConvite(bruta: string): ConviteParaSala | null {
+  try {
+    const msg = JSON.parse(bruta);
+    if (msg?.tipo !== "convite" || typeof msg.codigo !== "string" || typeof msg.de?.id !== "string" || typeof msg.de.nome !== "string") return null;
+    return { de: { id: msg.de.id, nome: msg.de.nome, avatar: typeof msg.de.avatar === "string" ? msg.de.avatar : null }, codigo: msg.codigo };
+  } catch {
+    return null;
+  }
+}
 
 /** A partida que quem assiste precisa montar igual. */
 export interface PartidaTransmitida {
