@@ -1,15 +1,21 @@
 import { useEffect, useState } from "react";
-import { Crown, Globe, Plus, RefreshCw, Users, Wifi, type LucideIcon } from "lucide-react";
+import { Globe, RefreshCw, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar, type Personagem } from "@/modules/rock/character";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Switch } from "@/shared/ui/switch";
-import { cn } from "@/shared/lib/utils";
 import type { SalaOnline } from "../online";
 import { MAXIMO_DE_JOGADORES } from "../protocolo";
-import { PORTA_DA_SALA, criarSala, criarSalaOnline, ehClienteWebDaSala, entrarNaSala, entrarNaSalaOnline, procurarSalas, procurarSalasOnline, temModoOnline, type SalaEncontrada } from "../sala";
+import {
+  criarSalaOnline,
+  ehClienteWebDaSala,
+  entrarNaSala,
+  entrarNaSalaOnline,
+  procurarSalasOnline,
+  temModoOnline,
+} from "../sala";
 
 const INTERVALO_DA_BUSCA = 5000;
 
@@ -19,10 +25,12 @@ interface Props {
   aoEditarPersonagem: () => void;
 }
 
-export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem }: Props) {
-  const [salas, setSalas] = useState<SalaEncontrada[]>([]);
+export function ProcurarSala({
+  personagem,
+  volumeDosEfeitos,
+  aoEditarPersonagem,
+}: Props) {
   const [procurando, setProcurando] = useState(false);
-  const [ip, setIp] = useState("");
   const [codigo, setCodigo] = useState("");
   const [publica, setPublica] = useState(true);
   const [salasOnline, setSalasOnline] = useState<SalaOnline[]>([]);
@@ -33,102 +41,121 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
   const procurar = async () => {
     setProcurando(true);
     try {
-      const [daRede, daInternet] = await Promise.all([procurarSalas().catch(() => []), online ? procurarSalasOnline() : []]);
-      setSalas(daRede);
-      setSalasOnline(daInternet);
+      setSalasOnline(await procurarSalasOnline());
     } finally {
       setProcurando(false);
     }
   };
 
   useEffect(() => {
-    if (noCelular) return;
+    if (!online) return;
     void procurar();
     const id = setInterval(() => void procurar(), INTERVALO_DA_BUSCA);
     return () => clearInterval(id);
-    // A busca só depende de estar ou não no celular, que não muda.
+    // A busca só depende de ter o modo online, que não muda.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const entrar = (endereco: string) => {
-    tocarEfeito("selecionar", volumeDosEfeitos);
-    entrarNaSala(endereco, personagem);
-  };
-
   return (
     <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:flex max-md:flex-col max-md:gap-2">
-      <section className="col-span-4 flex flex-col items-center gap-4 placa p-6 max-md:order-2 max-md:gap-2 max-md:p-3">
-        <Avatar personagem={personagem} className="h-48 w-auto max-md:hidden" />
-        <p className="text-xl font-black max-md:hidden">{personagem.nome}</p>
-        <Button variant="outline" className="max-md:hidden" onClick={aoEditarPersonagem}>
-          Editar personagem
-        </Button>
-        <div className="flex-1" />
-        {noCelular ? (
-          <Button size="lg" className="w-full" onClick={() => entrar(location.origin)}>
-            <Users className="opacity-70" /> Entrar na sala
-          </Button>
-        ) : (
+      {(noCelular || online) && (
+        <section className="col-span-4 flex flex-col items-center gap-4 placa p-6 max-md:order-2 max-md:gap-2 max-md:p-3">
+          <Avatar
+            personagem={personagem}
+            className="h-48 w-auto max-md:hidden"
+          />
+          <p className="text-xl font-black max-md:hidden">{personagem.nome}</p>
           <Button
-            size="lg"
-            className="w-full"
-            onClick={() => {
-              tocarEfeito("selecionar", volumeDosEfeitos);
-              void criarSala(personagem);
-            }}
+            variant="outline"
+            className="max-md:hidden"
+            onClick={aoEditarPersonagem}
           >
-            <Plus className="opacity-70" /> Criar sala na rede
+            Editar personagem
           </Button>
-        )}
-        {online && (
-          <>
+          <div className="flex-1" />
+          {noCelular && (
             <Button
               size="lg"
-              variant="outline"
               className="w-full"
               onClick={() => {
                 tocarEfeito("selecionar", volumeDosEfeitos);
-                criarSalaOnline(personagem, publica);
+                entrarNaSala(location.origin, personagem);
               }}
             >
-              <Globe className="opacity-70" /> Criar sala online
+              <Users className="opacity-70" /> Entrar na sala
             </Button>
-            {/* Desligado, a sala não aparece para quem procura: só entra quem tem o código. */}
-            <div className="flex w-full items-center justify-between gap-2">
-              <Label htmlFor="sala-publica" className="text-base text-texto-suave">
-                Aparecer na lista
-              </Label>
-              <Switch id="sala-publica" checked={publica} onCheckedChange={setPublica} />
-            </div>
-          </>
-        )}
-      </section>
+          )}
+          {online && (
+            <>
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={() => {
+                  tocarEfeito("selecionar", volumeDosEfeitos);
+                  criarSalaOnline(personagem, publica);
+                }}
+              >
+                <Globe className="opacity-70" /> Criar sala online
+              </Button>
+              {/* Desligado, a sala não aparece para quem procura: só entra quem tem o código. */}
+              <div className="flex w-full items-center justify-between gap-2">
+                <Label
+                  htmlFor="sala-publica"
+                  className="text-base text-texto-suave"
+                >
+                  Aparecer na lista
+                </Label>
+                <Switch
+                  id="sala-publica"
+                  checked={publica}
+                  onCheckedChange={setPublica}
+                />
+              </div>
+            </>
+          )}
+        </section>
+      )}
 
-      {!noCelular && (
+      {!noCelular && !online && (
+        <p className="col-span-12 flex items-center justify-center placa p-6 text-center text-base text-texto-suave max-md:order-1">
+          O modo online não está disponível nesta versão do jogo.
+        </p>
+      )}
+
+      {online && (
         <section className="col-span-8 flex min-h-0 flex-col gap-4 placa p-6 max-md:order-1 max-md:flex-none max-md:gap-2 max-md:p-3">
           <div className="flex items-center gap-4">
-            <Wifi className="text-primaria opacity-70" aria-hidden />
-            <h2 className="text-xl font-bold max-md:text-base">{online ? "Salas abertas" : "Salas na sua rede"}</h2>
+            <Globe className="text-primaria opacity-70" aria-hidden />
+            <h2 className="text-xl font-bold max-md:text-base">
+              Salas abertas
+            </h2>
             <div className="flex-1" />
-            <Button variant="ghost" onClick={() => void procurar()} disabled={procurando}>
-              <RefreshCw className={procurando ? "animate-spin opacity-70" : "opacity-70"} /> Procurar
+            <Button
+              variant="ghost"
+              onClick={() => void procurar()}
+              disabled={procurando}
+            >
+              <RefreshCw
+                className={
+                  procurando ? "animate-spin opacity-70" : "opacity-70"
+                }
+              />{" "}
+              Procurar
             </Button>
           </div>
           <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-            {salas.length === 0 && salasOnline.length === 0 && (
+            {salasOnline.length === 0 && (
               <li className="py-12 text-center text-base text-texto-suave">
-                {procurando ? "Procurando salas..." : "Nenhuma sala encontrada. Crie a sua ou peça para alguém criar."}
+                {procurando
+                  ? "Procurando salas..."
+                  : "Nenhuma sala encontrada. Crie a sua ou peça para alguém criar."}
               </li>
             )}
-            {salas.map((s) => (
-              <ItemDeSala key={`${s.ip}:${s.porta}`} icone={Crown} nome={s.nome} detalhe={s.ip} jogadores={s.jogadores} aoEntrar={() => entrar(`http://${s.ip}:${s.porta}`)} />
-            ))}
             {salasOnline.map((s) => (
               <ItemDeSala
                 key={s.codigo}
-                icone={Globe}
                 nome={s.nome}
-                detalhe={`Online · ${s.codigo}`}
+                detalhe={s.codigo}
                 jogadores={s.jogadores}
                 aoEntrar={() => {
                   tocarEfeito("selecionar", volumeDosEfeitos);
@@ -137,54 +164,35 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
               />
             ))}
           </ul>
-          <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1 max-md:gap-2">
-            {online && (
-              <form
-                className="flex items-end gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  tocarEfeito("selecionar", volumeDosEfeitos);
-                  entrarNaSalaOnline(codigo, personagem);
-                }}
+          <form
+            className="flex items-end gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              tocarEfeito("selecionar", volumeDosEfeitos);
+              entrarNaSalaOnline(codigo, personagem);
+            }}
+          >
+            <div className="flex-1">
+              <Label
+                htmlFor="codigo-da-sala"
+                className="mb-2 text-base text-texto-suave"
               >
-                <div className="flex-1">
-                  <Label htmlFor="codigo-da-sala" className="mb-2 text-base text-texto-suave">
-                    Código da sala online
-                  </Label>
-                  <Input
-                    id="codigo-da-sala"
-                    placeholder="K7QXM"
-                    autoComplete="off"
-                    maxLength={7}
-                    value={codigo}
-                    onChange={(e) => setCodigo(e.target.value)}
-                    className="font-mono text-base uppercase"
-                  />
-                </div>
-                <Button type="submit" variant="outline">
-                  Entrar online
-                </Button>
-              </form>
-            )}
-            <form
-              className={cn("flex items-end gap-2", !online && "col-span-2")}
-              onSubmit={(e) => {
-                e.preventDefault();
-                const limpo = ip.trim().replace(/^https?:\/\//, "").replace(/:\d+$/, "");
-                if (limpo) entrar(`http://${limpo}:${PORTA_DA_SALA}`);
-              }}
-            >
-              <div className="flex-1">
-                <Label htmlFor="ip-do-host" className="mb-2 text-base text-texto-suave">
-                  Ou digite o IP do host
-                </Label>
-                <Input id="ip-do-host" placeholder="192.168.0.10" value={ip} onChange={(e) => setIp(e.target.value)} className="text-base" />
-              </div>
-              <Button type="submit" variant="outline">
-                Entrar
-              </Button>
-            </form>
-          </div>
+                Código da sala online
+              </Label>
+              <Input
+                id="codigo-da-sala"
+                placeholder="K7QXM"
+                autoComplete="off"
+                maxLength={7}
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value)}
+                className="font-mono text-base uppercase"
+              />
+            </div>
+            <Button type="submit" variant="outline">
+              Entrar online
+            </Button>
+          </form>
         </section>
       )}
     </div>
@@ -192,15 +200,14 @@ export function ProcurarSala({ personagem, volumeDosEfeitos, aoEditarPersonagem 
 }
 
 interface PropsDoItem {
-  icone: LucideIcon;
   nome: string;
   detalhe: string;
   jogadores: number;
   aoEntrar: () => void;
 }
 
-/** Uma sala aberta na lista, da rede ou da internet. */
-function ItemDeSala({ icone: Icone, nome, detalhe, jogadores, aoEntrar }: PropsDoItem) {
+/** Uma sala online aberta na lista. */
+function ItemDeSala({ nome, detalhe, jogadores, aoEntrar }: PropsDoItem) {
   const cheia = jogadores >= MAXIMO_DE_JOGADORES;
   return (
     <li>
@@ -209,10 +216,12 @@ function ItemDeSala({ icone: Icone, nome, detalhe, jogadores, aoEntrar }: PropsD
         disabled={cheia}
         className="chapa flex w-full items-center gap-4 bg-superficie-elevada p-4 text-left max-md:gap-2 max-md:p-2 transition-colors hover:border-primaria disabled:opacity-50 disabled:hover:border-borda"
       >
-        <Icone className="text-ouro opacity-70" aria-hidden />
+        <Globe className="text-ouro opacity-70" aria-hidden />
         <span className="flex-1">
           <span className="block text-base font-bold">Sala de {nome}</span>
-          <span className="block font-mono text-base text-texto-suave">{detalhe}</span>
+          <span className="block font-mono text-base text-texto-suave">
+            {detalhe}
+          </span>
         </span>
         <span className="rounded-full bg-superficie px-3 py-1 text-base">
           {cheia ? "Cheia" : `${jogadores}/${MAXIMO_DE_JOGADORES}`}

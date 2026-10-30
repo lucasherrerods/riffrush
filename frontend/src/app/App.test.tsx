@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa } from "@/modules/platform";
@@ -88,7 +88,7 @@ vi.mock("@/modules/conta", async (original) => ({
 
 // Sem isso o player sintetizaria a primeira música a cada teste.
 vi.mock("@/modules/rock/player", () => ({
-  CabecalhoDoPlayerDeMusica: () => null,
+  CabecalhoDoPlayerDeMusica: ({ children }: { children?: ReactNode }) => <>{children}</>,
   indiceVizinho: vi.fn(),
   useSeguirMusica: vi.fn(),
   playerDeMusica: { definirFila: vi.fn(), definirNavegacao: vi.fn(), seguir: vi.fn(), definirVolume: vi.fn(), suspender: vi.fn(), estado: () => ({ musica: null }) },
@@ -393,10 +393,20 @@ describe("App em rede", () => {
     baldesDoChat: {},
   };
 
-  it("Multiplayer abre a tela da sala", async () => {
+  it("Multiplayer pergunta se é local ou online; Online abre a tela da sala", async () => {
     const usuario = abrir();
     await usuario.click(screen.getByRole("button", { name: "Multiplayer" }));
+    await usuario.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Online/ }));
     expect(await screen.findByRole("heading", { name: "Multiplayer" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("Local abre a escolha de dispositivos da tela dividida", async () => {
+    const usuario = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Multiplayer" }));
+    await usuario.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Local/ }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(await screen.findByRole("heading", { name: /Tela dividida|Local/ })).toBeInTheDocument();
   });
 
   it("quando o host dá a largada, abre a partida em rede com os adversários", async () => {
@@ -428,6 +438,7 @@ describe("App em rede", () => {
     it("Esc na busca volta para a sala, não para o menu", async () => {
       const usuario = abrir();
       await usuario.click(screen.getByRole("button", { name: "Multiplayer" }));
+      await usuario.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Online/ }));
       await usuario.click(await screen.findByRole("button", { name: /Baixar músicas/ }));
       expect(await screen.findByRole("heading", { name: "Buscar músicas" })).toBeInTheDocument();
       await usuario.keyboard("{Escape}");
@@ -437,6 +448,7 @@ describe("App em rede", () => {
     it("jogar a música baixada volta para a sala com ela escolhida", async () => {
       const usuario = abrir();
       await usuario.click(screen.getByRole("button", { name: "Multiplayer" }));
+      await usuario.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Online/ }));
       await usuario.click(await screen.findByRole("button", { name: /Baixar músicas/ }));
       await usuario.click(await screen.findByRole("button", { name: "Baixar Do Encore" }));
       await usuario.click(await screen.findByRole("button", { name: "Jogar Do Encore" }));

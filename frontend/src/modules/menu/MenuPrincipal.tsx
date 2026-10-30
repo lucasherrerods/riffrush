@@ -1,12 +1,13 @@
 import { useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
-import { Columns2, Play, Radio, Search, Settings2, Shirt, Trophy, Users, type LucideIcon } from "lucide-react";
+import { Play, Radio, Search, Settings2, Shirt, Trophy, Users, type LucideIcon } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Documento } from "@/modules/legal";
 import { abrirLink } from "@/modules/platform";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
 import { IconeGithub } from "@/shared/ui/IconeGithub";
+import { EscolhaDoMultiplayer } from "./EscolhaDoMultiplayer";
 import { LogoDoJogo } from "./LogoDoJogo";
 
 interface Props {
@@ -14,11 +15,13 @@ interface Props {
   /** Celular que entrou pelo QR code: o foco é a sala. */
   noCelular?: boolean;
   aoJogar: () => void;
+  /** As salas online. */
   aoMultijogador: () => void;
-  /** Só no computador: vários jogadores na mesma tela. */
-  aoTelaDividida?: () => void;
+  /** Só no computador: vários jogadores na mesma tela. Com ele, o Multiplayer pergunta antes se é local ou online. */
+  aoMultiplayerLocal?: () => void;
   aoPersonagem: () => void;
-  aoConfigurar: () => void;
+  /** Só sem conta: com ela, as configurações ficam no menu da conta. */
+  aoConfigurar?: () => void;
   aoBuscarMusicas: () => void;
   /** Sem contas ligadas não há leaderboard, e a opção some. */
   aoLeaderboard?: () => void;
@@ -40,21 +43,21 @@ interface Item {
 const URL_DO_PROJETO = "https://github.com/lucasherrerods/riffrush";
 const URL_DA_LANDING = "https://playriffrush.vercel.app";
 
-export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoTelaDividida, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca }: Props) {
+export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoMultiplayerLocal, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca }: Props) {
   const [selecionado, setSelecionado] = useState(0);
+  const [escolhendoMultiplayer, setEscolhendoMultiplayer] = useState(false);
   const buscar: Item = { rotulo: "Buscar músicas", icone: Search, acao: aoBuscarMusicas };
   const comuns: Item[] = [
     ...(aoLeaderboard ? [{ rotulo: "Leaderboard", icone: Trophy, acao: aoLeaderboard }] : []),
     ...(aoOnline ? [{ rotulo: "Online", icone: Radio, acao: aoOnline }] : []),
     { rotulo: "Personagem", icone: Shirt, acao: aoPersonagem },
-    { rotulo: "Configurações", icone: Settings2, acao: aoConfigurar },
+    ...(aoConfigurar ? [{ rotulo: "Configurações", icone: Settings2, acao: aoConfigurar }] : []),
   ];
   const itens: Item[] = noCelular
     ? [{ rotulo: "Entrar na sala", icone: Users, acao: aoMultijogador }, { rotulo: "Jogar sozinho", icone: Play, acao: aoJogar }, buscar, ...comuns]
     : [
         { rotulo: "Jogar", icone: Play, acao: aoJogar },
-        { rotulo: "Multiplayer", icone: Users, acao: aoMultijogador },
-        ...(aoTelaDividida ? [{ rotulo: "Tela dividida", icone: Columns2, acao: aoTelaDividida }] : []),
+        { rotulo: "Multiplayer", icone: Users, acao: aoMultiplayerLocal ? () => setEscolhendoMultiplayer(true) : aoMultijogador },
         buscar,
         ...comuns,
       ];
@@ -65,6 +68,8 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
   };
 
   useTeclado((evento) => {
+    // Com a escolha aberta, as setas e o Enter são dela.
+    if (escolhendoMultiplayer) return;
     if (evento.code === "ArrowDown" || evento.code === "ArrowUp") {
       evento.preventDefault();
       tocarEfeito("mover", volumeDosEfeitos);
@@ -116,6 +121,23 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
           );
         })}
       </nav>
+
+      {aoMultiplayerLocal && (
+        <EscolhaDoMultiplayer
+          aberta={escolhendoMultiplayer}
+          aoFechar={() => setEscolhendoMultiplayer(false)}
+          aoLocal={() => {
+            tocarEfeito("selecionar", volumeDosEfeitos);
+            setEscolhendoMultiplayer(false);
+            aoMultiplayerLocal();
+          }}
+          aoOnline={() => {
+            tocarEfeito("selecionar", volumeDosEfeitos);
+            setEscolhendoMultiplayer(false);
+            aoMultijogador();
+          }}
+        />
+      )}
 
       {chat && (
         <aside aria-label="Chat" className="absolute bottom-4 left-4 flex max-h-72 w-96 origin-bottom-left scale-[0.8] flex-col justify-end max-lg:hidden max-md:fixed max-md:bottom-0 max-md:left-[1%] max-md:z-10 max-md:flex max-md:w-[98%] max-md:scale-100">

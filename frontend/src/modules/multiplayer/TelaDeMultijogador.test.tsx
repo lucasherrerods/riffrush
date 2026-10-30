@@ -81,10 +81,12 @@ beforeEach(() => {
 });
 
 describe("fora de uma sala", () => {
-  it("cria uma sala com o personagem do jogador", async () => {
-    const { usuario } = abrir({ sala: null, endereco: "" });
-    await usuario.click(screen.getByRole("button", { name: /Criar sala na rede/ }));
-    expect(sala.criarSala).toHaveBeenCalledWith(lucas);
+  it("é só online: sem sala na rede, sem salas da rede e sem entrar pelo IP", async () => {
+    abrir({ sala: null, endereco: "" });
+    await screen.findByText(/Nenhuma sala encontrada/);
+    expect(screen.queryByRole("button", { name: /na rede/ })).toBeNull();
+    expect(screen.queryByLabelText(/IP do host/)).toBeNull();
+    expect(sala.procurarSalas).not.toHaveBeenCalled();
   });
 
   it("cria uma sala online", async () => {
@@ -127,21 +129,13 @@ describe("fora de uma sala", () => {
     expect(screen.queryByRole("button", { name: /Criar sala online/ })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Código da sala online")).not.toBeInTheDocument();
     expect(sala.procurarSalasOnline).not.toHaveBeenCalled();
+    expect(screen.getByText(/online não está disponível/)).toBeInTheDocument();
   });
 
-  it("lista as salas da rede e entra numa delas", async () => {
-    vi.mocked(sala.procurarSalas).mockResolvedValue([{ nome: "Vitor", ip: "192.168.0.9", porta: 7777, jogadores: 2 }]);
-    const { usuario } = abrir({ sala: null, endereco: "" });
-    await usuario.click(await screen.findByRole("button", { name: /Sala de Vitor/ }));
-    expect(screen.getByText("2/4")).toBeInTheDocument();
-    expect(sala.entrarNaSala).toHaveBeenCalledWith("http://192.168.0.9:7777", lucas);
-  });
-
-  it("entra pelo IP digitado", async () => {
-    const { usuario } = abrir({ sala: null, endereco: "" });
-    await usuario.type(screen.getByLabelText(/IP do host/), "192.168.0.20");
-    await usuario.click(screen.getByRole("button", { name: "Entrar" }));
-    expect(sala.entrarNaSala).toHaveBeenCalledWith("http://192.168.0.20:7777", lucas);
+  it("mostra quantos jogadores cada sala tem", async () => {
+    vi.mocked(sala.procurarSalasOnline).mockResolvedValue([{ codigo: "K7QXM", nome: "Ana", jogadores: 2 }]);
+    abrir({ sala: null, endereco: "" });
+    expect(await screen.findByText("2/4")).toBeInTheDocument();
   });
 
   it("mostra o erro da última tentativa", () => {

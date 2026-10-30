@@ -39,7 +39,7 @@ function DropdownMenuItem({ className, variant = "padrao", ...props }: React.Com
     <DropdownMenuPrimitive.Item
       data-slot="dropdown-menu-item"
       className={cn(
-        "flex items-center gap-2 rounded-sm px-2 py-2.5 text-sm outline-none select-none focus:bg-accent [&_svg]:size-4 [&_svg]:opacity-70",
+        "flex cursor-pointer items-center gap-3 rounded-sm px-2 py-2 text-base outline-none select-none transition-colors focus:bg-accent [&_svg]:size-4 [&_svg]:opacity-70",
         variant === "perigo" && "text-destructive focus:bg-destructive/15",
         className,
       )}

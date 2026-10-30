@@ -14,7 +14,7 @@ describe("CartaoDaConta", () => {
   it("sem conta, mostra o botão do Google que inicia o login", async () => {
     vi.spyOn(sessaoDaConta, "estado").mockReturnValue({ conta: null, carregando: false });
     const entrar = vi.spyOn(sessaoDaConta, "entrar").mockResolvedValue();
-    render(<CartaoDaConta aoVerPerfil={() => {}} />);
+    render(<CartaoDaConta aoVerPerfil={() => {}} aoConfigurar={() => {}} />);
 
     const botao = screen.getByRole("button", { name: "Entrar com Google" });
     expect(botao).toHaveTextContent("Google");
@@ -26,7 +26,7 @@ describe("CartaoDaConta", () => {
     vi.spyOn(sessaoDaConta, "estado").mockReturnValue({ conta, carregando: false });
     const sair = vi.spyOn(sessaoDaConta, "sair").mockResolvedValue();
     const usuario = userEvent.setup();
-    render(<CartaoDaConta aoVerPerfil={() => {}} />);
+    render(<CartaoDaConta aoVerPerfil={() => {}} aoConfigurar={() => {}} />);
 
     expect(screen.getByText("Lucas")).toBeInTheDocument();
     expect(screen.getByText("Nv 3")).toBeInTheDocument();
@@ -40,17 +40,29 @@ describe("CartaoDaConta", () => {
     vi.spyOn(sessaoDaConta, "estado").mockReturnValue({ conta, carregando: false });
     const aoVerPerfil = vi.fn();
     const usuario = userEvent.setup();
-    render(<CartaoDaConta aoVerPerfil={aoVerPerfil} />);
+    render(<CartaoDaConta aoVerPerfil={aoVerPerfil} aoConfigurar={() => {}} />);
 
     await usuario.click(screen.getByRole("button", { name: /Lucas/ }));
     await usuario.click(screen.getByRole("menuitem", { name: "Ver perfil" }));
     expect(aoVerPerfil).toHaveBeenCalled();
   });
 
+  it("configurações fica no menu, logo abaixo de ver perfil", async () => {
+    vi.spyOn(sessaoDaConta, "estado").mockReturnValue({ conta, carregando: false });
+    const aoConfigurar = vi.fn();
+    const usuario = userEvent.setup();
+    render(<CartaoDaConta aoVerPerfil={() => {}} aoConfigurar={aoConfigurar} />);
+
+    await usuario.click(screen.getByRole("button", { name: /Lucas/ }));
+    expect(screen.getAllByRole("menuitem").map((item) => item.textContent).slice(0, 2)).toEqual(["Ver perfil", "Configurações"]);
+    await usuario.click(screen.getByRole("menuitem", { name: "Configurações" }));
+    expect(aoConfigurar).toHaveBeenCalled();
+  });
+
   it("ajuda no menu abre as issues do projeto", async () => {
     vi.spyOn(sessaoDaConta, "estado").mockReturnValue({ conta, carregando: false });
     const usuario = userEvent.setup();
-    render(<CartaoDaConta aoVerPerfil={() => {}} />);
+    render(<CartaoDaConta aoVerPerfil={() => {}} aoConfigurar={() => {}} />);
 
     await usuario.click(screen.getByRole("button", { name: /Lucas/ }));
     await usuario.click(screen.getByRole("menuitem", { name: "Ajuda" }));
