@@ -22,7 +22,7 @@ export { layoutDaPista, type LayoutDaPista } from "./pista/geometria";
 export { resultadoDaPartida, valorDosAcertos, type Resultado } from "./resultado";
 export { codigoDaEntrada, desempacotarReplay, emTicks, entradaDoCodigo, hashDoChart, type EntradaDoReplay, type EventoDaTransmissao, type Replay } from "./replay";
 export type { EstadoDoJogador } from "./rede";
-export { OPCOES_PADRAO_DA_PARTIDA, TelaDeJogo, type OpcoesDaPartida } from "./TelaDeJogo";
+export { OPCOES_PADRAO_DA_PARTIDA, TelaDeJogo, type JogadorLocal, type OpcoesDaPartida } from "./TelaDeJogo";
 export { EntradaDaPartida } from "./componentes/EntradaDaPartida";
 export { IconeDoJeito, NOMES_DOS_JEITOS } from "./componentes/IconeDoJeito";
 export { MedidorDeVida } from "./componentes/MedidorDeVida";

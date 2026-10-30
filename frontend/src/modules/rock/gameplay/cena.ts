@@ -4,6 +4,8 @@ interface Ambiente {
   personagem: boolean;
   comWebGL: boolean;
   estreita: boolean;
+  /** Na tela dividida, quantas pistas há. Sem ele, uma. */
+  jogadores?: number;
 }
 
 /** O que aparece em volta da pista. A pista e o placar aparecem sempre. */
@@ -16,7 +18,8 @@ export interface CenaDaPartida {
   video: boolean;
 }
 
-export function cenaDaPartida({ modoCompetitivo, efeitos, personagem, comWebGL, estreita }: Ambiente): CenaDaPartida {
+export function cenaDaPartida({ modoCompetitivo, efeitos, personagem, comWebGL, estreita, jogadores = 1 }: Ambiente): CenaDaPartida {
+  if (jogadores > 1) return { palco: false, personagem: false, video: false };
   // O clipe fica no canto, fora da pista, e o jogador escolheu baixá-lo: continua mesmo no modo competitivo.
   if (modoCompetitivo) return { palco: false, personagem: false, video: true };
   // No celular a GPU fica toda para a pista, sem palco nem personagem; sem efeitos, o palco também sai.
