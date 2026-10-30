@@ -4,7 +4,7 @@ import { ChevronsUp } from "lucide-react";
 import { PALHETA_DO_CONTROLE, veioDoControle } from "@/modules/gamepad";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar, novaReacao, type Personagem, type Reacao } from "@/modules/rock/character";
-import { opacidadeDaPista, type EstadoDoPalco } from "@/modules/rock/stage";
+import { escalaDoCanvas, opacidadeDaPista, type EstadoDoPalco } from "@/modules/rock/stage";
 import { PISTA_ABERTA, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada } from "@/modules/rock/songs";
 import { ehTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
@@ -383,7 +383,7 @@ export function PistaDoJogador(props: Props) {
       // Com palco, a pista some na abertura para a cena dominar e volta até a música começar.
       if (elemento) elemento.style.opacity = atuais.current.comPalco ? String(opacidadeDaPista(tempo, entrada)) : "1";
       if (contexto2d && elemento) {
-        const escala = Math.min(2, window.devicePixelRatio || 1);
+        const escala = escalaDoCanvas(window.devicePixelRatio, opcoes.escalaDeRenderizacao);
         const { largura, altura } = medida;
         if (elemento.width !== Math.round(largura * escala) || elemento.height !== Math.round(altura * escala)) {
           elemento.width = Math.round(largura * escala);

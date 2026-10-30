@@ -14,3 +14,14 @@ const AJUSTES: Record<QualidadeDoPalco, { resolucao: number; quadrosPorSegundo: 
 };
 
 export const ajustesDoPalco = (qualidade: QualidadeDoPalco) => AJUSTES[qualidade];
+
+/** Fração da resolução nativa em que a pista é desenhada: menos pixels aliviam placas de vídeo fracas. */
+export const ESCALA_MINIMA_DE_RENDERIZACAO = 0.5;
+
+export function limitarEscalaDeRenderizacao(escala: number) {
+  if (!Number.isFinite(escala)) return 1;
+  return Math.min(1, Math.max(ESCALA_MINIMA_DE_RENDERIZACAO, escala));
+}
+
+/** Pixels do canvas por pixel CSS. Telas muito densas param em 2 antes da escala escolhida. */
+export const escalaDoCanvas = (densidadeDaTela: number, escala: number) => Math.min(2, densidadeDaTela || 1) * limitarEscalaDeRenderizacao(escala);

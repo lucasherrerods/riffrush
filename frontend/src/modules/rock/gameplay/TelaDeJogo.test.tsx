@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { invoke } from "@tauri-apps/api/core";
 import { instalarAtalhosDeVolume, obterContextoDeAudio } from "@/modules/audio";
 import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
 import { carregarMusica, PISTA_ABERTA, type Nota } from "@/modules/rock/songs";
@@ -12,6 +13,8 @@ vi.mock("@/modules/rock/songs", async (original) => ({
   ...(await original<typeof import("@/modules/rock/songs")>()),
   carregarMusica: vi.fn(),
 }));
+
+vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => {}), isTauri: () => true }));
 
 const ENTRADA = 2.5;
 const nota = (tempo: number, pista = 0): Nota => ({ tempo, pista, frase: -1, duracao: 0 });
@@ -182,6 +185,32 @@ describe("TelaDeJogo", () => {
     expect(audio().resume).not.toHaveBeenCalled();
     await waitFor(() => expect(audio().resume).toHaveBeenCalled(), { timeout: 4500 });
   }, 8000);
+
+  it("segura as teclas do sistema na partida e solta na pausa e ao sair", async () => {
+    carregarCom([nota(5)]);
+    const { usuario } = abrir();
+    await partidaPronta();
+    expect(invoke).toHaveBeenLastCalledWith("teclado_bloquear", { ligar: true });
+    await usuario.keyboard("{Escape}");
+    await screen.findByRole("heading", { name: "Pausado" });
+    expect(invoke).toHaveBeenLastCalledWith("teclado_bloquear", { ligar: false });
+  });
+
+  it("com o bloqueio desligado nas configurações, não segura nada", async () => {
+    carregarCom([nota(5)]);
+    abrir({ bloquearAtalhos: false });
+    await partidaPronta();
+    expect(invoke).not.toHaveBeenCalledWith("teclado_bloquear", { ligar: true });
+  });
+
+  it("na partida, F5, Ctrl+R e o menu de contexto não chegam ao navegador", async () => {
+    carregarCom([nota(5)]);
+    abrir();
+    await partidaPronta();
+    expect(fireEvent.keyDown(window, { code: "F5" })).toBe(false);
+    expect(fireEvent.keyDown(window, { code: "KeyR", ctrlKey: true })).toBe(false);
+    expect(fireEvent.contextMenu(window)).toBe(false);
+  });
 
   it("Esc durante a contagem da volta pausa de novo, sem a música voltar", async () => {
     carregarCom([nota(5)]);
