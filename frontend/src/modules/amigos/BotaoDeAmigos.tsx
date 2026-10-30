@@ -1,9 +1,7 @@
 import { useEffect } from "react";
 import { Users } from "lucide-react";
 import { useConta } from "@/modules/conta";
-import { presenca, type ConviteParaSala } from "@/modules/presenca";
 import { Button } from "@/shared/ui/button";
-import { avisar } from "@/shared/ui/avisos";
 import { cn } from "@/shared/lib/utils";
 import { listaDeAmigos } from "./loja";
 import { Contador, useAmigos } from "./PainelDeAmigos";
@@ -32,18 +30,5 @@ export function BotaoDeAmigos({ aberto, aoAlternar }: { aberto: boolean; aoAlter
         </span>
       )}
     </Button>
-  );
-}
-
-/** Convite de quem é amigo vira um aviso com o botão de entrar; o de quem não é, o app ignora. */
-export function useConvitesDeAmigos(aoEntrar: (codigo: string) => void) {
-  useEffect(
-    () =>
-      presenca.ouvirConvites((convite: ConviteParaSala) => {
-        const amigos = listaDeAmigos.estado().listas?.amigos ?? [];
-        if (!amigos.some((a) => a.conta_id === convite.de.id)) return;
-        avisar(`${convite.de.nome} chamou você para a sala ${convite.codigo}.`, { action: { label: "Entrar", onClick: () => aoEntrar(convite.codigo) } });
-      }),
-    [aoEntrar],
   );
 }

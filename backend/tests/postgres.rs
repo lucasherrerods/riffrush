@@ -865,7 +865,9 @@ async fn amizades_pedem_aceitam_bloqueiam_e_sugerem_amigos_de_amigos() {
     amizades.bloquear(caio, ana, agora).await.unwrap();
     assert!(amizades.sugestoes(ana, 10).await.unwrap().is_empty());
     assert_eq!(amizades.relacao(ana, caio).await.unwrap(), Relacao::FoiBloqueado);
-    assert_eq!(amizades.pessoas(caio).await.unwrap()[1].vinculo, Vinculo::Bloqueado);
+    // Todas as contas do teste têm o mesmo nome: acha pela conta, não pela posição.
+    let da_ana = amizades.pessoas(caio).await.unwrap().into_iter().find(|p| p.conta_id == ana).unwrap();
+    assert_eq!(da_ana.vinculo, Vinculo::Bloqueado);
     amizades.desbloquear(caio, ana).await.unwrap();
     assert_eq!(amizades.relacao(ana, caio).await.unwrap(), Relacao::Nenhuma);
 

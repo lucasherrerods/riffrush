@@ -19,7 +19,7 @@ import { EscolhaDeDispositivos, ResultadoDaTelaDividida, eventoDoJogador, opcoes
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { PainelDeRanking, PlacarAoVivo, buscarMaisJogadaAleatoria, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
-import { BotaoDeAmigos, PainelDeAmigos, useConvitesDeAmigos } from "@/modules/amigos";
+import { BotaoDeAmigos, ConvitesDeAmigos, PainelDeAmigos } from "@/modules/amigos";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -267,7 +267,6 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
     },
     [personagemEmJogo],
   );
-  useConvitesDeAmigos(entrarNaSalaDoAmigo);
   /** Quantas pessoas estão assistindo a partida transmitida agora. */
   const [espectadores, setEspectadores] = useState(0);
   // Uma transmissão por partida: recomeçar a música dentro dela manda um início novo pela mesma.
@@ -740,6 +739,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
       <IndicadorDeVolume />
       <SoltarParaImportar ativo={!naPista} aoSoltar={(arquivos) => void importar(arquivos)} />
       <ProgressoDaImportacao progresso={progresso} />
+      {contasLigadas && <ConvitesDeAmigos aoEntrar={entrarNaSalaDoAmigo} />}
       <Avisos />
     </main>
   );
