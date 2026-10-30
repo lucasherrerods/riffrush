@@ -133,9 +133,10 @@ def main():
     for cena, lista in recortes.items():
         quadros = [estilizar(q, caixa, receita["altura"], receita["cores"]) for q in lista]
         imagem, colunas, linhas = folha(quadros)
-        imagem.save(destino / f"{cena}.png", optimize=True)
+        # WebP com transparência: cerca de 80% menor que o PNG, sem diferença visível no recorte.
+        imagem.save(destino / f"{cena}.webp", "WEBP", quality=88, method=6, alpha_quality=90)
         manifesto["cenas"][cena] = {
-            "arquivo": f"{cena}.png",
+            "arquivo": f"{cena}.webp",
             "quadros": len(quadros),
             "colunas": colunas,
             "linhas": linhas,

@@ -1,2 +1,3 @@
+import { adiar } from "@/shared/lib/adiar";
 export { documentoDoEndereco, type Documento } from "./documentos";
-export { TelaDeDocumento } from "./TelaDeDocumento";
+export const TelaDeDocumento = adiar(() => import("./TelaDeDocumento").then((m) => m.TelaDeDocumento));
