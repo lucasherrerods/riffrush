@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { marcarComoDoControle, registrarUso, rotuloDoComando, useDispositivo } from "./dispositivo";
+import { indiceDoControle, marcarComoDoControle, registrarUso, rotuloDoComando, useDispositivo } from "./dispositivo";
 
 beforeEach(() => registrarUso("teclado"));
 
@@ -35,5 +35,14 @@ describe("rotuloDoComando", () => {
     expect(rotuloDoComando("confirmar", "controle")).toBe("A");
     expect(rotuloDoComando("voltar", "controle")).toBe("B");
     expect(rotuloDoComando("vertical", "controle")).not.toBe(rotuloDoComando("vertical", "teclado"));
+  });
+});
+
+describe("indiceDoControle", () => {
+  it("diz de qual controle veio a tecla simulada, e nada para o teclado", () => {
+    const doControle = new KeyboardEvent("keydown", { code: "KeyA" });
+    marcarComoDoControle(doControle, 2);
+    expect(indiceDoControle(doControle)).toBe(2);
+    expect(indiceDoControle(new KeyboardEvent("keydown", { code: "KeyA" }))).toBeUndefined();
   });
 });
