@@ -19,6 +19,11 @@ describe("opcoesDaPartida", () => {
     expect(opcoesDaPartida(CONFIGURACOES_PADRAO)).toMatchObject({ personagem: true, mostrarFps: false });
   });
 
+  it("leva o bloqueio das teclas do sistema, que começa ligado", () => {
+    expect(opcoesDaPartida(CONFIGURACOES_PADRAO).bloquearAtalhos).toBe(true);
+    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, bloquearAtalhos: false }).bloquearAtalhos).toBe(false);
+  });
+
   it("leva a qualidade do palco, que começa na média", () => {
     expect(opcoesDaPartida(CONFIGURACOES_PADRAO).qualidadeDoPalco).toBe("media");
     expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, qualidadeDoPalco: "leve" }).qualidadeDoPalco).toBe("leve");

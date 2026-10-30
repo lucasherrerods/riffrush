@@ -125,6 +125,14 @@ describe("TelaDeConfiguracoes", () => {
     expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ mostrarFps: true }));
   });
 
+  it("desliga o bloqueio das teclas do sistema na partida, que começa ligado", async () => {
+    const { aoMudar, usuario } = abrir();
+    await usuario.click(screen.getByRole("tab", { name: /Gameplay/ }));
+    expect(screen.getByRole("switch", { name: "Bloquear teclas do sistema" })).toBeChecked();
+    await usuario.click(screen.getByRole("switch", { name: "Bloquear teclas do sistema" }));
+    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ bloquearAtalhos: false }));
+  });
+
   it("liga o chat global do menu, que começa desligado", async () => {
     const { aoMudar, usuario } = abrir();
     await usuario.click(screen.getByRole("tab", { name: /Vídeo/ }));

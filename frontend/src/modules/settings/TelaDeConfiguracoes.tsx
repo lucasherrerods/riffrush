@@ -192,6 +192,11 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
             <LinhaDeOpcao rotulo="Bot" dica="O jogo toca sozinho. Recordes não são salvos" para="bot">
               <Switch id="bot" checked={configuracoes.bot} onCheckedChange={(bot) => mudar({ bot })} />
             </LinhaDeOpcao>
+            {!estreita && (
+              <LinhaDeOpcao rotulo="Bloquear teclas do sistema" dica="Na partida, Windows, Alt+Tab e F5 não tiram você do jogo. Ctrl+Alt+Del sempre funciona" para="bloquear-atalhos">
+                <Switch id="bloquear-atalhos" checked={configuracoes.bloquearAtalhos} onCheckedChange={(bloquearAtalhos) => mudar({ bloquearAtalhos })} />
+              </LinhaDeOpcao>
+            )}
           </TabsContent>
 
           <TabsContent value="audio" className="flex flex-col gap-2">
