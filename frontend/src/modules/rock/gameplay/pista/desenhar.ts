@@ -3,7 +3,7 @@ import { cores } from "@/modules/rock/tema";
 import { comAlfa } from "@/shared/styles/tokens";
 import { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ABERTA, COR_DA_ESTRELA, COR_DA_NOTA_PERDIDA, TRILHO_DA_ESTRELA, corDaPista } from "../cores";
 import type { NotaEmJogo } from "../partida";
-import { pontosDoRaio, tremor } from "./efeitos";
+import { pontosDoRaio, pulo, tremor } from "./efeitos";
 import { cordasDaPista, layoutDaPista, projetar, xDaPista, type LayoutDaPista } from "./geometria";
 
 export interface Cena {
@@ -95,12 +95,14 @@ export function desenharPista(
   const layout = layoutDaPista(largura, altura);
   const { centro, linhaDeBatida, larguraDoTraste } = layout;
 
-  // O tremor do star power gira e desloca a pista em torno da linha de batida.
-  const sacudida = efeitos && cena.estrelaDesde !== null ? tremor(tempo - cena.estrelaDesde) : null;
-  const tremendo = !!sacudida && (sacudida.x !== 0 || sacudida.y !== 0);
+  // O tremor e o pulo do star power giram e deslocam a pista em torno da linha de batida, na mesma transformação.
+  const desde = efeitos && cena.estrelaDesde !== null ? tempo - cena.estrelaDesde : null;
+  const sacudida = desde !== null ? tremor(desde) : null;
+  const subida = desde !== null ? pulo(desde) : 0;
+  const tremendo = !!sacudida && (sacudida.x !== 0 || sacudida.y !== 0 || subida !== 0);
   if (tremendo) {
     c.save();
-    c.translate(centro + sacudida.x, linhaDeBatida + sacudida.y);
+    c.translate(centro + sacudida.x, linhaDeBatida + sacudida.y + subida);
     c.rotate(sacudida.angulo);
     c.translate(-centro, -linhaDeBatida);
   }

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { capturarBotao, useControleConectado } from "@/modules/gamepad";
-import { definirTelaCheia } from "@/modules/platform";
+import { definirTelaCheia, ehJanelaNativa } from "@/modules/platform";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { CONFIGURACOES_PADRAO } from "./configuracoes";
 import { TelaDeConfiguracoes } from "./TelaDeConfiguracoes";
@@ -15,6 +15,14 @@ vi.mock("@/modules/gamepad", async (original) => ({
 vi.mock("@/modules/platform", () => ({
   estaEmTelaCheia: vi.fn(async () => false),
   definirTelaCheia: vi.fn(async () => {}),
+  ehJanelaNativa: vi.fn(() => false),
+  monitorAtual: vi.fn(async () => ({ x: 0, y: 0, largura: 1920, altura: 1080 })),
+  resolucoesDisponiveis: () => [{ id: "1600x900", rotulo: "1600 × 900", largura: 1600, altura: 900 }],
+  MODOS_DE_JANELA: [
+    { id: "janela", rotulo: "Janela" },
+    { id: "sem-borda", rotulo: "Sem borda" },
+    { id: "tela-cheia", rotulo: "Tela cheia" },
+  ],
 }));
 
 function abrir() {
@@ -113,6 +121,18 @@ describe("TelaDeConfiguracoes", () => {
     await usuario.click(screen.getByRole("tab", { name: /Vídeo/ }));
     await usuario.click(screen.getByRole("switch", { name: "Tela cheia" }));
     expect(definirTelaCheia).toHaveBeenCalledWith(true);
+  });
+
+  it("no desktop escolhe o modo de exibição e a resolução da janela", async () => {
+    vi.mocked(ehJanelaNativa).mockReturnValue(true);
+    const { aoMudar, usuario } = abrir();
+    await usuario.click(screen.getByRole("tab", { name: /Vídeo/ }));
+    expect(screen.queryByRole("switch", { name: "Tela cheia" })).toBeNull();
+    await usuario.click(await screen.findByRole("radio", { name: "1600 × 900" }));
+    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ resolucaoDaJanela: "1600x900" }));
+    await usuario.click(screen.getByRole("radio", { name: "Sem borda" }));
+    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ modoDeJanela: "sem-borda" }));
+    vi.mocked(ehJanelaNativa).mockReturnValue(false);
   });
 
   it("desliga o personagem 3D e liga o contador de FPS, para comparar o desempenho", async () => {

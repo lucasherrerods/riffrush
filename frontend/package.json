@@ -10,7 +10,8 @@
     "tauri": "tauri",
     "test": "vitest run",
     "test:watch": "vitest",
-    "motor": "node scripts/gerar-motor.mjs"
+    "motor": "node scripts/gerar-motor.mjs",
+    "lancar": "node scripts/lancar.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

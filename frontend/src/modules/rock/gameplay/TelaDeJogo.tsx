@@ -5,7 +5,7 @@ import { PALHETA_DO_CONTROLE, veioDoControle } from "@/modules/gamepad";
 import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
 import { Avatar, novaReacao, suportaWebGL, type Personagem, type Reacao } from "@/modules/rock/character";
 import { cenaDaPartida } from "./cena";
-import { Palco, opacidadeDaPista, type EstadoDoPalco, type QualidadeDoPalco } from "@/modules/rock/stage";
+import { Palco, escalaDoCanvas, opacidadeDaPista, type EstadoDoPalco, type QualidadeDoPalco } from "@/modules/rock/stage";
 import { DIFICULDADES, INSTRUMENTOS, PISTA_ABERTA, carregarMusica, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada } from "@/modules/rock/songs";
 import { bloquearTeclasDoSistema, ehAtalhoDoNavegador } from "@/modules/platform";
 import { ehTelaEstreita, useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
@@ -25,7 +25,7 @@ import { NOMES_DAS_PISTAS } from "./cores";
 import { avancar, criarPartida, multiplicador, precisao, retirarEventos, type JeitoDeJogar, type Julgamento } from "./partida";
 import { aplicarEntradas, criarGravador, empacotarReplay, hashDoChart, partidaNoInstante, type EventoDaTransmissao, type Replay } from "./replay";
 import { desenharPista, type Cena } from "./pista/desenhar";
-import { forcaDoTrovao } from "./pista/efeitos";
+import { trovaoDoEvento } from "./pista/efeitos";
 import { criarContadorDeFps, type LeituraDeFps } from "./fps";
 import { layoutDaPista } from "./pista/geometria";
 import { criarSprites } from "./pista/sprites";
@@ -60,6 +60,8 @@ export interface OpcoesDaPartida {
   personagem: boolean;
   mostrarFps: boolean;
   qualidadeDoPalco: QualidadeDoPalco;
+  /** Fração da resolução nativa em que a pista é desenhada. */
+  escalaDeRenderizacao: number;
   modoCompetitivo: boolean;
   /** No desktop, segura as teclas Windows, Alt e Alt+Tab e os atalhos do navegador enquanto se joga. */
   bloquearAtalhos: boolean;
@@ -86,6 +88,7 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   personagem: true,
   mostrarFps: false,
   qualidadeDoPalco: "media",
+  escalaDeRenderizacao: 1,
   modoCompetitivo: false,
   bloquearAtalhos: true,
 };
@@ -396,16 +399,16 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
 
     const tratarEventos = (tempo: number) => {
       for (const evento of retirarEventos(partida)) {
+        const forca = trovaoDoEvento(evento.tipo);
+        if (forca) {
+          ultimoTrovao = tempo;
+          trovoes.push({ tempo, forca, semente: Math.floor(tempo * 1000) });
+          if (trovoes.length > MAXIMO_DE_TROVOES) trovoes.shift();
+        }
         if (evento.tipo === "acerto") {
           explosoes.push({ pista: evento.nota.pista, tempo });
           julgamento = { julgamento: evento.julgamento, tempo };
           if (explosoes.length > MAXIMO_DE_EXPLOSOES) explosoes.shift();
-          const forca = forcaDoTrovao(partida.sequencia);
-          if (forca) {
-            ultimoTrovao = tempo;
-            trovoes.push({ tempo, forca, semente: partida.sequencia });
-            if (trovoes.length > MAXIMO_DE_TROVOES) trovoes.shift();
-          }
         } else if (evento.tipo === "erro") {
           reagir("errou");
           falhas.push({ pista: evento.nota.pista, tempo });
@@ -626,7 +629,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       // Com palco, a pista some na abertura para a cena dominar e volta até a música começar.
       if (elemento) elemento.style.opacity = comPalcoAgora.current ? String(opacidadeDaPista(tempo, ENTRADA)) : "1";
       if (contexto2d && elemento) {
-        const escala = Math.min(2, window.devicePixelRatio || 1);
+        const escala = escalaDoCanvas(window.devicePixelRatio, opcoes.escalaDeRenderizacao);
         const { largura, altura } = medida;
         if (elemento.width !== Math.round(largura * escala) || elemento.height !== Math.round(altura * escala)) {
           elemento.width = Math.round(largura * escala);

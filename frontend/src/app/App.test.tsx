@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { definirTelaCheia } from "@/modules/platform";
+import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa } from "@/modules/platform";
 import { anotarRecorde, definirRecordes, recordesAtuais } from "@/modules/rock/results";
 import { escolherNaSala, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
@@ -36,6 +36,9 @@ vi.mock("@/modules/platform", () => ({
   estaEmTelaCheia: vi.fn(async () => false),
   definirTelaCheia: vi.fn(async () => {}),
   fecharJanela: vi.fn(),
+  ehJanelaNativa: vi.fn(() => false),
+  aplicarModoDeJanela: vi.fn(async () => {}),
+  modoDoF11: (modo: string) => (modo === "janela" ? "tela-cheia" : "janela"),
 }));
 
 // A partida de verdade é testada no módulo de gameplay; aqui só importa a ligação entre as telas.
@@ -347,6 +350,16 @@ describe("App", () => {
     const usuario = abrir();
     await usuario.keyboard("[F11]");
     await waitFor(() => expect(definirTelaCheia).toHaveBeenCalledWith(true));
+  });
+
+  it("no desktop, F11 troca o modo de janela salvo e o aplica", async () => {
+    vi.mocked(ehJanelaNativa).mockReturnValue(true);
+    const usuario = abrir();
+    await waitFor(() => expect(aplicarModoDeJanela).toHaveBeenCalledWith("janela", null));
+    await usuario.keyboard("[F11]");
+    await waitFor(() => expect(aplicarModoDeJanela).toHaveBeenCalledWith("tela-cheia", null));
+    expect(JSON.parse(localStorage.getItem("riffrush.configuracoes") ?? "{}").modoDeJanela).toBe("tela-cheia");
+    vi.mocked(ehJanelaNativa).mockReturnValue(false);
   });
 
   it("sair da música volta para a seleção", async () => {
