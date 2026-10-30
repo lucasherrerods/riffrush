@@ -8,7 +8,7 @@ import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas
 import { Fundo, MenuPrincipal } from "@/modules/menu";
 import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
-import { definirTelaCheia, estaEmTelaCheia } from "@/modules/platform";
+import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa, estaEmTelaCheia, modoDoF11 } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
 import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
 import { ChatGlobal, TelaDeEspectador, TelaOnline, presenca, presencaDisponivel, transmitirPartida, usePresenca, useSouDaModeracao, type PessoaOnline } from "@/modules/presenca";
@@ -133,8 +133,15 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
   useTeclado(async (evento) => {
     if (evento.code !== "F11") return;
     evento.preventDefault();
-    await definirTelaCheia(!(await estaEmTelaCheia()));
+    if (ehJanelaNativa()) mudarConfiguracoes({ ...configuracoes, modoDeJanela: modoDoF11(configuracoes.modoDeJanela) });
+    else await definirTelaCheia(!(await estaEmTelaCheia()));
   });
+
+  // No boot e a cada troca nas configurações, a janela nativa entra no modo salvo.
+  const { modoDeJanela, resolucaoDaJanela } = configuracoes;
+  useEffect(() => {
+    aplicarModoDeJanela(modoDeJanela, resolucaoDaJanela).catch(() => {});
+  }, [modoDeJanela, resolucaoDaJanela]);
 
   const telaAtual = useRef(tela);
   telaAtual.current = tela;

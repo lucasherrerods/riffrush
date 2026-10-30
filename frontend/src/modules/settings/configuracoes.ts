@@ -1,5 +1,6 @@
 import { BOTAO_DA_ESTRELA_PADRAO, BOTOES_DOS_TRASTES_PADRAO } from "@/modules/gamepad";
 import type { JeitoDeJogar } from "@/modules/rock/gameplay";
+import type { ModoDeJanela } from "@/modules/platform";
 import type { QualidadeDoPalco } from "@/modules/rock/stage";
 
 export interface Configuracoes {
@@ -31,6 +32,12 @@ export interface Configuracoes {
   personagem3d: boolean;
   mostrarFps: boolean;
   qualidadeDoPalco: QualidadeDoPalco;
+  /** Fração da resolução em que a pista é desenhada, de 0,5 a 1. */
+  escalaDeRenderizacao: number;
+  /** Só no app desktop; no navegador vale a tela cheia dele. */
+  modoDeJanela: ModoDeJanela;
+  /** "1600x900" no modo janela. `null` mantém o tamanho em que a pessoa deixou a janela. */
+  resolucaoDaJanela: string | null;
   /** Só a pista e o placar na partida: sem palco, personagem nem fundo. O clipe da música continua no canto. */
   modoCompetitivo: boolean;
   /** Aparecer na lista de quem está online. `null` enquanto a pessoa não respondeu: nada liga sem ela aceitar. */
@@ -61,6 +68,9 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   personagem3d: true,
   mostrarFps: false,
   qualidadeDoPalco: "media",
+  escalaDeRenderizacao: 1,
+  modoDeJanela: "janela",
+  resolucaoDaJanela: null,
   modoCompetitivo: true,
   mostrarOnline: null,
   permitirEspectadores: true,
