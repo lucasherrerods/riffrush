@@ -18,6 +18,7 @@ pub struct PartidaPendente {
     pub enviada_em: DateTime<Utc>,
     /// Já contando esta.
     pub tentativas: u32,
+    pub rodada: Option<Uuid>,
 }
 
 #[async_trait]

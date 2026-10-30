@@ -137,12 +137,13 @@ struct LinhaDaMusica {
     dificuldade_do_recorde: Option<String>,
 }
 
+/// Uma rodada da sala conta uma partida só, com quantos jogadores ela tiver.
 /// No empate, a que tem mais jogadores diferentes fica na frente.
 /// O recorde é o primeiro lugar pelos pontos na dificuldade mais alta, em qualquer instrumento.
 const CONSULTA_DAS_MUSICAS: &str = "
     WITH populares AS (
-        SELECT ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC, COUNT(DISTINCT conta_id) DESC, musica_id) AS posicao,
-               musica_id, COUNT(*) AS partidas, COUNT(DISTINCT conta_id) AS jogadores
+        SELECT ROW_NUMBER() OVER (ORDER BY COUNT(DISTINCT COALESCE(rodada_id, id)) DESC, COUNT(DISTINCT conta_id) DESC, musica_id) AS posicao,
+               musica_id, COUNT(DISTINCT COALESCE(rodada_id, id)) AS partidas, COUNT(DISTINCT conta_id) AS jogadores
         FROM partidas
         GROUP BY musica_id
         ORDER BY posicao

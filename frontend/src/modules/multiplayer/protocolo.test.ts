@@ -165,7 +165,7 @@ describe("ações do host", () => {
       expect(comecarPartida(umPronto)).toEqual([]);
       const todos = pronto(umPronto, 3).estado;
       expect(todosProntos(todos)).toBe(true);
-      expect(comecarPartida(todos)).toEqual([{ tipo: "comecar", musica: overdrive, dificuldade: "medio", instrumento: "guitarra" }]);
+      expect(comecarPartida(todos, "0b6c1f3e-8d2a-4c5b-9e7f-1a2b3c4d5e6f")).toEqual([{ tipo: "comecar", musica: overdrive, dificuldade: "medio", instrumento: "guitarra", rodada: "0b6c1f3e-8d2a-4c5b-9e7f-1a2b3c4d5e6f" }]);
     });
 
     it("trocar a música zera os prontos, porque todos precisam baixar a nova", () => {
@@ -193,8 +193,22 @@ describe("ações do host", () => {
     });
   });
 
+  it("cada largada é uma rodada nova, para as partidas da sala contarem uma vez no ranking", () => {
+    const [primeira] = comecarPartida(salaDoHost());
+    const [segunda] = comecarPartida(salaDoHost());
+    expect(primeira).toMatchObject({ rodada: expect.stringMatching(/^[0-9a-f-]{36}$/) });
+    expect(primeira).not.toEqual(segunda);
+  });
+
+  it("a sala guarda a rodada que o host mandou, e ignora uma que não é um id", () => {
+    const comecar = { tipo: "comecar", musica: { tipo: "embutida", id: "overdrive" }, dificuldade: "dificil" } as const;
+    expect(reduzir(salaDoConvidado(), 1, { ...comecar, rodada: "0b6c1f3e-8d2a-4c5b-9e7f-1a2b3c4d5e6f" }, 0).estado.rodada).toBe("0b6c1f3e-8d2a-4c5b-9e7f-1a2b3c4d5e6f");
+    expect(reduzir(salaDoConvidado(), 1, { ...comecar, rodada: "qualquer coisa" }, 0).estado.rodada).toBeUndefined();
+    expect(reduzir(salaDoConvidado(), 1, comecar, 0).estado.rodada).toBeUndefined();
+  });
+
   it("começar a partida avisa todos com a música e a dificuldade", () => {
-    expect(comecarPartida(salaDoHost())).toEqual([{ tipo: "comecar", musica: salaDoHost().musica, dificuldade: salaDoHost().dificuldade, instrumento: "guitarra" }]);
+    expect(comecarPartida(salaDoHost(), "0b6c1f3e-8d2a-4c5b-9e7f-1a2b3c4d5e6f")).toEqual([{ tipo: "comecar", musica: salaDoHost().musica, dificuldade: salaDoHost().dificuldade, instrumento: "guitarra", rodada: "0b6c1f3e-8d2a-4c5b-9e7f-1a2b3c4d5e6f" }]);
     expect(comecarPartida(salaDoConvidado())).toEqual([]);
   });
 });
