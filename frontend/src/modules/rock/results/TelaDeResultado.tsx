@@ -56,7 +56,10 @@ export function TelaDeResultado(props: Props) {
   }, [resultado.pontos, estrelas, volumeDosEfeitos]);
 
   useTeclado((evento) => {
-    if (evento.code === "Enter" || evento.code === "Escape") aoContinuar();
+    if (evento.code === "Enter" || evento.code === "Escape") {
+      evento.preventDefault();
+      aoContinuar();
+    }
     else if (evento.code === "KeyR" && podeRepetir) aoRepetir();
   });
 

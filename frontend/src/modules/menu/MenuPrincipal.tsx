@@ -68,6 +68,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
       const passo = evento.code === "ArrowDown" ? 1 : itens.length - 1;
       setSelecionado((atual) => (atual + passo) % itens.length);
     } else if (evento.code === "Enter") {
+      evento.preventDefault();
       escolher(itens[selecionado]);
     }
   });

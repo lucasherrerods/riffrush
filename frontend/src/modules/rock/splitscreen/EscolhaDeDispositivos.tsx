@@ -29,6 +29,8 @@ export function EscolhaDeDispositivos({ aoComecar, aoVoltar }: Props) {
       const jaEntrou = dispositivo && jogadores.some((j) => mesmoDispositivo(j, dispositivo));
       // O Enter do teclado, ou o A de quem já entrou, começa a partida.
       const confirmou = evento.code === "Enter" && (indiceDoControle(evento) === undefined || jaEntrou);
+      // Tratada aqui: o A do controle não aperta também o botão em foco.
+      if (confirmou || dispositivo) evento.preventDefault();
       if (confirmou) {
         if (jogadores.length >= MINIMO_DE_JOGADORES) aoComecar(jogadores);
         return;

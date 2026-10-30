@@ -180,9 +180,11 @@ export function TelaDeSelecao(props: Props) {
       evento.preventDefault();
       andar(evento.code === "ArrowDown" ? 1 : -1);
     } else if (evento.code === "ArrowLeft" || evento.code === "ArrowRight") {
+      evento.preventDefault();
       const proxima = dificuldades[posicao + (evento.code === "ArrowRight" ? 1 : -1)];
       if (proxima) escolherDificuldade(proxima.id);
     } else if (evento.code === "Enter") {
+      evento.preventDefault();
       jogar();
     } else if (evento.code === "Escape" || evento.code === "Backspace") {
       efeito("voltar");
