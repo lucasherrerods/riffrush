@@ -1,6 +1,8 @@
 //! O adaptador do Postgres contra um banco de verdade. Roda quando há `DATABASE_URL`
 //! (o CI sobe um Postgres); sem ela, os testes passam sem fazer nada.
 
+mod comum;
+
 use chrono::{Duration, Utc};
 use riffrush_api::modules::amizade::{AmizadesPostgres, Relacao, RepositorioDeAmizades, Vinculo};
 use riffrush_api::modules::catalogo::{CatalogoPostgres, DadosDaMusica, RepositorioDoCatalogo};
@@ -12,14 +14,10 @@ use riffrush_api::modules::perfil::{PerfilPostgres, RepositorioDoPerfil};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar, ResumoDaPartida};
 use riffrush_api::modules::ranking::{Ordem, RankingPostgres, RepositorioDoRanking};
 use riffrush_api::modules::rejulgamento::{CacheDeCharts, ChartGuardado, FilaDoRejulgamento, LimiteDePedidos, RejulgamentoPostgres, PEDIDOS_AO_ENCORE};
-use sqlx::PgPool;
 use uuid::Uuid;
 
 async fn banco() -> Option<ContasPostgres> {
-    let url = std::env::var("DATABASE_URL").ok()?;
-    let pool = PgPool::connect(&url).await.expect("o DATABASE_URL não conecta");
-    sqlx::migrate!("./migrations").run(&pool).await.expect("as migrações falharam");
-    Some(ContasPostgres(pool))
+    comum::banco_migrado().await.map(ContasPostgres)
 }
 
 /// Cada teste usa uma pessoa nova, para rodarem juntos no mesmo banco.

@@ -35,4 +35,5 @@ testes = []
 [dev-dependencies]
 riffrush-api = { path = ".", features = ["testes"] }
 http-body-util = "0.1"
+tokio = { version = "1", features = ["sync"] }
 tower = { version = "0.5", features = ["util"] }
