@@ -18,7 +18,7 @@ import { TelaDeResultado, anotarRecorde, definirRecordes, recordeDe, useRecordes
 import { EscolhaDeDispositivos, ResultadoDaTelaDividida, eventoDoJogador, opcoesDoJogador, type DispositivoDoJogador, type ResultadoDoJogador } from "@/modules/rock/splitscreen";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
-import { PainelDeRanking, PlacarAoVivo, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
+import { PlacarAoVivo, RankingDaSelecao, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
 import { BotaoDeAmigos, ConvitesDeAmigos, PainelDeAmigos, useIdsDosAmigos } from "@/modules/amigos";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
@@ -563,7 +563,8 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                   avisar.success(`${removida.titulo} removida.`);
                 }}
                 ranking={contasLigadas && escolhida ? (
-                    <PainelDeRanking
+                    <RankingDaSelecao
+                      jeitoInicial={opcoes.jeitoDeJogar}
                       musicaId={idDoRanking(escolhida)}
                       dificuldade={dificuldadeDaSelecao}
                       instrumento={instrumentoDaSelecao}
@@ -704,7 +705,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                     : undefined
                 }
                 // Em rede o canto mostra a sala; sozinho, o ranking global da música.
-                placar={contasLigadas && !emRede && !assistindo && !divididos ? (pontos) => <PlacarAoVivo musicaId={idDoRanking(musica)} dificuldade={dificuldadeDaPartida} instrumento={instrumentoDaPartida} pontos={pontos} /> : undefined}
+                placar={contasLigadas && !emRede && !assistindo && !divididos ? (pontos) => <PlacarAoVivo musicaId={idDoRanking(musica)} dificuldade={dificuldadeDaPartida} instrumento={instrumentoDaPartida} jeito={opcoes.jeitoDeJogar} pontos={pontos} /> : undefined}
                 aoSair={assistindo ? sairDoReplay : () => setTela(emRede ? "multijogador" : "selecao")}
                 aoTerminar={assistindo ? sairDoReplay : terminar}
                 transmissao={transmissao}

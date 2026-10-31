@@ -51,12 +51,6 @@ describe("PainelDeRanking", () => {
     expect(linhas[0]).toHaveTextContent("1.099.340");
   });
 
-  it("cada linha mostra o ícone do jeito de jogar, quando a partida tem", async () => {
-    abrir(apiCom({ jogadores: 2, top: [{ ...posicao(1, "Ana", 900), jeito_de_jogar: "palhetada" }, posicao(2, "Bia", 800)], meu: null }));
-    expect(await screen.findByRole("img", { name: "Jogou no Palhetada" })).toBeInTheDocument();
-    expect(screen.getAllByRole("img", { name: /Jogou no/ })).toHaveLength(1);
-  });
-
   it("cada linha mostra a nota da precisão, como no osu!mania", async () => {
     abrir(apiCom({ jogadores: 2, top: [{ ...posicao(1, "Srr 4", 10), precisao: 1 }, posicao(2, "Cohue", 9)], meu: null }));
     const linhas = within(await screen.findByRole("list", { name: "Ranking" })).getAllByRole("listitem");

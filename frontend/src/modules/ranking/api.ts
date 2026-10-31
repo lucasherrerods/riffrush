@@ -14,8 +14,6 @@ export interface PosicaoNoRanking {
   precisao: number;
   maior_sequencia: number | null;
   jogada_em: string;
-  /** Como o recorde foi tocado. Partidas de antes da opção vêm sem. */
-  jeito_de_jogar?: JeitoDeJogar | null;
   /** A partida do recorde, para abrir as estatísticas dela. */
   partida_id: string;
 }
@@ -40,6 +38,8 @@ export interface PartidaDoRanking {
   jogada_em: string;
   /** Se dá para assistir ao replay. */
   tem_replay: boolean;
+  /** Só as partidas que o servidor conferiu têm. */
+  jeito_de_jogar?: JeitoDeJogar | null;
 }
 
 /** Um jogador no ranking geral, ordenado pelo XP total. */
@@ -73,7 +73,7 @@ export interface MusicaNoRanking {
   /** Endereço da imagem da capa. */
   capa?: string | null;
   /** O primeiro lugar pelos pontos na dificuldade mais alta. Sem ele, ninguém terminou uma partida conferida pelo servidor. */
-  recorde?: { nome: string; pontos: number; precisao: number; dificuldade: Dificuldade } | null;
+  recorde?: { nome: string; pontos: number; precisao: number; dificuldade: Dificuldade; jeito_de_jogar?: JeitoDeJogar | null } | null;
 }
 
 /** O que ordena o ranking de uma música. */
@@ -99,10 +99,10 @@ export function criarApiDoRanking(base: string, buscar?: typeof fetch) {
     buscar: (
       musicaId: string,
       dificuldade: Dificuldade,
-      { instrumento = "guitarra", ordem = "pontos", token, sinal }: { instrumento?: Instrumento; ordem?: OrdemDoRanking; token?: string; sinal?: AbortSignal } = {},
+      { instrumento = "guitarra", jeito = "gamepad", ordem = "pontos", token, sinal }: { instrumento?: Instrumento; jeito?: JeitoDeJogar; ordem?: OrdemDoRanking; token?: string; sinal?: AbortSignal } = {},
     ) => {
       // Os pontos são o padrão da API: o pedido só leva a ordem quando ela muda.
-      const parametros = new URLSearchParams({ musica_id: musicaId, dificuldade, instrumento, ...(ordem === "precisao" && { ordem }) });
+      const parametros = new URLSearchParams({ musica_id: musicaId, dificuldade, instrumento, jeito_de_jogar: jeito, ...(ordem === "precisao" && { ordem }) });
       return chamar<unknown>("GET", `/ranking?${parametros}`, { token, sinal }).then(conferirRanking<PosicaoNoRanking>);
     },
     geral: ({ token, sinal }: { token?: string; sinal?: AbortSignal } = {}) =>
