@@ -35,6 +35,9 @@ pub struct PedidoDoRanking {
     #[serde(default)]
     #[param(value_type = Option<String>, example = "baixo")]
     instrumento: Instrumento,
+    /// Cada jeito de jogar tem o próprio top.
+    #[param(value_type = String, example = "gamepad")]
+    jeito_de_jogar: JeitoDeJogar,
     /// Sem ela, pelos pontos.
     #[serde(default)]
     #[param(value_type = Option<String>, example = "precisao")]
@@ -54,7 +57,7 @@ pub struct PosicaoNoRanking {
     precisao: f64,
     maior_sequencia: Option<u32>,
     jogada_em: DateTime<Utc>,
-    /// Tapping, gamepad ou palhetada. Partidas de antes da opção vêm sem.
+    /// Tapping, gamepad ou palhetada.
     #[schema(value_type = Option<String>, example = "gamepad")]
     jeito_de_jogar: Option<JeitoDeJogar>,
 }
@@ -163,6 +166,8 @@ pub struct RecordeNoRanking {
     precisao: f64,
     #[schema(value_type = String, example = "expert")]
     dificuldade: Dificuldade,
+    #[schema(value_type = Option<String>, example = "gamepad")]
+    jeito_de_jogar: Option<JeitoDeJogar>,
 }
 
 impl From<RecordeDaMusica> for RecordeNoRanking {
@@ -172,6 +177,7 @@ impl From<RecordeDaMusica> for RecordeNoRanking {
             pontos: r.pontos,
             precisao: r.precisao,
             dificuldade: r.dificuldade,
+            jeito_de_jogar: r.jeito_de_jogar,
         }
     }
 }
@@ -197,7 +203,7 @@ pub async fn musicas(State(estado): State<EstadoDoApp>) -> Result<Json<Vec<Music
     Ok(Json(estado.ranking.musicas().await?.into_iter().map(Into::into).collect()))
 }
 
-/// O top de uma música, dificuldade e instrumento, pelos pontos ou pela precisão. Com o token, vem também o recorde de quem pediu.
+/// O top de uma música, dificuldade, instrumento e jeito de jogar, pelos pontos ou pela precisão. Com o token, vem também o recorde de quem pediu.
 #[utoipa::path(get, path = "/ranking", params(PedidoDoRanking), responses((status = 200, body = RespostaDoRanking), (status = 400)), security((), ("token" = [])))]
 pub async fn ranking(
     State(estado): State<EstadoDoApp>,
@@ -206,7 +212,14 @@ pub async fn ranking(
 ) -> Result<Json<RespostaDoRanking>, ErroDaApi> {
     let ranking = estado
         .ranking
-        .ranking(&pedido.musica_id, pedido.dificuldade, pedido.instrumento, pedido.ordem, token.as_deref())
+        .ranking(
+            &pedido.musica_id,
+            pedido.dificuldade,
+            pedido.instrumento,
+            pedido.jeito_de_jogar,
+            pedido.ordem,
+            token.as_deref(),
+        )
         .await?;
     Ok(Json(ranking.into()))
 }
@@ -233,6 +246,9 @@ pub struct PartidaDoRanking {
     jogada_em: DateTime<Utc>,
     /// Se dá para assistir em `/partidas/{id}/replay`.
     tem_replay: bool,
+    /// Só as partidas que o servidor rejulgou têm.
+    #[schema(value_type = Option<String>, example = "gamepad")]
+    jeito_de_jogar: Option<JeitoDeJogar>,
 }
 
 impl From<PartidaPublica> for PartidaDoRanking {
@@ -253,6 +269,7 @@ impl From<PartidaPublica> for PartidaDoRanking {
             fantasma: p.fantasma,
             jogada_em: p.jogada_em,
             tem_replay: p.tem_replay,
+            jeito_de_jogar: p.jeito_de_jogar,
         }
     }
 }

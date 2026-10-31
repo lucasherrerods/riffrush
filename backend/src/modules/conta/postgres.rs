@@ -122,11 +122,11 @@ impl RepositorioDeContas for ContasPostgres {
             return self.buscar(partida.conta_id).await?.ok_or_else(|| FalhaExterna("conta sumiu".into()));
         }
         if partida.replay.is_some() {
-            // Só os recordes do top guardam replay: quem saiu do top, ou superou a própria marca, perde o antigo.
+            // Só os recordes do top de cada jeito guardam replay: quem saiu do top, ou superou a própria marca, perde o antigo.
             sqlx::query(
                 "UPDATE partidas SET replay = NULL
                  WHERE musica_id = $1 AND dificuldade = $2 AND instrumento = $3 AND replay IS NOT NULL
-                   AND id NOT IN (SELECT partida_id FROM recordes_do_ranking
+                   AND id NOT IN (SELECT partida_id FROM recordes_por_jeito
                                   WHERE musica_id = $1 AND dificuldade = $2 AND instrumento = $3 AND posicao <= $4)",
             )
             .bind(&partida.musica_id)

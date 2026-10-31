@@ -9,7 +9,7 @@ use axum::Router;
 use chrono::DateTime;
 use http_body_util::BodyExt;
 use riffrush_api::modules::conta::fakes::{pedido, servicos};
-use riffrush_api::modules::progresso::{Dificuldade, Instrumento};
+use riffrush_api::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar};
 use riffrush_api::modules::ranking::fakes::{servicos_do_ranking, RankingEmMemoria};
 use riffrush_api::modules::ranking::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, Ordem, PartidaPublica, RecordeDaMusica};
 use riffrush_api::modules::saude::VerificadorDoBanco;
@@ -41,7 +41,7 @@ fn linha(posicao: u32, conta_id: Uuid, nome: &str, pontos: u64) -> LinhaDoRankin
         precisao: 0.9,
         maior_sequencia: Some(9),
         jogada_em: DateTime::UNIX_EPOCH,
-        jeito_de_jogar: None,
+        jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
     }
 }
 
@@ -105,7 +105,7 @@ async fn chamar(app: &Router, caminho: &str, token: Option<&str>) -> (StatusCode
 #[tokio::test]
 async fn sem_login_devolve_o_top_e_o_total_de_jogadores() {
     let (app, _, _) = app().await;
-    let (status, corpo) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert", None).await;
+    let (status, corpo) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&jeito_de_jogar=gamepad", None).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(corpo["jogadores"], 928);
     assert_eq!(corpo["top"][0]["nome"], "Srr 4");
@@ -117,7 +117,7 @@ async fn sem_login_devolve_o_top_e_o_total_de_jogadores() {
 #[tokio::test]
 async fn com_login_vem_o_proprio_recorde_fora_do_top() {
     let (app, token, _) = app().await;
-    let (_, corpo) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert", Some(&token)).await;
+    let (_, corpo) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&jeito_de_jogar=gamepad", Some(&token)).await;
     assert_eq!(corpo["meu"]["posicao"], 578);
     assert_eq!(corpo["meu"]["pontos"], 380_146);
 }
@@ -125,15 +125,29 @@ async fn com_login_vem_o_proprio_recorde_fora_do_top() {
 #[tokio::test]
 async fn cada_instrumento_tem_o_proprio_ranking_e_sem_ele_vale_a_guitarra() {
     let (app, _, _) = app().await;
-    let (_, guitarra) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&instrumento=guitarra", None).await;
+    let (_, guitarra) = chamar(
+        &app,
+        "/ranking?musica_id=encore:abc&dificuldade=expert&instrumento=guitarra&jeito_de_jogar=gamepad",
+        None,
+    )
+    .await;
     assert_eq!(guitarra["top"][0]["nome"], "Srr 4");
-    let (_, baixo) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&instrumento=baixo", None).await;
+    let (_, baixo) = chamar(
+        &app,
+        "/ranking?musica_id=encore:abc&dificuldade=expert&instrumento=baixo&jeito_de_jogar=gamepad",
+        None,
+    )
+    .await;
     assert_eq!(baixo["top"][0]["nome"], "Baixista");
     assert_eq!(baixo["top"].as_array().unwrap().len(), 1);
     assert_eq!(
-        chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&instrumento=bateria", None)
-            .await
-            .0,
+        chamar(
+            &app,
+            "/ranking?musica_id=encore:abc&dificuldade=expert&instrumento=bateria&jeito_de_jogar=gamepad",
+            None
+        )
+        .await
+        .0,
         StatusCode::BAD_REQUEST
     );
 }
@@ -141,13 +155,24 @@ async fn cada_instrumento_tem_o_proprio_ranking_e_sem_ele_vale_a_guitarra() {
 #[tokio::test]
 async fn a_ordem_vem_do_pedido_e_sem_ela_valem_os_pontos() {
     let (app, _, repositorio) = app().await;
-    chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert", None).await;
+    chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&jeito_de_jogar=gamepad", None).await;
     assert_eq!(*repositorio.ultima_ordem.lock().unwrap(), Some(Ordem::Pontos));
-    let (status, _) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&ordem=precisao", None).await;
+    let (status, _) = chamar(
+        &app,
+        "/ranking?musica_id=encore:abc&dificuldade=expert&ordem=precisao&jeito_de_jogar=gamepad",
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(*repositorio.ultima_ordem.lock().unwrap(), Some(Ordem::Precisao));
     assert_eq!(
-        chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&ordem=sorte", None).await.0,
+        chamar(
+            &app,
+            "/ranking?musica_id=encore:abc&dificuldade=expert&ordem=sorte&jeito_de_jogar=gamepad",
+            None
+        )
+        .await
+        .0,
         StatusCode::BAD_REQUEST
     );
 }
@@ -155,12 +180,24 @@ async fn a_ordem_vem_do_pedido_e_sem_ela_valem_os_pontos() {
 #[tokio::test]
 async fn pedido_invalido_e_recusado() {
     let (app, _, _) = app().await;
+    for sem_jeito_valido in ["", "&jeito_de_jogar=teclado"] {
+        let caminho = format!("/ranking?musica_id=encore:abc&dificuldade=expert{sem_jeito_valido}");
+        assert_eq!(chamar(&app, &caminho, None).await.0, StatusCode::BAD_REQUEST);
+    }
     assert_eq!(
-        chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=impossivel", None).await.0,
+        chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=impossivel&jeito_de_jogar=gamepad", None)
+            .await
+            .0,
         StatusCode::BAD_REQUEST
     );
-    assert_eq!(chamar(&app, "/ranking?musica_id=&dificuldade=expert", None).await.0, StatusCode::BAD_REQUEST);
-    assert_eq!(chamar(&app, "/ranking?dificuldade=expert", None).await.0, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        chamar(&app, "/ranking?musica_id=&dificuldade=expert&jeito_de_jogar=gamepad", None).await.0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        chamar(&app, "/ranking?dificuldade=expert&jeito_de_jogar=gamepad", None).await.0,
+        StatusCode::BAD_REQUEST
+    );
 }
 
 #[tokio::test]
@@ -218,6 +255,7 @@ async fn as_musicas_mais_jogadas_vem_com_partidas_e_jogadores() {
             pontos: 1_200_000,
             precisao: 0.98,
             dificuldade: Dificuldade::Expert,
+            jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
         }),
     }];
 
@@ -240,7 +278,7 @@ async fn as_musicas_mais_jogadas_vem_com_partidas_e_jogadores() {
 #[tokio::test]
 async fn cada_linha_do_ranking_traz_o_id_da_partida() {
     let (app, _, _) = app().await;
-    let (_, corpo) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert", None).await;
+    let (_, corpo) = chamar(&app, "/ranking?musica_id=encore:abc&dificuldade=expert&jeito_de_jogar=gamepad", None).await;
     assert_eq!(corpo["top"][0]["partida_id"], Uuid::from_u128(1001).to_string());
 }
 
@@ -264,6 +302,7 @@ async fn a_partida_do_ranking_e_publica_e_traz_as_estatisticas() {
         fantasma: false,
         jogada_em: DateTime::UNIX_EPOCH,
         tem_replay: true,
+        jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
     }];
 
     let (status, corpo) = chamar(&app, &format!("/partidas/{id}"), None).await;

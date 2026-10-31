@@ -93,7 +93,7 @@ async fn partida_soma_xp_e_marca_a_ultima() {
         jogada_em,
         replay: None,
         precisao: None,
-        jeito_de_jogar: None,
+        jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
         rodada: None,
     };
     assert_eq!(banco.registrar_partida(&partida).await.unwrap().xp_total, 120);
@@ -131,7 +131,7 @@ async fn excluir_apaga_a_conta_com_sessoes_e_partidas() {
         jogada_em: agora,
         replay: None,
         precisao: None,
-        jeito_de_jogar: None,
+        jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
         rodada: None,
     };
     banco.registrar_partida(&partida).await.unwrap();
@@ -169,7 +169,7 @@ async fn ranking_pega_o_recorde_de_cada_jogador_pelos_pontos() {
         jogada_em: agora + Duration::seconds(segundos),
         replay: None,
         precisao,
-        jeito_de_jogar: None,
+        jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
         rodada: None,
     };
     let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -200,19 +200,35 @@ async fn ranking_pega_o_recorde_de_cada_jogador_pelos_pontos() {
     }
 
     let linhas = ranking
-        .linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, Ordem::Pontos, 2, Some(caio.id))
+        .linhas(
+            &musica,
+            Dificuldade::Expert,
+            Instrumento::Guitarra,
+            JeitoDeJogar::Gamepad,
+            Ordem::Pontos,
+            2,
+            Some(caio.id),
+        )
         .await
         .unwrap();
 
     let resumo: Vec<_> = linhas.iter().map(|l| (l.posicao, l.conta_id, l.pontos, l.jogadores)).collect();
     assert_eq!(resumo, [(1, bia.id, 950, 4), (2, ana.id, 900, 4), (4, caio.id, 100, 4)]);
     assert!(ranking
-        .linhas(&musica, Dificuldade::Facil, Instrumento::Guitarra, Ordem::Pontos, 50, None)
+        .linhas(
+            &musica,
+            Dificuldade::Facil,
+            Instrumento::Guitarra,
+            JeitoDeJogar::Gamepad,
+            Ordem::Pontos,
+            50,
+            None
+        )
         .await
         .unwrap()
         .is_empty());
     let baixo = ranking
-        .linhas(&musica, Dificuldade::Expert, Instrumento::Baixo, Ordem::Pontos, 50, None)
+        .linhas(&musica, Dificuldade::Expert, Instrumento::Baixo, JeitoDeJogar::Gamepad, Ordem::Pontos, 50, None)
         .await
         .unwrap();
     assert_eq!(baixo.iter().map(|l| (l.conta_id, l.pontos)).collect::<Vec<_>>(), [(caio.id, 9999)]);
@@ -248,17 +264,33 @@ async fn o_ranking_mostra_o_jeito_de_jogar_de_cada_recorde() {
     let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     banco.registrar_partida(&jogar(ana.id, 900, Some(JeitoDeJogar::Palhetada))).await.unwrap();
-    // Partida de antes do jeito de jogar: fica sem.
-    banco.registrar_partida(&jogar(bia.id, 800, None)).await.unwrap();
+    banco.registrar_partida(&jogar(ana.id, 500, Some(JeitoDeJogar::Tapping))).await.unwrap();
+    banco.registrar_partida(&jogar(bia.id, 800, Some(JeitoDeJogar::Tapping))).await.unwrap();
 
-    for ordem in [Ordem::Pontos, Ordem::Precisao] {
-        let linhas = ranking
-            .linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, ordem, 10, None)
-            .await
-            .unwrap();
-        let jeitos: Vec<_> = linhas.iter().map(|l| (l.conta_id, l.jeito_de_jogar)).collect();
-        assert_eq!(jeitos, [(ana.id, Some(JeitoDeJogar::Palhetada)), (bia.id, None)]);
-    }
+    let pedir = |jeito| ranking.linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, jeito, Ordem::Pontos, 10, None);
+    let tapping = pedir(JeitoDeJogar::Tapping).await.unwrap();
+    assert_eq!(
+        tapping.iter().map(|l| (l.conta_id, l.pontos, l.posicao, l.jogadores)).collect::<Vec<_>>(),
+        [(bia.id, 800, 1, 2), (ana.id, 500, 2, 2)]
+    );
+    let palhetada = pedir(JeitoDeJogar::Palhetada).await.unwrap();
+    assert_eq!(palhetada.iter().map(|l| (l.conta_id, l.pontos)).collect::<Vec<_>>(), [(ana.id, 900)]);
+    assert!(pedir(JeitoDeJogar::Gamepad).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn o_banco_recusa_partida_do_ranking_sem_jeito_de_jogar() {
+    let Some(banco) = banco().await else { return };
+    let conta = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let resultado = sqlx::query(
+        "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, instrumento, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em, precisao)
+         VALUES ($1, $2, 'teste:sem-jeito', 'expert', 'guitarra', 1, 1, 1, false, false, 0, now(), 1.0)",
+    )
+    .bind(Uuid::new_v4())
+    .bind(conta.id)
+    .execute(&banco.0)
+    .await;
+    assert!(resultado.is_err());
 }
 
 #[tokio::test]
@@ -286,7 +318,7 @@ async fn ranking_por_precisao_pega_a_partida_de_mais_precisao_de_cada_jogador() 
         jogada_em: agora + Duration::seconds(segundos),
         replay: None,
         precisao,
-        jeito_de_jogar: None,
+        jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
         rodada: None,
     };
     let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -304,7 +336,15 @@ async fn ranking_por_precisao_pega_a_partida_de_mais_precisao_de_cada_jogador() 
     }
 
     let linhas = ranking
-        .linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, Ordem::Precisao, 10, None)
+        .linhas(
+            &musica,
+            Dificuldade::Expert,
+            Instrumento::Guitarra,
+            JeitoDeJogar::Gamepad,
+            Ordem::Precisao,
+            10,
+            None,
+        )
         .await
         .unwrap();
 
@@ -337,7 +377,7 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
         jogada_em: agora + Duration::seconds(segundos),
         replay: None,
         precisao: None,
-        jeito_de_jogar: None,
+        jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
         rodada: None,
     };
     for partida in [
@@ -409,7 +449,7 @@ async fn ranking_geral_ordena_por_xp_e_ignora_quem_nao_jogou() {
             jogada_em: Utc::now(),
             replay: None,
             precisao: None,
-            jeito_de_jogar: None,
+            jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
             rodada: None,
         })
         .await
@@ -456,7 +496,7 @@ async fn musicas_mais_jogadas_contam_partidas_e_jogadores_diferentes() {
                 jogada_em: agora + Duration::seconds(i as i64),
                 replay: None,
                 precisao: None,
-                jeito_de_jogar: None,
+                jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
                 rodada: None,
             })
             .await
@@ -503,7 +543,7 @@ async fn a_rodada_da_sala_conta_uma_partida_so_nas_mais_jogadas() {
                 jogada_em: agora + Duration::seconds(i as i64),
                 replay: None,
                 precisao: None,
-                jeito_de_jogar: None,
+                jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
                 rodada,
             })
             .await
@@ -538,7 +578,7 @@ async fn ranking_geral_da_a_posicao_certa_fora_do_top_e_no_empate() {
         jogada_em: Utc::now(),
         replay: None,
         precisao: None,
-        jeito_de_jogar: None,
+        jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
         rodada: None,
     };
     let primeiro = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -590,14 +630,22 @@ async fn a_linha_do_ranking_abre_a_partida_com_a_maior_sequencia() {
             jogada_em: Utc::now(),
             replay: None,
             precisao: Some(0.9),
-            jeito_de_jogar: None,
+            jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
             rodada: None,
         })
         .await
         .unwrap();
 
     let linhas = ranking
-        .linhas(&musica, Dificuldade::Dificil, Instrumento::Baixo, Ordem::Pontos, 10, None)
+        .linhas(
+            &musica,
+            Dificuldade::Dificil,
+            Instrumento::Baixo,
+            JeitoDeJogar::Gamepad,
+            Ordem::Pontos,
+            10,
+            None,
+        )
         .await
         .unwrap();
     let partida = ranking.partida(linhas[0].partida_id).await.unwrap().unwrap();
@@ -640,7 +688,7 @@ async fn so_o_top_10_guarda_replay_e_quem_cai_perde_o_dele() {
         jogada_em: agora + Duration::seconds(segundos),
         replay: Some(vec![1, replay]),
         precisao: Some(0.9),
-        jeito_de_jogar: None,
+        jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
         rodada: None,
     };
     let com_replay = || async {
@@ -657,7 +705,15 @@ async fn so_o_top_10_guarda_replay_e_quem_cai_perde_o_dele() {
 
     // Do mesmo jogador, só o recorde guarda o replay.
     let linhas = ranking
-        .linhas(&musica, Dificuldade::Facil, Instrumento::Guitarra, Ordem::Pontos, 10, None)
+        .linhas(
+            &musica,
+            Dificuldade::Facil,
+            Instrumento::Guitarra,
+            JeitoDeJogar::Gamepad,
+            Ordem::Pontos,
+            10,
+            None,
+        )
         .await
         .unwrap();
     let recorde = linhas[0].partida_id;
@@ -773,7 +829,7 @@ async fn recordes_pegam_a_melhor_partida_terminada_de_cada_musica() {
         jogada_em: Utc::now(),
         replay: None,
         precisao: Some(pontos as f64 / 1000.0),
-        jeito_de_jogar: None,
+        jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
         rodada: None,
     };
     for partida in [
