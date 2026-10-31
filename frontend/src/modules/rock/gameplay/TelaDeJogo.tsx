@@ -4,7 +4,7 @@ import { Eye, Loader2, Pause, Skull } from "lucide-react";
 import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, pausarAudio, retomarAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
 import { suportaWebGL, type Personagem } from "@/modules/rock/character";
 import { cenaDaPartida } from "./cena";
-import { Palco, type EstadoDoPalco } from "@/modules/rock/stage";
+import { Palco, ShowAoVivo, type EstadoDoPalco } from "@/modules/rock/stage";
 import { DIFICULDADES, INSTRUMENTOS, carregarMusica, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada } from "@/modules/rock/songs";
 import { bloquearTeclasDoSistema, ehAtalhoDoNavegador } from "@/modules/platform";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
@@ -109,6 +109,9 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     entrada: ENTRADA,
     estrelaAtiva: false,
     desdeTrovao: Infinity,
+    sequencia: 0,
+    multiplicador: 1,
+    apagando: false,
   });
   const emRede = !!rede;
   // A rede chega como objeto novo a cada render; só o instante de largada reinicia a partida.
@@ -432,7 +435,12 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         if (inicio && ehArrasteParaCima(inicio, { x: e.clientX, y: e.clientY })) jogador.current.estrela();
       }}
     >
-      {comPalco && carregada && <Palco lerEstado={() => estadoDoPalco.current} comPersonagem={cena.personagem} qualidade={opcoes.qualidadeDoPalco} />}
+      {comPalco && carregada && (
+        <>
+          <Palco lerEstado={() => estadoDoPalco.current} comPersonagem={cena.personagem} qualidade={opcoes.qualidadeDoPalco} />
+          <ShowAoVivo lerEstado={() => estadoDoPalco.current} />
+        </>
+      )}
 
       {!carregada && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">

@@ -49,3 +49,32 @@ export function luzesDoPalco({ tempo, bpm, desdeTrovao, estrelaAtiva }: { tempo:
     foco: tempo < 0 ? 1 : 0.6,
   };
 }
+
+const SEQUENCIA_PARA_PULSAR = 25;
+const SEQUENCIA_DO_PULSO_MAXIMO = 150;
+
+/**
+ * Clima das camadas de show por cima do palco (luz geral, pulso dos refletores, flashes e paleta).
+ * Reage a momentos da partida, nunca a cada nota, para não piscar na frente da pista.
+ */
+export function ambienteDoShow({
+  tempo,
+  sequencia,
+  multiplicador,
+  estrelaAtiva,
+  apagando,
+}: {
+  tempo: number;
+  sequencia: number;
+  multiplicador: number;
+  estrelaAtiva: boolean;
+  /** Falhou ou a música acabou. */
+  apagando: boolean;
+}) {
+  const paleta = estrelaAtiva ? ("estrela" as const) : ("show" as const);
+  if (apagando) return { luz: 0.15, pulso: 0, flashes: false, paleta };
+  const noMaximo = multiplicador >= 4;
+  const pulso =
+    sequencia < SEQUENCIA_PARA_PULSAR ? 0 : 0.4 + 0.6 * Math.min(1, (sequencia - SEQUENCIA_PARA_PULSAR) / (SEQUENCIA_DO_PULSO_MAXIMO - SEQUENCIA_PARA_PULSAR));
+  return { luz: (tempo < 0 ? 0.45 : 0.7) + (noMaximo ? 0.2 : 0), pulso, flashes: noMaximo, paleta };
+}

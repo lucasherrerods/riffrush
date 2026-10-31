@@ -393,6 +393,9 @@ export function PistaDoJogador(props: Props) {
         entrada,
         estrelaAtiva: partida.estrelaAtiva,
         desdeTrovao: tempo - ultimoTrovao,
+        sequencia: partida.sequencia,
+        multiplicador: multiplicador(partida),
+        apagando: partida.derrota || terminou,
         reacao,
       };
 

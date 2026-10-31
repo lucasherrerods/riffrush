@@ -1,4 +1,4 @@
-import { luzesDoPalco, opacidadeDaPista, planoDaCamera } from "./direcao";
+import { ambienteDoShow, luzesDoPalco, opacidadeDaPista, planoDaCamera } from "./direcao";
 
 const distancia = (p: { posicao: number[]; alvo: number[] }) => Math.hypot(...p.posicao.map((v, i) => v - p.alvo[i]));
 
@@ -60,5 +60,44 @@ describe("luzesDoPalco", () => {
 
   it("durante a música as luzes ficam mais baixas que na abertura, para a pista se destacar", () => {
     expect(luzesDoPalco({ ...base, tempo: -2 }).foco).toBeGreaterThan(luzesDoPalco(base).foco);
+  });
+});
+
+describe("ambienteDoShow", () => {
+  const base = { tempo: 10, sequencia: 0, multiplicador: 1, estrelaAtiva: false, apagando: false };
+
+  it("a luz do show sobe quando a música começa", () => {
+    expect(ambienteDoShow({ ...base, tempo: 5 }).luz).toBeGreaterThan(ambienteDoShow({ ...base, tempo: -2 }).luz);
+  });
+
+  it("sem sequência longa os refletores não pulsam", () => {
+    expect(ambienteDoShow({ ...base, sequencia: 10 }).pulso).toBe(0);
+  });
+
+  it("a sequência longa faz os refletores pulsarem, mais forte quanto maior", () => {
+    const media = ambienteDoShow({ ...base, sequencia: 30 }).pulso;
+    const longa = ambienteDoShow({ ...base, sequencia: 150 }).pulso;
+    expect(media).toBeGreaterThan(0);
+    expect(longa).toBeGreaterThan(media);
+    expect(longa).toBeLessThanOrEqual(1);
+  });
+
+  it("multiplicador no máximo acende mais e solta flashes nas laterais", () => {
+    const alto = ambienteDoShow({ ...base, multiplicador: 4 });
+    expect(alto.flashes).toBe(true);
+    expect(alto.luz).toBeGreaterThan(ambienteDoShow(base).luz);
+    expect(ambienteDoShow({ ...base, multiplicador: 2 }).flashes).toBe(false);
+  });
+
+  it("no star power a paleta vira a da estrela", () => {
+    expect(ambienteDoShow({ ...base, estrelaAtiva: true }).paleta).toBe("estrela");
+    expect(ambienteDoShow(base).paleta).toBe("show");
+  });
+
+  it("na falha ou no fim da música o palco apaga e para os efeitos", () => {
+    const fim = ambienteDoShow({ ...base, multiplicador: 4, sequencia: 200, apagando: true });
+    expect(fim.luz).toBeLessThan(ambienteDoShow({ ...base, tempo: -2 }).luz);
+    expect(fim.pulso).toBe(0);
+    expect(fim.flashes).toBe(false);
   });
 });

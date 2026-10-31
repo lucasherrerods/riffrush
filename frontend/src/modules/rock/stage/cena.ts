@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Ator, EstadoDoAvatar } from "@/modules/rock/character";
-import { CORES_DA_CENA, cores } from "@/modules/rock/tema";
+import { CORES_DA_CENA, CORES_DOS_INSTRUMENTOS, cores } from "@/modules/rock/tema";
 import { luzesDoPalco, planoDaCamera } from "./direcao";
 import { ajustesDoPalco, type QualidadeDoPalco } from "./qualidade";
 
@@ -13,6 +13,10 @@ export interface EstadoDoPalco extends EstadoDoAvatar {
   estrelaAtiva: boolean;
   /** Segundos desde o último trovão de combo. */
   desdeTrovao: number;
+  sequencia: number;
+  multiplicador: number;
+  /** Falhou ou a música acabou: as luzes do show apagam. */
+  apagando: boolean;
 }
 
 const HOLOFOTES = [
@@ -117,6 +121,114 @@ function montarCenario(cena: THREE.Scene) {
   return telao.material;
 }
 
+/** Silhueta de músico desenhada num plano: corpo, cabeça e instrumento, sem rosto, para não disputar com o personagem. */
+function texturaDeMusico(instrumento: "guitarra" | "baixo") {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 512;
+  const c = canvas.getContext("2d");
+  if (!c) return null;
+  c.fillStyle = CORES_DA_CENA.contorno;
+  c.beginPath();
+  c.arc(128, 70, 34, 0, Math.PI * 2);
+  c.fill();
+  c.beginPath();
+  c.moveTo(78, 120);
+  c.lineTo(178, 120);
+  c.lineTo(168, 300);
+  c.lineTo(190, 500);
+  c.lineTo(146, 500);
+  c.lineTo(128, 340);
+  c.lineTo(110, 500);
+  c.lineTo(66, 500);
+  c.lineTo(88, 300);
+  c.closePath();
+  c.fill();
+  // Braço do instrumento atravessando o corpo; o baixo é mais comprido.
+  c.save();
+  c.translate(128, 260);
+  c.rotate(-0.5);
+  c.fillRect(-20, -6, instrumento === "baixo" ? 200 : 160, 12);
+  c.beginPath();
+  c.ellipse(-30, 0, 46, 34, 0, 0, Math.PI * 2);
+  c.fill();
+  c.restore();
+  const textura = new THREE.CanvasTexture(canvas);
+  textura.colorSpace = THREE.SRGBColorSpace;
+  return textura;
+}
+
+/** Banda de apoio no fundo: bateria ao centro, guitarrista e baixista nas laterais, amplificadores atrás deles. */
+function montarBanda(cena: THREE.Scene) {
+  const preto = toon(CORES_DOS_INSTRUMENTOS.preto);
+  const metal = toon(CORES_DOS_INSTRUMENTOS.metal);
+  const bateria = new THREE.Group();
+  const bumbo = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.4, 24).rotateX(Math.PI / 2), preto);
+  bumbo.position.set(0, 0.42, 0);
+  const pele = new THREE.Mesh(new THREE.CircleGeometry(0.4, 24), toon(CORES_DOS_INSTRUMENTOS.marfim));
+  pele.position.set(0, 0.42, 0.205);
+  bateria.add(bumbo, pele);
+  for (const [x, y, raio] of [
+    [-0.55, 0.7, 0.2],
+    [0.55, 0.7, 0.22],
+    [-0.25, 0.95, 0.16],
+    [0.25, 0.95, 0.16],
+  ]) {
+    const tambor = new THREE.Mesh(new THREE.CylinderGeometry(raio, raio, 0.22, 20), preto);
+    tambor.position.set(x, y, 0.1);
+    bateria.add(tambor);
+  }
+  const pratos: THREE.Mesh[] = [];
+  for (const x of [-0.85, 0.9]) {
+    const haste = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.4, 6), metal);
+    haste.position.set(x, 0.7, 0);
+    const prato = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.02, 24), toon(CORES_DOS_INSTRUMENTOS.madeira));
+    prato.position.set(x, 1.4, 0);
+    bateria.add(haste, prato);
+    pratos.push(prato);
+  }
+  // Tablado elevado da bateria, no fundo.
+  const praticavel = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.4, 1.6), toon(cores.superficieElevada));
+  praticavel.position.set(0, -0.2, 0);
+  bateria.add(praticavel);
+  bateria.position.set(0.6, 0.4, -2.6);
+  cena.add(bateria);
+
+  // Cabeçotes e caixas dos amplificadores atrás de cada músico.
+  for (const x of [-3.2, 3.2]) {
+    const caixa = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.5), preto);
+    caixa.position.set(x, 0.5, -2.2);
+    const tela = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.86), toon(cores.superficie));
+    tela.position.set(0, 0, 0.251);
+    const cabecote = new THREE.Mesh(new THREE.BoxGeometry(1, 0.32, 0.45), preto);
+    cabecote.position.set(0, 0.66, 0);
+    const painel = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.08), toon(CORES_DOS_INSTRUMENTOS.marfim));
+    painel.position.set(0, 0.66, 0.226);
+    caixa.add(tela, cabecote, painel);
+    cena.add(caixa);
+  }
+
+  const musicos = (["guitarra", "baixo"] as const).map((instrumento, i) => {
+    const material = new THREE.MeshBasicMaterial({ map: texturaDeMusico(instrumento), transparent: true, depthWrite: false });
+    const musico = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 1.7), material);
+    musico.position.set(i === 0 ? -3.4 : 3.3, 0.85, -1.4);
+    cena.add(musico);
+    return musico;
+  });
+
+  /** Os músicos balançam na batida e os pratos tremem; tudo devagar para não chamar mais atenção que a pista. */
+  return (tempo: number, bpm: number) => {
+    const fase = (tempo * Math.max(40, bpm)) / 60;
+    musicos.forEach((musico, i) => {
+      musico.rotation.z = Math.sin(fase * Math.PI + i * 1.3) * 0.06;
+      musico.position.y = 0.85 + Math.abs(Math.sin(fase * Math.PI + i)) * 0.04;
+    });
+    pratos.forEach((prato, i) => {
+      prato.rotation.x = Math.sin(fase * Math.PI * 2 + i) * 0.08;
+    });
+  };
+}
+
 /** Holofote com cone de luz visível, preso na treliça e mirando o personagem. */
 function criarHolofote(cena: THREE.Scene, x: number, cor: string) {
   const luz = new THREE.SpotLight(cor, 0, 14, 0.32, 0.5, 1.2);
@@ -155,6 +267,7 @@ export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoP
   frente.position.set(0, 3, 6);
   cena.add(ambiente, frente);
   const materialDoTelao = montarCenario(cena);
+  const animarBanda = montarBanda(cena);
   const holofotes = HOLOFOTES.map(({ x, cor }) => criarHolofote(cena, x, cor));
   const corDaEstrela = new THREE.Color(cores.estrela);
   const branco = new THREE.Color(cores.texto);
@@ -195,6 +308,7 @@ export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoP
 
     ator?.atualizar(estado);
     ator?.animar(agora, dt);
+    animarBanda(estado.tempo, estado.bpm);
 
     const plano = planoDaCamera(estado.tempo, estado.entrada, ator?.altura() ?? 1.6);
     camera.position.set(...plano.posicao);

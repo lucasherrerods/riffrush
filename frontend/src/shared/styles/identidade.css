@@ -193,3 +193,177 @@ h1 {
   }
 }
 
+
+/* Show ao vivo: camadas por cima do palco 3D e atrás da pista. As cores vêm do tema do Rock
+   pelas variáveis --show-*; --luz, --pulso e --batida mudam com a partida. */
+.show-ao-vivo {
+  --luz: 0.45;
+  --pulso: 0;
+  --batida: 0.5s;
+  --cor-a: var(--show-a);
+  --cor-b: var(--show-b);
+}
+
+.show-ao-vivo[data-paleta="estrela"] {
+  --cor-a: var(--show-estrela);
+  --cor-b: var(--show-texto);
+}
+
+.show-ao-vivo > * {
+  position: absolute;
+  inset: 0;
+}
+
+.show-refletores {
+  opacity: var(--luz);
+  transition: opacity 1.2s ease;
+}
+
+.show-ao-vivo[data-pulsando="true"] .show-refletores {
+  animation: show-pulso var(--batida) ease-out infinite;
+}
+
+/* Feixes vindos do alto e de trás, inclinados para fora para não cruzarem a pista. */
+.show-feixe {
+  position: absolute;
+  top: -20%;
+  width: 22%;
+  height: 120%;
+  transform-origin: 50% 0;
+  clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cor) 55%, transparent), transparent 75%);
+  mix-blend-mode: screen;
+  filter: blur(10px);
+  transition: background 0.8s ease;
+  animation: show-varre 9s ease-in-out infinite alternate;
+}
+
+.show-feixe-1 { --cor: var(--cor-a); left: -4%; --de: 18deg; --ate: 34deg; }
+.show-feixe-2 { --cor: var(--cor-b); left: 14%; --de: 8deg; --ate: 22deg; animation-delay: -3s; }
+.show-feixe-3 { --cor: var(--cor-b); right: 14%; --de: -8deg; --ate: -22deg; animation-delay: -6s; }
+.show-feixe-4 { --cor: var(--cor-a); right: -4%; --de: -18deg; --ate: -34deg; animation-delay: -1.5s; }
+
+.show-fumaca {
+  inset: 55% -15% -20%;
+  opacity: calc(0.12 + var(--luz) * 0.18);
+  background: radial-gradient(ellipse at 30% 60%, color-mix(in srgb, var(--show-texto) 45%, transparent), transparent 60%),
+    radial-gradient(ellipse at 75% 50%, color-mix(in srgb, var(--cor-a) 40%, transparent), transparent 60%);
+  filter: blur(30px);
+  animation: show-fumaca 14s ease-in-out infinite alternate;
+}
+
+.show-particulas span {
+  position: absolute;
+  bottom: -2%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--show-texto);
+  opacity: 0;
+  animation: show-poeira linear infinite;
+}
+
+/* Flashes nas laterais quando o multiplicador chega ao máximo; longe do centro, onde fica a pista. */
+.show-flash {
+  opacity: 0;
+  background: radial-gradient(ellipse at var(--x) 30%, color-mix(in srgb, var(--show-texto) 60%, transparent), transparent 30%);
+  mix-blend-mode: screen;
+}
+
+.show-flash-esquerda { --x: 4%; }
+.show-flash-direita { --x: 96%; }
+
+.show-ao-vivo[data-flashes="true"] .show-flash {
+  animation: show-flash calc(var(--batida) * 8) steps(1, end) infinite;
+}
+
+.show-ao-vivo[data-flashes="true"] .show-flash-direita {
+  animation-delay: calc(var(--batida) * 4);
+}
+
+.show-vinheta {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--show-fundo) 30%, transparent), transparent 30%),
+    linear-gradient(90deg, color-mix(in srgb, var(--show-fundo) 55%, transparent), transparent 26%, transparent 74%, color-mix(in srgb, var(--show-fundo) 55%, transparent));
+}
+
+.show-plateia {
+  top: auto;
+  height: 16%;
+}
+
+.show-plateia svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: var(--show-fundo);
+  opacity: 0.92;
+}
+
+/* Telas de celular e isqueiros na plateia. */
+.show-plateia span {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--show-b);
+  animation: show-isqueiro 4s ease-in-out infinite alternate;
+}
+
+@keyframes show-varre {
+  from { transform: rotate(var(--de)); }
+  to { transform: rotate(var(--ate)); }
+}
+
+@keyframes show-pulso {
+  0% { filter: brightness(calc(1 + var(--pulso) * 0.6)); }
+  100% { filter: brightness(1); }
+}
+
+@keyframes show-fumaca {
+  from { transform: translate3d(-3%, 0, 0); }
+  to { transform: translate3d(3%, -4%, 0); }
+}
+
+@keyframes show-poeira {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  20% { opacity: 0.35; }
+  100% { transform: translate3d(30px, -90vh, 0); opacity: 0; }
+}
+
+@keyframes show-flash {
+  0% { opacity: 0.55; }
+  6% { opacity: 0; }
+}
+
+@keyframes show-isqueiro {
+  from { opacity: 0.15; }
+  to { opacity: 0.6; }
+}
+
+/* Em telas estreitas a pista ocupa quase tudo: saem os detalhes laterais, e o desfoque pesa demais na GPU. */
+@media (max-width: 767px) {
+  .show-feixe-2,
+  .show-feixe-3,
+  .show-flash,
+  .show-particulas {
+    display: none;
+  }
+
+  .show-feixe,
+  .show-fumaca {
+    filter: none;
+    mix-blend-mode: normal;
+  }
+
+  .show-plateia {
+    height: 10%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .show-ao-vivo *,
+  .show-ao-vivo[data-pulsando="true"] .show-refletores {
+    animation: none !important;
+  }
+}
