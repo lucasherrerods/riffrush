@@ -11,10 +11,12 @@ interface Props {
   /** Desligado, o palco fica sem o personagem (para aliviar a placa de vídeo). */
   comPersonagem?: boolean;
   qualidade?: QualidadeDoPalco;
+  /** Só o personagem, sem cenário e com fundo transparente: para ficar por cima do vídeo do show. */
+  soPersonagem?: boolean;
 }
 
 /** Palco 3D com o personagem, desenhado atrás da pista. Só decoração: fica escondido dos leitores de tela. */
-export function Palco({ lerEstado, className, comPersonagem = true, qualidade = "media" }: Props) {
+export function Palco({ lerEstado, className, comPersonagem = true, qualidade = "media", soPersonagem = false }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const leitura = useRef(lerEstado);
   leitura.current = lerEstado;
@@ -26,13 +28,13 @@ export function Palco({ lerEstado, className, comPersonagem = true, qualidade = 
     let desmontado = false;
     // A cena e o personagem trazem o three.js: só baixam quando a partida abre.
     void Promise.all([import("./cena"), comPersonagem ? carregarAtor() : undefined]).then(([{ criarPalco }, criarAtor]) => {
-      if (!desmontado) palco = criarPalco(destino, () => leitura.current(), { criarAtor, qualidade });
+      if (!desmontado) palco = criarPalco(destino, () => leitura.current(), { criarAtor, qualidade, soPersonagem });
     });
     return () => {
       desmontado = true;
       palco?.descartar();
     };
-  }, [comPersonagem, qualidade]);
+  }, [comPersonagem, qualidade, soPersonagem]);
 
   return <canvas ref={canvas} aria-hidden="true" data-parte="palco" className={cn("pointer-events-none absolute inset-0 size-full", className)} />;
 }

@@ -367,3 +367,9 @@ h1 {
     animation: none !important;
   }
 }
+
+/* O vídeo do show cresce a partir do topo: a borda de baixo, onde fica a marca d'água da ferramenta que gerou o vídeo, sai da tela. */
+.video-do-palco {
+  transform: scale(1.14);
+  transform-origin: 50% 0;
+}

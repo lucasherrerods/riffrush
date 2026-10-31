@@ -442,7 +442,10 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
           {semVideoDoPalco ? (
             <Palco lerEstado={() => estadoDoPalco.current} comPersonagem={cena.personagem} qualidade={opcoes.qualidadeDoPalco} />
           ) : (
-            <VideoDoPalco aoFalhar={() => setSemVideoDoPalco(true)} />
+            <>
+              <VideoDoPalco aoFalhar={() => setSemVideoDoPalco(true)} />
+              {cena.personagem && <Palco lerEstado={() => estadoDoPalco.current} qualidade={opcoes.qualidadeDoPalco} soPersonagem />}
+            </>
           )}
           <ShowAoVivo lerEstado={() => estadoDoPalco.current} />
         </>

@@ -33,7 +33,7 @@ export function VideoDoPalco({ aoFalhar }: Props) {
       aria-hidden="true"
       data-parte="video-do-palco"
       onError={aoFalhar}
-      className="pointer-events-none absolute inset-0 size-full bg-fundo object-cover object-center"
+      className="video-do-palco pointer-events-none absolute inset-0 size-full bg-fundo object-cover object-center"
     />
   );
 }

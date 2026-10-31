@@ -18,4 +18,9 @@ describe("VideoDoPalco", () => {
     fireEvent.error(container.querySelector("video")!);
     expect(aoFalhar).toHaveBeenCalled();
   });
+
+  it("amplia o vídeo a partir do topo para a borda de baixo, onde fica a marca d'água, sair da tela", () => {
+    const { container } = render(<VideoDoPalco aoFalhar={() => {}} />);
+    expect(container.querySelector("video")).toHaveClass("video-do-palco");
+  });
 });

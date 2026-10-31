@@ -251,24 +251,32 @@ interface OpcoesDoPalco {
   /** Sem ele, o palco fica sem o personagem. */
   criarAtor?: (estado: EstadoDoAvatar) => Ator;
   qualidade?: QualidadeDoPalco;
+  /** Desenha só o personagem e as luzes, com fundo transparente, para ficar por cima do vídeo do show. */
+  soPersonagem?: boolean;
 }
 
-export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoPalco, { criarAtor, qualidade = "media" }: OpcoesDoPalco = {}) {
+export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoPalco, { criarAtor, qualidade = "media", soPersonagem = false }: OpcoesDoPalco = {}) {
   // O palco é fundo: menos resolução e quadros que a pista deixam a GPU para ela.
   const { resolucao, quadrosPorSegundo } = ajustesDoPalco(qualidade);
   const intervaloEntreQuadros = 1000 / quadrosPorSegundo;
-  const renderizador = new THREE.WebGLRenderer({ canvas, antialias: false });
+  const renderizador = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: soPersonagem });
   renderizador.setPixelRatio(resolucao);
   const cena = new THREE.Scene();
-  cena.background = new THREE.Color(cores.fundo);
-  cena.fog = new THREE.Fog(cores.fundo, 9, 24);
+  if (!soPersonagem) {
+    cena.background = new THREE.Color(cores.fundo);
+    cena.fog = new THREE.Fog(cores.fundo, 9, 24);
+  }
   const ambiente = new THREE.AmbientLight(CORES_DA_CENA.luz, 0.35);
   const frente = new THREE.DirectionalLight(CORES_DA_CENA.luzQuente, 0.6);
   frente.position.set(0, 3, 6);
   cena.add(ambiente, frente);
-  const materialDoTelao = montarCenario(cena);
-  const animarBanda = montarBanda(cena);
+  const materialDoTelao = soPersonagem ? null : montarCenario(cena);
+  const animarBanda = soPersonagem ? null : montarBanda(cena);
   const holofotes = HOLOFOTES.map(({ x, cor }) => criarHolofote(cena, x, cor));
+  // Sobre o vídeo, os cones de luz ficam por conta dele; os holofotes só iluminam o personagem.
+  if (soPersonagem) for (const { feixe } of holofotes) feixe.visible = false;
+  // Sem o palco escuro em volta, o personagem precisa de mais luz para não sumir no vídeo.
+  const luzDeBase = soPersonagem ? 0.7 : 0.25;
   const corDaEstrela = new THREE.Color(cores.estrela);
   const branco = new THREE.Color(cores.texto);
 
@@ -308,7 +316,7 @@ export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoP
 
     ator?.atualizar(estado);
     ator?.animar(agora, dt);
-    animarBanda(estado.tempo, estado.bpm);
+    animarBanda?.(estado.tempo, estado.bpm);
 
     const plano = planoDaCamera(estado.tempo, estado.entrada, ator?.altura() ?? 1.6);
     camera.position.set(...plano.posicao);
@@ -331,9 +339,9 @@ export function criarPalco(canvas: HTMLCanvasElement, lerEstado: () => EstadoDoP
       holofote.luz.target.position.copy(alvo);
       holofote.feixe.lookAt(alvo);
     });
-    ambiente.intensity = 0.25 + 0.9 * luzes.clarao;
+    ambiente.intensity = luzDeBase + 0.9 * luzes.clarao;
     // O telão acompanha o ritmo, mas tocando fica baixo para não disputar com as notas.
-    materialDoTelao.color.setScalar((0.15 + 0.5 * luzes.intensidade) * (luzes.foco < 1 ? 0.55 : 1) + luzes.clarao * 0.35);
+    materialDoTelao?.color.setScalar((0.15 + 0.5 * luzes.intensidade) * (luzes.foco < 1 ? 0.55 : 1) + luzes.clarao * 0.35);
 
     renderizador.render(cena, camera);
   };
