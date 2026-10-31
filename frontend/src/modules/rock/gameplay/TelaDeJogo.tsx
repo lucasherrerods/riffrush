@@ -4,7 +4,7 @@ import { Eye, Loader2, Pause, Skull } from "lucide-react";
 import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, pausarAudio, retomarAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
 import { suportaWebGL, type Personagem } from "@/modules/rock/character";
 import { cenaDaPartida } from "./cena";
-import { Palco, ShowAoVivo, type EstadoDoPalco } from "@/modules/rock/stage";
+import { Palco, ShowAoVivo, VideoDoPalco, type EstadoDoPalco } from "@/modules/rock/stage";
 import { DIFICULDADES, INSTRUMENTOS, carregarMusica, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada } from "@/modules/rock/songs";
 import { bloquearTeclasDoSistema, ehAtalhoDoNavegador } from "@/modules/platform";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
@@ -99,6 +99,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   const [comWebGL] = useState(suportaWebGL);
   const cena = cenaDaPartida({ modoCompetitivo: opcoes.modoCompetitivo, efeitos: opcoes.efeitos, personagem: opcoes.personagem, comWebGL, estreita, jogadores: quantos });
   const comPalco = cena.palco;
+  // O palco 3D só entra quando o vídeo do show não pode tocar.
+  const [semVideoDoPalco, setSemVideoDoPalco] = useState(false);
   const estadoDoPalco = useRef<EstadoDoPalco>({
     personagem,
     tocando: false,
@@ -437,7 +439,11 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     >
       {comPalco && carregada && (
         <>
-          <Palco lerEstado={() => estadoDoPalco.current} comPersonagem={cena.personagem} qualidade={opcoes.qualidadeDoPalco} />
+          {semVideoDoPalco ? (
+            <Palco lerEstado={() => estadoDoPalco.current} comPersonagem={cena.personagem} qualidade={opcoes.qualidadeDoPalco} />
+          ) : (
+            <VideoDoPalco aoFalhar={() => setSemVideoDoPalco(true)} />
+          )}
           <ShowAoVivo lerEstado={() => estadoDoPalco.current} />
         </>
       )}
