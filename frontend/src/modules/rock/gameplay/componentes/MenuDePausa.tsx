@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { EyeOff, ListOrdered, LogOut, Play, RotateCcw, Skull } from "lucide-react";
+import { EyeOff, ListOrdered, ListRestart, LogOut, Play, RotateCcw, Skull } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 
 interface Props {
@@ -13,9 +13,11 @@ interface Props {
   aoRecomecar: () => void;
   aoSair: () => void;
   aoDesistir: () => void;
+  /** Só no treino: volta para a escolha do trecho. */
+  aoTrocarTrecho?: () => void;
 }
 
-export function MenuDePausa({ derrota, emRede, aoVivo = false, aoContinuar, aoRecomecar, aoSair, aoDesistir }: Props) {
+export function MenuDePausa({ derrota, emRede, aoVivo = false, aoContinuar, aoRecomecar, aoSair, aoDesistir, aoTrocarTrecho }: Props) {
   // Nenhum botão abre com foco: uma tecla do jogo (Espaço, Enter) apertada na hora não pode recomeçar a partida.
   useEffect(() => {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
@@ -55,6 +57,11 @@ export function MenuDePausa({ derrota, emRede, aoVivo = false, aoContinuar, aoRe
             <Button size="lg" variant="outline" onClick={aoRecomecar}>
               <RotateCcw className="opacity-70" /> Recomeçar
             </Button>
+            {aoTrocarTrecho && (
+              <Button size="lg" variant="outline" onClick={aoTrocarTrecho}>
+                <ListRestart className="opacity-70" /> Trocar trecho
+              </Button>
+            )}
             <Button size="lg" variant="ghost" onClick={aoSair}>
               <LogOut className="opacity-70" /> Sair da música
             </Button>

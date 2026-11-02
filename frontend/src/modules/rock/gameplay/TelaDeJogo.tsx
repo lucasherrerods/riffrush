@@ -5,12 +5,13 @@ import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, p
 import { suportaWebGL, type Personagem } from "@/modules/rock/character";
 import { cenaDaPartida } from "./cena";
 import { Palco, type EstadoDoPalco } from "@/modules/rock/stage";
-import { DIFICULDADES, INSTRUMENTOS, carregarMusica, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada } from "@/modules/rock/songs";
+import { DIFICULDADES, INSTRUMENTOS, carregarMusica, trechosDaMusica, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada, type Trecho } from "@/modules/rock/songs";
 import { bloquearTeclasDoSistema, ehAtalhoDoNavegador } from "@/modules/platform";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { ehArrasteParaCima } from "./gesto";
+import { EscolhaDoTreino } from "./componentes/EscolhaDoTreino";
 import { MenuDePausa } from "./componentes/MenuDePausa";
 import { NumeroDaContagem } from "./componentes/NumeroDaContagem";
 import { criarLojaDoHud, useLoja, type LojaDoHud } from "./lojaDoHud";
@@ -21,6 +22,7 @@ import { criarContadorDeFps, type LeituraDeFps } from "./fps";
 import { layoutDaPista } from "./pista/geometria";
 import type { EstadoDoJogador } from "./rede";
 import type { Resultado } from "./resultado";
+import { limitesDaVolta, registrarVolta, VOLTAS_INICIAIS, type Voltas } from "./treino";
 import { noTempoReal, rotuloDaVelocidade } from "./velocidade";
 import type { JogadorLocal, OpcoesDaPartida } from "./opcoesDaPartida";
 
@@ -65,6 +67,8 @@ interface Props {
   jogadores?: JogadorLocal[];
   /** Na tela dividida, o resultado de cada jogador, na ordem de `jogadores`, quando a música acaba. */
   aoTerminarJuntos?: (resultados: Resultado[]) => void;
+  /** Treino: o jogador escolhe um trecho, que repete até ele sair. Nada vai para o recorde nem para o ranking. */
+  treino?: boolean;
 }
 
 
@@ -76,7 +80,7 @@ const FOLGA_DO_FIM = 0.5;
 const SALTO_DAS_SETAS: Record<string, number> = { ArrowLeft: -5, ArrowRight: 5 };
 const nada = () => {};
 
-export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar, replay, transmissao, espectadores = 0, jogadores, aoTerminarJuntos }: Props) {
+export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar, replay, transmissao, espectadores = 0, jogadores, aoTerminarJuntos, treino = false }: Props) {
   const divididos = jogadores && jogadores.length > 1 ? jogadores : null;
   const quantos = divididos?.length ?? 1;
   // O replay toca na velocidade em que foi gravado, não na das configurações de quem assiste.
@@ -128,9 +132,13 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   // O FPS fica numa loja: a leitura nova re-renderiza só o contador, não a tela com todas as pistas.
   const lojaDoFps = useMemo(() => criarLojaDoHud<{ leitura: LeituraDeFps | null }>({ leitura: null }), []);
   const [tamanho, setTamanho] = useState({ largura: window.innerWidth, altura: window.innerHeight });
+  const [trecho, setTrecho] = useState<Trecho | null>(null);
+  const [contagemNoTreino, setContagemNoTreino] = useState(true);
+  const [voltas, setVoltas] = useState<Voltas>(VOLTAS_INICIAIS);
+  const trechos = useMemo(() => (treino && carregada ? trechosDaMusica(carregada.secoes ?? [], carregada.batidas, carregada.duracao) : []), [treino, carregada]);
   // A música e a pista recomeçam juntas: as duas dependem só da sessão.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const sessao = useMemo(() => ({}), [carregada, rodada, opcoes, musica.id, dificuldade, instrumento, aoTerminar, inicioEmRede, replay, jogadores]);
+  const sessao = useMemo(() => ({}), [carregada, rodada, opcoes, musica.id, dificuldade, instrumento, aoTerminar, inicioEmRede, replay, jogadores, trecho, contagemNoTreino]);
 
   useEffect(() => {
     let cancelado = false;
@@ -179,7 +187,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   }, []);
 
   useEffect(() => {
-    if (!carregada) return;
+    // No treino a música só toca depois de escolher o trecho.
+    if (!carregada || (treino && !trecho)) return;
     const audio = obterContextoDeAudio();
     const ganho = audio.createGain();
     ganho.gain.value = opcoes.volumeDaMusica;
@@ -193,12 +202,14 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       return nova;
     };
     let fonte = criarFonte();
-    // Em rede a música começa no instante combinado; quem carregou atrasado entra no meio.
-    const agora = audio.currentTime;
-    let inicio = inicioEmRede === undefined ? agora + ENTRADA : agora + (inicioEmRede - performance.now()) / 1000;
-    if (inicio > agora + 0.05) fonte.start(inicio);
-    else fonte.start(agora + 0.05, (agora + 0.05 - inicio) * velocidade);
     const duracao = noTempoReal(carregada.duracao, velocidade);
+    const volta = trecho && limitesDaVolta(trecho, velocidade, duracao);
+    // Em rede a música começa no instante combinado; quem carregou atrasado entra no meio. No treino, ela já começa no trecho.
+    const agora = audio.currentTime;
+    const pularAte = volta ? Math.max(0, volta.inicio) : 0;
+    let inicio = inicioEmRede === undefined ? agora + ENTRADA - pularAte : agora + (inicioEmRede - performance.now()) / 1000;
+    if (inicio + pularAte > agora + 0.05) fonte.start(inicio + pularAte, pularAte * velocidade);
+    else fonte.start(agora + 0.05, (agora + 0.05 - inicio) * velocidade);
     const atraso = opcoes.atrasoMs / 1000;
     const tempoDaMusica = (tempoDoAudio: number) => tempoDoAudio - inicio - atraso;
     let pausadoAgora = false;
@@ -263,6 +274,9 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     const continuar = () => {
       setPausado(false);
       if (!pausadoAgora || retomada) return;
+      contarERetomar();
+    };
+    function contarERetomar() {
       const contar = (falta: number) => {
         setRetomando(falta);
         retomada = setTimeout(() => {
@@ -277,6 +291,18 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         }, 1000);
       };
       contar(SEGUNDOS_PARA_RETOMAR);
+    }
+    /** No treino, o fim do trecho volta a música para o começo dele, com uma partida nova. */
+    const repetirTrecho = () => {
+      if (!volta) return;
+      const precisaoDaVolta = jogador.current.novaVolta();
+      if (precisaoDaVolta !== null) setVoltas((atuais) => registrarVolta(atuais, precisaoDaVolta));
+      tocarDe(volta.inicio);
+      if (!contagemNoTreino) return;
+      posicaoNaPausa = volta.inicio;
+      pausadoAgora = true;
+      pausarAudio();
+      contarERetomar();
     };
     const desistir = () => {
       const resultado = jogador.current.desistir();
@@ -346,6 +372,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       // Algo de fora (o sistema, outro som do jogo) pode religar o áudio com a partida pausada.
       if (pausadoAgora && audio.state === "running") void audio.suspend();
       const tempo = relogio.agora();
+      if (volta && !pausadoAgora && !terminou && tempo >= volta.fim) repetirTrecho();
       const clipe = video.current;
       if (clipe && !terminou && !pausadoAgora && tempo >= 0 && performance.now() - ultimaSincroniaDoVideo > 500) {
         ultimaSincroniaDoVideo = performance.now();
@@ -378,6 +405,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     setPausado(false);
     setRetomando(0);
     setDerrota(false);
+    setVoltas(VOLTAS_INICIAIS);
     for (const l of lojas) l.definir(HUD_INICIAL);
     setRodada((r) => r + 1);
   };
@@ -406,6 +434,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     pausado,
     derrota,
     replay,
+    trecho: trecho ?? undefined,
   });
 
   if (erro) {
@@ -499,6 +528,14 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
                 {opcoes.bot && !replay && <span className="ml-2 rounded bg-estrela px-2 font-black text-fundo">BOT</span>}
                 {velocidade !== 1 && <span className="ml-2 rounded bg-superficie-elevada px-2 font-black">{rotuloDaVelocidade(velocidade)}</span>}
                 {replay && <span className="ml-2 rounded bg-primaria px-2 font-black">{replay.ateAgora === undefined ? "REPLAY" : "AO VIVO"}</span>}
+                {trecho && (
+                  <span className="ml-2 rounded bg-primaria px-2 font-black">
+                    TREINO · {trecho.nome}
+                    {voltas.voltas > 0 && ` · volta ${voltas.voltas + 1}`}
+                    {voltas.ultima !== null && ` · última ${Math.round(voltas.ultima * 100)}%`}
+                    {voltas.melhor !== null && ` · melhor ${Math.round(voltas.melhor * 100)}%`}
+                  </span>
+                )}
                 {opcoes.mostrarFps && <ContadorDeFps loja={lojaDoFps} />}
               </p>
             </div>
@@ -533,6 +570,21 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       )}
 
       <AnimatePresence>
+        {treino && carregada && !trecho && (
+          <EscolhaDoTreino
+            trechos={trechos}
+            velocidade={velocidade}
+            contagem={contagemNoTreino}
+            aoContagem={setContagemNoTreino}
+            aoComecar={(escolhido) => {
+              setVoltas(VOLTAS_INICIAIS);
+              setTrecho(escolhido);
+            }}
+            aoSair={aoSair}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
         {retomando > 0 && !pausado && <NumeroDaContagem key={`retomada-${retomando}`} valor={retomando} />}
       </AnimatePresence>
       <AnimatePresence>
@@ -545,6 +597,14 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
             aoRecomecar={recomecar}
             aoSair={aoSair}
             aoDesistir={() => controles.current.desistir()}
+            aoTrocarTrecho={
+              trecho
+                ? () => {
+                    setPausado(false);
+                    setTrecho(null);
+                  }
+                : undefined
+            }
           />
         )}
       </AnimatePresence>
