@@ -95,6 +95,53 @@ describe("TelaDeJogoMania", () => {
     expect(audio().fontes.at(-1)!.parada).toBe(true);
   });
 
+  describe("treino", () => {
+    const abrirTreino = () => {
+      const aoTerminar = vi.fn();
+      const comDuracao = vi.fn(async () => ({ duration: 10 }) as AudioBuffer);
+      render(<TelaDeJogoMania mapa={mapa} aoTerminar={aoTerminar} aoSair={vi.fn()} decodificar={comDuracao} treino />);
+      return { aoTerminar, comDuracao };
+    };
+
+    it("a música só começa depois de escolher a parte, e a escolha não decodifica o áudio de novo", async () => {
+      const { comDuracao } = abrirTreino();
+      const parte = await screen.findByRole("button", { name: /Compassos 1–5/ });
+      expect(audio().fontes.length).toBe(fontesAntes);
+      fireEvent.click(parte);
+      await pronta();
+      expect(audio().fontes.at(-1)!.inicio).toBe(ENTRADA);
+      expect(screen.getByText(/TREINO · Compassos 1–5/)).toBeInTheDocument();
+      expect(comDuracao).toHaveBeenCalledTimes(1);
+    });
+
+    it("no fim da parte volta para o começo com uma partida nova, conta 3, 2, 1 e nunca entrega resultado", async () => {
+      const { aoTerminar } = abrirTreino();
+      fireEvent.click(await screen.findByRole("button", { name: /Compassos 1–5/ }));
+      await pronta();
+      await irPara(1000);
+      fireEvent.keyDown(window, { code: "KeyD" });
+      fireEvent.keyUp(window, { code: "KeyD" });
+      const fontesDaPrimeira = audio().fontes.length;
+      await irPara(9600);
+      await waitFor(() => expect(audio().fontes.length).toBe(fontesDaPrimeira + 1));
+      expect(audio().fontes.at(-2)!.parada).toBe(true);
+      expect(audio().fontes.at(-1)!.inicio).toBeCloseTo(ENTRADA + 9.6 + 3);
+      await waitFor(() => expect(screen.getByText(/volta 2 · última/)).toBeInTheDocument());
+      await irPara(9700);
+      expect(screen.getByRole("timer")).toHaveTextContent("3");
+      expect(aoTerminar).not.toHaveBeenCalled();
+    });
+
+    it("Trocar trecho volta para a escolha e para a música", async () => {
+      abrirTreino();
+      fireEvent.click(await screen.findByRole("button", { name: /Compassos 1–5/ }));
+      await pronta();
+      fireEvent.click(screen.getByRole("button", { name: "Trocar trecho" }));
+      expect(await screen.findByRole("heading", { name: "Treinar" })).toBeInTheDocument();
+      expect(audio().fontes.at(-1)!.parada).toBe(true);
+    });
+  });
+
   it("mostra o erro quando o mapa não abre", async () => {
     render(<TelaDeJogoMania mapa={{ ...mapa, texto: "quebrado" }} aoTerminar={vi.fn()} aoSair={vi.fn()} decodificar={decodificar} />);
     expect(await screen.findByRole("alert")).toHaveTextContent("Não é um arquivo .osu.");
