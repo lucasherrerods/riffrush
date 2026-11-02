@@ -1,5 +1,6 @@
 import { dificuldadeMaisProxima } from "./dificuldades";
-import { DIFICULDADES, INSTRUMENTOS, PISTA_ABERTA, type Batida, type Dificuldade, type Instrumento, type Nota, type TipoDaNota, type Trilhas } from "./tipos";
+import { secaoDoEvento } from "./secoes";
+import { DIFICULDADES, INSTRUMENTOS, PISTA_ABERTA, type Batida, type Dificuldade, type Instrumento, type Nota, type Secao, type TipoDaNota, type Trilhas } from "./tipos";
 
 /*
  * Formatos do Clone Hero.
@@ -108,6 +109,16 @@ export class MapaDeTempo {
 export interface ChartLido {
   notas: Partial<Record<Instrumento, Partial<Record<Dificuldade, Nota[]>>>>;
   mapa: MapaDeTempo;
+  /** As partes da música marcadas pelo autor do chart (intro, verso, solo), em ordem. */
+  secoes: Secao[];
+}
+
+function lerSecoes(eventos: { tick: number; texto: string }[], mapa: MapaDeTempo): Secao[] {
+  return eventos
+    .map((e) => ({ tick: e.tick, nome: secaoDoEvento(e.texto) }))
+    .filter((e): e is { tick: number; nome: string } => e.nome !== null)
+    .sort((a, b) => a.tick - b.tick)
+    .map((e) => ({ nome: e.nome, inicio: mapa.emSegundos(e.tick) }));
 }
 
 interface NotaEmTicks {
@@ -217,6 +228,11 @@ export function lerChart(conteudo: string): ChartLido {
   }
   const mapa = new MapaDeTempo(resolucao, andamentos);
 
+  const eventos = (secoes.get("Events") ?? []).flatMap((linha) => {
+    const encontrado = linha.match(/^(\d+)\s*=\s*E\s+"?([^"]*)"?/);
+    return encontrado ? [{ tick: Number(encontrado[1]), texto: encontrado[2] }] : [];
+  });
+
   const notas: ChartLido["notas"] = {};
   for (const { id: instrumento } of INSTRUMENTOS) for (const { id: dificuldade } of DIFICULDADES) {
     const linhas = secoes.get(PREFIXOS_DO_CHART[dificuldade] + INSTRUMENTOS_DO_CHART[instrumento]);
@@ -239,7 +255,7 @@ export function lerChart(conteudo: string): ChartLido {
     const classificadas = classificar(brutas, LIMIAR_DO_HOPO_NO_CHART * resolucao, (tick) => marcas.get(tick) ?? {});
     if (classificadas.length) guardarTrilha(notas, instrumento, dificuldade, montarNotas(classificadas, frases, mapa, resolucao));
   }
-  return { notas, mapa };
+  return { notas, mapa, secoes: lerSecoes(eventos, mapa) };
 }
 
 const NOTA_MIDI_BASE: Record<Dificuldade, number> = { facil: 60, medio: 72, dificil: 84, expert: 96 };
@@ -276,6 +292,7 @@ export function lerMidi(dados: Uint8Array): ChartLido {
     notas: { tick: number; nota: number; duracao: number }[];
     aberturasMelhoradas: boolean;
     sysex: { tick: number; dificuldade: number; tipo: number; duracao: number }[];
+    textos: { tick: number; texto: string }[];
   }[] = [];
 
   for (let f = 0; f < quantidadeDeFaixas && posicao < dados.length; f++) {
@@ -290,6 +307,7 @@ export function lerMidi(dados: Uint8Array): ChartLido {
     let aberturasMelhoradas = false;
     const sysex: (typeof faixas)[number]["sysex"] = [];
     const sysexLigados = new Map<string, number>();
+    const textos: { tick: number; texto: string }[] = [];
     const quantidadeVariavel = () => {
       let valor = 0;
       let byte: number;
@@ -307,6 +325,7 @@ export function lerMidi(dados: Uint8Array): ChartLido {
       if (status === 0xff) {
         const tipo = dados[p++];
         const tamanho = quantidadeVariavel();
+        if (tipo === 0x01 || tipo === 0x05) textos.push({ tick, texto: decodificador.decode(dados.subarray(p, p + tamanho)) });
         if (tipo === 0x03) nome = decodificador.decode(dados.subarray(p, p + tamanho));
         // Com este texto, a nota logo abaixo do verde de cada dificuldade é a aberta.
         if (tipo === 0x01 && decodificador.decode(dados.subarray(p, p + tamanho)).includes("ENHANCED_OPENS")) aberturasMelhoradas = true;
@@ -341,7 +360,7 @@ export function lerMidi(dados: Uint8Array): ChartLido {
         }
       }
     }
-    faixas.push({ nome: nome.trim().toUpperCase(), notas, aberturasMelhoradas, sysex });
+    faixas.push({ nome: nome.trim().toUpperCase(), notas, aberturasMelhoradas, sysex, textos });
   }
 
   const mapa = new MapaDeTempo(resolucao, andamentos);
@@ -384,7 +403,8 @@ export function lerMidi(dados: Uint8Array): ChartLido {
       if (classificadas.length) guardarTrilha(notas, instrumento, dificuldade, montarNotas(classificadas, frases, mapa, resolucao));
     }
   }
-  return { notas, mapa };
+  const eventos = faixas.find((f) => f.nome === "EVENTS")?.textos ?? [];
+  return { notas, mapa, secoes: lerSecoes(eventos, mapa) };
 }
 
 export function trilhasDoChart(chart: ChartLido): Trilhas {

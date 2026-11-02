@@ -1,4 +1,4 @@
-import { andamento, construirMidi, construirSng, nomeDaFaixa, notaDesligada, notaLigada } from "@/test/cloneHero";
+import { andamento, construirMidi, construirSng, nomeDaFaixa, notaDesligada, notaLigada, eventoDeTexto } from "@/test/cloneHero";
 import { MapaDeTempo, escolherTrilha, lerChart, lerMidi, lerSng, trilhasDoChart } from "./cloneHero";
 
 const resumo = (notas: { tempo: number; pista: number; duracao: number; frase: number }[]) =>
@@ -40,6 +40,13 @@ const CHART = `[Song]
 {
   0 = TS 4
   0 = B 120000
+}
+[Events]
+{
+  0 = E "section Intro"
+  384 = E "[prc_verse_1]"
+  384 = E "lighting (flare)"
+  768 = E "[section Riff 1]"
 }
 [ExpertSingle]
 {
@@ -109,6 +116,28 @@ const chartCom = (notas: string) => lerChart(`[Song]
 {
 ${notas}
 }`).notas.guitarra!.expert!;
+
+describe("seções", () => {
+  it("o .chart lê as seções do [Events] em segundos, em ordem, sem os outros eventos", () => {
+    expect(lerChart(CHART).secoes).toEqual([
+      { nome: "Intro", inicio: 0 },
+      { nome: "Verso 1", inicio: 1 },
+      { nome: "Riff 1", inicio: 2 },
+    ]);
+  });
+
+  it("chart sem [Events] não tem seções", () => {
+    expect(lerChart("[Song]\n{\n  Resolution = 192\n}\n").secoes).toEqual([]);
+  });
+
+  it("o notes.mid lê as seções dos textos da faixa EVENTS", () => {
+    const midi = construirMidi(480, [andamento(500000)], [nomeDaFaixa("EVENTS"), eventoDeTexto(0, "[section Intro]"), eventoDeTexto(960, "[music_start]"), eventoDeTexto(0, "[prc_chorus_1]")], [nomeDaFaixa("PART GUITAR"), notaLigada(480, 96), notaDesligada(10, 96)]);
+    expect(lerMidi(midi).secoes).toEqual([
+      { nome: "Intro", inicio: 0 },
+      { nome: "Refrão 1", inicio: 1 },
+    ]);
+  });
+});
 
 describe("lerChart: notas abertas, HOPO e tap", () => {
   it("a nota aberta (7) vira a pista 5", () => {
@@ -217,13 +246,12 @@ describe("lerMidi", () => {
 });
 
 describe("lerMidi: notas abertas, HOPO e tap", () => {
-  const texto = (delta: number, conteudo: string) => ({ delta, bytes: [0xff, 0x01, conteudo.length, ...new TextEncoder().encode(conteudo)] });
   // Phase Shift: F0, tamanho, "PS", 0, 0, dificuldade (3 = expert, 0xFF = todas), tipo (1 = aberta, 4 = tap), liga/desliga, F7.
   const sysex = (delta: number, dificuldade: number, tipo: number, liga: boolean) => ({ delta, bytes: [0xf0, 8, 0x50, 0x53, 0, 0, dificuldade, tipo, liga ? 1 : 0, 0xf7] });
   const ler = (...eventos: { delta: number; bytes: number[] }[]) => lerMidi(construirMidi(480, [andamento(500000)], [nomeDaFaixa("PART GUITAR"), ...eventos])).notas.guitarra!.expert!;
 
   it("com ENHANCED_OPENS, a nota logo abaixo do verde é a aberta", () => {
-    expect(tipos(ler(texto(0, "[ENHANCED_OPENS]"), notaLigada(0, 95), notaDesligada(60, 95), notaLigada(900, 96), notaDesligada(60, 96)))).toEqual(["5", "0"]);
+    expect(tipos(ler(eventoDeTexto(0, "[ENHANCED_OPENS]"), notaLigada(0, 95), notaDesligada(60, 95), notaLigada(900, 96), notaDesligada(60, 96)))).toEqual(["5", "0"]);
   });
 
   it("o sysex do Phase Shift transforma o verde em aberta, e outro sysex deixa tap", () => {
