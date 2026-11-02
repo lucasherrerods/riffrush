@@ -13,6 +13,8 @@ interface Props {
   aoMudarMods: (mods: number) => void;
   aoImportar: (arquivos: File[]) => void;
   aoJogar: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void;
+  /** Abre o mapa no treino; sem ele o botão não aparece. */
+  aoTreinar?: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void;
 }
 
 const ehOsz = (arquivo: File) => arquivo.name.toLowerCase().endsWith(".osz");
@@ -32,7 +34,7 @@ function RotuloDaDificuldade({ conjunto, dificuldade }: { conjunto: ConjuntoSalv
   );
 }
 
-export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, aoJogar }: Props) {
+export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, aoJogar, aoTreinar }: Props) {
   const [aberto, setAberto] = useState<string | null>(null);
   const [escolhida, setEscolhida] = useState<{ conjunto: ConjuntoSalvo; dificuldade: DificuldadeSalva } | null>(null);
   const [arrastando, setArrastando] = useState(false);
@@ -119,7 +121,12 @@ export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, a
       )}
 
       {escolhida?.dificuldade.beatmapId && escolhida.conjunto.origem === "osu" && <PainelDoRankingDoMania beatmapId={escolhida.dificuldade.beatmapId} />}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        {aoTreinar && (
+          <Button variant="outline" disabled={!escolhida} onClick={() => escolhida && aoTreinar(escolhida.conjunto, escolhida.dificuldade)}>
+            Treinar
+          </Button>
+        )}
         <Button disabled={!escolhida} onClick={() => escolhida && aoJogar(escolhida.conjunto, escolhida.dificuldade)}>
           Jogar
         </Button>

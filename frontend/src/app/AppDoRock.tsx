@@ -18,7 +18,7 @@ import { TelaDeResultado, anotarRecorde, definirRecordes, recordeDe, useRecordes
 import { EscolhaDeDispositivos, ResultadoDaTelaDividida, eventoDoJogador, opcoesDoJogador, type DispositivoDoJogador, type ResultadoDoJogador } from "@/modules/rock/splitscreen";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
-import { PainelDeRanking, PlacarAoVivo, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
+import { PlacarAoVivo, RankingDaSelecao, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
 import { BotaoDeAmigos, ConvitesDeAmigos, PainelDeAmigos, useIdsDosAmigos } from "@/modules/amigos";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
@@ -59,6 +59,8 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
   // A partida do ranking aberta, com a música dela e a tela de onde veio.
   const [partidaAberta, setPartidaAberta] = useState<{ id: string; titulo: string; artista: string; voltarPara: Tela } | null>(null);
   const [assistindo, setAssistindo] = useState<{ replay: Replay; dificuldade: Dificuldade; instrumento: Instrumento } | null>(null);
+  // O botão Treinar da seleção: a partida repete um trecho e não vale para recorde, ranking nem transmissão.
+  const [treinandoNaSelecao, setTreinando] = useState(false);
   const [resultado, setResultado] = useState<{ resultado: Resultado; recordeNovo: boolean } | null>(null);
   const [xpDaPartida, setXpDaPartida] = useState<RegistroDaPartida | null>(null);
   // Tela dividida: os dispositivos de cada jogador, da escolha até sair para o menu.
@@ -231,7 +233,8 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
     else presenca.desligar();
   }, [online]);
   // A partida só vai ao ar quando dá para quem assiste ter a mesma música: as do jogo e as do Encore.
-  const transmitindo = online && configuracoes.permitirEspectadores && tela === "jogo" && !emRede && !assistindo && !divididos && !configuracoes.bot && podeTocarOnline(musica);
+  const treinando = treinandoNaSelecao && !emRede && !assistindo && !divididos;
+  const transmitindo = online && configuracoes.permitirEspectadores && tela === "jogo" && !emRede && !assistindo && !divididos && !treinando && !configuracoes.bot && podeTocarOnline(musica);
   const jogadoresLocais = useMemo<JogadorLocal[] | undefined>(
     () => divididos?.map((dispositivo, i) => ({ nome: `P${i + 1}`, opcoes: opcoesDoJogador(opcoes, dispositivo), aceitaEvento: (evento: Event) => eventoDoJogador(evento, dispositivo) })),
     [divididos, opcoes],
@@ -329,13 +332,14 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
     setTela("configuracoes");
   };
 
-  const jogar = async () => {
+  const jogar = async (treino = false) => {
     const escolhida = musicas[indice];
     void biblioteca.usar(escolhida.id);
     const pronta = await biblioteca.prepararParaTocar(escolhida);
     if (pronta !== escolhida) setMusicas((atuais) => juntarMusicas(atuais, [pronta]));
     setEmRede(null);
     setAssistindo(null);
+    setTreinando(treino);
     setPartida((p) => p + 1);
     setEntrada({ segurando: true });
     setTela("jogo");
@@ -542,7 +546,8 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                 aoSelecionar={setIndice}
                 aoDificuldade={setDificuldade}
                 aoInstrumento={setInstrumento}
-                aoJogar={jogar}
+                aoJogar={() => void jogar()}
+                aoTreinar={divididos ? undefined : () => void jogar(true)}
                 aoVoltar={() => {
                   setDivididos(null);
                   setTela("menu");
@@ -563,7 +568,8 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                   avisar.success(`${removida.titulo} removida.`);
                 }}
                 ranking={contasLigadas && escolhida ? (
-                    <PainelDeRanking
+                    <RankingDaSelecao
+                      jeitoInicial={opcoes.jeitoDeJogar}
                       musicaId={idDoRanking(escolhida)}
                       dificuldade={dificuldadeDaSelecao}
                       instrumento={instrumentoDaSelecao}
@@ -696,7 +702,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                 instrumento={instrumentoDaPartida}
                 opcoes={opcoes}
                 personagem={personagemEmJogo}
-                recorde={assistindo || divididos ? undefined : recordeDe(recordes, idDoRanking(musica), dificuldadeDaPartida, instrumentoDaPartida)?.pontos}
+                recorde={assistindo || divididos || treinando ? undefined : recordeDe(recordes, idDoRanking(musica), dificuldadeDaPartida, instrumentoDaPartida)?.pontos}
                 replay={assistindo?.replay}
                 rede={
                   emRede && conexao.sala
@@ -704,13 +710,14 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                     : undefined
                 }
                 // Em rede o canto mostra a sala; sozinho, o ranking global da música.
-                placar={contasLigadas && !emRede && !assistindo && !divididos ? (pontos) => <PlacarAoVivo musicaId={idDoRanking(musica)} dificuldade={dificuldadeDaPartida} instrumento={instrumentoDaPartida} pontos={pontos} /> : undefined}
+                placar={contasLigadas && !emRede && !assistindo && !divididos && !treinando ? (pontos) => <PlacarAoVivo musicaId={idDoRanking(musica)} dificuldade={dificuldadeDaPartida} instrumento={instrumentoDaPartida} jeito={opcoes.jeitoDeJogar} pontos={pontos} /> : undefined}
                 aoSair={assistindo ? sairDoReplay : () => setTela(emRede ? "multijogador" : "selecao")}
                 aoTerminar={assistindo ? sairDoReplay : terminar}
                 transmissao={transmissao}
                 espectadores={transmissao ? espectadores : 0}
                 jogadores={jogadoresLocais}
                 aoTerminarJuntos={terminarDividido}
+                treino={treinando}
               />
             )}
             {tela === "telaDividida" && (
@@ -723,7 +730,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
               />
             )}
             {tela === "resultadoDividido" && resultadosDivididos && (
-              <ResultadoDaTelaDividida titulo={musica.titulo} artista={musica.artista} resultados={resultadosDivididos} aoRepetir={jogar} aoContinuar={() => setTela("selecao")} />
+              <ResultadoDaTelaDividida titulo={musica.titulo} artista={musica.artista} resultados={resultadosDivididos} aoRepetir={() => void jogar()} aoContinuar={() => setTela("selecao")} />
             )}
             {tela === "resultado" && resultado && (
               <TelaDeResultado
@@ -732,7 +739,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                 resultado={resultado.resultado}
                 recordeNovo={resultado.recordeNovo}
                 volumeDosEfeitos={configuracoes.volumeDosEfeitos}
-                aoRepetir={jogar}
+                aoRepetir={() => void jogar()}
                 aoContinuar={() => {
                   if (!emRede) return setTela("selecao");
                   setEmRede(null);

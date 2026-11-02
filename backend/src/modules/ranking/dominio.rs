@@ -64,6 +64,7 @@ pub struct PartidaPublica {
     pub fantasma: bool,
     pub jogada_em: DateTime<Utc>,
     pub tem_replay: bool,
+    pub jeito_de_jogar: Option<JeitoDeJogar>,
 }
 
 /// O que ordena o ranking de uma música.
@@ -84,6 +85,7 @@ pub struct RecordeDaMusica {
     pub pontos: u64,
     pub precisao: f64,
     pub dificuldade: Dificuldade,
+    pub jeito_de_jogar: Option<JeitoDeJogar>,
 }
 
 impl RecordeDaMusica {
@@ -292,6 +294,7 @@ mod tests {
             pontos,
             precisao: 0.9,
             dificuldade,
+            jeito_de_jogar: None,
         })
     }
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Loader2, PlayCircle } from "lucide-react";
+import { NOMES_DOS_JEITOS } from "@/modules/rock/gameplay";
 import { TelaDeResultado } from "@/modules/rock/results";
 import { avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
@@ -44,11 +45,14 @@ export function TelaDePartidaDoRanking({ partidaId, titulo, artista, aoVoltar, a
             aoContinuar={aoVoltar}
             rotuloDeContinuar="Voltar"
             extra={
-              partida.tem_replay && (
-                <Button size="lg" variant="outline" disabled={baixando} onClick={() => assistir(partida)}>
-                  {baixando ? <Loader2 className="animate-spin opacity-70" /> : <PlayCircle className="opacity-70" />} Assistir replay
-                </Button>
-              )
+              <>
+                {partida.jeito_de_jogar && <p className="text-base text-texto-suave">Jogou no {NOMES_DOS_JEITOS[partida.jeito_de_jogar]}</p>}
+                {partida.tem_replay && (
+                  <Button size="lg" variant="outline" disabled={baixando} onClick={() => assistir(partida)}>
+                    {baixando ? <Loader2 className="animate-spin opacity-70" /> : <PlayCircle className="opacity-70" />} Assistir replay
+                  </Button>
+                )}
+              </>
             }
           />
         )}

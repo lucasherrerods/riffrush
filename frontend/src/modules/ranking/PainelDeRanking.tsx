@@ -1,5 +1,4 @@
 import { Loader2 } from "lucide-react";
-import { IconeDoJeito, NOMES_DOS_JEITOS } from "@/modules/rock/gameplay";
 import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
 import type { PosicaoNoRanking } from "./api";
 import { haQuantoTempo, porcentagem } from "@/shared/lib/formatar";
@@ -72,14 +71,7 @@ function LinhaDoRanking({ linha, minha, aoAbrir }: { linha: PosicaoNoRanking; mi
       avatar={linha.avatar}
       minha={minha}
       selo={<SeloDaNota precisao={linha.precisao} />}
-      detalhe={
-        <span className="inline-flex items-center gap-2">
-          {linha.jeito_de_jogar && (
-            <IconeDoJeito jeito={linha.jeito_de_jogar} rotulo={`Jogou no ${NOMES_DOS_JEITOS[linha.jeito_de_jogar]}`} className="size-4 shrink-0 opacity-70" />
-          )}
-          {`${porcentagem(linha.precisao)} · ${haQuantoTempo(linha.jogada_em)}`}
-        </span>
-      }
+      detalhe={`${porcentagem(linha.precisao)} · ${haQuantoTempo(linha.jogada_em)}`}
       valor={formatar(linha.pontos)}
       aoClicar={aoAbrir && (() => aoAbrir(linha.partida_id))}
     />

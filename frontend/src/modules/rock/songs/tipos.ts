@@ -42,10 +42,9 @@ export interface Nota {
   duracao: number;
 }
 
-export interface Batida {
-  tempo: number;
-  forte: boolean;
-}
+// As seções e as batidas também servem ao treino do Mania: a definição fica no treino compartilhado.
+import type { Batida, Secao } from "@/shared/lib/treino";
+export type { Batida, Secao };
 
 export interface Musica {
   id: string;
@@ -81,5 +80,7 @@ export interface MusicaCarregada {
   audio: AudioBuffer;
   notas: Nota[];
   batidas: Batida[];
+  /** As seções do chart, quando ele tem. */
+  secoes?: Secao[];
   duracao: number;
 }

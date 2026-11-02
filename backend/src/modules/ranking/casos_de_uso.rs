@@ -6,7 +6,7 @@ use super::dominio::{
 use super::portas::RepositorioDoRanking;
 use crate::modules::catalogo::{DadosDaMusica, ServicosDoCatalogo};
 use crate::modules::conta::{FalhaExterna, ServicosDaConta, TAMANHO_MAXIMO_DO_ID_DA_MUSICA};
-use crate::modules::progresso::{Dificuldade, Instrumento};
+use crate::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar};
 
 #[derive(Clone)]
 pub struct ServicosDoRanking {
@@ -33,6 +33,7 @@ impl ServicosDoRanking {
         musica_id: &str,
         dificuldade: Dificuldade,
         instrumento: Instrumento,
+        jeito: JeitoDeJogar,
         ordem: Ordem,
         token: Option<&str>,
     ) -> Result<Ranking, ErroDoRanking> {
@@ -42,7 +43,7 @@ impl ServicosDoRanking {
         let conta = self.conta_de(token).await;
         let linhas = self
             .repositorio
-            .linhas(musica_id, dificuldade, instrumento, ordem, TAMANHO_DO_TOP_DA_MUSICA, conta)
+            .linhas(musica_id, dificuldade, instrumento, jeito, ordem, TAMANHO_DO_TOP_DA_MUSICA, conta)
             .await?;
         Ok(montar_ranking(linhas, conta, TAMANHO_DO_TOP_DA_MUSICA))
     }
@@ -132,6 +133,7 @@ pub mod fakes {
             musica_id: &str,
             dificuldade: Dificuldade,
             instrumento: Instrumento,
+            jeito: JeitoDeJogar,
             ordem: Ordem,
             ate: u32,
             conta: Option<Uuid>,
@@ -143,7 +145,13 @@ pub mod fakes {
                 .lock()
                 .unwrap()
                 .iter()
-                .filter(|(m, d, i, l)| m == musica_id && *d == dificuldade && *i == instrumento && (l.posicao <= ate || Some(l.conta_id) == conta))
+                .filter(|(m, d, i, l)| {
+                    m == musica_id
+                        && *d == dificuldade
+                        && *i == instrumento
+                        && l.jeito_de_jogar == Some(jeito)
+                        && (l.posicao <= ate || Some(l.conta_id) == conta)
+                })
                 .map(|(_, _, _, l)| l.clone())
                 .collect())
         }
@@ -199,7 +207,7 @@ mod tests {
             precisao: 0.9,
             maior_sequencia: Some(9),
             jogada_em: DateTime::UNIX_EPOCH,
-            jeito_de_jogar: None,
+            jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
         }
     }
 
@@ -216,7 +224,14 @@ mod tests {
     async fn sem_login_mostra_so_o_top() {
         let (servicos, repositorio) = ranking_com(servicos().0, vec![linha(1, Uuid::from_u128(1))]);
         let ranking = servicos
-            .ranking("encore:abc", Dificuldade::Expert, Instrumento::Guitarra, Ordem::Precisao, None)
+            .ranking(
+                "encore:abc",
+                Dificuldade::Expert,
+                Instrumento::Guitarra,
+                JeitoDeJogar::Gamepad,
+                Ordem::Precisao,
+                None,
+            )
             .await
             .unwrap();
         assert_eq!(ranking.top.len(), 1);
@@ -228,7 +243,14 @@ mod tests {
     async fn a_ordem_pedida_chega_ao_repositorio() {
         let (servicos, repositorio) = ranking_com(servicos().0, vec![]);
         servicos
-            .ranking("encore:abc", Dificuldade::Expert, Instrumento::Guitarra, Ordem::Precisao, None)
+            .ranking(
+                "encore:abc",
+                Dificuldade::Expert,
+                Instrumento::Guitarra,
+                JeitoDeJogar::Gamepad,
+                Ordem::Precisao,
+                None,
+            )
             .await
             .unwrap();
         assert_eq!(*repositorio.ultima_ordem.lock().unwrap(), Some(Ordem::Precisao));
@@ -240,7 +262,14 @@ mod tests {
         let entrada = conta.entrar_com_google(&pedido("bom")).await.unwrap();
         let (servicos, _) = ranking_com(conta, vec![linha(1, Uuid::from_u128(77)), linha(578, entrada.conta.id)]);
         let ranking = servicos
-            .ranking("encore:abc", Dificuldade::Expert, Instrumento::Guitarra, Ordem::Precisao, Some(&entrada.token))
+            .ranking(
+                "encore:abc",
+                Dificuldade::Expert,
+                Instrumento::Guitarra,
+                JeitoDeJogar::Gamepad,
+                Ordem::Precisao,
+                Some(&entrada.token),
+            )
             .await
             .unwrap();
         assert_eq!(ranking.top.len(), 1);
@@ -251,7 +280,14 @@ mod tests {
     async fn sessao_invalida_nao_derruba_o_ranking() {
         let (servicos, _) = ranking_com(servicos().0, vec![linha(1, Uuid::from_u128(1))]);
         let ranking = servicos
-            .ranking("encore:abc", Dificuldade::Expert, Instrumento::Guitarra, Ordem::Precisao, Some("inventado"))
+            .ranking(
+                "encore:abc",
+                Dificuldade::Expert,
+                Instrumento::Guitarra,
+                JeitoDeJogar::Gamepad,
+                Ordem::Precisao,
+                Some("inventado"),
+            )
             .await
             .unwrap();
         assert_eq!((ranking.top.len(), ranking.meu), (1, None));
@@ -261,13 +297,15 @@ mod tests {
     async fn id_de_musica_vazio_ou_grande_demais_e_recusado() {
         let (servicos, _) = ranking_com(servicos().0, vec![]);
         assert!(matches!(
-            servicos.ranking("", Dificuldade::Medio, Instrumento::Guitarra, Ordem::Precisao, None).await,
+            servicos
+                .ranking("", Dificuldade::Medio, Instrumento::Guitarra, JeitoDeJogar::Gamepad, Ordem::Precisao, None)
+                .await,
             Err(ErroDoRanking::MusicaInvalida)
         ));
         let enorme = "x".repeat(TAMANHO_MAXIMO_DO_ID_DA_MUSICA + 1);
         assert!(matches!(
             servicos
-                .ranking(&enorme, Dificuldade::Medio, Instrumento::Guitarra, Ordem::Precisao, None)
+                .ranking(&enorme, Dificuldade::Medio, Instrumento::Guitarra, JeitoDeJogar::Gamepad, Ordem::Precisao, None)
                 .await,
             Err(ErroDoRanking::MusicaInvalida)
         ));

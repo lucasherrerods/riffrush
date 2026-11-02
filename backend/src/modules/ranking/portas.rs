@@ -3,16 +3,18 @@ use uuid::Uuid;
 
 use super::dominio::{LinhaDoGeral, LinhaDoRanking, MusicaPopular, Ordem, PartidaPublica};
 use crate::modules::conta::FalhaExterna;
-use crate::modules::progresso::{Dificuldade, Instrumento};
+use crate::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar};
 
 #[async_trait]
 pub trait RepositorioDoRanking: Send + Sync {
-    /// As linhas até a posição `ate` e, se `conta` tiver recorde, a linha dela, já numeradas pela `ordem`.
+    /// As linhas do `jeito` até a posição `ate` e, se `conta` tiver recorde nele, a linha dela, já numeradas pela `ordem`.
+    #[allow(clippy::too_many_arguments)]
     async fn linhas(
         &self,
         musica_id: &str,
         dificuldade: Dificuldade,
         instrumento: Instrumento,
+        jeito: JeitoDeJogar,
         ordem: Ordem,
         ate: u32,
         conta: Option<Uuid>,

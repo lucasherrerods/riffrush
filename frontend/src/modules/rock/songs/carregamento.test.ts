@@ -11,6 +11,10 @@ const CHART = `[Song]
 {
   0 = B 120000
 }
+[Events]
+{
+  384 = E "section Riff"
+}
 [ExpertSingle]
 {
   192 = N 0 0
@@ -133,6 +137,7 @@ describe("carregarMusica (importadas)", () => {
     expect(carregada.notas.map((n) => +n.tempo.toFixed(2))).toEqual([0.4, 0.9]);
     expect(carregada.audio.numberOfChannels).toBe(2);
     expect(carregada.duracao).toBeCloseTo(2);
+    expect(carregada.secoes).toEqual([{ nome: "Riff", inicio: expect.closeTo(0.9) }]);
   });
 
   it("carrega as notas do instrumento escolhido", async () => {

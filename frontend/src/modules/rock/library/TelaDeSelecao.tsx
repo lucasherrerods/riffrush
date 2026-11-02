@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Dices, Ellipsis, Gauge, FileAudio, Flame, Heart, Info, ListOrdered, LoaderCircle, Play, RotateCcw, Search, Trash2, Trophy } from "lucide-react";
+import { ArrowLeft, Dices, Dumbbell, Ellipsis, Gauge, FileAudio, Flame, Heart, Info, ListOrdered, LoaderCircle, Play, RotateCcw, Search, Trash2, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/rock/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
@@ -36,6 +36,8 @@ interface Props {
   aoDificuldade: (dificuldade: Dificuldade) => void;
   aoInstrumento: (instrumento: Instrumento) => void;
   aoJogar: () => void;
+  /** Abre a música no modo treino; sem ele o botão não aparece. */
+  aoTreinar?: () => void;
   aoVoltar: () => void;
   aoImportar: (arquivos: File[]) => void;
   /** Abre a busca de músicas; sem ele o botão não aparece. */
@@ -227,9 +229,24 @@ export function TelaDeSelecao(props: Props) {
       </Button>
     </div>
   ) : (
-    <Button size="lg" className="h-11 font-titulo text-xl tracking-widest max-md:h-10 max-md:text-lg" onClick={jogar}>
-      <Play className="fill-current opacity-70" /> TOCAR
-    </Button>
+    <div className="flex gap-2">
+      <Button size="lg" className="h-11 flex-1 font-titulo text-xl tracking-widest max-md:h-10 max-md:text-lg" onClick={jogar}>
+        <Play className="fill-current opacity-70" /> TOCAR
+      </Button>
+      {props.aoTreinar && (
+        <Button
+          size="lg"
+          variant="outline"
+          className="h-11 max-md:h-10"
+          onClick={() => {
+            efeito("selecionar");
+            props.aoTreinar?.();
+          }}
+        >
+          <Dumbbell className="opacity-70" /> Treinar
+        </Button>
+      )}
+    </div>
   );
 
   const filtros = (

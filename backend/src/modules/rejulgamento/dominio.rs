@@ -32,7 +32,12 @@ pub enum Recusa {
     TrilhaVazia,
     #[error("velocidade da música que o jogo não oferece")]
     VelocidadeInvalida,
+    #[error("jeito de jogar que essa versão do replay não tem")]
+    JeitoDeOutraVersao,
 }
+
+/// O jeito de jogar nasceu nessa versão do replay: as anteriores são todas do gamepad.
+const VERSAO_COM_JEITO: u8 = 4;
 
 fn no_motor(instrumento: Instrumento) -> motor::Instrumento {
     match instrumento {
@@ -54,8 +59,11 @@ fn dificuldade_no_motor(dificuldade: Dificuldade) -> motor::Dificuldade {
 }
 
 /// Toca o replay sobre as notas da trilha, como o app faria ao assistir, até a última nota passar.
-pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Dificuldade, replay: &[u8]) -> Result<Rejulgada, Recusa> {
-    let replay = motor::desempacotar_replay(replay).map_err(|_| Recusa::ReplayInvalido)?;
+pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Dificuldade, pacote: &[u8]) -> Result<Rejulgada, Recusa> {
+    let replay = motor::desempacotar_replay(pacote).map_err(|_| Recusa::ReplayInvalido)?;
+    if pacote.first().is_some_and(|&versao| versao < VERSAO_COM_JEITO) && replay.jeito != motor::JeitoDeJogar::Gamepad {
+        return Err(Recusa::JeitoDeOutraVersao);
+    }
     let notas = motor::notas_do_chart(chart, no_motor(instrumento), dificuldade_no_motor(dificuldade)).map_err(|_| Recusa::ChartInvalido)?;
     if notas.is_empty() {
         return Err(Recusa::TrilhaVazia);
@@ -272,6 +280,19 @@ mod tests {
         let rejulgada = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &motor::empacotar_replay(&na_palhetada)).unwrap();
         assert_eq!(rejulgada.resumo.acertos, 0);
         assert_eq!(rejulgada.jeito_de_jogar, JeitoDeJogar::Palhetada);
+    }
+
+    #[test]
+    fn recusa_replay_de_antes_da_versao_4_em_outro_jeito_que_nao_o_gamepad() {
+        let chart = chart();
+        let mut na_palhetada = motor::desempacotar_replay(&replay(&chart, &[(0, 0.0)])).unwrap();
+        na_palhetada.jeito = motor::JeitoDeJogar::Palhetada;
+        let mut antigo = motor::empacotar_replay(&na_palhetada);
+        antigo[0] = 3;
+        assert_eq!(
+            rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &antigo),
+            Err(Recusa::JeitoDeOutraVersao)
+        );
     }
 
     #[test]

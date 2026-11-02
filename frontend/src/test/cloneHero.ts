@@ -76,6 +76,7 @@ export const andamento = (microssegundosPorSeminima: number, delta = 0): EventoM
   delta,
   bytes: [0xff, 0x51, 3, (microssegundosPorSeminima >> 16) & 0xff, (microssegundosPorSeminima >> 8) & 0xff, microssegundosPorSeminima & 0xff],
 });
+export const eventoDeTexto = (delta: number, conteudo: string): EventoMidi => ({ delta, bytes: [0xff, 0x01, conteudo.length, ...texto.encode(conteudo)] });
 export const notaLigada = (delta: number, nota: number): EventoMidi => ({ delta, bytes: [0x90, nota, 100] });
 export const notaDesligada = (delta: number, nota: number): EventoMidi => ({ delta, bytes: [0x80, nota, 0] });
 
