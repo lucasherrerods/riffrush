@@ -42,6 +42,12 @@ export interface Nota {
   duracao: number;
 }
 
+export interface Secao {
+  nome: string;
+  /** Em segundos, no tempo do chart. */
+  inicio: number;
+}
+
 export interface Batida {
   tempo: number;
   forte: boolean;
