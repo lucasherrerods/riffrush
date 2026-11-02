@@ -74,8 +74,11 @@ export interface ControleDoJogador {
   desistir: () => Resultado;
   /** Só no replay gravado: refaz a partida no instante dado (em segundos da música). */
   refazerEm: (tempo: number) => void;
-  /** Só no treino: começa a partida do trecho de novo e devolve a precisão da volta que acabou (null sem nota tocada). */
-  novaVolta: () => number | null;
+  /**
+   * Só no treino: começa a partida do trecho de novo e devolve a precisão da volta que acabou (null sem nota tocada).
+   * Com `desde` (tempo real), a partida nova começa ali: é o pulo pela barra.
+   */
+  novaVolta: (desde?: number) => number | null;
   /** Avisa quem assiste ao vivo que a música parou ou voltou. */
   transmitirPausa: (pausado: boolean) => void;
 }
@@ -303,11 +306,12 @@ export function PistaDoJogador(props: Props) {
       julgamento = null;
       estrelaDesde = partida.estrelaAtiva ? alvo : null;
     };
-    const novaVolta = () => {
+    const novaVolta = (desde?: number) => {
       if (!trecho) return null;
       const tocou = partida.acertos + partida.erros > 0 ? precisao(partida) : null;
       partida.motor.free();
-      partida = criarPartida(notasDaPartida, opcoesDoJogador);
+      const notas = desde === undefined ? notasDaPartida : notasDoTrecho(carregada.notas, { ...trecho, inicio: desde * velocidade });
+      partida = criarPartida(notas, opcoesDoJogador);
       gravador = criarGravador(partida);
       apertados.fill(false);
       explosoes.length = falhas.length = trovoes.length = 0;
