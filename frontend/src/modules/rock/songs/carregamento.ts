@@ -101,6 +101,7 @@ async function carregarSng(musica: Musica, dificuldade: Dificuldade, instrumento
     audio,
     notas: escolherTrilha(chart, instrumento, dificuldade).map((n) => ({ ...n, tempo: n.tempo - atraso })),
     batidas: chart.mapa.batidas(audio.duration + atraso).map((b) => ({ ...b, tempo: b.tempo - atraso })),
+    secoes: chart.secoes.map((s) => ({ ...s, inicio: s.inicio - atraso })),
     duracao: audio.duration,
   };
 }

@@ -87,5 +87,7 @@ export interface MusicaCarregada {
   audio: AudioBuffer;
   notas: Nota[];
   batidas: Batida[];
+  /** As seções do chart, quando ele tem. */
+  secoes?: Secao[];
   duracao: number;
 }

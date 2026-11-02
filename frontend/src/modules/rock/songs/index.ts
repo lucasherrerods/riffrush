@@ -4,3 +4,4 @@ export { dificuldadeMaisProxima, dificuldadesDaMusica, instrumentoDaMusica, inst
 export { CapaPequena } from "./CapaPequena";
 export { idDoRanking, nomeDaMusica, tituloDaMusica, type MusicaDaApi } from "./idDoRanking";
 export { DIFICULDADES, INSTRUMENTOS, PISTA_ABERTA, type TipoDaNota, type Batida, type Secao, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada, type Nota } from "./tipos";
+export { trechosDaMusica, type Trecho } from "./trechos";
