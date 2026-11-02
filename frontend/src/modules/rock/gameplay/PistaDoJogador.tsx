@@ -5,7 +5,8 @@ import { PALHETA_DO_CONTROLE, veioDoControle } from "@/modules/gamepad";
 import { tocarEfeito } from "@/modules/audio";
 import { Avatar, novaReacao, type Personagem, type Reacao } from "@/modules/rock/character";
 import { escalaDoCanvas, opacidadeDaPista, type EstadoDoPalco } from "@/modules/rock/stage";
-import { PISTA_ABERTA, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada } from "@/modules/rock/songs";
+import { PISTA_ABERTA, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada, type Trecho } from "@/modules/rock/songs";
+import { notasDoTrecho } from "./treino";
 import { ehTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
 import { criarBot, jogarSozinho } from "./bot";
@@ -73,12 +74,14 @@ export interface ControleDoJogador {
   desistir: () => Resultado;
   /** Só no replay gravado: refaz a partida no instante dado (em segundos da música). */
   refazerEm: (tempo: number) => void;
+  /** Só no treino: começa a partida do trecho de novo e devolve a precisão da volta que acabou (null sem nota tocada). */
+  novaVolta: () => number | null;
   /** Avisa quem assiste ao vivo que a música parou ou voltou. */
   transmitirPausa: (pausado: boolean) => void;
 }
 
 const nada = () => {};
-export const CONTROLE_VAZIO: ControleDoJogador = { estrela: nada, desistir: () => ({}) as Resultado, refazerEm: nada, transmitirPausa: nada };
+export const CONTROLE_VAZIO: ControleDoJogador = { estrela: nada, desistir: () => ({}) as Resultado, refazerEm: nada, novaVolta: () => null, transmitirPausa: nada };
 
 /** Ao vivo, as entradas vão em lotes: um por segundo poupa a cota do relay e chega bem antes de quem assiste precisar. */
 const INTERVALO_DO_LOTE_MS = 1000;
@@ -117,6 +120,8 @@ interface Props {
   derrota: boolean;
   recorde?: number;
   replay?: Replay;
+  /** Treino: a partida tem só as notas do trecho, sem vaia, e não vale para recorde, transmissão ou ranking. */
+  trecho?: Trecho;
   /** Em rede: quem zera a vida vira fantasma e o estado vai para a sala. */
   emRede: boolean;
   aoAtualizarRede?: (estado: EstadoDoJogador) => void;
@@ -130,7 +135,7 @@ interface Props {
 
 /** A pista e o HUD de um jogador, com a própria partida. O áudio e o relógio vêm de fora, da tela. */
 export function PistaDoJogador(props: Props) {
-  const { sessao, carregada, opcoes, velocidade, entrada, relogio, controle, loja, layout, estreita, comPalco, personagemDoHud, pausado, derrota, replay, emRede } = props;
+  const { sessao, carregada, opcoes, velocidade, entrada, relogio, controle, loja, layout, estreita, comPalco, personagemDoHud, pausado, derrota, replay, emRede, trecho } = props;
   // Lidos no loop: trocar a função ou o recorde a cada render não pode reiniciar a partida.
   const atuais = useRef(props);
   atuais.current = props;
@@ -147,11 +152,11 @@ export function PistaDoJogador(props: Props) {
     const duracao = noTempoReal(carregada.duracao, velocidade);
     const batidas = carregada.batidas.map((b) => ({ ...b, tempo: noTempoReal(b.tempo, velocidade) }));
     const opcoesDoReplay = replay && { semFalha: replay.semFalha, fantasma: replay.fantasma, semAberta: replay.semAberta, velocidade, jeito: replay.jeito, puneToqueEmVazio: replay.puneToqueEmVazio };
-    let partida = opcoesDoReplay
-      ? criarPartida(carregada.notas, opcoesDoReplay)
-      : criarPartida(carregada.notas, { semFalha: opcoes.semFalha, fantasma: emRede, semAberta: opcoes.semAberta, velocidade, jeito: opcoes.jeitoDeJogar });
+    const notasDaPartida = trecho ? notasDoTrecho(carregada.notas, trecho) : carregada.notas;
+    const opcoesDoJogador = { semFalha: opcoes.semFalha || !!trecho, fantasma: emRede, semAberta: opcoes.semAberta, velocidade, jeito: opcoes.jeitoDeJogar };
+    let partida = opcoesDoReplay ? criarPartida(carregada.notas, opcoesDoReplay) : criarPartida(notasDaPartida, opcoesDoJogador);
     const bot = opcoes.bot && !replay ? criarBot() : null;
-    const gravador = criarGravador(partida);
+    let gravador = criarGravador(partida);
     let proximaEntrada = 0;
     // Os lotes só saem depois do início: o relay apaga o que tinha quando chega um início novo.
     let transmitindo = false;
@@ -168,7 +173,7 @@ export function PistaDoJogador(props: Props) {
       transmitir({ tipo: "fim" });
       transmissaoAcabou = true;
     };
-    if (atuais.current.transmissao && !replay && !bot) {
+    if (atuais.current.transmissao && !replay && !bot && !trecho) {
       void hashDoChart(carregada.notas).then((hash) => {
         if (transmissaoAcabou) return;
         transmitindo = true;
@@ -199,7 +204,7 @@ export function PistaDoJogador(props: Props) {
     let terminou = false;
     let quadro = 0;
     // Com o bot o recorde não vale, então também não tem festa.
-    let recordeBatido = opcoes.bot || !!replay;
+    let recordeBatido = opcoes.bot || !!replay || !!trecho;
     let idDoAviso = 0;
     let ultimoEnvio = 0;
     const publicar = (terminouAgora: boolean) =>
@@ -222,7 +227,7 @@ export function PistaDoJogador(props: Props) {
       if (partida.derrota) return atuais.current.aoFim({ derrota: true });
       const resultado = resultadoDaPartida(partida, musica.id, dificuldade, instrumento);
       // Fantasma também manda: a API rejulga o replay das músicas do Encore para dar o XP, e deixa o fantasma fora do ranking.
-      const tocouDeVerdade = !bot && !replay;
+      const tocouDeVerdade = !bot && !replay && !trecho;
       const gerarReplay = async () =>
         empacotarReplay({
           semFalha: opcoes.semFalha,
@@ -298,8 +303,20 @@ export function PistaDoJogador(props: Props) {
       julgamento = null;
       estrelaDesde = partida.estrelaAtiva ? alvo : null;
     };
+    const novaVolta = () => {
+      if (!trecho) return null;
+      const tocou = partida.acertos + partida.erros > 0 ? precisao(partida) : null;
+      partida.motor.free();
+      partida = criarPartida(notasDaPartida, opcoesDoJogador);
+      gravador = criarGravador(partida);
+      apertados.fill(false);
+      explosoes.length = falhas.length = trovoes.length = 0;
+      julgamento = null;
+      estrelaDesde = null;
+      return tocou;
+    };
     const transmitirPausa = (pausado: boolean) => transmitir({ tipo: "pausa", pausado });
-    Object.assign(controle.current, { estrela, desistir, refazerEm, transmitirPausa });
+    Object.assign(controle.current, { estrela, desistir, refazerEm, novaVolta, transmitirPausa });
 
     /** Teclado e toque apertam do mesmo jeito: o instante vem do próprio evento. */
     const apertar = (pista: number, evento: Event) => {

@@ -425,6 +425,70 @@ describe("TelaDeJogo", () => {
     await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
   });
 
+  describe("treino", () => {
+    const abrirTreino = () => {
+      vi.mocked(carregarMusica).mockResolvedValue({
+        audio: {} as AudioBuffer,
+        notas: [nota(1), nota(4.5), nota(5.5)],
+        batidas: [],
+        secoes: [
+          { nome: "Intro", inicio: 0 },
+          { nome: "Riff", inicio: 4 },
+          { nome: "Final", inicio: 6 },
+        ],
+        duracao: 10,
+      });
+      const aoTerminar = vi.fn();
+      render(<TelaDeJogo musica={MUSICAS_DE_TESTE[0]} dificuldade="medio" opcoes={OPCOES_PADRAO_DA_PARTIDA} personagem={PERSONAGEM_PADRAO} aoSair={vi.fn()} aoTerminar={aoTerminar} treino />);
+      return { aoTerminar, usuario: userEvent.setup() };
+    };
+    /** No treino a música começa 2 s antes do trecho: o relógio do áudio conta a partir dali. */
+    const noTreino = (tempo: number) => act(() => void (audio().currentTime = ENTRADA - 2 + tempo));
+
+    it("a música só começa depois de escolher o trecho, e já começa nele", async () => {
+      const { usuario } = abrirTreino();
+      await screen.findByRole("heading", { name: "Treinar" });
+      expect(audio().fontes.length).toBe(fontesAntes);
+      await usuario.click(screen.getByRole("button", { name: /Riff/ }));
+      await partidaPronta();
+      expect(audio().fontes.at(-1)!.deslocamento).toBeCloseTo(2);
+      expect(screen.getByText(/TREINO · Riff/)).toBeInTheDocument();
+    });
+
+    it("no fim do trecho volta para o começo dele com a partida zerada, mostra a precisão da volta e não entrega resultado", async () => {
+      const { usuario, aoTerminar } = abrirTreino();
+      await usuario.click(await screen.findByRole("switch", { name: "Contagem antes de repetir" }));
+      await usuario.click(screen.getByRole("button", { name: /Riff/ }));
+      await partidaPronta();
+      noTreino(4.5);
+      await usuario.keyboard("a");
+      await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("50"));
+      noTreino(6.6);
+      await waitFor(() => expect(screen.getByText(/volta 2 · última 50% · melhor 50%/)).toBeInTheDocument());
+      expect(audio().fontes.at(-1)!.deslocamento).toBeCloseTo(2);
+      await waitFor(() => expect(screen.getByLabelText("Pontos")).toHaveTextContent("0"));
+      expect(aoTerminar).not.toHaveBeenCalled();
+    });
+
+    it("com a contagem ligada, espera o 3, 2, 1 antes de repetir", async () => {
+      const { usuario } = abrirTreino();
+      await usuario.click(await screen.findByRole("button", { name: /Riff/ }));
+      await partidaPronta();
+      noTreino(6.6);
+      await waitFor(() => expect(screen.getAllByRole("timer").map((t) => t.textContent)).toContain("3"));
+      expect(audio().suspend).toHaveBeenCalled();
+    });
+
+    it("Trocar trecho, no menu de pausa, volta para a escolha", async () => {
+      const { usuario } = abrirTreino();
+      await usuario.click(await screen.findByRole("button", { name: /Intro/ }));
+      await partidaPronta();
+      await usuario.keyboard("{Escape}");
+      await usuario.click(await screen.findByRole("button", { name: "Trocar trecho" }));
+      expect(await screen.findByRole("heading", { name: "Treinar" })).toBeInTheDocument();
+    });
+  });
+
   it("no replay, as setas avançam e voltam 5 segundos", async () => {
     const notas = [nota(1), nota(7, 1)];
     carregarCom(notas, 20);

@@ -9,7 +9,7 @@ import { TelaDeSelecao } from "./TelaDeSelecao";
 import { MUSICAS_DE_TESTE } from "@/test/musicas";
 
 function abrir({ indice = 0, dificuldade = "medio" as Dificuldade, instrumento = "guitarra" as Instrumento, musicas = MUSICAS_DE_TESTE } = {}) {
-  const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoInstrumento: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoBuscarMusicas: vi.fn(), aoRemover: vi.fn(), aoVelocidadeDaMusica: vi.fn() };
+  const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoInstrumento: vi.fn(), aoJogar: vi.fn(), aoTreinar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoBuscarMusicas: vi.fn(), aoRemover: vi.fn(), aoVelocidadeDaMusica: vi.fn() };
   render(
     <TelaDeSelecao
       musicas={musicas}
@@ -149,6 +149,12 @@ describe("TelaDeSelecao", () => {
     abrir();
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
     expect(within(screen.getByRole("region", { name: "Informações da música" })).getByText("Médio")).toBeInTheDocument();
+  });
+
+  it("Treinar abre a música no modo treino", async () => {
+    const { aoTreinar, usuario } = abrir();
+    await usuario.click(screen.getAllByRole("button", { name: "Treinar" })[0]);
+    expect(aoTreinar).toHaveBeenCalled();
   });
 
   it("Enter toca e Esc volta", async () => {
