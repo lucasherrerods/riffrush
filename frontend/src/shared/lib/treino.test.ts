@@ -1,5 +1,4 @@
-import { trechosDaMusica } from "./trechos";
-import type { Batida } from "./tipos";
+import { limitesDaVolta, registrarVolta, rotuloDasVoltas, trechosDaMusica, VOLTAS_INICIAIS, type Batida } from "./treino";
 
 /** Batidas a cada 0,5 s, tempo forte a cada 4: um compasso a cada 2 s. */
 const batidas = (duracao: number): Batida[] => Array.from({ length: duracao * 2 + 1 }, (_, i) => ({ tempo: i / 2, forte: i % 4 === 0 }));
@@ -61,5 +60,30 @@ describe("trechosDaMusica", () => {
 
   it("sem seções nem batidas, a música inteira é um trecho só", () => {
     expect(trechosDaMusica([], [], 12)).toEqual([{ nome: "Música inteira", inicio: 0, fim: 12 }]);
+  });
+});
+
+describe("limitesDaVolta", () => {
+  it("começa um pouco antes do trecho, para as notas descerem, e acaba com uma folga depois", () => {
+    expect(limitesDaVolta({ nome: "Riff", inicio: 10, fim: 20 }, 1, 100)).toEqual({ inicio: 8, fim: 20.5 });
+  });
+
+  it("segue a velocidade: na metade, tudo fica no dobro do tempo real", () => {
+    expect(limitesDaVolta({ nome: "Riff", inicio: 10, fim: 20 }, 0.5, 200)).toEqual({ inicio: 18, fim: 40.5 });
+  });
+
+  it("o trecho do fim acaba antes da música, senão a partida terminaria", () => {
+    expect(limitesDaVolta({ nome: "Final", inicio: 90, fim: 100 }, 1, 100).fim).toBeLessThan(100);
+  });
+});
+
+describe("registrarVolta", () => {
+  it("conta a volta e guarda a última e a melhor precisão", () => {
+    const uma = registrarVolta(VOLTAS_INICIAIS, 0.8);
+    const duas = registrarVolta(uma, 0.95);
+    const tres = registrarVolta(duas, 0.9);
+    expect(tres).toEqual({ voltas: 3, ultima: 0.9, melhor: 0.95 });
+    expect(rotuloDasVoltas(tres)).toBe("volta 4 · última 90% · melhor 95%");
+    expect(rotuloDasVoltas(VOLTAS_INICIAIS)).toBe("");
   });
 });

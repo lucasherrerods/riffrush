@@ -11,7 +11,6 @@ import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { ehArrasteParaCima } from "./gesto";
-import { EscolhaDoTreino } from "./componentes/EscolhaDoTreino";
 import { MenuDePausa } from "./componentes/MenuDePausa";
 import { NumeroDaContagem } from "./componentes/NumeroDaContagem";
 import { criarLojaDoHud, useLoja, type LojaDoHud } from "./lojaDoHud";
@@ -22,7 +21,8 @@ import { criarContadorDeFps, type LeituraDeFps } from "./fps";
 import { layoutDaPista } from "./pista/geometria";
 import type { EstadoDoJogador } from "./rede";
 import type { Resultado } from "./resultado";
-import { limitesDaVolta, registrarVolta, VOLTAS_INICIAIS, type Voltas } from "./treino";
+import { limitesDaVolta, registrarVolta, rotuloDasVoltas, VOLTAS_INICIAIS, type Voltas } from "@/shared/lib/treino";
+import { EscolhaDoTreino } from "@/shared/ui/EscolhaDoTreino";
 import { noTempoReal, rotuloDaVelocidade } from "./velocidade";
 import type { JogadorLocal, OpcoesDaPartida } from "./opcoesDaPartida";
 
@@ -539,10 +539,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
                 {replay && <span className="ml-2 rounded bg-primaria px-2 font-black">{replay.ateAgora === undefined ? "REPLAY" : "AO VIVO"}</span>}
                 {trecho && (
                   <span className="ml-2 rounded bg-primaria px-2 font-black">
-                    TREINO · {trecho.nome}
-                    {voltas.voltas > 0 && ` · volta ${voltas.voltas + 1}`}
-                    {voltas.ultima !== null && ` · última ${Math.round(voltas.ultima * 100)}%`}
-                    {voltas.melhor !== null && ` · melhor ${Math.round(voltas.melhor * 100)}%`}
+                    {["TREINO", trecho.nome, rotuloDasVoltas(voltas)].filter(Boolean).join(" · ")}
                   </span>
                 )}
                 {opcoes.mostrarFps && <ContadorDeFps loja={lojaDoFps} />}
@@ -599,7 +596,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         {treino && carregada && !trecho && (
           <EscolhaDoTreino
             trechos={trechos}
-            velocidade={velocidade}
+            aviso={`Velocidade: ${rotuloDaVelocidade(velocidade)}, nos modificadores.`}
             contagem={contagemNoTreino}
             aoContagem={setContagemNoTreino}
             aoComecar={(escolhido) => {

@@ -44,7 +44,7 @@ const arquivoOsz = (nome = "musica.osz") => new File([new Uint8Array(pacote({ "a
 
 function abrir() {
   const biblioteca = bibliotecaNaMemoria();
-  render(<TelaDoMania alavanca={<button type="button">alavanca</button>} abrirBiblioteca={async () => biblioteca} decodificar={async () => ({}) as AudioBuffer} />);
+  render(<TelaDoMania alavanca={<button type="button">alavanca</button>} abrirBiblioteca={async () => biblioteca} decodificar={async () => ({ duration: 10 }) as AudioBuffer} />);
   return { usuario: userEvent.setup() };
 }
 
@@ -91,6 +91,18 @@ describe("TelaDoMania", () => {
     expect(await screen.findByRole("region", { name: "Seleção de mapas" })).toBeInTheDocument();
   });
 
+  it("Treinar abre o mapa na escolha das partes, sem jogar o mapa inteiro", async () => {
+    const { usuario } = abrir();
+    await screen.findByText(/Nenhum mapa ainda/);
+    await usuario.upload(screen.getByLabelText("Arquivos .osz"), arquivoOsz());
+    await usuario.click(await screen.findByText("Música"));
+    await usuario.click(within(screen.getByRole("list", { name: "Dificuldades" })).getByRole("button", { name: /4K.*Hard/ }));
+    await usuario.click(screen.getByRole("button", { name: "Treinar" }));
+    expect(await screen.findByRole("heading", { name: "Treinar" })).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: /Sair da música/ }));
+    expect(await screen.findByRole("region", { name: "Seleção de mapas" })).toBeInTheDocument();
+  });
+
   it("baixa um mapa pela busca e ele entra na biblioteca como do osu!", async () => {
     const biblioteca = bibliotecaNaMemoria();
     const mapa = {
@@ -120,7 +132,7 @@ describe("TelaDoMania", () => {
     try {
       const biblioteca = bibliotecaNaMemoria();
       const mapa = { beatmapsetId: 7, titulo: "Musica", tituloUnicode: "Música", artista: "Banda", artistaUnicode: "Banda", mapper: "Mapper", status: "ranked", dificuldades: [] };
-      render(<TelaDoMania abrirBiblioteca={async () => biblioteca} buscar={async () => [mapa]} baixar={async () => arquivoOsz()} decodificar={async () => ({}) as AudioBuffer} />);
+      render(<TelaDoMania abrirBiblioteca={async () => biblioteca} buscar={async () => [mapa]} baixar={async () => arquivoOsz()} decodificar={async () => ({ duration: 10 }) as AudioBuffer} />);
       const usuario = userEvent.setup();
       await usuario.click(screen.getByRole("button", { name: "Buscar mapas" }));
       await usuario.click(await screen.findByRole("button", { name: "Baixar Musica" }));

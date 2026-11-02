@@ -17,7 +17,7 @@ import type { FiltrosDaBusca, MapaDaBusca, baixarOsz } from "./busca/api";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 
-type Tela = { nome: "selecao" } | { nome: "busca" } | { nome: "jogo"; mapa: MapaParaJogar } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado };
+type Tela = { nome: "selecao" } | { nome: "busca" } | { nome: "jogo"; mapa: MapaParaJogar; treino?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado };
 
 interface Props {
   /** A alavanca que volta para o Rock, no cabeçalho. */
@@ -63,7 +63,7 @@ export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania
   };
   const baixados = new Set((conjuntos ?? []).flatMap((c) => (c.origem === "osu" && c.beatmapsetId ? [c.beatmapsetId] : [])));
 
-  const aoJogar = async (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => {
+  const aoJogar = async (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva, treino = false) => {
     const pacote = await abrirPacote(conjunto.id);
     const lido = pacote?.mapas.find((m) => m.hash === dificuldade.hash);
     const audio = lido && pacote?.arquivos.get(lido.arquivoDeAudio);
@@ -72,6 +72,7 @@ export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania
     setSemente((Math.random() * 2 ** 32) >>> 0);
     setTela({
       nome: "jogo",
+      treino,
       mapa: {
         titulo: conjunto.tituloUnicode || conjunto.titulo,
         dificuldade: lido.dificuldade,
@@ -107,6 +108,7 @@ export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania
         semente={semente}
         opcoes={opcoes}
         decodificar={decodificar}
+        treino={tela.treino}
         aoSair={() => setTela({ nome: "selecao" })}
         aoTerminar={(resultado) => aoTerminar(tela.mapa, resultado)}
       />
@@ -147,7 +149,7 @@ export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania
       {tela.nome === "busca" ? (
         <TelaDeBuscaMania baixados={baixados} aoBaixar={aoBaixar} buscar={buscar} baixar={baixar} />
       ) : (
-        <TelaDeSelecaoMania conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} />
+        <TelaDeSelecaoMania conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} />
       )}
       <JanelaDeConfiguracoesMania aberta={configurando} aoFechar={() => setConfigurando(false)} opcoes={opcoes} aoMudar={mudarOpcoes} />
       <Avisos />
