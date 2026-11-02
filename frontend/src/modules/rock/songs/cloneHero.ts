@@ -65,6 +65,12 @@ export function lerSng(buffer: ArrayBufferLike): PacoteSng {
 
 const ANDAMENTO_PADRAO = 500000;
 
+export interface Compasso {
+  tick: number;
+  numerador: number;
+  denominador: number;
+}
+
 /** Converte as posições do chart (ticks) em segundos, seguindo as mudanças de andamento. */
 export class MapaDeTempo {
   private pontos: { tick: number; segundo: number; segundosPorTick: number }[] = [];
@@ -72,6 +78,7 @@ export class MapaDeTempo {
   constructor(
     private resolucao: number,
     andamentos: { tick: number; microssegundosPorSeminima: number }[],
+    private compassos: Compasso[] = [],
   ) {
     const ordenados = [...andamentos].sort((a, b) => a.tick - b.tick);
     if (!ordenados.length || ordenados[0].tick > 0) ordenados.unshift({ tick: 0, microssegundosPorSeminima: ANDAMENTO_PADRAO });
@@ -94,13 +101,21 @@ export class MapaDeTempo {
     return ponto.segundo + (tick - ponto.tick) * ponto.segundosPorTick;
   }
 
-  /** Uma batida por semínima, com tempo forte a cada 4. */
+  /** Uma batida por semínima, com tempo forte no começo de cada compasso (4/4 se o chart não disser). */
   batidas(ateSegundo: number): Batida[] {
+    const compassos = [...this.compassos].sort((a, b) => a.tick - b.tick);
+    if (!compassos.length || compassos[0].tick > 0) compassos.unshift({ tick: 0, numerador: 4, denominador: 4 });
+    const fortes = new Set<number>();
+    compassos.forEach((compasso, i) => {
+      const tamanho = Math.max(1, Math.round((compasso.numerador * 4 * this.resolucao) / compasso.denominador));
+      const ate = compassos[i + 1]?.tick ?? Infinity;
+      for (let tick = compasso.tick; tick < ate && this.emSegundos(tick) <= ateSegundo + 1e-9; tick += tamanho) fortes.add(tick);
+    });
     const batidas: Batida[] = [];
-    for (let tick = 0, i = 0; ; tick += this.resolucao, i++) {
+    for (let tick = 0; ; tick += this.resolucao) {
       const tempo = this.emSegundos(tick);
       if (tempo > ateSegundo + 1e-9) break;
-      batidas.push({ tempo, forte: i % 4 === 0 });
+      batidas.push({ tempo, forte: fortes.has(tick) });
     }
     return batidas;
   }
@@ -221,12 +236,16 @@ export function lerChart(conteudo: string): ChartLido {
   const resolucao = Number(musica.Resolution) || 192;
 
   const andamentos: { tick: number; microssegundosPorSeminima: number }[] = [];
+  const compassos: Compasso[] = [];
   for (const linha of secoes.get("SyncTrack") ?? []) {
     // "B" guarda o BPM vezes 1000.
     const encontrado = linha.match(/^(\d+)\s*=\s*B\s+(\d+)/);
     if (encontrado) andamentos.push({ tick: Number(encontrado[1]), microssegundosPorSeminima: 60e9 / Number(encontrado[2]) });
+    // "TS" traz o numerador e, opcional, o denominador como potência de 2 (3 = colcheia).
+    const compasso = linha.match(/^(\d+)\s*=\s*TS\s+(\d+)(?:\s+(\d+))?/);
+    if (compasso) compassos.push({ tick: Number(compasso[1]), numerador: Number(compasso[2]), denominador: 2 ** Number(compasso[3] ?? 2) });
   }
-  const mapa = new MapaDeTempo(resolucao, andamentos);
+  const mapa = new MapaDeTempo(resolucao, andamentos, compassos);
 
   const eventos = (secoes.get("Events") ?? []).flatMap((linha) => {
     const encontrado = linha.match(/^(\d+)\s*=\s*E\s+"?([^"]*)"?/);
@@ -287,6 +306,7 @@ export function lerMidi(dados: Uint8Array): ChartLido {
 
   let posicao = 8 + vista.getUint32(4);
   const andamentos: { tick: number; microssegundosPorSeminima: number }[] = [];
+  const compassos: Compasso[] = [];
   const faixas: {
     nome: string;
     notas: { tick: number; nota: number; duracao: number }[];
@@ -329,6 +349,7 @@ export function lerMidi(dados: Uint8Array): ChartLido {
         if (tipo === 0x03) nome = decodificador.decode(dados.subarray(p, p + tamanho));
         // Com este texto, a nota logo abaixo do verde de cada dificuldade é a aberta.
         if (tipo === 0x01 && decodificador.decode(dados.subarray(p, p + tamanho)).includes("ENHANCED_OPENS")) aberturasMelhoradas = true;
+        if (tipo === 0x58) compassos.push({ tick, numerador: dados[p], denominador: 2 ** dados[p + 1] });
         if (tipo === 0x51) andamentos.push({ tick, microssegundosPorSeminima: (dados[p] << 16) | (dados[p + 1] << 8) | dados[p + 2] });
         p += tamanho;
       } else if (status === 0xf0 || status === 0xf7) {
@@ -363,7 +384,7 @@ export function lerMidi(dados: Uint8Array): ChartLido {
     faixas.push({ nome: nome.trim().toUpperCase(), notas, aberturasMelhoradas, sysex, textos });
   }
 
-  const mapa = new MapaDeTempo(resolucao, andamentos);
+  const mapa = new MapaDeTempo(resolucao, andamentos, compassos);
   const porInstrumento = new Map<Instrumento, (typeof faixas)[number]>();
   for (const faixa of faixas) {
     const instrumento = FAIXAS_DO_MIDI[faixa.nome];

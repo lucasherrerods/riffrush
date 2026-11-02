@@ -29,6 +29,12 @@ describe("MapaDeTempo", () => {
     expect(batidas.map((b) => b.tempo)).toEqual([0, 0.5, 1, 1.5, 2]);
     expect(batidas.map((b) => b.forte)).toEqual([true, false, false, false, true]);
   });
+
+  it("o tempo forte segue as mudanças de compasso", () => {
+    // 3/4 até o tick 576 (um compasso), depois 6/8: compasso de 3 semínimas também.
+    const mapa = new MapaDeTempo(192, [], [{ tick: 0, numerador: 3, denominador: 4 }, { tick: 576, numerador: 2, denominador: 4 }]);
+    expect(mapa.batidas(3).map((b) => b.forte)).toEqual([true, false, false, true, false, true, false]);
+  });
 });
 
 const CHART = `[Song]
@@ -116,6 +122,18 @@ const chartCom = (notas: string) => lerChart(`[Song]
 {
 ${notas}
 }`).notas.guitarra!.expert!;
+
+describe("compasso", () => {
+  it("o .chart lê o TS do [SyncTrack], com o denominador em potência de 2", () => {
+    const chart = lerChart("[Song]\n{\n  Resolution = 192\n}\n[SyncTrack]\n{\n  0 = TS 3\n  576 = TS 6 3\n  0 = B 120000\n}\n");
+    expect(chart.mapa.batidas(3).filter((b) => b.forte).map((b) => b.tempo)).toEqual([0, 1.5, 3]);
+  });
+
+  it("o notes.mid lê a fórmula de compasso (meta 0x58)", () => {
+    const midi = construirMidi(480, [andamento(500000), { delta: 0, bytes: [0xff, 0x58, 4, 3, 2, 24, 8] }], [nomeDaFaixa("PART GUITAR"), notaLigada(480, 96), notaDesligada(10, 96)]);
+    expect(lerMidi(midi).mapa.batidas(3).filter((b) => b.forte).map((b) => b.tempo)).toEqual([0, 1.5, 3]);
+  });
+});
 
 describe("seções", () => {
   it("o .chart lê as seções do [Events] em segundos, em ordem, sem os outros eventos", () => {
