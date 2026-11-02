@@ -135,7 +135,12 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   const [trecho, setTrecho] = useState<Trecho | null>(null);
   const [contagemNoTreino, setContagemNoTreino] = useState(true);
   const [voltas, setVoltas] = useState<Voltas>(VOLTAS_INICIAIS);
-  const trechos = useMemo(() => (treino && carregada ? trechosDaMusica(carregada.secoes ?? [], carregada.batidas, carregada.duracao) : []), [treino, carregada]);
+  /** No treino livre: onde o jogador marcou o A, no tempo da música. */
+  const [marcaA, setMarcaA] = useState<number | null>(null);
+  const trechos = useMemo(
+    () => (treino && carregada ? [musicaInteira(carregada.duracao), ...trechosDaMusica(carregada.secoes ?? [], carregada.batidas, carregada.duracao)] : []),
+    [treino, carregada],
+  );
   // A música e a pista recomeçam juntas: as duas dependem só da sessão.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const sessao = useMemo(() => ({}), [carregada, rodada, opcoes, musica.id, dificuldade, instrumento, aoTerminar, inicioEmRede, replay, jogadores, trecho, contagemNoTreino]);
@@ -309,12 +314,13 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
       terminou = true;
       aoTerminar(resultado);
     };
-    /** Só no replay gravado: refaz a partida no instante escolhido e recomeça o áudio dali, pausado ou não. */
+    /** No replay gravado e no treino: refaz a partida no instante escolhido e recomeça o áudio dali, pausado ou não. */
     const irPara = (fracao: number) => irParaOTempo(fracao * duracao);
     const irParaOTempo = (tempo: number) => {
-      if (!replay || replay.ateAgora !== undefined || terminou) return;
+      if (!navegavel || terminou) return;
       const alvo = Math.max(0, Math.min(tempo, duracao - FOLGA_DO_FIM));
-      jogador.current.refazerEm(alvo);
+      if (volta) jogador.current.novaVolta(alvo);
+      else jogador.current.refazerEm(alvo);
       tocarDe(alvo);
     };
     /** Recomeça o áudio no segundo `alvo` da música; antes do zero, espera o que falta para ela começar. */
@@ -350,8 +356,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
         else pausar();
         return;
       }
-      // No replay as setas pulam na música, pausado ou não.
-      if (replay && SALTO_DAS_SETAS[evento.code]) {
+      // No replay e no treino as setas pulam na música, pausado ou não.
+      if (navegavel && SALTO_DAS_SETAS[evento.code] && !teclaDoJogo(evento.code)) {
         evento.preventDefault();
         irParaOTempo(relogio.agora() + SALTO_DAS_SETAS[evento.code]);
       }
@@ -400,6 +406,9 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessao]);
+
+  // A barra e as setas levam a partida para outro ponto no replay gravado e no treino.
+  const navegavel = (!!replay && replay.ateAgora === undefined) || !!trecho;
 
   const recomecar = () => {
     setPausado(false);
@@ -539,7 +548,24 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
                 {opcoes.mostrarFps && <ContadorDeFps loja={lojaDoFps} />}
               </p>
             </div>
-            <ProgressoDaMusica loja={loja} aoIrPara={replay && replay.ateAgora === undefined ? (fracao) => controles.current.irPara(fracao) : undefined} />
+            <ProgressoDaMusica loja={loja} aoIrPara={navegavel ? (fracao) => controles.current.irPara(fracao) : undefined} />
+            {trecho && (
+              <MarcasDoTreino
+                marcaA={marcaA}
+                emLoop={trecho.nome === NOME_DO_A_B}
+                aoMarcarA={() => setMarcaA(Math.max(0, relogio.agora() * velocidade))}
+                aoMarcarB={() => {
+                  const fim = relogio.agora() * velocidade;
+                  if (marcaA === null || fim <= marcaA) return;
+                  setMarcaA(null);
+                  setTrecho({ nome: NOME_DO_A_B, inicio: marcaA, fim });
+                }}
+                aoLimpar={() => {
+                  setMarcaA(null);
+                  setTrecho(musicaInteira(carregada.duracao));
+                }}
+              />
+            )}
             {espectadores > 0 && (
               <span
                 role="status"
@@ -601,6 +627,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
               trecho
                 ? () => {
                     setPausado(false);
+                    setMarcaA(null);
                     setTrecho(null);
                   }
                 : undefined
@@ -612,7 +639,32 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   );
 }
 
-/** No replay gravado a barra também é um controle: clicar ou arrastar leva a partida para aquele ponto. */
+const NOME_DO_A_B = "A–B";
+const musicaInteira = (duracao: number): Trecho => ({ nome: "Música inteira", inicio: 0, fim: duracao });
+
+/** Treino livre: marca o A, depois o B, e o trecho entre os dois passa a repetir. */
+function MarcasDoTreino({ marcaA, emLoop, aoMarcarA, aoMarcarB, aoLimpar }: { marcaA: number | null; emLoop: boolean; aoMarcarA: () => void; aoMarcarB: () => void; aoLimpar: () => void }) {
+  // As teclas são do jogo: os botões não ficam com o foco depois do clique.
+  const semFoco = (e: React.PointerEvent<HTMLButtonElement>) => e.currentTarget.blur();
+  if (emLoop) {
+    return (
+      <Button variant="ghost" size="sm" onPointerUp={semFoco} onClick={aoLimpar}>
+        Limpar A–B
+      </Button>
+    );
+  }
+  return marcaA === null ? (
+    <Button variant="ghost" size="sm" onPointerUp={semFoco} onClick={aoMarcarA}>
+      Marcar A
+    </Button>
+  ) : (
+    <Button variant="ghost" size="sm" onPointerUp={semFoco} onClick={aoMarcarB}>
+      Marcar B
+    </Button>
+  );
+}
+
+/** No replay gravado e no treino a barra também é um controle: clicar ou arrastar leva a partida para aquele ponto. */
 function ProgressoDaMusica({ loja, aoIrPara }: { loja: LojaDoHud<Hud>; aoIrPara?: (fracao: number) => void }) {
   const progresso = useLoja(loja, (h) => h.progresso);
   return (
