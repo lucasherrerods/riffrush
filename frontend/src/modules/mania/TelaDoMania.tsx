@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { ArrowLeft } from "lucide-react";
-import { LogoDoJogo } from "@/modules/menu";
+import { useEffect, useState, type ReactNode } from "react";
+import { ArrowLeft, Library, Search, Settings2 } from "lucide-react";
+import { LogoDoJogo, type PalcoCompartilhado } from "@/modules/menu";
 import { sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
@@ -11,18 +11,23 @@ import { useBibliotecaDoMania } from "./beatmaps/useBibliotecaDoMania";
 import { ResultadoDoMania } from "./gameplay/ResultadoDoMania";
 import { TelaDeJogoMania, type MapaParaJogar, type OpcoesDoMania, type ResultadoDoMania as Resultado } from "./gameplay/TelaDeJogoMania";
 import { TelaDeSelecaoMania } from "./selecao/TelaDeSelecaoMania";
-import { carregarConfiguracoesDoMania } from "./settings/configuracoesMania";
+import { carregarConfiguracoesDoMania, salvarConfiguracoesDoMania } from "./settings/configuracoesMania";
+import { JanelaDeConfiguracoesMania } from "./settings/JanelaDeConfiguracoesMania";
 import type { FiltrosDaBusca, MapaDaBusca, baixarOsz } from "./busca/api";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
+import { cn } from "@/shared/lib/utils";
+import { TeclaDoMania } from "./menu/TeclaDoMania";
+import { FundoDoMania } from "./menu/FundoDoMania";
+import { MenuDoMania } from "./menu/MenuDoMania";
 
-type Tela = { nome: "selecao" } | { nome: "busca" } | { nome: "jogo"; mapa: MapaParaJogar; treino?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado };
+type Tela = { nome: "menu" } | { nome: "selecao" } | { nome: "busca" } | { nome: "jogo"; mapa: MapaParaJogar; treino?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado };
 
 interface Props {
-  /** A tela em que abre: vem da opção escolhida no menu. */
-  telaInicial?: "selecao" | "busca";
-  /** Volta para o menu principal. */
-  aoVoltar?: () => void;
+  /** A alavanca que volta para o Rock, no cabeçalho. */
+  alavanca?: ReactNode;
+  /** Com a tela inicial compartilhada, o disco do app fica atrás dela no lugar do fundo do Mania. */
+  palco?: PalcoCompartilhado;
   /** Para os testes. */
   abrirBiblioteca?: () => Promise<BibliotecaDoMania>;
   decodificar?: (contexto: AudioContext, bytes: Uint8Array) => Promise<AudioBuffer>;
@@ -31,12 +36,19 @@ interface Props {
 }
 
 /** A raiz do Riff Rush Mania: seleção, partida e resultado. */
-export function TelaDoMania({ telaInicial = "selecao", aoVoltar, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
+export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
   const { conjuntos, importar, guardarBaixado, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
-  const [tela, setTela] = useState<Tela>({ nome: telaInicial });
+  const [tela, setTela] = useState<Tela>({ nome: "menu" });
   useAtualizacaoAutomatica(tela.nome === "jogo");
+  const aoMudarDeTela = palco?.aoMudarDeTela;
+  useEffect(() => aoMudarDeTela?.(tela.nome === "menu"), [tela.nome, aoMudarDeTela]);
   const [mods, setMods] = useState(0);
-  const [opcoes] = useState<OpcoesDoMania>(carregarConfiguracoesDoMania);
+  const [opcoes, setOpcoes] = useState<OpcoesDoMania>(carregarConfiguracoesDoMania);
+  const [configurando, setConfigurando] = useState(false);
+  const mudarOpcoes = (novas: OpcoesDoMania) => {
+    setOpcoes(novas);
+    salvarConfiguracoesDoMania(novas);
+  };
   const { conta } = useConta();
   const [xp, setXp] = useState<RegistroDaPartida | undefined>();
   // A semente do Random muda a cada partida; o replay a guarda.
@@ -123,32 +135,65 @@ export function TelaDoMania({ telaInicial = "selecao", aoVoltar, abrirBiblioteca
       />
     );
 
+  const janelaDeConfiguracoes = <JanelaDeConfiguracoesMania aberta={configurando} aoFechar={() => setConfigurando(false)} opcoes={opcoes} aoMudar={mudarOpcoes} />;
+
+  if (tela.nome === "menu")
+    return (
+      <main className={cn("relative flex h-dvh w-screen flex-col overflow-hidden text-texto", !palco && "bg-fundo")}>
+        {!palco && <FundoDoMania />}
+        <MenuDoMania alavanca={alavanca} troca={palco?.troca} aoMedirTitulo={palco?.aoMedirTitulo} aoJogar={() => setTela({ nome: "selecao" })} aoBuscar={() => setTela({ nome: "busca" })} aoConfigurar={() => setConfigurando(true)} />
+        {janelaDeConfiguracoes}
+        <Avisos />
+      </main>
+    );
+
+  const aba = (nome: "selecao" | "busca", rotulo: string, icone: typeof Library) => {
+    const ativa = tela.nome === nome;
+    return (
+      <button
+        type="button"
+        aria-current={ativa}
+        onClick={() => setTela({ nome })}
+        className={cn(
+          "chapa flex items-center gap-2 py-1 pr-4 pl-1.5 font-titulo text-lg tracking-wide uppercase transition-colors",
+          ativa ? "border-primaria bg-primaria text-texto" : "border-borda bg-superficie-elevada text-texto-suave hover:text-texto",
+        )}
+      >
+        <TeclaDoMania icone={icone} apagado={!ativa} className="h-6 w-5" />
+        {rotulo}
+      </button>
+    );
+  };
+
   return (
-    <main className="flex h-full flex-col bg-fundo text-texto">
-      <header className="flex items-center justify-between border-b border-borda px-6 py-4">
-        <LogoDoJogo modo="Mania" pequena />
+    <main className="relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
+      <FundoDoMania />
+      <header className="relative flex items-center justify-between gap-4 border-b border-borda bg-superficie-elevada/80 px-6 py-3 backdrop-blur-sm max-md:flex-wrap max-md:px-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => setTela({ nome: "menu" })} aria-label="Voltar ao menu">
+            <ArrowLeft aria-hidden />
+          </Button>
+          <LogoDoJogo modo="Mania" pequena fofa />
+        </div>
         <nav aria-label="Telas do Mania" className="flex gap-2">
-          <Button variant={tela.nome === "selecao" ? "default" : "secondary"} aria-current={tela.nome === "selecao"} onClick={() => setTela({ nome: "selecao" })}>
-            Biblioteca
-          </Button>
-          <Button variant={tela.nome === "busca" ? "default" : "secondary"} aria-current={tela.nome === "busca"} onClick={() => setTela({ nome: "busca" })}>
-            Buscar mapas
-          </Button>
+          {aba("selecao", "Biblioteca", Library)}
+          {aba("busca", "Buscar mapas", Search)}
         </nav>
         <div className="flex items-center gap-4">
-          {aoVoltar && (
-            <Button variant="secondary" onClick={aoVoltar}>
-              <ArrowLeft aria-hidden className="opacity-70" />
-              Menu
-            </Button>
-          )}
+          <button type="button" onClick={() => setConfigurando(true)} aria-label="Configurações do Mania" className="rounded-[4px]">
+            <TeclaDoMania icone={Settings2} className="h-9 w-8" />
+          </button>
+          {alavanca}
         </div>
       </header>
-      {tela.nome === "busca" ? (
-        <TelaDeBuscaMania baixados={baixados} aoBaixar={aoBaixar} buscar={buscar} baixar={baixar} />
-      ) : (
-        <TelaDeSelecaoMania conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} />
-      )}
+      <div className="relative min-h-0 flex-1">
+        {tela.nome === "busca" ? (
+          <TelaDeBuscaMania baixados={baixados} aoBaixar={aoBaixar} buscar={buscar} baixar={baixar} />
+        ) : (
+          <TelaDeSelecaoMania conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} />
+        )}
+      </div>
+      {janelaDeConfiguracoes}
       <Avisos />
     </main>
   );

@@ -6,8 +6,7 @@ import { iniciarControle, nomeDoBotao, useControleConectado } from "@/modules/ga
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 import { EntradaDaPartida, TelaDeJogo, type JogadorLocal, type Resultado, desempacotarReplay, type Replay, type OpcoesDaPartida } from "@/modules/rock/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/rock/library";
-import { Fundo, MenuPrincipal } from "@/modules/menu";
-import { ConfiguracoesDoMania, TelaDoMania } from "@/modules/mania";
+import { Fundo, MenuPrincipal, type PalcoCompartilhado } from "@/modules/menu";
 import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
 import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa, estaEmTelaCheia, modoDoF11 } from "@/modules/platform";
@@ -22,14 +21,13 @@ import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, 
 import { PlacarAoVivo, RankingDaSelecao, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
 import { BotaoDeAmigos, ConvitesDeAmigos, PainelDeAmigos, useIdsDosAmigos } from "@/modules/amigos";
 import { useTeclado } from "@/shared/hooks/useTeclado";
-import { cn } from "@/shared/lib/utils";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { TelaCarregando } from "@/shared/ui/TelaCarregando";
-import type { Modo } from "./modo";
+import { cn } from "@/shared/lib/utils";
 import { mesmasOpcoes, opcoesDaPartida } from "./opcoes";
 
-type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "espectador" | "telaDividida" | "resultadoDividido" | "maniaSelecao" | "maniaBusca";
+type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "espectador" | "telaDividida" | "resultadoDividido";
 
 interface PartidaEmRede {
   musica: Musica;
@@ -40,13 +38,12 @@ interface PartidaEmRede {
   rodada?: string;
 }
 
-/** O menu principal e o Riff Rush Rock. No modo Mania, o mesmo menu abre as telas do Mania; a `alavanca` fica embaixo da logo. */
-export function AppDoRock({ modo = "rock", alavanca }: { modo?: Modo; alavanca?: ReactNode } = {}) {
+/** O Riff Rush Rock inteiro. A `alavanca` aparece embaixo da logo, na tela inicial. */
+export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: PalcoCompartilhado } = {}) {
   const [tela, setTela] = useState<Tela>(() => documentoDoEndereco(location.pathname) ?? "menu");
-  const [configurandoMania, setConfigurandoMania] = useState(false);
-  const noMania = tela === "maniaSelecao" || tela === "maniaBusca";
-  // Nas telas do Mania, quem cuida da atualização é o próprio Mania, que sabe quando há partida.
-  useAtualizacaoAutomatica(tela === "jogo" || tela === "espectador" || noMania);
+  const aoMudarDeTela = palco?.aoMudarDeTela;
+  useEffect(() => aoMudarDeTela?.(tela === "menu"), [tela, aoMudarDeTela]);
+  useAtualizacaoAutomatica(tela === "jogo" || tela === "espectador");
   /** md5 do chart do Encore aberto na janela de baixar do leaderboard. */
   const [chartDoLeaderboard, setChartDoLeaderboard] = useState<string | null>(null);
   // Lembrada aqui para o leaderboard voltar nela depois de abrir uma partida.
@@ -141,7 +138,7 @@ export function AppDoRock({ modo = "rock", alavanca }: { modo?: Modo; alavanca?:
   }, [configuracoes, comControle]);
 
   useTeclado((evento) => {
-    if (evento.code !== "Tab" || !evento.shiftKey || noMania) return;
+    if (evento.code !== "Tab" || !evento.shiftKey) return;
     // Sem o preventDefault, o navegador também pularia o foco para o botão anterior.
     evento.preventDefault();
     const modoCompetitivo = !configuracoes.modoCompetitivo;
@@ -229,8 +226,8 @@ export function AppDoRock({ modo = "rock", alavanca }: { modo?: Modo; alavanca?:
   // Assistir ao vivo também é uma partida na tela: sem o player do menu e sem o cabeçalho.
   const naPista = tela === "jogo" || tela === "espectador";
   useEffect(() => {
-    playerDeMusica.suspender(naPista || noMania);
-  }, [naPista, noMania]);
+    playerDeMusica.suspender(naPista);
+  }, [naPista]);
 
   // Só aparece online quem aceitou, com conta e com o relay configurado.
   const online = presencaDisponivel && contasLigadas && !!conta && configuracoes.mostrarOnline === true;
@@ -333,7 +330,6 @@ export function AppDoRock({ modo = "rock", alavanca }: { modo?: Modo; alavanca?:
 
   /** Abre do cabeçalho, em qualquer tela: o Voltar leva para onde estava. */
   const abrirConfiguracoes = () => {
-    if (modo === "mania") return setConfigurandoMania(true);
     if (tela === "configuracoes") return;
     setVoltarDasConfiguracoesPara(tela);
     setTela("configuracoes");
@@ -456,10 +452,11 @@ export function AppDoRock({ modo = "rock", alavanca }: { modo?: Modo; alavanca?:
   };
 
   return (
-    <main className={cn("relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto", modo === "rock" && "dark")}>
+    <main className={cn("dark relative flex h-dvh w-screen flex-col overflow-hidden text-texto", !(palco && tela === "menu") && "bg-fundo")}>
       {/* As telas menos usadas chegam só quando abertas: a abertura do jogo baixa menos código. */}
       <Suspense fallback={<TelaCarregando />}>
-      {!noMania && !(naPista && configuracoes.modoCompetitivo) && <Fundo tocando={naPista} />}
+      {/* Na tela inicial compartilhada, o disco do app faz o papel do fundo. */}
+      {!(naPista && configuracoes.modoCompetitivo) && !(palco && tela === "menu") && <Fundo tocando={naPista} />}
       {entrada && tela === "jogo" && (
         <EntradaDaPartida
           key={partida}
@@ -471,7 +468,7 @@ export function AppDoRock({ modo = "rock", alavanca }: { modo?: Modo; alavanca?:
           aoTerminar={() => setEntrada(null)}
         />
       )}
-      {!naPista && !noMania && (
+      {!naPista && (
         <CabecalhoDoPlayerDeMusica volume={volumeGeral} aoMudarVolume={definirVolumeGeral}>
           {contasLigadas && <BotaoDeAmigos aberto={amigosAbertos} aoAlternar={() => setAmigosAbertos((abertos) => !abertos)} />}
           {contasLigadas && (
@@ -497,15 +494,14 @@ export function AppDoRock({ modo = "rock", alavanca }: { modo?: Modo; alavanca?:
             transition={{ duration: 0.2 }}
             className="absolute inset-0"
           >
-            {noMania && <TelaDoMania telaInicial={tela === "maniaBusca" ? "busca" : "selecao"} aoVoltar={() => setTela("menu")} />}
             {tela === "menu" && (
               <MenuPrincipal
-                modo={modo}
                 volumeDosEfeitos={configuracoes.volumeDosEfeitos}
                 noCelular={ehClienteWebDaSala()}
                 alavanca={alavanca}
+                troca={palco?.troca}
+                aoMedirTitulo={palco?.aoMedirTitulo}
                 aoJogar={() => {
-                  if (modo === "mania") return setTela("maniaSelecao");
                   setDivididos(null);
                   setTela("selecao");
                 }}
@@ -525,7 +521,6 @@ export function AppDoRock({ modo = "rock", alavanca }: { modo?: Modo; alavanca?:
                   ) : undefined
                 }
                 aoBuscarMusicas={() => {
-                  if (modo === "mania") return setTela("maniaBusca");
                   setVoltarDaBuscaPara("menu");
                   setTela("buscaDeMusicas");
                 }}
@@ -790,12 +785,11 @@ export function AppDoRock({ modo = "rock", alavanca }: { modo?: Modo; alavanca?:
           )}
         </AnimatePresence>
       </div>
-      {configurandoMania && <ConfiguracoesDoMania aoFechar={() => setConfigurandoMania(false)} />}
       <IndicadorDeVolume />
-      <SoltarParaImportar ativo={!naPista && modo === "rock"} aoSoltar={(arquivos) => void importar(arquivos)} />
+      <SoltarParaImportar ativo={!naPista} aoSoltar={(arquivos) => void importar(arquivos)} />
       <ProgressoDaImportacao progresso={progresso} />
-      {contasLigadas && modo === "rock" && <ConvitesDeAmigos aoEntrar={entrarNaSalaDoAmigo} />}
-      {!noMania && <Avisos />}
+      {contasLigadas && <ConvitesDeAmigos aoEntrar={entrarNaSalaDoAmigo} />}
+      <Avisos />
       </Suspense>
     </main>
   );

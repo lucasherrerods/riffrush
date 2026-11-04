@@ -1,52 +1,70 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useReducedMotion } from "framer-motion";
-import { tocarEfeito } from "@/modules/audio";
-import { IDENTIDADE_DO_MANIA } from "@/modules/mania";
-import { AlavancaDeModo, TransicaoDeModo, COBERTURA_DA_TRANSICAO_MS, DURACAO_DA_TRANSICAO_MS } from "@/modules/menu";
+import { FundoDoMania, IDENTIDADE_DO_MANIA, TelaDoMania, carregarTelaDoMania } from "@/modules/mania";
+import { AlavancaDeModo, Fundo, LogoDoJogo } from "@/modules/menu";
 import { IDENTIDADE_DO_ROCK } from "@/modules/rock";
-import { carregarConfiguracoes } from "@/modules/settings";
 import { definirTema } from "@/shared/styles/tema";
 import { TEMAS } from "@/shared/styles/tokens";
+import { TelaCarregando } from "@/shared/ui/TelaCarregando";
+import { Volvelle, type LadoDaVolvelle, type PosicaoNaTela } from "@/shared/ui/volvelle/Volvelle";
 import { AppDoRock } from "./AppDoRock";
 import { MANIA_LIGADO, trocarModo, useModo, type Modo } from "./modo";
+import { useTrocaDeModo } from "./useTrocaDeModo";
 
 const IDENTIDADES = { rock: IDENTIDADE_DO_ROCK, mania: IDENTIDADE_DO_MANIA };
-const ROTULOS: Record<Modo, string> = { rock: "Rock", mania: "Mania" };
 
-/** O menu é um só: o App veste a interface com o tema do modo e faz a transição entre eles. */
+/** A cópia do título da tela inicial que vai no disco. */
+function TituloDaCena({ modo, subtitulo, fofa }: { modo: string; subtitulo: string; fofa?: boolean }) {
+  return (
+    <>
+      <LogoDoJogo modo={modo} fofa={fofa} />
+      <p className="text-center text-xs font-bold tracking-[0.4em] text-texto-suave max-md:tracking-[0.15em]">{subtitulo}</p>
+    </>
+  );
+}
+
+/** O cenário de cada modo no disco da troca: o mesmo fundo da tela inicial, com o tema dele. */
+const CENAS: Record<Modo, LadoDaVolvelle> = {
+  rock: { cena: <Fundo />, tema: TEMAS[IDENTIDADE_DO_ROCK.tema], titulo: <TituloDaCena modo="Rock" subtitulo="O PALCO É SEU" /> },
+  mania: { cena: <FundoDoMania />, tema: TEMAS[IDENTIDADE_DO_MANIA.tema], titulo: <TituloDaCena modo="Mania" subtitulo="SIGA O RITMO" fofa /> },
+};
+
+const preCarregar = (modo: Modo) => {
+  if (modo === "mania") void carregarTelaDoMania();
+};
+
+/** Cada modo é um jogo à parte: o App só escolhe qual montar e veste a interface com o tema dele. */
 export function App({ maniaLigado = MANIA_LIGADO }: { maniaLigado?: boolean } = {}) {
   const modo = useModo();
-  const semMovimento = useReducedMotion();
-  const [destino, setDestino] = useState<Modo | null>(null);
   const identidade = IDENTIDADES[modo];
   useEffect(() => {
     definirTema(TEMAS[identidade.tema]);
     document.title = identidade.nome;
   }, [identidade]);
-
-  // O modo só troca com a tela coberta, para o tema novo não aparecer antes da hora.
-  useEffect(() => {
-    if (!destino) return;
-    const cobrir = setTimeout(() => trocarModo(destino), COBERTURA_DA_TRANSICAO_MS);
-    const terminar = setTimeout(() => setDestino(null), DURACAO_DA_TRANSICAO_MS);
-    return () => {
-      clearTimeout(cobrir);
-      clearTimeout(terminar);
-    };
-  }, [destino]);
-
-  const girar = (para: Modo) => {
-    if (destino) return;
-    if (semMovimento) return trocarModo(para);
-    tocarEfeito("selecionar", carregarConfiguracoes().volumeDosEfeitos);
-    setDestino(para);
-  };
-
-  const alavanca = maniaLigado ? <AlavancaDeModo modo={destino ?? modo} aoTrocar={girar} /> : undefined;
+  const semMovimento = useReducedMotion() ?? false;
+  const { giro, pedir } = useTrocaDeModo(modo, { trocar: trocarModo, preCarregar, semMovimento });
+  const alavanca = maniaLigado ? <AlavancaDeModo modo={modo} aoTrocar={pedir} /> : undefined;
+  // O disco fica atrás da tela inicial dos dois modos; nas outras telas cada modo tem o próprio fundo.
+  const [naTelaInicial, setNaTelaInicial] = useState(true);
+  const [posicaoDoTitulo, setPosicaoDoTitulo] = useState<PosicaoNaTela>();
+  const troca = giro ? { fase: giro.fase, sentido: giro.sentido } : undefined;
+  const palco = useMemo(
+    () => ({ troca, aoMudarDeTela: setNaTelaInicial, aoMedirTitulo: (r: DOMRect) => setPosicaoDoTitulo({ x: r.left, y: r.top, largura: r.width }) }),
+    [troca?.fase, troca?.sentido], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const mostrarDisco = naTelaInicial || !!giro;
+  // O disco já gira para o destino no clique, enquanto as opções saem voando.
+  const virada = (giro ? giro.para : modo) === "mania";
   return (
     <>
-      <AppDoRock modo={modo} alavanca={alavanca} />
-      {destino && <TransicaoDeModo nome={ROTULOS[destino]} cores={TEMAS[IDENTIDADES[destino].tema].cores} />}
+      {mostrarDisco && <Volvelle cima={CENAS.rock} baixo={CENAS.mania} virada={virada} girando={!!giro} posicaoDoTitulo={posicaoDoTitulo} />}
+      {modo === "mania" ? (
+        <Suspense fallback={<TelaCarregando />}>
+          <TelaDoMania alavanca={alavanca} palco={palco} />
+        </Suspense>
+      ) : (
+        <AppDoRock alavanca={alavanca} palco={palco} />
+      )}
     </>
   );
 }

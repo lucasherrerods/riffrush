@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
 @import "@fontsource/bebas-neue";
+@import "@fontsource/fredoka/600.css";
 @import "./fontes/rubik-dirt.css";
 @import "./identidade.css";
 
@@ -354,4 +355,85 @@ body {
   @media (width < 48rem) {
     font-size: var(--text-lg);
   }
+}
+
+/* ---------- Fundo do Mania ---------- */
+
+/* A nota desce pela coluna inteira, de cima até passar do teclado. */
+.nota-cai {
+  top: 0;
+  animation: nota-cai linear infinite;
+}
+
+@keyframes nota-cai {
+  from {
+    transform: translateY(-220px);
+  }
+  to {
+    transform: translateY(100vh);
+  }
+}
+
+/* O receptor da coluna acende na batida e volta a apagar. */
+.receptor-acende {
+  animation: receptor-acende 2.3s ease-out infinite;
+}
+
+@keyframes receptor-acende {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  6% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 0.55;
+  }
+}
+
+/* As claves sobem e descem devagar, balançando um pouco. */
+.clave-flutua {
+  rotate: var(--giro, 0deg);
+  animation: clave-flutua 6s ease-in-out infinite alternate;
+}
+
+@keyframes clave-flutua {
+  from {
+    transform: translateY(-14px) rotate(-5deg);
+  }
+  to {
+    transform: translateY(14px) rotate(5deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clave-flutua,
+  .nota-cai,
+  .receptor-acende {
+    animation: none;
+  }
+}
+
+/* O nome do jogo no Mania: fonte arredondada e fofa, reta e sem o desgaste do letreiro do Rock. */
+.titulo-fofo {
+  font-family: "Fredoka", var(--font-sans);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  transform: none;
+  mask-image: none;
+}
+
+/* ---------- Volvelle: o disco que troca de modo ---------- */
+
+/* Durante o giro, as animações de dentro das cenas param e o desfoque sai:
+   o disco inteiro vira uma camada só, e o giro corre liso na GPU. */
+.volvelle[data-girando] * {
+  animation-play-state: paused !important;
+}
+
+.volvelle[data-girando] .holofote {
+  filter: none;
+  mix-blend-mode: normal;
 }
