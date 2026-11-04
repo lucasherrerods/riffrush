@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
 @import "@fontsource/bebas-neue";
+@import "@fontsource/fredoka/600.css";
 @import "./fontes/rubik-dirt.css";
 @import "./identidade.css";
 
@@ -358,63 +359,68 @@ body {
 
 /* ---------- Fundo do Mania ---------- */
 
-/* Triângulos subindo e girando devagar, o fundo clássico do osu!. */
-.triangulo {
-  bottom: -120px;
-  animation: triangulo-sobe linear infinite;
+/* A nota desce pela coluna inteira, de cima até passar do teclado. */
+.nota-cai {
+  top: 0;
+  animation: nota-cai linear infinite;
 }
 
-@keyframes triangulo-sobe {
+@keyframes nota-cai {
   from {
-    transform: translateY(0) rotate(0deg);
-    opacity: 0;
+    transform: translateY(-220px);
   }
-  10% {
+  to {
+    transform: translateY(100vh);
+  }
+}
+
+/* O receptor da coluna acende na batida e volta a apagar. */
+.receptor-acende {
+  animation: receptor-acende 2.3s ease-out infinite;
+}
+
+@keyframes receptor-acende {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  6% {
     opacity: 1;
   }
-  to {
-    transform: translateY(-115vh) rotate(40deg);
-    opacity: 0.2;
+  20% {
+    opacity: 0.55;
   }
 }
 
-/* O anel de aproximação: fecha sobre o círculo de acerto e some no toque. */
-.aproximacao {
-  animation: aproximacao 2.4s ease-in infinite;
+/* As claves sobem e descem devagar, balançando um pouco. */
+.clave-flutua {
+  rotate: var(--giro, 0deg);
+  animation: clave-flutua 6s ease-in-out infinite alternate;
 }
 
-@keyframes aproximacao {
+@keyframes clave-flutua {
   from {
-    transform: scale(2.4);
-    opacity: 0;
-  }
-  70% {
-    opacity: 1;
+    transform: translateY(-14px) rotate(-5deg);
   }
   to {
-    transform: scale(1);
-    opacity: 0;
-  }
-}
-
-/* O anel atrás da logo pulsa na batida, como o cookie do osu!. */
-.anel-do-mania {
-  animation: anel-pulsa 0.9s ease-out infinite;
-}
-
-@keyframes anel-pulsa {
-  from {
-    scale: 1.03;
-  }
-  to {
-    scale: 1;
+    transform: translateY(14px) rotate(5deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .triangulo,
-  .aproximacao,
-  .anel-do-mania {
+  .clave-flutua,
+  .nota-cai,
+  .receptor-acende {
     animation: none;
   }
+}
+
+/* O nome do jogo no Mania: fonte arredondada e fofa, reta e sem o desgaste do letreiro do Rock. */
+.titulo-fofo {
+  font-family: "Fredoka", var(--font-sans);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  transform: none;
+  mask-image: none;
 }

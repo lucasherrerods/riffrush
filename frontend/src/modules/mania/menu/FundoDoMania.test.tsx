@@ -7,14 +7,21 @@ describe("FundoDoMania", () => {
     expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("tem os triângulos subindo e os círculos de acerto pulsando, como no osu!", () => {
+  it("tem as colunas do mania com notas e notas longas caindo até a linha de julgamento", () => {
     const { container } = render(<FundoDoMania />);
-    expect(container.querySelectorAll("[data-parte='triangulo']").length).toBeGreaterThanOrEqual(8);
-    expect(container.querySelectorAll("[data-parte='aproximacao']").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll("[data-parte='coluna']")).toHaveLength(7);
+    expect(container.querySelectorAll("[data-parte='nota']").length).toBeGreaterThanOrEqual(7);
+    expect(container.querySelectorAll("[data-parte='nota-longa']").length).toBeGreaterThan(0);
+    expect(container.querySelector("[data-parte='julgamento']")).toBeInTheDocument();
   });
 
-  it("desenha as colunas do mania convergindo no chão", () => {
+  it("tem um receptor para cada coluna, embaixo da linha de julgamento", () => {
     const { container } = render(<FundoDoMania />);
-    expect(container.querySelectorAll("[data-parte='coluna']").length).toBe(7);
+    expect(container.querySelectorAll("[data-parte='receptor']")).toHaveLength(7);
+  });
+
+  it("não tem os círculos de acerto do osu! padrão", () => {
+    const { container } = render(<FundoDoMania />);
+    expect(container.querySelector("[data-parte='aproximacao']")).not.toBeInTheDocument();
   });
 });

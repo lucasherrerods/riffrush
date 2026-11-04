@@ -17,7 +17,7 @@ import type { FiltrosDaBusca, MapaDaBusca, baixarOsz } from "./busca/api";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 import { cn } from "@/shared/lib/utils";
-import { CirculoDeAcerto } from "./menu/CirculoDeAcerto";
+import { TeclaDoMania } from "./menu/TeclaDoMania";
 import { FundoDoMania } from "./menu/FundoDoMania";
 import { MenuDoMania } from "./menu/MenuDoMania";
 
@@ -155,7 +155,7 @@ export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania
           ativa ? "border-primaria bg-primaria text-texto" : "border-borda bg-superficie-elevada text-texto-suave hover:text-texto",
         )}
       >
-        <CirculoDeAcerto icone={icone} apagado={!ativa} className="size-6" />
+        <TeclaDoMania icone={icone} apagado={!ativa} className="h-6 w-5" />
         {rotulo}
       </button>
     );
@@ -169,15 +169,15 @@ export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania
           <Button variant="ghost" size="icon" onClick={() => setTela({ nome: "menu" })} aria-label="Voltar ao menu">
             <ArrowLeft aria-hidden />
           </Button>
-          <LogoDoJogo modo="Mania" pequena />
+          <LogoDoJogo modo="Mania" pequena fofa />
         </div>
         <nav aria-label="Telas do Mania" className="flex gap-2">
           {aba("selecao", "Biblioteca", Library)}
           {aba("busca", "Buscar mapas", Search)}
         </nav>
         <div className="flex items-center gap-4">
-          <button type="button" onClick={() => setConfigurando(true)} aria-label="Configurações do Mania" className="rounded-full">
-            <CirculoDeAcerto icone={Settings2} className="size-9" />
+          <button type="button" onClick={() => setConfigurando(true)} aria-label="Configurações do Mania" className="rounded-[4px]">
+            <TeclaDoMania icone={Settings2} className="h-9 w-8" />
           </button>
           {alavanca}
         </div>

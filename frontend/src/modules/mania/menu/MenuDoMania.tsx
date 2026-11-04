@@ -4,7 +4,7 @@ import { Play, Search, Settings2, type LucideIcon } from "lucide-react";
 import { LogoDoJogo } from "@/modules/menu";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
-import { CirculoDeAcerto } from "./CirculoDeAcerto";
+import { TeclaDoMania } from "./TeclaDoMania";
 
 interface Props {
   aoJogar: () => void;
@@ -48,7 +48,7 @@ export function MenuDoMania({ aoJogar, aoBuscar, aoConfigurar, alavanca }: Props
         transition={{ type: "spring", stiffness: 120, damping: 12 }}
         className="mt-auto flex flex-col items-center gap-2"
       >
-        <LogoDoJogo modo="Mania" />
+        <LogoDoJogo modo="Mania" fofa />
         <p className="text-center text-xs font-bold tracking-[0.4em] text-texto-suave max-md:tracking-[0.15em]">SIGA O RITMO</p>
         {alavanca}
       </motion.div>
@@ -70,7 +70,7 @@ export function MenuDoMania({ aoJogar, aoBuscar, aoConfigurar, alavanca }: Props
                 ativo ? "border-primaria bg-primaria text-texto" : "border-borda bg-superficie-elevada text-texto-suave",
               )}
             >
-              <CirculoDeAcerto icone={item.icone} apagado={!ativo} className={ativo ? "ring-texto/60" : undefined} />
+              <TeclaDoMania icone={item.icone} apagado={!ativo} />
               {item.rotulo}
             </motion.button>
           );
