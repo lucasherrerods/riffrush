@@ -105,7 +105,7 @@ export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, a
                             type="button"
                             aria-pressed={selecionada}
                             onClick={() => setEscolhida({ conjunto, dificuldade })}
-                            className={cn("w-full px-4 py-2 text-left transition-colors hover:bg-primaria/10", selecionada && "bg-primaria text-superficie-elevada hover:bg-primaria [&_.text-texto-suave]:text-superficie-elevada/80")}
+                            className={cn("w-full px-4 py-2 text-left transition-colors hover:bg-primaria/10", selecionada && "bg-primaria text-texto hover:bg-primaria [&_.text-texto-suave]:text-texto/80")}
                           >
                             <RotuloDaDificuldade conjunto={conjunto} dificuldade={dificuldade} />
                           </button>
@@ -127,7 +127,7 @@ export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, a
             Treinar
           </Button>
         )}
-        <Button className="h-10 px-8 font-titulo text-lg tracking-wide text-superficie-elevada uppercase" disabled={!escolhida} onClick={() => escolhida && aoJogar(escolhida.conjunto, escolhida.dificuldade)}>
+        <Button className="h-10 px-8 font-titulo text-lg tracking-wide text-texto uppercase" disabled={!escolhida} onClick={() => escolhida && aoJogar(escolhida.conjunto, escolhida.dificuldade)}>
           Jogar
         </Button>
       </div>

@@ -14,7 +14,7 @@ const CIRCULOS = [
 /**
  * O palco do Mania no desenho do osu!: fundo claro, triângulos subindo devagar,
  * um anel grande atrás da logo, círculos de acerto com o anel de aproximação
- * e as sete colunas do mania convergindo no chão. Tudo em rosa e branco, do tema.
+ * e as sete colunas do mania convergindo no chão. Tudo em rosa sobre o roxo uva, do tema.
  */
 export function FundoDoMania() {
   return (
@@ -42,11 +42,11 @@ export function FundoDoMania() {
 
       {/* O anel grande atrás da logo, que pulsa como o cookie do osu! na batida. */}
       <div className="anel-do-mania absolute top-[10%] left-1/2 size-[440px] -translate-x-1/2 rounded-full border-[26px] border-primaria/25 max-md:size-[300px] max-md:border-[16px]" />
-      <div className="absolute top-[calc(10%+38px)] left-1/2 size-[364px] -translate-x-1/2 rounded-full border-2 border-superficie-elevada max-md:top-[calc(10%+26px)] max-md:size-[248px]" />
+      <div className="absolute top-[calc(10%+38px)] left-1/2 size-[364px] -translate-x-1/2 rounded-full border-2 border-texto max-md:top-[calc(10%+26px)] max-md:size-[248px]" />
 
       {CIRCULOS.map((c) => (
         <div key={c.esquerda} className="absolute max-md:hidden" style={{ left: c.esquerda, top: c.topo, width: c.tamanho, height: c.tamanho }}>
-          <div className="absolute inset-0 rounded-full border-4 border-superficie-elevada bg-primaria/70" />
+          <div className="absolute inset-0 rounded-full border-4 border-texto bg-primaria/70" />
           <div data-parte="aproximacao" className="aproximacao absolute inset-0 rounded-full border-2 border-primaria" style={{ animationDelay: `${c.atraso}s` }} />
         </div>
       ))}

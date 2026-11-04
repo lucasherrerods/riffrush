@@ -67,10 +67,10 @@ export function MenuDoMania({ aoJogar, aoBuscar, aoConfigurar, alavanca }: Props
               onClick={item.acao}
               className={cn(
                 "chapa flex items-center gap-3 px-2 py-1.5 text-left font-titulo text-lg tracking-wide uppercase transition-colors max-md:py-2 max-md:text-xl",
-                ativo ? "border-primaria bg-primaria text-superficie-elevada" : "border-borda bg-superficie-elevada text-texto-suave",
+                ativo ? "border-primaria bg-primaria text-texto" : "border-borda bg-superficie-elevada text-texto-suave",
               )}
             >
-              <CirculoDeAcerto icone={item.icone} apagado={!ativo} className={ativo ? "ring-superficie-elevada/60" : undefined} />
+              <CirculoDeAcerto icone={item.icone} apagado={!ativo} className={ativo ? "ring-texto/60" : undefined} />
               {item.rotulo}
             </motion.button>
           );

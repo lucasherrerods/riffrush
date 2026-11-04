@@ -152,7 +152,7 @@ export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania
         onClick={() => setTela({ nome })}
         className={cn(
           "chapa flex items-center gap-2 py-1 pr-4 pl-1.5 font-titulo text-lg tracking-wide uppercase transition-colors",
-          ativa ? "border-primaria bg-primaria text-superficie-elevada" : "border-borda bg-superficie-elevada text-texto-suave hover:text-texto",
+          ativa ? "border-primaria bg-primaria text-texto" : "border-borda bg-superficie-elevada text-texto-suave hover:text-texto",
         )}
       >
         <CirculoDeAcerto icone={icone} apagado={!ativa} className="size-6" />

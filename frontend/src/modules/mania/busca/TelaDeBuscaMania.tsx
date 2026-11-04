@@ -61,7 +61,7 @@ export function TelaDeBuscaMania({ baixados, aoBaixar, buscar = buscarMapas, bai
   };
 
   const chip = (ligado: boolean) =>
-    cn("rounded-full border-2 px-4 py-1 font-titulo text-base tracking-wide uppercase transition-colors", ligado ? "border-superficie-elevada bg-primaria text-superficie-elevada ring-2 ring-primaria" : "border-borda bg-superficie-elevada text-texto-suave hover:text-texto");
+    cn("rounded-full border-2 px-4 py-1 font-titulo text-base tracking-wide uppercase transition-colors", ligado ? "border-texto bg-primaria text-texto ring-2 ring-primaria" : "border-borda bg-superficie-elevada text-texto-suave hover:text-texto");
 
   return (
     <section aria-label="Busca de mapas" className="respiro-de-tela flex h-full flex-col">
@@ -115,7 +115,7 @@ export function TelaDeBuscaMania({ baixados, aoBaixar, buscar = buscarMapas, bai
                   Baixado
                 </span>
               ) : (
-                <Button className="font-titulo text-base tracking-wide text-superficie-elevada uppercase" disabled={progresso !== undefined} onClick={() => aoClicarBaixar(mapa)} aria-label={`Baixar ${mapa.titulo}`}>
+                <Button className="font-titulo text-base tracking-wide text-texto uppercase" disabled={progresso !== undefined} onClick={() => aoClicarBaixar(mapa)} aria-label={`Baixar ${mapa.titulo}`}>
                   <Download aria-hidden />
                   Baixar
                 </Button>

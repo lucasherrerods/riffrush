@@ -8,7 +8,7 @@ export function CirculoDeAcerto({ icone: Icone, apagado = false, className }: { 
       data-parte="circulo"
       aria-hidden
       className={cn(
-        "grid size-7 shrink-0 place-items-center rounded-full border-2 border-superficie-elevada bg-primaria text-superficie-elevada ring-1 ring-primaria/40 transition-opacity",
+        "grid size-7 shrink-0 place-items-center rounded-full border-2 border-texto bg-primaria text-texto ring-1 ring-primaria/40 transition-opacity",
         apagado && "opacity-60",
         className,
       )}

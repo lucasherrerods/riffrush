@@ -34,7 +34,7 @@ describe("MenuDoMania", () => {
     expect(aoBuscar).toHaveBeenCalledOnce();
   });
 
-  it("os ícones são círculos de acerto do osu!, em rosa e branco", () => {
+  it("os ícones são círculos de acerto do osu!, em rosa e branco sobre o roxo", () => {
     const { container } = render(<MenuDoMania aoJogar={() => {}} aoBuscar={() => {}} aoConfigurar={() => {}} />);
     expect(container.querySelectorAll("nav [data-parte='circulo']")).toHaveLength(3);
   });
