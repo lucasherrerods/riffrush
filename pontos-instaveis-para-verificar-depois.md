@@ -30,3 +30,9 @@ Problemas encontrados de passagem, fora do escopo da mudança que estava sendo f
 - **Suspeita:** tipo aninhado (Arc/Mutex/Option…) escrito direto no campo, sem um `type` com nome.
 - **Próximo passo:** extrair o tipo para um `type` com nome e, se fizer sentido, ligar o clippy do `src-tauri` no CI.
 
+
+## Teste "as configurações ficam salvas" falhou uma vez na suíte inteira
+- Onde: `frontend/src/app/App.test.tsx`, ao procurar a aba Gameplay.
+- O que se viu: o `findByRole` estourou o tempo na suíte completa; rodando o arquivo sozinho, passou duas vezes.
+- Suspeita: a tela de configurações é carregada sob demanda e demora mais que o limite padrão com a máquina sob carga.
+- Próximo passo: repetir a suíte e, se voltar a falhar, aumentar o `timeout` desse `findByRole`.

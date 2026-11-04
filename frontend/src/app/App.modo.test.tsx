@@ -37,7 +37,8 @@ it("com o Mania ligado, girar a alavanca gira o disco do cenário, troca o jogo 
   expect(screen.getByText("jogo do rock")).toBeInTheDocument();
   expect(await screen.findByRole("heading", { name: "Riff Rush Mania" }, { timeout: 5000 })).toBeInTheDocument();
   expect(lerTema()).toBe(TEMAS.mania);
-  await waitFor(() => expect(container.querySelector("[data-parte='disco']")).not.toBeInTheDocument(), { timeout: 3000 });
+  // O disco fica atrás da tela inicial; a troca acaba quando ele para de girar.
+  await waitFor(() => expect(container.querySelector(".volvelle[data-girando]")).not.toBeInTheDocument(), { timeout: 3000 });
   await userEvent.click(screen.getByRole("switch", { name: "Modo de jogo: Mania" }));
   expect(await screen.findByText("jogo do rock", {}, { timeout: 3000 })).toBeInTheDocument();
   expect(lerTema()).toBe(TEMAS.riffRush);
