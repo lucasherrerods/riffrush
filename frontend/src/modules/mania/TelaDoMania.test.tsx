@@ -42,9 +42,11 @@ function bibliotecaNaMemoria(): BibliotecaDoMania {
 
 const arquivoOsz = (nome = "musica.osz") => new File([new Uint8Array(pacote({ "a.osu": osu(), "audio.mp3": new Uint8Array([1]) }))], nome);
 
+const aoVoltar = vi.fn();
+
 function abrir() {
   const biblioteca = bibliotecaNaMemoria();
-  render(<TelaDoMania alavanca={<button type="button">alavanca</button>} abrirBiblioteca={async () => biblioteca} decodificar={async () => ({ duration: 10 }) as AudioBuffer} />);
+  render(<TelaDoMania aoVoltar={aoVoltar} abrirBiblioteca={async () => biblioteca} decodificar={async () => ({ duration: 10 }) as AudioBuffer} />);
   return { usuario: userEvent.setup() };
 }
 
@@ -155,9 +157,10 @@ describe("TelaDoMania", () => {
     }
   });
 
-  it("a alavanca fica no cabeçalho, junto da logo do Mania", () => {
+  it("o cabeçalho tem a logo do Mania e volta para o menu", () => {
     abrir();
     expect(screen.getByRole("heading", { name: "Riff Rush Mania" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "alavanca" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    expect(aoVoltar).toHaveBeenCalled();
   });
 });

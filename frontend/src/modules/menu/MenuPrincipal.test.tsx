@@ -23,6 +23,13 @@ function abrir({ noCelular = false, comLeaderboard = true, chat }: { noCelular?:
 beforeEach(() => vi.stubGlobal("AudioContext", AudioContextFalso));
 
 describe("MenuPrincipal", () => {
+  it("no Mania, a logo muda e o menu fica só com o que existe nesse modo", () => {
+    render(<MenuPrincipal modo="mania" volumeDosEfeitos={0} aoJogar={vi.fn()} aoMultijogador={vi.fn()} aoPersonagem={vi.fn()} aoBuscarMusicas={vi.fn()} aoLeaderboard={vi.fn()} aoAbrirDocumento={vi.fn()} chat={<p>chat</p>} />);
+    expect(screen.getByRole("heading", { name: "Riff Rush Mania" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Buscar mapas", "Personagem"]);
+    expect(screen.getByText("chat")).toBeInTheDocument();
+  });
+
   it("mostra o nome do jogo e as opções", () => {
     abrir();
     expect(screen.getByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();

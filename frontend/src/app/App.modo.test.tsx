@@ -1,22 +1,40 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { lerTema } from "@/shared/styles/tema";
 import { TEMAS } from "@/shared/styles/tokens";
+import { AudioContextFalso } from "@/test/audioFalso";
 import { App } from "./App";
 import { trocarModo } from "./modo";
 
-vi.mock("./AppDoRock", () => ({ AppDoRock: ({ alavanca }: { alavanca?: React.ReactNode }) => <main>jogo do rock{alavanca}</main> }));
+const montagens = vi.hoisted(() => ({ total: 0 }));
 
+vi.mock("./AppDoRock", async () => {
+  const { useEffect } = await import("react");
+  return {
+    AppDoRock: ({ modo, alavanca }: { modo: string; alavanca?: React.ReactNode }) => {
+      useEffect(() => {
+        montagens.total += 1;
+      }, []);
+      return (
+        <main>
+          <p>menu do {modo}</p>
+          {alavanca}
+        </main>
+      );
+    },
+  };
+});
+
+beforeEach(() => vi.stubGlobal("AudioContext", AudioContextFalso));
 afterEach(() => act(() => trocarModo("rock")));
 
-it("monta o jogo do modo ativo", async () => {
+it("mantém o mesmo menu montado ao trocar de modo", () => {
+  montagens.total = 0;
   render(<App />);
-  expect(screen.getByText("jogo do rock")).toBeInTheDocument();
+  expect(screen.getByText("menu do rock")).toBeInTheDocument();
   act(() => trocarModo("mania"));
-  // O Mania é baixado só quando aparece.
-  expect(await screen.findByRole("heading", { name: "Riff Rush Mania" }, { timeout: 5000 })).toBeInTheDocument();
-  act(() => trocarModo("rock"));
-  expect(screen.getByText("jogo do rock")).toBeInTheDocument();
+  expect(screen.getByText("menu do mania")).toBeInTheDocument();
+  expect(montagens.total).toBe(1);
 });
 
 it("troca o tema e o nome da janela junto com o modo", () => {
@@ -29,14 +47,15 @@ it("troca o tema e o nome da janela junto com o modo", () => {
   expect(document.documentElement.style.getPropertyValue("--cor-fundo")).toBe(TEMAS.mania.cores.fundo);
 });
 
-it("com o Mania ligado, girar a alavanca troca o jogo inteiro e girar de novo volta", async () => {
+it("a alavanca gira na hora, e o tema só troca coberto pela transição, que depois some", async () => {
   render(<App maniaLigado />);
   await userEvent.click(screen.getByRole("switch", { name: "Modo de jogo: Rock" }));
-  expect(await screen.findByRole("heading", { name: "Riff Rush Mania" }, { timeout: 5000 })).toBeInTheDocument();
-  expect(lerTema()).toBe(TEMAS.mania);
-  await userEvent.click(screen.getByRole("switch", { name: "Modo de jogo: Mania" }));
-  expect(screen.getByText("jogo do rock")).toBeInTheDocument();
+  expect(screen.getByRole("switch", { name: "Modo de jogo: Mania" })).toBeInTheDocument();
+  expect(screen.getByTestId("transicao-de-modo")).toBeInTheDocument();
   expect(lerTema()).toBe(TEMAS.riffRush);
+  await screen.findByText("menu do mania", undefined, { timeout: 3000 });
+  expect(lerTema()).toBe(TEMAS.mania);
+  await waitFor(() => expect(screen.queryByTestId("transicao-de-modo")).not.toBeInTheDocument(), { timeout: 3000 });
 });
 
 it("sem o Mania ligado, não há alavanca", () => {

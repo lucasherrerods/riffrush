@@ -7,6 +7,7 @@ import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 import { EntradaDaPartida, TelaDeJogo, type JogadorLocal, type Resultado, desempacotarReplay, type Replay, type OpcoesDaPartida } from "@/modules/rock/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/rock/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
+import { TelaDoMania } from "@/modules/mania";
 import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
 import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa, estaEmTelaCheia, modoDoF11 } from "@/modules/platform";
@@ -21,12 +22,14 @@ import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, 
 import { PlacarAoVivo, RankingDaSelecao, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
 import { BotaoDeAmigos, ConvitesDeAmigos, PainelDeAmigos, useIdsDosAmigos } from "@/modules/amigos";
 import { useTeclado } from "@/shared/hooks/useTeclado";
+import { cn } from "@/shared/lib/utils";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { TelaCarregando } from "@/shared/ui/TelaCarregando";
+import type { Modo } from "./modo";
 import { mesmasOpcoes, opcoesDaPartida } from "./opcoes";
 
-type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "espectador" | "telaDividida" | "resultadoDividido";
+type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "espectador" | "telaDividida" | "resultadoDividido" | "maniaSelecao" | "maniaBusca";
 
 interface PartidaEmRede {
   musica: Musica;
@@ -37,10 +40,12 @@ interface PartidaEmRede {
   rodada?: string;
 }
 
-/** O Riff Rush Rock inteiro. A `alavanca` aparece embaixo da logo, na tela inicial. */
-export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
+/** O menu principal e o Riff Rush Rock. No modo Mania, o mesmo menu abre as telas do Mania; a `alavanca` fica embaixo da logo. */
+export function AppDoRock({ modo = "rock", alavanca }: { modo?: Modo; alavanca?: ReactNode } = {}) {
   const [tela, setTela] = useState<Tela>(() => documentoDoEndereco(location.pathname) ?? "menu");
-  useAtualizacaoAutomatica(tela === "jogo" || tela === "espectador");
+  const noMania = tela === "maniaSelecao" || tela === "maniaBusca";
+  // Nas telas do Mania, quem cuida da atualização é o próprio Mania, que sabe quando há partida.
+  useAtualizacaoAutomatica(tela === "jogo" || tela === "espectador" || noMania);
   /** md5 do chart do Encore aberto na janela de baixar do leaderboard. */
   const [chartDoLeaderboard, setChartDoLeaderboard] = useState<string | null>(null);
   // Lembrada aqui para o leaderboard voltar nela depois de abrir uma partida.
@@ -135,7 +140,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
   }, [configuracoes, comControle]);
 
   useTeclado((evento) => {
-    if (evento.code !== "Tab" || !evento.shiftKey) return;
+    if (evento.code !== "Tab" || !evento.shiftKey || noMania) return;
     // Sem o preventDefault, o navegador também pularia o foco para o botão anterior.
     evento.preventDefault();
     const modoCompetitivo = !configuracoes.modoCompetitivo;
@@ -223,8 +228,8 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
   // Assistir ao vivo também é uma partida na tela: sem o player do menu e sem o cabeçalho.
   const naPista = tela === "jogo" || tela === "espectador";
   useEffect(() => {
-    playerDeMusica.suspender(naPista);
-  }, [naPista]);
+    playerDeMusica.suspender(naPista || noMania);
+  }, [naPista, noMania]);
 
   // Só aparece online quem aceitou, com conta e com o relay configurado.
   const online = presencaDisponivel && contasLigadas && !!conta && configuracoes.mostrarOnline === true;
@@ -449,10 +454,10 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
   };
 
   return (
-    <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
+    <main className={cn("relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto", modo === "rock" && "dark")}>
       {/* As telas menos usadas chegam só quando abertas: a abertura do jogo baixa menos código. */}
       <Suspense fallback={<TelaCarregando />}>
-      {!(naPista && configuracoes.modoCompetitivo) && <Fundo tocando={naPista} />}
+      {!noMania && !(naPista && configuracoes.modoCompetitivo) && <Fundo tocando={naPista} />}
       {entrada && tela === "jogo" && (
         <EntradaDaPartida
           key={partida}
@@ -464,7 +469,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
           aoTerminar={() => setEntrada(null)}
         />
       )}
-      {!naPista && (
+      {!naPista && !noMania && (
         <CabecalhoDoPlayerDeMusica volume={volumeGeral} aoMudarVolume={definirVolumeGeral}>
           {contasLigadas && <BotaoDeAmigos aberto={amigosAbertos} aoAlternar={() => setAmigosAbertos((abertos) => !abertos)} />}
           {contasLigadas && (
@@ -490,12 +495,15 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
             transition={{ duration: 0.2 }}
             className="absolute inset-0"
           >
+            {noMania && <TelaDoMania telaInicial={tela === "maniaBusca" ? "busca" : "selecao"} aoVoltar={() => setTela("menu")} />}
             {tela === "menu" && (
               <MenuPrincipal
+                modo={modo}
                 volumeDosEfeitos={configuracoes.volumeDosEfeitos}
                 noCelular={ehClienteWebDaSala()}
                 alavanca={alavanca}
                 aoJogar={() => {
+                  if (modo === "mania") return setTela("maniaSelecao");
                   setDivididos(null);
                   setTela("selecao");
                 }}
@@ -515,6 +523,7 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                   ) : undefined
                 }
                 aoBuscarMusicas={() => {
+                  if (modo === "mania") return setTela("maniaBusca");
                   setVoltarDaBuscaPara("menu");
                   setTela("buscaDeMusicas");
                 }}
@@ -780,10 +789,10 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
         </AnimatePresence>
       </div>
       <IndicadorDeVolume />
-      <SoltarParaImportar ativo={!naPista} aoSoltar={(arquivos) => void importar(arquivos)} />
+      <SoltarParaImportar ativo={!naPista && modo === "rock"} aoSoltar={(arquivos) => void importar(arquivos)} />
       <ProgressoDaImportacao progresso={progresso} />
-      {contasLigadas && <ConvitesDeAmigos aoEntrar={entrarNaSalaDoAmigo} />}
-      <Avisos />
+      {contasLigadas && modo === "rock" && <ConvitesDeAmigos aoEntrar={entrarNaSalaDoAmigo} />}
+      {!noMania && <Avisos />}
       </Suspense>
     </main>
   );

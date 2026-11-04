@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { Settings2 } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Settings2 } from "lucide-react";
 import { LogoDoJogo } from "@/modules/menu";
 import { sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -20,8 +20,10 @@ import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 type Tela = { nome: "selecao" } | { nome: "busca" } | { nome: "jogo"; mapa: MapaParaJogar; treino?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado };
 
 interface Props {
-  /** A alavanca que volta para o Rock, no cabeçalho. */
-  alavanca?: ReactNode;
+  /** A tela em que abre: vem da opção escolhida no menu. */
+  telaInicial?: "selecao" | "busca";
+  /** Volta para o menu principal. */
+  aoVoltar?: () => void;
   /** Para os testes. */
   abrirBiblioteca?: () => Promise<BibliotecaDoMania>;
   decodificar?: (contexto: AudioContext, bytes: Uint8Array) => Promise<AudioBuffer>;
@@ -30,9 +32,9 @@ interface Props {
 }
 
 /** A raiz do Riff Rush Mania: seleção, partida e resultado. */
-export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
+export function TelaDoMania({ telaInicial = "selecao", aoVoltar, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
   const { conjuntos, importar, guardarBaixado, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
-  const [tela, setTela] = useState<Tela>({ nome: "selecao" });
+  const [tela, setTela] = useState<Tela>({ nome: telaInicial });
   useAtualizacaoAutomatica(tela.nome === "jogo");
   const [mods, setMods] = useState(0);
   const [opcoes, setOpcoes] = useState<OpcoesDoMania>(carregarConfiguracoesDoMania);
@@ -143,7 +145,12 @@ export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania
           <Button variant="secondary" onClick={() => setConfigurando(true)} aria-label="Configurações do Mania">
             <Settings2 aria-hidden className="opacity-70" />
           </Button>
-          {alavanca}
+          {aoVoltar && (
+            <Button variant="secondary" onClick={aoVoltar}>
+              <ArrowLeft aria-hidden className="opacity-70" />
+              Menu
+            </Button>
+          )}
         </div>
       </header>
       {tela.nome === "busca" ? (
