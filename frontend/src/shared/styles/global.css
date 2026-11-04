@@ -424,3 +424,16 @@ body {
   transform: none;
   mask-image: none;
 }
+
+/* ---------- Volvelle: o disco que troca de modo ---------- */
+
+/* Durante o giro, as animações de dentro das cenas param e o desfoque sai:
+   o disco inteiro vira uma camada só, e o giro corre liso na GPU. */
+.volvelle[data-girando] * {
+  animation-play-state: paused !important;
+}
+
+.volvelle[data-girando] .holofote {
+  filter: none;
+  mix-blend-mode: normal;
+}

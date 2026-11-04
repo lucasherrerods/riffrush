@@ -1,14 +1,13 @@
 import { useState, type ReactNode } from "react";
-import { motion } from "framer-motion";
-import { Play, Radio, Search, Settings2, Shirt, Trophy, Users, type LucideIcon } from "lucide-react";
+import { Play, Radio, Search, Settings2, Shirt, Trophy, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Documento } from "@/modules/legal";
 import { abrirLink } from "@/modules/platform";
-import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
 import { IconeGithub } from "@/shared/ui/IconeGithub";
 import { EscolhaDoMultiplayer } from "./EscolhaDoMultiplayer";
 import { LogoDoJogo } from "./LogoDoJogo";
+import { TelaInicial, type OpcaoDaTelaInicial, type TrocaDeModo } from "./TelaInicial";
 
 interface Props {
   volumeDosEfeitos: number;
@@ -32,19 +31,16 @@ interface Props {
   chat?: ReactNode;
   /** A alavanca que troca para o Mania, embaixo da logo. */
   alavanca?: ReactNode;
+  troca?: TrocaDeModo;
+  aoMedirTitulo?: (retangulo: DOMRect) => void;
 }
 
-interface Item {
-  rotulo: string;
-  icone: LucideIcon;
-  acao: () => void;
-}
+type Item = OpcaoDaTelaInicial;
 
 const URL_DO_PROJETO = "https://github.com/lucasherrerods/riffrush";
 const URL_DA_LANDING = "https://playriffrush.vercel.app";
 
-export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoMultiplayerLocal, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca }: Props) {
-  const [selecionado, setSelecionado] = useState(0);
+export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoMultiplayerLocal, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca, troca, aoMedirTitulo }: Props) {
   const [escolhendoMultiplayer, setEscolhendoMultiplayer] = useState(false);
   const buscar: Item = { rotulo: "Buscar músicas", icone: Search, acao: aoBuscarMusicas };
   const comuns: Item[] = [
@@ -62,66 +58,19 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
         ...comuns,
       ];
 
-  const escolher = (item: Item) => {
-    tocarEfeito("selecionar", volumeDosEfeitos);
-    item.acao();
-  };
-
-  useTeclado((evento) => {
-    // Com a escolha aberta, as setas e o Enter são dela.
-    if (escolhendoMultiplayer) return;
-    if (evento.code === "ArrowDown" || evento.code === "ArrowUp") {
-      evento.preventDefault();
-      tocarEfeito("mover", volumeDosEfeitos);
-      const passo = evento.code === "ArrowDown" ? 1 : itens.length - 1;
-      setSelecionado((atual) => (atual + passo) % itens.length);
-    } else if (evento.code === "Enter") {
-      evento.preventDefault();
-      escolher(itens[selecionado]);
-    }
-  });
-
   return (
-    <div className={cn("rolagem-de-toque relative flex h-full flex-col items-center gap-6 py-6 max-md:px-4", chat && "max-md:pb-16")}>
-      <motion.div
-        initial={{ y: -40, opacity: 0, scale: 0.8 }}
-        animate={{ y: 0, opacity: 1, scale: 1 }}
-        transition={{ type: "spring", stiffness: 120, damping: 12 }}
-        className="mt-auto flex flex-col items-center gap-2"
-      >
-        <LogoDoJogo modo="Rock" />
-        <p className="text-center text-xs font-bold tracking-[0.4em] text-texto-suave max-md:tracking-[0.15em]">O PALCO É SEU</p>
-        {alavanca}
-      </motion.div>
-
-      <nav className="mb-auto flex w-56 flex-col gap-1 max-md:w-full max-md:max-w-sm max-md:gap-2">
-        {itens.map((item, i) => {
-          const ativo = i === selecionado;
-          const Icone = item.icone;
-          return (
-            <motion.button
-              key={item.rotulo}
-              aria-current={ativo}
-              initial={{ x: -48, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.16 + i * 0.08 }}
-              onMouseEnter={() => {
-                if (!ativo) tocarEfeito("mover", volumeDosEfeitos);
-                setSelecionado(i);
-              }}
-              onClick={() => escolher(item)}
-              className={cn(
-                "chapa flex items-center gap-3 px-3 py-1 text-left font-titulo text-lg max-md:px-4 max-md:py-2 max-md:text-xl tracking-wide uppercase transition-colors",
-                ativo ? "gasto border-primaria bg-primaria text-texto" : "border-borda bg-superficie text-texto-suave",
-              )}
-            >
-              <Icone className="size-3.5 opacity-70 max-md:size-5" />
-              {item.rotulo}
-            </motion.button>
-          );
-        })}
-      </nav>
-
+    <TelaInicial
+      logo={<LogoDoJogo modo="Rock" />}
+      subtitulo="O PALCO É SEU"
+      alavanca={alavanca}
+      troca={troca}
+      aoMedirTitulo={aoMedirTitulo}
+      opcoes={itens}
+      pausada={escolhendoMultiplayer}
+      aoMover={() => tocarEfeito("mover", volumeDosEfeitos)}
+      aoEscolher={() => tocarEfeito("selecionar", volumeDosEfeitos)}
+      className={cn(chat && "max-md:pb-16")}
+    >
       {aoMultiplayerLocal && (
         <EscolhaDoMultiplayer
           aberta={escolhendoMultiplayer}
@@ -170,7 +119,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
           <IconeGithub />
         </LinkExterno>
       </footer>
-    </div>
+    </TelaInicial>
   );
 }
 

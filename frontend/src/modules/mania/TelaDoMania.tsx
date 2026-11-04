@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ArrowLeft, Library, Search, Settings2 } from "lucide-react";
-import { LogoDoJogo } from "@/modules/menu";
+import { LogoDoJogo, type PalcoCompartilhado } from "@/modules/menu";
 import { sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
@@ -26,6 +26,8 @@ type Tela = { nome: "menu" } | { nome: "selecao" } | { nome: "busca" } | { nome:
 interface Props {
   /** A alavanca que volta para o Rock, no cabeçalho. */
   alavanca?: ReactNode;
+  /** Com a tela inicial compartilhada, o disco do app fica atrás dela no lugar do fundo do Mania. */
+  palco?: PalcoCompartilhado;
   /** Para os testes. */
   abrirBiblioteca?: () => Promise<BibliotecaDoMania>;
   decodificar?: (contexto: AudioContext, bytes: Uint8Array) => Promise<AudioBuffer>;
@@ -34,10 +36,12 @@ interface Props {
 }
 
 /** A raiz do Riff Rush Mania: seleção, partida e resultado. */
-export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
+export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
   const { conjuntos, importar, guardarBaixado, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
   const [tela, setTela] = useState<Tela>({ nome: "menu" });
   useAtualizacaoAutomatica(tela.nome === "jogo");
+  const aoMudarDeTela = palco?.aoMudarDeTela;
+  useEffect(() => aoMudarDeTela?.(tela.nome === "menu"), [tela.nome, aoMudarDeTela]);
   const [mods, setMods] = useState(0);
   const [opcoes, setOpcoes] = useState<OpcoesDoMania>(carregarConfiguracoesDoMania);
   const [configurando, setConfigurando] = useState(false);
@@ -135,9 +139,9 @@ export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania
 
   if (tela.nome === "menu")
     return (
-      <main className="relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
-        <FundoDoMania />
-        <MenuDoMania alavanca={alavanca} aoJogar={() => setTela({ nome: "selecao" })} aoBuscar={() => setTela({ nome: "busca" })} aoConfigurar={() => setConfigurando(true)} />
+      <main className={cn("relative flex h-dvh w-screen flex-col overflow-hidden text-texto", !palco && "bg-fundo")}>
+        {!palco && <FundoDoMania />}
+        <MenuDoMania alavanca={alavanca} troca={palco?.troca} aoMedirTitulo={palco?.aoMedirTitulo} aoJogar={() => setTela({ nome: "selecao" })} aoBuscar={() => setTela({ nome: "busca" })} aoConfigurar={() => setConfigurando(true)} />
         {janelaDeConfiguracoes}
         <Avisos />
       </main>
