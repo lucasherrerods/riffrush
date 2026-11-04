@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { Settings2 } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { LogoDoJogo } from "@/modules/menu";
 import { sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -11,8 +11,7 @@ import { useBibliotecaDoMania } from "./beatmaps/useBibliotecaDoMania";
 import { ResultadoDoMania } from "./gameplay/ResultadoDoMania";
 import { TelaDeJogoMania, type MapaParaJogar, type OpcoesDoMania, type ResultadoDoMania as Resultado } from "./gameplay/TelaDeJogoMania";
 import { TelaDeSelecaoMania } from "./selecao/TelaDeSelecaoMania";
-import { carregarConfiguracoesDoMania, salvarConfiguracoesDoMania } from "./settings/configuracoesMania";
-import { JanelaDeConfiguracoesMania } from "./settings/JanelaDeConfiguracoesMania";
+import { carregarConfiguracoesDoMania } from "./settings/configuracoesMania";
 import type { FiltrosDaBusca, MapaDaBusca, baixarOsz } from "./busca/api";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
@@ -20,8 +19,10 @@ import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 type Tela = { nome: "selecao" } | { nome: "busca" } | { nome: "jogo"; mapa: MapaParaJogar; treino?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado };
 
 interface Props {
-  /** A alavanca que volta para o Rock, no cabeçalho. */
-  alavanca?: ReactNode;
+  /** A tela em que abre: vem da opção escolhida no menu. */
+  telaInicial?: "selecao" | "busca";
+  /** Volta para o menu principal. */
+  aoVoltar?: () => void;
   /** Para os testes. */
   abrirBiblioteca?: () => Promise<BibliotecaDoMania>;
   decodificar?: (contexto: AudioContext, bytes: Uint8Array) => Promise<AudioBuffer>;
@@ -30,17 +31,12 @@ interface Props {
 }
 
 /** A raiz do Riff Rush Mania: seleção, partida e resultado. */
-export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
+export function TelaDoMania({ telaInicial = "selecao", aoVoltar, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
   const { conjuntos, importar, guardarBaixado, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
-  const [tela, setTela] = useState<Tela>({ nome: "selecao" });
+  const [tela, setTela] = useState<Tela>({ nome: telaInicial });
   useAtualizacaoAutomatica(tela.nome === "jogo");
   const [mods, setMods] = useState(0);
-  const [opcoes, setOpcoes] = useState<OpcoesDoMania>(carregarConfiguracoesDoMania);
-  const [configurando, setConfigurando] = useState(false);
-  const mudarOpcoes = (novas: OpcoesDoMania) => {
-    setOpcoes(novas);
-    salvarConfiguracoesDoMania(novas);
-  };
+  const [opcoes] = useState<OpcoesDoMania>(carregarConfiguracoesDoMania);
   const { conta } = useConta();
   const [xp, setXp] = useState<RegistroDaPartida | undefined>();
   // A semente do Random muda a cada partida; o replay a guarda.
@@ -140,10 +136,12 @@ export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania
           </Button>
         </nav>
         <div className="flex items-center gap-4">
-          <Button variant="secondary" onClick={() => setConfigurando(true)} aria-label="Configurações do Mania">
-            <Settings2 aria-hidden className="opacity-70" />
-          </Button>
-          {alavanca}
+          {aoVoltar && (
+            <Button variant="secondary" onClick={aoVoltar}>
+              <ArrowLeft aria-hidden className="opacity-70" />
+              Menu
+            </Button>
+          )}
         </div>
       </header>
       {tela.nome === "busca" ? (
@@ -151,7 +149,6 @@ export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania
       ) : (
         <TelaDeSelecaoMania conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} />
       )}
-      <JanelaDeConfiguracoesMania aberta={configurando} aoFechar={() => setConfigurando(false)} opcoes={opcoes} aoMudar={mudarOpcoes} />
       <Avisos />
     </main>
   );

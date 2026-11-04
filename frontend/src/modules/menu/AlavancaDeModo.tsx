@@ -17,7 +17,7 @@ export function AlavancaDeModo({ modo, aoTrocar, className }: Props) {
   const mania = modo === "mania";
   const trocar = (para: ModoDaAlavanca) => para !== modo && aoTrocar(para);
   return (
-    <div className={cn("flex items-center gap-3", className)}>
+    <div className={cn("flex items-center gap-3 pt-3", className)}>
       <span className={cn("font-titulo text-lg tracking-wide transition-opacity", mania ? "opacity-50" : "opacity-100")}>Rock</span>
       <button
         type="button"
@@ -46,7 +46,10 @@ export function AlavancaDeModo({ modo, aoTrocar, className }: Props) {
           <span className="absolute top-1/2 right-0 size-5 translate-x-1/2 -translate-y-1/2 rounded-full bg-primaria" />
         </motion.span>
       </button>
-      <span className={cn("font-titulo text-lg tracking-wide transition-opacity", mania ? "opacity-100" : "opacity-50")}>Mania</span>
+      <span className="relative">
+        <span className={cn("font-titulo text-lg tracking-wide transition-opacity", mania ? "opacity-100" : "opacity-50")}>Mania</span>
+        <span className="absolute -top-2 -right-4 -skew-x-12 bg-primaria px-1 text-[8px] leading-3 font-bold tracking-wider text-texto uppercase">Novo</span>
+      </span>
     </div>
   );
 }

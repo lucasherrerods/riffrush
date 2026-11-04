@@ -8,9 +8,12 @@ import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
 import { IconeGithub } from "@/shared/ui/IconeGithub";
 import { EscolhaDoMultiplayer } from "./EscolhaDoMultiplayer";
+import type { ModoDaAlavanca } from "./AlavancaDeModo";
 import { LogoDoJogo } from "./LogoDoJogo";
 
 interface Props {
+  /** O Mania usa o mesmo menu, sem o que só existe no Rock. */
+  modo?: ModoDaAlavanca;
   volumeDosEfeitos: number;
   /** Celular que entrou pelo QR code: o foco é a sala. */
   noCelular?: boolean;
@@ -30,7 +33,7 @@ interface Props {
   aoAbrirDocumento: (documento: Documento) => void;
   /** O chat global, no canto de baixo à esquerda. */
   chat?: ReactNode;
-  /** A alavanca que troca para o Mania, embaixo da logo. */
+  /** A alavanca que troca de modo, embaixo da logo. */
   alavanca?: ReactNode;
 }
 
@@ -43,17 +46,20 @@ interface Item {
 const URL_DO_PROJETO = "https://github.com/lucasherrerods/riffrush";
 const URL_DA_LANDING = "https://playriffrush.vercel.app";
 
-export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoMultiplayerLocal, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca }: Props) {
+export function MenuPrincipal({ modo = "rock", volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoMultiplayerLocal, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca }: Props) {
   const [selecionado, setSelecionado] = useState(0);
   const [escolhendoMultiplayer, setEscolhendoMultiplayer] = useState(false);
-  const buscar: Item = { rotulo: "Buscar músicas", icone: Search, acao: aoBuscarMusicas };
+  const mania = modo === "mania";
+  const buscar: Item = { rotulo: mania ? "Buscar mapas" : "Buscar músicas", icone: Search, acao: aoBuscarMusicas };
   const comuns: Item[] = [
-    ...(aoLeaderboard ? [{ rotulo: "Leaderboard", icone: Trophy, acao: aoLeaderboard }] : []),
+    ...(aoLeaderboard && !mania ? [{ rotulo: "Leaderboard", icone: Trophy, acao: aoLeaderboard }] : []),
     ...(aoOnline ? [{ rotulo: "Online", icone: Radio, acao: aoOnline }] : []),
-    { rotulo: "Personagem", icone: Shirt, acao: aoPersonagem },
+    ...(mania ? [] : [{ rotulo: "Personagem", icone: Shirt, acao: aoPersonagem }]),
     ...(aoConfigurar ? [{ rotulo: "Configurações", icone: Settings2, acao: aoConfigurar }] : []),
   ];
-  const itens: Item[] = noCelular
+  const itens: Item[] = mania
+    ? [{ rotulo: "Jogar", icone: Play, acao: aoJogar }, buscar, ...comuns]
+    : noCelular
     ? [{ rotulo: "Entrar na sala", icone: Users, acao: aoMultijogador }, { rotulo: "Jogar sozinho", icone: Play, acao: aoJogar }, buscar, ...comuns]
     : [
         { rotulo: "Jogar", icone: Play, acao: aoJogar },
@@ -83,18 +89,16 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
 
   return (
     <div className={cn("rolagem-de-toque relative flex h-full flex-col items-center gap-6 py-6 max-md:px-4", chat && "max-md:pb-16")}>
-      <motion.div
-        initial={{ y: -40, opacity: 0, scale: 0.8 }}
-        animate={{ y: 0, opacity: 1, scale: 1 }}
-        transition={{ type: "spring", stiffness: 120, damping: 12 }}
-        className="mt-auto flex flex-col items-center gap-2"
-      >
-        <LogoDoJogo modo="Rock" />
+      <div className="mt-auto flex flex-col items-center gap-2">
+        {/* A logo e os botões entram de novo ao trocar de modo; a alavanca e o chat continuam montados. */}
+        <motion.div key={modo} initial={{ y: -40, opacity: 0, scale: 0.8 }} animate={{ y: 0, opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 120, damping: 12 }}>
+          <LogoDoJogo modo={mania ? "Mania" : "Rock"} />
+        </motion.div>
         <p className="text-center text-xs font-bold tracking-[0.4em] text-texto-suave max-md:tracking-[0.15em]">O PALCO É SEU</p>
         {alavanca}
-      </motion.div>
+      </div>
 
-      <nav className="mb-auto flex w-56 flex-col gap-1 max-md:w-full max-md:max-w-sm max-md:gap-2">
+      <nav key={modo} className="mb-auto flex w-56 flex-col gap-1 max-md:w-full max-md:max-w-sm max-md:gap-2">
         {itens.map((item, i) => {
           const ativo = i === selecionado;
           const Icone = item.icone;
