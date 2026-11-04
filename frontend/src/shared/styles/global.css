@@ -355,3 +355,66 @@ body {
     font-size: var(--text-lg);
   }
 }
+
+/* ---------- Fundo do Mania ---------- */
+
+/* Triângulos subindo e girando devagar, o fundo clássico do osu!. */
+.triangulo {
+  bottom: -120px;
+  animation: triangulo-sobe linear infinite;
+}
+
+@keyframes triangulo-sobe {
+  from {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-115vh) rotate(40deg);
+    opacity: 0.2;
+  }
+}
+
+/* O anel de aproximação: fecha sobre o círculo de acerto e some no toque. */
+.aproximacao {
+  animation: aproximacao 2.4s ease-in infinite;
+}
+
+@keyframes aproximacao {
+  from {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+  70% {
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* O anel atrás da logo pulsa na batida, como o cookie do osu!. */
+.anel-do-mania {
+  animation: anel-pulsa 0.9s ease-out infinite;
+}
+
+@keyframes anel-pulsa {
+  from {
+    scale: 1.03;
+  }
+  to {
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .triangulo,
+  .aproximacao,
+  .anel-do-mania {
+    animation: none;
+  }
+}

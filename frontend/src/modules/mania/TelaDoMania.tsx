@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Settings2 } from "lucide-react";
+import { ArrowLeft, Library, Search, Settings2 } from "lucide-react";
 import { LogoDoJogo } from "@/modules/menu";
 import { sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -16,8 +16,12 @@ import { JanelaDeConfiguracoesMania } from "./settings/JanelaDeConfiguracoesMani
 import type { FiltrosDaBusca, MapaDaBusca, baixarOsz } from "./busca/api";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
+import { cn } from "@/shared/lib/utils";
+import { CirculoDeAcerto } from "./menu/CirculoDeAcerto";
+import { FundoDoMania } from "./menu/FundoDoMania";
+import { MenuDoMania } from "./menu/MenuDoMania";
 
-type Tela = { nome: "selecao" } | { nome: "busca" } | { nome: "jogo"; mapa: MapaParaJogar; treino?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado };
+type Tela = { nome: "menu" } | { nome: "selecao" } | { nome: "busca" } | { nome: "jogo"; mapa: MapaParaJogar; treino?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado };
 
 interface Props {
   /** A alavanca que volta para o Rock, no cabeçalho. */
@@ -32,7 +36,7 @@ interface Props {
 /** A raiz do Riff Rush Mania: seleção, partida e resultado. */
 export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
   const { conjuntos, importar, guardarBaixado, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
-  const [tela, setTela] = useState<Tela>({ nome: "selecao" });
+  const [tela, setTela] = useState<Tela>({ nome: "menu" });
   useAtualizacaoAutomatica(tela.nome === "jogo");
   const [mods, setMods] = useState(0);
   const [opcoes, setOpcoes] = useState<OpcoesDoMania>(carregarConfiguracoesDoMania);
@@ -127,31 +131,65 @@ export function TelaDoMania({ alavanca, abrirBiblioteca = abrirBibliotecaDoMania
       />
     );
 
+  const janelaDeConfiguracoes = <JanelaDeConfiguracoesMania aberta={configurando} aoFechar={() => setConfigurando(false)} opcoes={opcoes} aoMudar={mudarOpcoes} />;
+
+  if (tela.nome === "menu")
+    return (
+      <main className="relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
+        <FundoDoMania />
+        <MenuDoMania alavanca={alavanca} aoJogar={() => setTela({ nome: "selecao" })} aoBuscar={() => setTela({ nome: "busca" })} aoConfigurar={() => setConfigurando(true)} />
+        {janelaDeConfiguracoes}
+        <Avisos />
+      </main>
+    );
+
+  const aba = (nome: "selecao" | "busca", rotulo: string, icone: typeof Library) => {
+    const ativa = tela.nome === nome;
+    return (
+      <button
+        type="button"
+        aria-current={ativa}
+        onClick={() => setTela({ nome })}
+        className={cn(
+          "chapa flex items-center gap-2 py-1 pr-4 pl-1.5 font-titulo text-lg tracking-wide uppercase transition-colors",
+          ativa ? "border-primaria bg-primaria text-superficie-elevada" : "border-borda bg-superficie-elevada text-texto-suave hover:text-texto",
+        )}
+      >
+        <CirculoDeAcerto icone={icone} apagado={!ativa} className="size-6" />
+        {rotulo}
+      </button>
+    );
+  };
+
   return (
-    <main className="flex h-full flex-col bg-fundo text-texto">
-      <header className="flex items-center justify-between border-b border-borda px-6 py-4">
-        <LogoDoJogo modo="Mania" pequena />
+    <main className="relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
+      <FundoDoMania />
+      <header className="relative flex items-center justify-between gap-4 border-b border-borda bg-superficie-elevada/80 px-6 py-3 backdrop-blur-sm max-md:flex-wrap max-md:px-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => setTela({ nome: "menu" })} aria-label="Voltar ao menu">
+            <ArrowLeft aria-hidden />
+          </Button>
+          <LogoDoJogo modo="Mania" pequena />
+        </div>
         <nav aria-label="Telas do Mania" className="flex gap-2">
-          <Button variant={tela.nome === "selecao" ? "default" : "secondary"} aria-current={tela.nome === "selecao"} onClick={() => setTela({ nome: "selecao" })}>
-            Biblioteca
-          </Button>
-          <Button variant={tela.nome === "busca" ? "default" : "secondary"} aria-current={tela.nome === "busca"} onClick={() => setTela({ nome: "busca" })}>
-            Buscar mapas
-          </Button>
+          {aba("selecao", "Biblioteca", Library)}
+          {aba("busca", "Buscar mapas", Search)}
         </nav>
         <div className="flex items-center gap-4">
-          <Button variant="secondary" onClick={() => setConfigurando(true)} aria-label="Configurações do Mania">
-            <Settings2 aria-hidden className="opacity-70" />
-          </Button>
+          <button type="button" onClick={() => setConfigurando(true)} aria-label="Configurações do Mania" className="rounded-full">
+            <CirculoDeAcerto icone={Settings2} className="size-9" />
+          </button>
           {alavanca}
         </div>
       </header>
-      {tela.nome === "busca" ? (
-        <TelaDeBuscaMania baixados={baixados} aoBaixar={aoBaixar} buscar={buscar} baixar={baixar} />
-      ) : (
-        <TelaDeSelecaoMania conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} />
-      )}
-      <JanelaDeConfiguracoesMania aberta={configurando} aoFechar={() => setConfigurando(false)} opcoes={opcoes} aoMudar={mudarOpcoes} />
+      <div className="relative min-h-0 flex-1">
+        {tela.nome === "busca" ? (
+          <TelaDeBuscaMania baixados={baixados} aoBaixar={aoBaixar} buscar={buscar} baixar={baixar} />
+        ) : (
+          <TelaDeSelecaoMania conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} />
+        )}
+      </div>
+      {janelaDeConfiguracoes}
       <Avisos />
     </main>
   );

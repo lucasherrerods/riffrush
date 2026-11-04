@@ -44,8 +44,8 @@ export function SeletorDeMods({ mods, aoMudar }: { mods: number; aoMudar: (mods:
             title={NOMES[sigla]}
             onClick={() => aoMudar(alternarMod(mods, sigla))}
             className={cn(
-              "rounded-md border px-3 py-1.5 font-titulo text-lg tracking-wide transition-colors",
-              ligado ? "border-primaria bg-primaria text-texto" : "border-borda bg-superficie-elevada text-texto-suave hover:text-texto",
+              "grid size-11 place-items-center rounded-full border-2 font-titulo text-base tracking-wide transition-colors",
+              ligado ? "border-superficie-elevada bg-primaria text-superficie-elevada ring-2 ring-primaria" : "border-borda bg-superficie-elevada text-texto-suave hover:text-texto",
             )}
           >
             {sigla}

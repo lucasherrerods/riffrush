@@ -42,21 +42,24 @@ function bibliotecaNaMemoria(): BibliotecaDoMania {
 
 const arquivoOsz = (nome = "musica.osz") => new File([new Uint8Array(pacote({ "a.osu": osu(), "audio.mp3": new Uint8Array([1]) }))], nome);
 
-function abrir() {
+/** Abre o Mania e entra na biblioteca pelo Jogar do menu. */
+async function abrir() {
   const biblioteca = bibliotecaNaMemoria();
   render(<TelaDoMania alavanca={<button type="button">alavanca</button>} abrirBiblioteca={async () => biblioteca} decodificar={async () => ({ duration: 10 }) as AudioBuffer} />);
-  return { usuario: userEvent.setup() };
+  const usuario = userEvent.setup();
+  await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+  return { usuario };
 }
 
 describe("TelaDoMania", () => {
   it("mostra o nome do Riff Rush Mania e a biblioteca vazia", async () => {
-    abrir();
+    await abrir();
     expect(screen.getByRole("heading", { name: "Riff Rush Mania" })).toBeInTheDocument();
     expect(await screen.findByText(/Nenhum mapa ainda/)).toBeInTheDocument();
   });
 
   it("importa um .osz pelo botão e mostra o conjunto como importado", async () => {
-    const { usuario } = abrir();
+    const { usuario } = await abrir();
     await screen.findByText(/Nenhum mapa ainda/);
     await usuario.upload(screen.getByLabelText("Arquivos .osz"), arquivoOsz());
     expect(await screen.findByText("Música")).toBeInTheDocument();
@@ -64,14 +67,14 @@ describe("TelaDoMania", () => {
   });
 
   it("importa arrastando, e ignora o que não é .osz", async () => {
-    abrir();
+    await abrir();
     await screen.findByText(/Nenhum mapa ainda/);
     fireEvent.drop(screen.getByRole("region", { name: "Seleção de mapas" }), { dataTransfer: { files: [new File(["x"], "foto.png"), arquivoOsz()] } });
     expect(await screen.findByText("Música")).toBeInTheDocument();
   });
 
   it("escolhe a dificuldade, joga e chega no resultado", async () => {
-    const { usuario } = abrir();
+    const { usuario } = await abrir();
     await screen.findByText(/Nenhum mapa ainda/);
     await usuario.upload(screen.getByLabelText("Arquivos .osz"), arquivoOsz());
     expect(screen.getByRole("button", { name: "Jogar" })).toBeDisabled();
@@ -92,7 +95,7 @@ describe("TelaDoMania", () => {
   });
 
   it("Treinar abre o mapa na escolha das partes, sem jogar o mapa inteiro", async () => {
-    const { usuario } = abrir();
+    const { usuario } = await abrir();
     await screen.findByText(/Nenhum mapa ainda/);
     await usuario.upload(screen.getByLabelText("Arquivos .osz"), arquivoOsz());
     await usuario.click(await screen.findByText("Música"));
@@ -155,8 +158,20 @@ describe("TelaDoMania", () => {
     }
   });
 
-  it("a alavanca fica no cabeçalho, junto da logo do Mania", () => {
-    abrir();
+  it("abre na tela inicial, com a logo e a alavanca, e o Voltar das telas leva de volta a ela", async () => {
+    const biblioteca = bibliotecaNaMemoria();
+    render(<TelaDoMania alavanca={<button type="button">alavanca</button>} abrirBiblioteca={async () => biblioteca} />);
+    const usuario = userEvent.setup();
+    expect(screen.getByRole("navigation", { name: "Menu do Mania" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "alavanca" })).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Buscar mapas" }));
+    expect(await screen.findByRole("region", { name: "Busca de mapas" })).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Voltar ao menu" }));
+    expect(screen.getByRole("navigation", { name: "Menu do Mania" })).toBeInTheDocument();
+  });
+
+  it("a alavanca fica no cabeçalho das telas, junto da logo do Mania", async () => {
+    await abrir();
     expect(screen.getByRole("heading", { name: "Riff Rush Mania" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "alavanca" })).toBeInTheDocument();
   });
