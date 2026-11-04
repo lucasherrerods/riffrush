@@ -6,7 +6,7 @@ import { iniciarControle, nomeDoBotao, useControleConectado } from "@/modules/ga
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 import { EntradaDaPartida, TelaDeJogo, type JogadorLocal, type Resultado, desempacotarReplay, type Replay, type OpcoesDaPartida } from "@/modules/rock/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/rock/library";
-import { Fundo, MenuPrincipal } from "@/modules/menu";
+import { Fundo, MenuPrincipal, type PalcoCompartilhado } from "@/modules/menu";
 import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
 import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa, estaEmTelaCheia, modoDoF11 } from "@/modules/platform";
@@ -24,6 +24,7 @@ import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { TelaCarregando } from "@/shared/ui/TelaCarregando";
+import { cn } from "@/shared/lib/utils";
 import { mesmasOpcoes, opcoesDaPartida } from "./opcoes";
 
 type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "espectador" | "telaDividida" | "resultadoDividido";
@@ -38,8 +39,10 @@ interface PartidaEmRede {
 }
 
 /** O Riff Rush Rock inteiro. A `alavanca` aparece embaixo da logo, na tela inicial. */
-export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
+export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: PalcoCompartilhado } = {}) {
   const [tela, setTela] = useState<Tela>(() => documentoDoEndereco(location.pathname) ?? "menu");
+  const aoMudarDeTela = palco?.aoMudarDeTela;
+  useEffect(() => aoMudarDeTela?.(tela === "menu"), [tela, aoMudarDeTela]);
   useAtualizacaoAutomatica(tela === "jogo" || tela === "espectador");
   /** md5 do chart do Encore aberto na janela de baixar do leaderboard. */
   const [chartDoLeaderboard, setChartDoLeaderboard] = useState<string | null>(null);
@@ -449,10 +452,11 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
   };
 
   return (
-    <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
+    <main className={cn("dark relative flex h-dvh w-screen flex-col overflow-hidden text-texto", !(palco && tela === "menu") && "bg-fundo")}>
       {/* As telas menos usadas chegam só quando abertas: a abertura do jogo baixa menos código. */}
       <Suspense fallback={<TelaCarregando />}>
-      {!(naPista && configuracoes.modoCompetitivo) && <Fundo tocando={naPista} />}
+      {/* Na tela inicial compartilhada, o disco do app faz o papel do fundo. */}
+      {!(naPista && configuracoes.modoCompetitivo) && !(palco && tela === "menu") && <Fundo tocando={naPista} />}
       {entrada && tela === "jogo" && (
         <EntradaDaPartida
           key={partida}
@@ -495,6 +499,8 @@ export function AppDoRock({ alavanca }: { alavanca?: ReactNode } = {}) {
                 volumeDosEfeitos={configuracoes.volumeDosEfeitos}
                 noCelular={ehClienteWebDaSala()}
                 alavanca={alavanca}
+                troca={palco?.troca}
+                aoMedirTitulo={palco?.aoMedirTitulo}
                 aoJogar={() => {
                   setDivididos(null);
                   setTela("selecao");

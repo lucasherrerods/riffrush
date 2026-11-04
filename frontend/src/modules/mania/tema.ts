@@ -1,26 +1,26 @@
 import { TEMAS } from "@/shared/styles/tokens";
 
-/** O Mania desenha a pista sempre com o tema dele, rosa e branco. */
+/** O Mania desenha a pista sempre com o tema dele, rosa sobre roxo uva. */
 export const TEMA_DO_MANIA = TEMAS.mania;
 export const cores = TEMA_DO_MANIA.cores;
 
 /** Cores do canvas da pista: aqui o brilho neon é permitido, por ser efeito de jogo. */
 export const CORES_DA_PISTA = {
-  fundo: "#fbf6f8",
-  colunaAlternada: "#f4ecf0",
-  divisoria: "#e7d9df",
-  linhaDeJulgamento: "#241c20",
-  receptor: "#e2d3da",
+  fundo: "#130d17",
+  colunaAlternada: "#1b1420",
+  divisoria: "#2c2531",
+  linhaDeJulgamento: "#f4eff8",
+  receptor: "#3a333f",
   /** As notas: das bordas para o meio, alternando, e o centro dos mapas ímpares em ouro. */
   notaDaBorda: "#e0357f",
-  notaDoMeio: "#9d174d",
-  notaDoCentro: "#ca8a04",
+  notaDoMeio: "#f4eff8",
+  notaDoCentro: "#facc15",
   vida: "#e0357f",
-  fundoDaVida: "#e7d9df",
+  fundoDaVida: "#3a333f",
 };
 
 /** Do MAX ao Miss. */
-export const CORES_DOS_JULGAMENTOS = ["#db2777", "#ca8a04", "#15803d", "#0369a1", "#6b5f65", "#b91c1c"];
+export const CORES_DOS_JULGAMENTOS = ["#f472b6", "#facc15", "#22c55e", "#38bdf8", "#b3a4bb", "#ef4444"];
 
 /** Cor de cada coluna, simétrica como no mania: 4K é borda, meio, meio, borda; 7K tem o centro em ouro. */
 export function coresDasColunas(teclas: number): string[] {

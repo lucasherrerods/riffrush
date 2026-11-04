@@ -11,6 +11,11 @@ it("é um switch que diz o modo e gira para o outro ao clicar", async () => {
   expect(aoTrocar).toHaveBeenCalledWith("mania");
 });
 
+it("marca o Mania como novidade", () => {
+  render(<AlavancaDeModo modo="rock" aoTrocar={vi.fn()} />);
+  expect(screen.getByText("Novo")).toBeInTheDocument();
+});
+
 it("pelo teclado, as setas escolhem o lado e o Enter gira", async () => {
   const aoTrocar = vi.fn();
   render(<AlavancaDeModo modo="mania" aoTrocar={aoTrocar} />);

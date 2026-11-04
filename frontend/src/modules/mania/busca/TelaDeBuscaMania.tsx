@@ -61,7 +61,7 @@ export function TelaDeBuscaMania({ baixados, aoBaixar, buscar = buscarMapas, bai
   };
 
   const chip = (ligado: boolean) =>
-    cn("rounded-md border px-3 py-1 text-sm transition-colors", ligado ? "border-primaria bg-primaria text-texto" : "border-borda bg-superficie-elevada text-texto-suave hover:text-texto");
+    cn("rounded-full border-2 px-4 py-1 font-titulo text-base tracking-wide uppercase transition-colors", ligado ? "border-texto bg-primaria text-texto ring-2 ring-primaria" : "border-borda bg-superficie-elevada text-texto-suave hover:text-texto");
 
   return (
     <section aria-label="Busca de mapas" className="respiro-de-tela flex h-full flex-col">
@@ -97,10 +97,10 @@ export function TelaDeBuscaMania({ baixados, aoBaixar, buscar = buscarMapas, bai
           const progresso = baixando[mapa.beatmapsetId];
           const jaBaixado = baixados.has(mapa.beatmapsetId);
           return (
-            <li key={mapa.beatmapsetId} className="flex items-center gap-4 rounded-md border border-borda bg-superficie p-3">
-              {mapa.capa && <img src={mapa.capa} alt="" loading="lazy" className="h-14 w-20 rounded-sm object-cover" />}
+            <li key={mapa.beatmapsetId} className="chapa flex items-center gap-4 bg-superficie-elevada/95 p-3">
+              {mapa.capa && <img src={mapa.capa} alt="" loading="lazy" className="h-14 w-24 rounded-full border-2 border-primaria object-cover" />}
               <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold">{mapa.tituloUnicode}</p>
+                <p className="truncate font-titulo text-xl tracking-wide uppercase">{mapa.tituloUnicode}</p>
                 <p className="truncate text-texto-suave">
                   {mapa.artistaUnicode} · mapa de {mapa.mapper} · {mapa.status}
                 </p>
@@ -115,8 +115,8 @@ export function TelaDeBuscaMania({ baixados, aoBaixar, buscar = buscarMapas, bai
                   Baixado
                 </span>
               ) : (
-                <Button variant="secondary" disabled={progresso !== undefined} onClick={() => aoClicarBaixar(mapa)} aria-label={`Baixar ${mapa.titulo}`}>
-                  <Download aria-hidden className="opacity-70" />
+                <Button className="font-titulo text-base tracking-wide text-texto uppercase" disabled={progresso !== undefined} onClick={() => aoClicarBaixar(mapa)} aria-label={`Baixar ${mapa.titulo}`}>
+                  <Download aria-hidden />
                   Baixar
                 </Button>
               )}
