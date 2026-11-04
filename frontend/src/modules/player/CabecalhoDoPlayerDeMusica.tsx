@@ -3,7 +3,7 @@ import { Loader2, Music, Pause, Play, SkipBack, SkipForward, Volume2, VolumeX } 
 import { Button } from "@/shared/ui/button";
 import { Slider } from "@/shared/ui/slider";
 import { formatarTempo } from "./fila";
-import { playerDeMusica } from "./playerDeMusica";
+import type { FaixaDoPlayer, PlayerDeMusica } from "./playerDeMusica";
 import { usePlayerDeMusica, usePosicaoDaMusica } from "./usePlayerDeMusica";
 import { volumeAoAlternarMudo } from "./volume";
 
@@ -12,12 +12,14 @@ interface Props {
   aoMudarVolume: (volume: number) => void;
   /** Fica no canto direito (a conta, por exemplo). */
   children?: React.ReactNode;
+  /** O player que o cabeçalho controla: cada modo passa o seu. */
+  player: PlayerDeMusica<FaixaDoPlayer>;
 }
 
 /** O player no topo das telas: mostra a música que está tocando e deixa pausar, pular, escolher o trecho e o volume. */
-export function CabecalhoDoPlayerDeMusica({ volume, aoMudarVolume, children }: Props) {
-  const { musica, tocando, carregando, duracao } = usePlayerDeMusica();
-  const posicao = usePosicaoDaMusica(tocando);
+export function CabecalhoDoPlayerDeMusica({ volume, aoMudarVolume, children, player }: Props) {
+  const { musica, tocando, carregando, duracao } = usePlayerDeMusica(player);
+  const posicao = usePosicaoDaMusica(tocando, player);
   // Enquanto arrasta, o slider mostra o ponto escolhido; a música só pula ao soltar.
   const [arrastando, setArrastando] = useState<number | null>(null);
   const tempo = arrastando ?? posicao;
@@ -27,13 +29,13 @@ export function CabecalhoDoPlayerDeMusica({ volume, aoMudarVolume, children }: P
   return (
     <header className="relative z-10 flex items-center gap-3 border-b border-borda bg-superficie px-3 py-1">
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon-xs" aria-label="Música anterior" onClick={() => playerDeMusica.anterior()}>
+        <Button variant="ghost" size="icon-xs" aria-label="Música anterior" onClick={() => player.anterior()}>
           <SkipBack />
         </Button>
-        <Button variant="ghost" size="icon-xs" aria-label={tocando ? "Pausar" : "Tocar"} disabled={!musica || carregando} onClick={() => playerDeMusica.alternar()}>
+        <Button variant="ghost" size="icon-xs" aria-label={tocando ? "Pausar" : "Tocar"} disabled={!musica || carregando} onClick={() => player.alternar()}>
           {carregando ? <Loader2 className="animate-spin" /> : tocando ? <Pause /> : <Play />}
         </Button>
-        <Button variant="ghost" size="icon-xs" aria-label="Próxima música" onClick={() => playerDeMusica.proxima()}>
+        <Button variant="ghost" size="icon-xs" aria-label="Próxima música" onClick={() => player.proxima()}>
           <SkipForward />
         </Button>
       </div>
@@ -52,7 +54,7 @@ export function CabecalhoDoPlayerDeMusica({ volume, aoMudarVolume, children }: P
           disabled={!duracao}
           onValueChange={([valor]) => setArrastando(valor)}
           onValueCommit={([valor]) => {
-            playerDeMusica.irPara(valor);
+            player.irPara(valor);
             setArrastando(null);
           }}
         />

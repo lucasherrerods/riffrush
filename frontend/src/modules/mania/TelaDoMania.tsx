@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowLeft, Library, Search, Settings2 } from "lucide-react";
-import { LogoDoJogo, type PalcoCompartilhado } from "@/modules/menu";
+import { LogoDoJogo, PARTE_DA_TELA_DO_MODO, type PalcoCompartilhado } from "@/modules/menu";
 import { sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
@@ -16,6 +16,9 @@ import { JanelaDeConfiguracoesMania } from "./settings/JanelaDeConfiguracoesMani
 import type { FiltrosDaBusca, MapaDaBusca, baixarOsz } from "./busca/api";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
+import { definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
+import { CabecalhoDoPlayerDeMusica, type FaixaDoPlayer, type PlayerDeMusica } from "@/modules/player";
+import { criarPlayerDoMania, faixasDaBiblioteca, playerDoMania } from "./player/trilhaDoMania";
 import { cn } from "@/shared/lib/utils";
 import { TeclaDoMania } from "./menu/TeclaDoMania";
 import { FundoDoMania } from "./menu/FundoDoMania";
@@ -40,6 +43,22 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   const { conjuntos, importar, guardarBaixado, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
   const [tela, setTela] = useState<Tela>({ nome: "menu" });
   useAtualizacaoAutomatica(tela.nome === "jogo");
+  // A trilha dos menus: as músicas da biblioteca, no mesmo player do cabeçalho do Rock.
+  const player = useMemo(() => (decodificar ? criarPlayerDoMania(undefined, decodificar) : playerDoMania), [decodificar]);
+  const faixas = useMemo(() => faixasDaBiblioteca(conjuntos ?? [], abrirPacote), [conjuntos, abrirPacote]);
+  useEffect(() => {
+    player.definirFila(faixas);
+    if (!player.estado().musica && faixas[0]) player.seguir(faixas[0]);
+  }, [player, faixas]);
+  // Na partida a pista toca a música do mapa; nos menus a trilha volta aos poucos.
+  useEffect(() => player.suspender(tela.nome === "jogo", { esmaecer: tela.nome !== "jogo" }), [player, tela.nome]);
+  // Na troca de modo, a trilha do Mania some aos poucos enquanto o disco gira, e volta quando o Mania volta.
+  useEffect(() => {
+    player.suspender(false, { esmaecer: true });
+    return () => player.suspender(true, { esmaecer: true });
+  }, [player]);
+  const { volume } = useVolumeGeral();
+  const cabecalho = <CabecalhoDoPlayerDeMusica player={player as unknown as PlayerDeMusica<FaixaDoPlayer>} volume={volume} aoMudarVolume={definirVolumeGeral} />;
   const aoMudarDeTela = palco?.aoMudarDeTela;
   useEffect(() => aoMudarDeTela?.(tela.nome === "menu"), [tela.nome, aoMudarDeTela]);
   const [mods, setMods] = useState(0);
@@ -139,9 +158,10 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
 
   if (tela.nome === "menu")
     return (
-      <main className={cn("relative flex h-dvh w-screen flex-col overflow-hidden text-texto", !palco && "bg-fundo")}>
+      <main data-parte={PARTE_DA_TELA_DO_MODO} className={cn("relative flex h-dvh w-screen flex-col overflow-hidden text-texto", !palco && "bg-fundo")}>
         {!palco && <FundoDoMania />}
-        <MenuDoMania alavanca={alavanca} troca={palco?.troca} aoMedirTitulo={palco?.aoMedirTitulo} aoJogar={() => setTela({ nome: "selecao" })} aoBuscar={() => setTela({ nome: "busca" })} aoConfigurar={() => setConfigurando(true)} />
+        {cabecalho}
+        <MenuDoMania alavanca={alavanca} troca={palco?.troca} aoJogar={() => setTela({ nome: "selecao" })} aoBuscar={() => setTela({ nome: "busca" })} aoConfigurar={() => setConfigurando(true)} />
         {janelaDeConfiguracoes}
         <Avisos />
       </main>
@@ -168,6 +188,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   return (
     <main className="relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
       <FundoDoMania />
+      {cabecalho}
       <header className="relative flex items-center justify-between gap-4 border-b border-borda bg-superficie-elevada/80 px-6 py-3 backdrop-blur-sm max-md:flex-wrap max-md:px-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => setTela({ nome: "menu" })} aria-label="Voltar ao menu">

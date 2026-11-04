@@ -1,8 +1,8 @@
 import { AudioBufferFalso, AudioContextFalso, type FonteFalsa } from "@/test/audioFalso";
-import type { Musica } from "@/modules/rock/songs";
 import { PlayerDeMusica } from "./playerDeMusica";
 
-const musica = (id: string) => ({ id, titulo: id }) as Musica;
+const musica = (id: string) => ({ id, titulo: id });
+type Musica = ReturnType<typeof musica>;
 const fila = [musica("a"), musica("b"), musica("c")];
 const buffer = (duracao = 100) => new AudioBufferFalso([new Float32Array(duracao)], 1) as unknown as AudioBuffer;
 const esperar = () => new Promise((r) => setTimeout(r));

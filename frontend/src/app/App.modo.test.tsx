@@ -32,9 +32,7 @@ it("troca o tema e o nome da janela junto com o modo", () => {
 it("com o Mania ligado, girar a alavanca gira o disco do cenário, troca o jogo inteiro e girar de novo volta", async () => {
   const { container } = render(<App maniaLigado />);
   await userEvent.click(screen.getByRole("switch", { name: "Modo de jogo: Rock" }));
-  // O disco gira por cima de tudo, com os dois cenários, e o modo só troca no fim.
-  expect(container.querySelectorAll("[data-parte='metade']")).toHaveLength(2);
-  expect(screen.getByText("jogo do rock")).toBeInTheDocument();
+  // O modo troca logo no clique: a tela nova já fica por baixo, usável, e a capa com o Rock sai girando por cima.
   expect(await screen.findByRole("heading", { name: "Riff Rush Mania" }, { timeout: 5000 })).toBeInTheDocument();
   expect(lerTema()).toBe(TEMAS.mania);
   // O disco fica atrás da tela inicial; a troca acaba quando ele para de girar.

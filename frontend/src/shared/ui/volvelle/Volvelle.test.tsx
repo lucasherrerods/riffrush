@@ -1,54 +1,47 @@
 import { render } from "@testing-library/react";
 import { TEMAS } from "@/shared/styles/tokens";
-import { Volvelle } from "./Volvelle";
+import { CapaDaVolvelle, Volvelle } from "./Volvelle";
 
-const abrir = ({ virada = false, girando = false } = {}) =>
-  render(
-    <Volvelle
-      cima={{ cena: <p>rock</p>, tema: TEMAS.riffRush, titulo: <h1>Rock</h1> }}
-      baixo={{ cena: <p>mania</p>, tema: TEMAS.mania, titulo: <h1>Mania</h1> }}
-      virada={virada}
-      girando={girando}
-      posicaoDoTitulo={{ x: 10, y: 20, largura: 200 }}
-    />,
-  );
+const rock = { cena: <p>rock</p>, tema: TEMAS.riffRush };
+const mania = { cena: <p>mania</p>, tema: TEMAS.mania };
 
 describe("Volvelle", () => {
-  it("parado, monta só a cena que aparece", () => {
-    const { queryByText } = abrir();
+  it("parada, monta só o cenário que aparece", () => {
+    const { queryByText } = render(<Volvelle cima={rock} baixo={mania} virada={false} girando={false} />);
     expect(queryByText("rock")).toBeInTheDocument();
     expect(queryByText("mania")).not.toBeInTheDocument();
   });
 
-  it("girando, monta as duas cenas, uma em cada metade", () => {
-    const { getByText, container } = abrir({ girando: true });
-    expect(getByText("rock")).toBeInTheDocument();
+  it("girando, monta os dois cenários, cada um com o tema do seu modo", () => {
+    const { container, getByText } = render(<Volvelle cima={rock} baixo={mania} virada={false} girando />);
     expect(getByText("mania")).toBeInTheDocument();
-    expect(container.querySelectorAll("[data-parte='metade']")).toHaveLength(2);
-  });
-
-  it("cada metade veste o tema do seu modo, ao mesmo tempo", () => {
-    const { container } = abrir({ girando: true });
     const [cima, baixo] = container.querySelectorAll<HTMLElement>("[data-parte='metade']");
     expect(cima.style.getPropertyValue("--cor-fundo")).toBe(TEMAS.riffRush.cores.fundo);
     expect(baixo.style.getPropertyValue("--cor-fundo")).toBe(TEMAS.mania.cores.fundo);
   });
 
-  it("virado, o disco dá meia volta", () => {
-    const { container } = abrir({ virada: true });
+  it("virada, o disco dá meia volta", () => {
+    const { container } = render(<Volvelle cima={rock} baixo={mania} virada girando={false} />);
     expect(container.querySelector<HTMLElement>("[data-parte='disco']")!.style.transform).toBe("rotate(180deg)");
   });
 
-  it("os títulos só aparecem no giro, para a linha cortar um e revelar o outro", () => {
-    const parado = abrir();
-    for (const t of parado.container.querySelectorAll("[data-parte='titulo']")) expect(t.parentElement).toHaveClass("invisible");
-    parado.unmount();
-    const { container } = abrir({ girando: true });
-    for (const t of container.querySelectorAll("[data-parte='titulo']")) expect(t.parentElement).not.toHaveClass("invisible");
+  it("é só decoração para os leitores de tela", () => {
+    const { container } = render(<Volvelle cima={rock} baixo={mania} virada={false} girando={false} />);
+    expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
+  });
+});
+
+describe("CapaDaVolvelle", () => {
+  it("sem troca, fica vazia, só guardando a posição do disco", () => {
+    const { container } = render(<CapaDaVolvelle virada={false} />);
+    expect(container.querySelector("[data-parte='metade']")).not.toBeInTheDocument();
   });
 
-  it("é só decoração para os leitores de tela", () => {
-    const { container } = abrir();
-    expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
+  it("na troca, leva o cenário e a foto da tela do modo que saiu", () => {
+    const elemento = document.createElement("p");
+    elemento.textContent = "tela do rock";
+    const { getByText } = render(<CapaDaVolvelle virada saindo={{ lado: rock, emCima: true, foto: { elemento, retangulo: { x: 0, y: 0, largura: 800, altura: 600 } } }} />);
+    expect(getByText("rock")).toBeInTheDocument();
+    expect(getByText("tela do rock")).toBeInTheDocument();
   });
 });

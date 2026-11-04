@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { useTeclado } from "@/shared/hooks/useTeclado";
@@ -16,9 +16,10 @@ export interface PalcoCompartilhado {
   troca?: TrocaDeModo;
   /** O modo avisa se está na tela inicial, para o app mostrar o disco atrás dela. */
   aoMudarDeTela: (naTelaInicial: boolean) => void;
-  /** Onde o título está na tela: o disco desenha uma cópia dele ali, que a linha da troca corta. */
-  aoMedirTitulo?: (retangulo: DOMRect) => void;
 }
+
+/** Marca a tela de cada modo: no clique da troca, o app tira uma foto dela para a capa do disco. */
+export const PARTE_DA_TELA_DO_MODO = "tela-do-modo";
 
 export interface OpcaoDaTelaInicial {
   rotulo: string;
@@ -46,7 +47,8 @@ interface Props {
   /** O que cada modo põe a mais na tela: chat, rodapé, janelas. */
   children?: ReactNode;
   troca?: TrocaDeModo;
-  aoMedirTitulo?: (retangulo: DOMRect) => void;
+  /** Só a imagem da tela, desenhada no disco da troca: sem teclado e sem animação de entrada. */
+  estatica?: boolean;
 }
 
 const iconePadrao = ({ icone: Icone }: OpcaoDaTelaInicial) => <Icone className="size-3.5 opacity-70 max-md:size-5" />;
@@ -71,26 +73,15 @@ export function TelaInicial({
   className,
   children,
   troca,
-  aoMedirTitulo,
+  estatica = false,
 }: Props) {
-  const titulo = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    if (!aoMedirTitulo) return;
-    const medir = () => titulo.current && aoMedirTitulo(titulo.current.getBoundingClientRect());
-    medir();
-    window.addEventListener("resize", medir);
-    return () => window.removeEventListener("resize", medir);
-  }, [aoMedirTitulo]);
-  const saindo = troca?.fase === "saindo";
-  const chegando = troca?.fase === "chegando";
-  const lado = troca?.sentido ?? 1;
-  // O voo da alavanca e das opções: chegam de um lado, uma atrás da outra, e saem para o outro.
+  // Na troca a tela nova já aparece no lugar, usável, enquanto a capa com a antiga sai girando.
+  const semEntrada = estatica || troca?.fase === "chegando";
+  // A alavanca e as opções chegam voando de um lado, uma atrás da outra, ao abrir o jogo e ao voltar para a tela inicial.
   const voo = {
-    inicio: { x: `${lado * 70}vw`, opacity: 0, rotate: lado * 8 },
-    saida: { x: `${lado * -70}vw`, opacity: 0, rotate: lado * -8 },
+    inicio: semEntrada ? (false as const) : { x: "70vw", opacity: 0, rotate: 8 },
     parada: { x: 0, opacity: 1, rotate: 0 },
-    transicaoDeSaida: (ordem: number) => ({ duration: 0.35, ease: [0.55, 0, 1, 0.45] as const, delay: ordem * 0.04 }),
-    transicaoDeChegada: (ordem: number) => ({ type: "spring" as const, stiffness: 140, damping: 18, delay: (chegando ? 0 : 0.15) + ordem * 0.06 }),
+    transicao: (ordem: number) => ({ type: "spring" as const, stiffness: 140, damping: 18, delay: 0.15 + ordem * 0.06 }),
   };
   const [selecionada, setSelecionada] = useState(0);
 
@@ -100,7 +91,7 @@ export function TelaInicial({
   };
 
   useTeclado((evento) => {
-    if (pausada || saindo) return;
+    if (pausada || estatica) return;
     if (evento.code === "ArrowDown" || evento.code === "ArrowUp") {
       evento.preventDefault();
       aoMover?.();
@@ -113,27 +104,22 @@ export function TelaInicial({
   });
 
   return (
-    <div className={cn("rolagem-de-toque relative flex h-full flex-col items-center gap-6 overflow-x-hidden py-6 max-md:px-4", className)}>
+    <div
+      className={cn("rolagem-de-toque relative flex h-full flex-col items-center gap-6 overflow-x-hidden py-6 max-md:px-4", className)}
+    >
       <motion.div
-        // Na troca de modo, a logo fica parada no lugar: só as opções voam.
-        initial={chegando ? false : { y: -40, opacity: 0, scale: 0.8 }}
+        initial={semEntrada ? false : { y: -40, opacity: 0, scale: 0.8 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
         transition={{ type: "spring", stiffness: 120, damping: 12 }}
-        // Durante a troca o título da tela some: quem aparece é a cópia no disco, cortada pela linha. A alavanca some junto.
-        className="mt-auto"
+        className="mt-auto flex flex-col items-center gap-2"
       >
-        <div className="flex flex-col items-center gap-2">
-          <div ref={titulo} className={cn("flex flex-col items-center gap-2", troca && "invisible")}>
-            {logo}
-            <p className="text-center text-xs font-bold tracking-[0.4em] text-texto-suave max-md:tracking-[0.15em]">{subtitulo}</p>
-          </div>
-          {/* A alavanca voa junto com as opções: sai antes do giro e chega com as do novo modo. */}
-          {alavanca && (
-            <motion.div initial={voo.inicio} animate={saindo ? voo.saida : voo.parada} transition={saindo ? voo.transicaoDeSaida(0) : voo.transicaoDeChegada(0)}>
-              {alavanca}
-            </motion.div>
-          )}
-        </div>
+        {logo}
+        <p className="text-center text-xs font-bold tracking-[0.4em] text-texto-suave max-md:tracking-[0.15em]">{subtitulo}</p>
+        {alavanca && (
+          <motion.div initial={voo.inicio} animate={voo.parada} transition={voo.transicao(0)}>
+            {alavanca}
+          </motion.div>
+        )}
       </motion.div>
 
       <nav aria-label={rotuloDoMenu} className={cn("mb-auto flex flex-col max-md:w-full max-md:max-w-sm max-md:gap-2", classeDoMenu)}>
@@ -145,8 +131,8 @@ export function TelaInicial({
               aria-current={ativa}
               // As opções sempre chegam voando de um lado: ao abrir o jogo, ao voltar para a tela inicial e na troca de modo.
               initial={voo.inicio}
-              animate={saindo ? voo.saida : voo.parada}
-              transition={saindo ? voo.transicaoDeSaida(i + 1) : voo.transicaoDeChegada(i + 1)}
+              animate={voo.parada}
+              transition={voo.transicao(i + 1)}
               onMouseEnter={() => {
                 if (!ativa) aoMover?.();
                 setSelecionada(i);
