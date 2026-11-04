@@ -54,7 +54,7 @@ export function MenuPrincipal({ modo = "rock", volumeDosEfeitos, noCelular = fal
   const comuns: Item[] = [
     ...(aoLeaderboard && !mania ? [{ rotulo: "Leaderboard", icone: Trophy, acao: aoLeaderboard }] : []),
     ...(aoOnline ? [{ rotulo: "Online", icone: Radio, acao: aoOnline }] : []),
-    { rotulo: "Personagem", icone: Shirt, acao: aoPersonagem },
+    ...(mania ? [] : [{ rotulo: "Personagem", icone: Shirt, acao: aoPersonagem }]),
     ...(aoConfigurar ? [{ rotulo: "Configurações", icone: Settings2, acao: aoConfigurar }] : []),
   ];
   const itens: Item[] = mania

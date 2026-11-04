@@ -7,7 +7,7 @@ import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 import { EntradaDaPartida, TelaDeJogo, type JogadorLocal, type Resultado, desempacotarReplay, type Replay, type OpcoesDaPartida } from "@/modules/rock/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/rock/library";
 import { Fundo, MenuPrincipal } from "@/modules/menu";
-import { TelaDoMania } from "@/modules/mania";
+import { ConfiguracoesDoMania, TelaDoMania } from "@/modules/mania";
 import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
 import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa, estaEmTelaCheia, modoDoF11 } from "@/modules/platform";
@@ -43,6 +43,7 @@ interface PartidaEmRede {
 /** O menu principal e o Riff Rush Rock. No modo Mania, o mesmo menu abre as telas do Mania; a `alavanca` fica embaixo da logo. */
 export function AppDoRock({ modo = "rock", alavanca }: { modo?: Modo; alavanca?: ReactNode } = {}) {
   const [tela, setTela] = useState<Tela>(() => documentoDoEndereco(location.pathname) ?? "menu");
+  const [configurandoMania, setConfigurandoMania] = useState(false);
   const noMania = tela === "maniaSelecao" || tela === "maniaBusca";
   // Nas telas do Mania, quem cuida da atualização é o próprio Mania, que sabe quando há partida.
   useAtualizacaoAutomatica(tela === "jogo" || tela === "espectador" || noMania);
@@ -332,6 +333,7 @@ export function AppDoRock({ modo = "rock", alavanca }: { modo?: Modo; alavanca?:
 
   /** Abre do cabeçalho, em qualquer tela: o Voltar leva para onde estava. */
   const abrirConfiguracoes = () => {
+    if (modo === "mania") return setConfigurandoMania(true);
     if (tela === "configuracoes") return;
     setVoltarDasConfiguracoesPara(tela);
     setTela("configuracoes");
@@ -788,6 +790,7 @@ export function AppDoRock({ modo = "rock", alavanca }: { modo?: Modo; alavanca?:
           )}
         </AnimatePresence>
       </div>
+      {configurandoMania && <ConfiguracoesDoMania aoFechar={() => setConfigurandoMania(false)} />}
       <IndicadorDeVolume />
       <SoltarParaImportar ativo={!naPista && modo === "rock"} aoSoltar={(arquivos) => void importar(arquivos)} />
       <ProgressoDaImportacao progresso={progresso} />

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Settings2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { LogoDoJogo } from "@/modules/menu";
 import { sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -11,8 +11,7 @@ import { useBibliotecaDoMania } from "./beatmaps/useBibliotecaDoMania";
 import { ResultadoDoMania } from "./gameplay/ResultadoDoMania";
 import { TelaDeJogoMania, type MapaParaJogar, type OpcoesDoMania, type ResultadoDoMania as Resultado } from "./gameplay/TelaDeJogoMania";
 import { TelaDeSelecaoMania } from "./selecao/TelaDeSelecaoMania";
-import { carregarConfiguracoesDoMania, salvarConfiguracoesDoMania } from "./settings/configuracoesMania";
-import { JanelaDeConfiguracoesMania } from "./settings/JanelaDeConfiguracoesMania";
+import { carregarConfiguracoesDoMania } from "./settings/configuracoesMania";
 import type { FiltrosDaBusca, MapaDaBusca, baixarOsz } from "./busca/api";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
@@ -37,12 +36,7 @@ export function TelaDoMania({ telaInicial = "selecao", aoVoltar, abrirBiblioteca
   const [tela, setTela] = useState<Tela>({ nome: telaInicial });
   useAtualizacaoAutomatica(tela.nome === "jogo");
   const [mods, setMods] = useState(0);
-  const [opcoes, setOpcoes] = useState<OpcoesDoMania>(carregarConfiguracoesDoMania);
-  const [configurando, setConfigurando] = useState(false);
-  const mudarOpcoes = (novas: OpcoesDoMania) => {
-    setOpcoes(novas);
-    salvarConfiguracoesDoMania(novas);
-  };
+  const [opcoes] = useState<OpcoesDoMania>(carregarConfiguracoesDoMania);
   const { conta } = useConta();
   const [xp, setXp] = useState<RegistroDaPartida | undefined>();
   // A semente do Random muda a cada partida; o replay a guarda.
@@ -142,9 +136,6 @@ export function TelaDoMania({ telaInicial = "selecao", aoVoltar, abrirBiblioteca
           </Button>
         </nav>
         <div className="flex items-center gap-4">
-          <Button variant="secondary" onClick={() => setConfigurando(true)} aria-label="Configurações do Mania">
-            <Settings2 aria-hidden className="opacity-70" />
-          </Button>
           {aoVoltar && (
             <Button variant="secondary" onClick={aoVoltar}>
               <ArrowLeft aria-hidden className="opacity-70" />
@@ -158,7 +149,6 @@ export function TelaDoMania({ telaInicial = "selecao", aoVoltar, abrirBiblioteca
       ) : (
         <TelaDeSelecaoMania conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} />
       )}
-      <JanelaDeConfiguracoesMania aberta={configurando} aoFechar={() => setConfigurando(false)} opcoes={opcoes} aoMudar={mudarOpcoes} />
       <Avisos />
     </main>
   );
