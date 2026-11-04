@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <!-- luva de desenho animado apontando para cima e à esquerda; a ponta do indicador é o lugar do clique -->
+  <g transform="translate(-1.5 5.5) rotate(-35 7.5 0)">
+    <g fill="#e0357f" stroke="#e0357f" stroke-width="4" stroke-linejoin="round">
+      <rect x="4" y="0" width="7" height="17" rx="3.5"/>
+      <rect x="2" y="11" width="19" height="14" rx="6"/>
+      <circle cx="14.5" cy="13" r="4"/>
+      <circle cx="19" cy="16" r="3.4"/>
+      <ellipse cx="3" cy="18" rx="3.5" ry="5"/>
+      <rect x="4.5" y="24" width="14" height="7" rx="2.5"/>
+    </g>
+    <g fill="#fbf7fb">
+      <rect x="4" y="0" width="7" height="17" rx="3.5"/>
+      <rect x="2" y="11" width="19" height="14" rx="6"/>
+      <circle cx="14.5" cy="13" r="4"/>
+      <circle cx="19" cy="16" r="3.4"/>
+      <ellipse cx="3" cy="18" rx="3.5" ry="5"/>
+      <rect x="4.5" y="24" width="14" height="7" rx="2.5"/>
+    </g>
+    <path d="M7 24 C12 26 17 25 20 21 L20 23 C17 27 11 28 6 25 Z" fill="#d8cde0"/>
+    <g fill="none" stroke="#e0357f" stroke-width="1.3" stroke-linecap="round">
+      <path d="M11.5 14 C12 16 12 18 11 19"/>
+      <path d="M16.5 16.5 C17 18 16.5 19.5 15.5 20.5"/>
+      <path d="M5.5 26.5 L17.5 26.5"/>
+    </g>
+  </g>
+</svg>

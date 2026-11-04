@@ -7,3 +7,4 @@ export { abrirBibliotecaDoMania, importarOsz, type BibliotecaDoMania, type Conju
 export { ErroDoOsz } from "./beatmaps/osz";
 export { faixaDasEstrelas, type FaixaDeDificuldade } from "./beatmaps/dificuldades";
 export { FundoDoMania } from "./menu/FundoDoMania";
+export { MenuDoMania } from "./menu/MenuDoMania";

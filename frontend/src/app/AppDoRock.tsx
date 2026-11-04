@@ -6,9 +6,10 @@ import { iniciarControle, nomeDoBotao, useControleConectado } from "@/modules/ga
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 import { EntradaDaPartida, TelaDeJogo, type JogadorLocal, type Resultado, desempacotarReplay, type Replay, type OpcoesDaPartida } from "@/modules/rock/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/rock/library";
-import { Fundo, MenuPrincipal, type PalcoCompartilhado } from "@/modules/menu";
+import { Fundo, MenuPrincipal, PARTE_DA_TELA_DO_MODO, type PalcoCompartilhado } from "@/modules/menu";
 import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
-import { CabecalhoDoPlayerDeMusica, indiceVizinho, playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
+import { CabecalhoDoPlayerDeMusica, indiceVizinho, type FaixaDoPlayer, type PlayerDeMusica } from "@/modules/player";
+import { playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
 import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa, estaEmTelaCheia, modoDoF11 } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
 import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, entrarNaSalaOnline, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
@@ -41,6 +42,8 @@ interface PartidaEmRede {
 /** O Riff Rush Rock inteiro. A `alavanca` aparece embaixo da logo, na tela inicial. */
 export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: PalcoCompartilhado } = {}) {
   const [tela, setTela] = useState<Tela>(() => documentoDoEndereco(location.pathname) ?? "menu");
+  // Na troca de modo, a trilha do Rock some aos poucos enquanto o disco gira, e volta quando o Rock volta.
+  useEffect(() => () => playerDeMusica.suspender(true, { esmaecer: true }), []);
   const aoMudarDeTela = palco?.aoMudarDeTela;
   useEffect(() => aoMudarDeTela?.(tela === "menu"), [tela, aoMudarDeTela]);
   useAtualizacaoAutomatica(tela === "jogo" || tela === "espectador");
@@ -226,7 +229,8 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
   // Assistir ao vivo também é uma partida na tela: sem o player do menu e sem o cabeçalho.
   const naPista = tela === "jogo" || tela === "espectador";
   useEffect(() => {
-    playerDeMusica.suspender(naPista);
+    // Ao sair da pista, a trilha volta aos poucos.
+    playerDeMusica.suspender(naPista, { esmaecer: !naPista });
   }, [naPista]);
 
   // Só aparece online quem aceitou, com conta e com o relay configurado.
@@ -452,7 +456,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
   };
 
   return (
-    <main className={cn("dark relative flex h-dvh w-screen flex-col overflow-hidden text-texto", !(palco && tela === "menu") && "bg-fundo")}>
+    <main data-parte={PARTE_DA_TELA_DO_MODO} className={cn("dark relative flex h-dvh w-screen flex-col overflow-hidden text-texto", !(palco && tela === "menu") && "bg-fundo")}>
       {/* As telas menos usadas chegam só quando abertas: a abertura do jogo baixa menos código. */}
       <Suspense fallback={<TelaCarregando />}>
       {/* Na tela inicial compartilhada, o disco do app faz o papel do fundo. */}
@@ -469,7 +473,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
         />
       )}
       {!naPista && (
-        <CabecalhoDoPlayerDeMusica volume={volumeGeral} aoMudarVolume={definirVolumeGeral}>
+        <CabecalhoDoPlayerDeMusica player={playerDeMusica as unknown as PlayerDeMusica<FaixaDoPlayer>} volume={volumeGeral} aoMudarVolume={definirVolumeGeral}>
           {contasLigadas && <BotaoDeAmigos aberto={amigosAbertos} aoAlternar={() => setAmigosAbertos((abertos) => !abertos)} />}
           {contasLigadas && (
             <CartaoDaConta
@@ -500,7 +504,6 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 noCelular={ehClienteWebDaSala()}
                 alavanca={alavanca}
                 troca={palco?.troca}
-                aoMedirTitulo={palco?.aoMedirTitulo}
                 aoJogar={() => {
                   setDivididos(null);
                   setTela("selecao");

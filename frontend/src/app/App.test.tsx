@@ -87,9 +87,12 @@ vi.mock("@/modules/conta", async (original) => ({
 }));
 
 // Sem isso o player sintetizaria a primeira música a cada teste.
-vi.mock("@/modules/rock/player", () => ({
+vi.mock("@/modules/player", async (original) => ({
+  ...(await original<typeof import("@/modules/player")>()),
   CabecalhoDoPlayerDeMusica: ({ children }: { children?: ReactNode }) => <>{children}</>,
   indiceVizinho: vi.fn(),
+}));
+vi.mock("@/modules/rock/player", () => ({
   useSeguirMusica: vi.fn(),
   playerDeMusica: { definirFila: vi.fn(), definirNavegacao: vi.fn(), seguir: vi.fn(), definirVolume: vi.fn(), suspender: vi.fn(), estado: () => ({ musica: null }) },
 }));

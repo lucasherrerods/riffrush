@@ -32,7 +32,8 @@ interface Props {
   /** A alavanca que troca para o Mania, embaixo da logo. */
   alavanca?: ReactNode;
   troca?: TrocaDeModo;
-  aoMedirTitulo?: (retangulo: DOMRect) => void;
+  /** Só a imagem da tela, para o disco da troca. */
+  estatica?: boolean;
 }
 
 type Item = OpcaoDaTelaInicial;
@@ -40,7 +41,7 @@ type Item = OpcaoDaTelaInicial;
 const URL_DO_PROJETO = "https://github.com/lucasherrerods/riffrush";
 const URL_DA_LANDING = "https://playriffrush.vercel.app";
 
-export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoMultiplayerLocal, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca, troca, aoMedirTitulo }: Props) {
+export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoMultiplayerLocal, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca, troca, estatica }: Props) {
   const [escolhendoMultiplayer, setEscolhendoMultiplayer] = useState(false);
   const buscar: Item = { rotulo: "Buscar músicas", icone: Search, acao: aoBuscarMusicas };
   const comuns: Item[] = [
@@ -64,7 +65,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
       subtitulo="O PALCO É SEU"
       alavanca={alavanca}
       troca={troca}
-      aoMedirTitulo={aoMedirTitulo}
+      estatica={estatica}
       opcoes={itens}
       pausada={escolhendoMultiplayer}
       aoMover={() => tocarEfeito("mover", volumeDosEfeitos)}
