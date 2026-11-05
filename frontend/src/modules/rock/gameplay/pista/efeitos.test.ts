@@ -1,4 +1,4 @@
-import { estiloDoJulgamento, trovaoDoEvento, pontosDoRaio, progressoDoMultiplicador, tremor, pulo } from "./efeitos";
+import { estiloDoJulgamento, trovaoDoEvento, pontosDoRaio, progressoDoMultiplicador, tremor, pulo, forcaDaChama, elevacaoDoAro, linguasDeFogo, DURACAO_DA_CHAMA, DURACAO_DO_ARO } from "./efeitos";
 
 describe("trovaoDoEvento", () => {
   it("troveja forte quando o star power fica pronto para usar", () => {
@@ -73,5 +73,34 @@ describe("pulo", () => {
   it("não passa de 40 px", () => {
     const alturas = Array.from({ length: 50 }, (_, i) => pulo(i * 0.01));
     expect(Math.min(...alturas)).toBeGreaterThanOrEqual(-40);
+  });
+});
+
+describe("chamas do acerto", () => {
+  it("a chama acende rápido, apaga aos poucos e some no fim", () => {
+    expect(forcaDaChama(-0.01)).toBe(0);
+    expect(forcaDaChama(0.05)).toBeGreaterThan(0.9);
+    expect(forcaDaChama(0.2)).toBeLessThan(forcaDaChama(0.1));
+    expect(forcaDaChama(DURACAO_DA_CHAMA)).toBe(0);
+  });
+
+  it("o aro do traste sobe rápido, fica no alto e desce", () => {
+    expect(elevacaoDoAro(-0.01)).toBe(0);
+    expect(elevacaoDoAro(0.025)).toBeCloseTo(0.5);
+    expect(elevacaoDoAro(0.1)).toBe(1);
+    expect(elevacaoDoAro(DURACAO_DO_ARO - 0.05)).toBeCloseTo(0.5);
+    expect(elevacaoDoAro(DURACAO_DO_ARO)).toBe(0);
+  });
+
+  it("as línguas de fogo têm o mesmo desenho no mesmo instante e tremem com o tempo", () => {
+    expect(linguasDeFogo(7, 0.1, 1)).toEqual(linguasDeFogo(7, 0.1, 1));
+    expect(linguasDeFogo(7, 0.1, 1)).not.toEqual(linguasDeFogo(7, 0.15, 1));
+  });
+
+  it("a força define a altura das línguas", () => {
+    const altura = (forca: number) => Math.max(...linguasDeFogo(3, 0.1, forca).map((l) => l.altura));
+    expect(altura(1)).toBeGreaterThan(altura(0.4));
+    expect(altura(1)).toBeLessThanOrEqual(1);
+    for (const { desvio } of linguasDeFogo(3, 0.1, 1)) expect(Math.abs(desvio)).toBeLessThanOrEqual(1);
   });
 });
