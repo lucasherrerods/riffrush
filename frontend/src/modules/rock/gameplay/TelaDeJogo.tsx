@@ -45,6 +45,8 @@ interface Props {
   personagem: Personagem;
   /** Pontos do recorde nesta música e dificuldade, para marcar na barra de estrelas. */
   recorde?: number;
+  /** A entrada com o trovão ainda cobre a tela. */
+  esperandoEntrada?: boolean;
   /** Partida em rede: largada combinada, estado enviado à sala e o painel dos adversários. */
   rede?: {
     /** Instante (performance.now) em que a música começa para todos. */
@@ -72,7 +74,7 @@ interface Props {
 }
 
 
-const ENTRADA = 2.5;
+const ENTRADA = 4;
 const SINCRONIA_DO_VIDEO = 0.15;
 /** Pular para o fim exato terminaria o replay na hora: a barra para um pouco antes. */
 const FOLGA_DO_FIM = 0.5;
@@ -80,7 +82,7 @@ const FOLGA_DO_FIM = 0.5;
 const SALTO_DAS_SETAS: Record<string, number> = { ArrowLeft: -5, ArrowRight: 5 };
 const nada = () => {};
 
-export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, rede, aoSair, aoTerminar, placar, replay, transmissao, espectadores = 0, jogadores, aoTerminarJuntos, treino = false }: Props) {
+export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, esperandoEntrada, rede, aoSair, aoTerminar, placar, replay, transmissao, espectadores = 0, jogadores, aoTerminarJuntos, treino = false }: Props) {
   const divididos = jogadores && jogadores.length > 1 ? jogadores : null;
   const quantos = divididos?.length ?? 1;
   // O replay toca na velocidade em que foi gravado, não na das configurações de quem assiste.
@@ -436,6 +438,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     instrumento,
     velocidade,
     entrada: ENTRADA,
+    esperandoEntrada,
     relogio,
     comPalco,
     personagem,

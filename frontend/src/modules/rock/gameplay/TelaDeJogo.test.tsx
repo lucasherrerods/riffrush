@@ -16,7 +16,7 @@ vi.mock("@/modules/rock/songs", async (original) => ({
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => {}), isTauri: () => true }));
 
-const ENTRADA = 2.5;
+const ENTRADA = 4;
 const nota = (tempo: number, pista = 0): Nota => ({ tempo, pista, frase: -1, duracao: 0 });
 
 function carregarCom(notas: Nota[], duracao = 10) {
