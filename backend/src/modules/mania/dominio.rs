@@ -2,6 +2,9 @@ use riffrush_motor_mania as motor;
 
 use crate::modules::progresso::xp_pelos_numeros;
 
+/// Quantos replays cada mapa guarda: os do top do ranking. Quem cai para fora perde o seu.
+pub const REPLAYS_POR_MAPA: u32 = 10;
+
 /// Um replay de um mapa longo e denso fica com poucas dezenas de KB.
 pub const TAMANHO_MAXIMO_DO_REPLAY: usize = 512 * 1024;
 
@@ -87,6 +90,56 @@ pub fn xp_do_mania(estrelas: f64, rejulgada: &Rejulgada, repeticoes: u32) -> u64
 /// Entra no ranking: mapa ranked ou loved, sem derrota e sem os mods que não valem.
 pub fn vale_ranking(status: &str, rejulgada: &Rejulgada) -> bool {
     status_vale_xp(status) && !rejulgada.derrota && rejulgada.mods_valem_ranking
+}
+
+/// Título, artista e nome da dificuldade de um `.osu` guardado. Nada quando o texto não é um beatmap.
+pub fn metadados_do_osu(texto: &str) -> Option<(String, String, String)> {
+    let beatmap = motor::ler_beatmap(texto).ok()?;
+    let m = beatmap.metadados;
+    let preferir = |unicode: String, ascii: String| if unicode.is_empty() { ascii } else { unicode };
+    Some((preferir(m.titulo_unicode, m.titulo), preferir(m.artista_unicode, m.artista), m.dificuldade))
+}
+
+/// A partir de quanto a partida conta como S no perfil, como no osu!mania (SS é 100%).
+pub const PRECISAO_DO_S: f64 = 0.95;
+
+/// Uma dificuldade no leaderboard dos mapas mais jogados.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MapaPopular {
+    pub beatmap_id: u64,
+    pub beatmapset_id: Option<u64>,
+    pub partidas: u32,
+    pub jogadores: u32,
+    pub titulo: Option<String>,
+    pub artista: Option<String>,
+    pub dificuldade: Option<String>,
+    /// O primeiro lugar do ranking do mapa.
+    pub recorde: Option<RecordeDoMapa>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecordeDoMapa {
+    pub nome: String,
+    pub pontuacao: u32,
+    pub precisao: f64,
+}
+
+/// Os números do Mania no perfil, só das partidas que entram no ranking.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct EstatisticasDoMania {
+    pub partidas: u32,
+    /// Mapas diferentes jogados.
+    pub mapas: u32,
+    /// De 0 a 1; sem partidas, 0.
+    pub precisao_media: f64,
+    pub maior_combo: u32,
+    pub pontuacao_total: u64,
+    pub ss: u32,
+    pub s: u32,
+    /// Em quantos mapas a conta está entre os primeiros do ranking.
+    pub no_top: u32,
+    /// Julgamentos somados, de MAX a Miss.
+    pub contagem: [u64; 6],
 }
 
 #[cfg(test)]
@@ -203,5 +256,21 @@ pub mod tests {
                 ..r
             }
         ));
+    }
+}
+
+#[cfg(test)]
+mod testes_dos_metadados {
+    use super::metadados_do_osu;
+
+    #[test]
+    fn le_titulo_artista_e_dificuldade_preferindo_o_unicode() {
+        let texto = "osu file format v14\n\n[General]\nMode: 3\n\n[Metadata]\nTitle:Musica\nTitleUnicode:Música\nArtist:Banda\nVersion:Hard\n\n[Difficulty]\nCircleSize:4\nOverallDifficulty:8\nHPDrainRate:8\n\n[HitObjects]\n64,192,1000,1,0,0:0:0:0:\n";
+        assert_eq!(metadados_do_osu(texto), Some(("Música".into(), "Banda".into(), "Hard".into())));
+    }
+
+    #[test]
+    fn texto_que_nao_e_beatmap_nao_tem_metadados() {
+        assert_eq!(metadados_do_osu("nada"), None);
     }
 }

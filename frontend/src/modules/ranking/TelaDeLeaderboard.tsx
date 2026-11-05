@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ArrowLeft, Music, Search, Users } from "lucide-react";
 import { sessaoDaConta, useConta } from "@/modules/conta";
 import { DIFICULDADES, nomeDaMusica } from "@/modules/rock/songs";
@@ -31,6 +31,10 @@ interface Props {
   /** A música aberta, quando quem usa a tela quer lembrar dela (ex.: ao voltar de uma partida). Sem ela, a tela guarda sozinha. */
   musicaAberta?: MusicaNoRanking | null;
   aoAbrirMusica?: (musica: MusicaNoRanking | null) => void;
+  /** O nome da segunda aba: as músicas do Rock ou os mapas do Mania. */
+  rotuloDasMusicas?: string;
+  /** A segunda aba de outro modo, no lugar das músicas do Rock. A aba de XP é a mesma nos dois. */
+  abaDasMusicas?: ReactNode;
 }
 
 /** O ranking guarda as músicas do Encore como `encore:<md5>`; as outras não têm de onde baixar. */
@@ -44,7 +48,7 @@ const plural = (n: number, um: string, varios: string) => `${formatar(n)} ${n ==
 const LISTA = "sem-barra-de-rolagem rolagem-de-toque flex min-h-0 flex-1 flex-col gap-1";
 
 /** O leaderboard: os jogadores com mais XP numa aba e as músicas mais jogadas na outra. */
-export function TelaDeLeaderboard({ aoVoltar, carregarPlayers = carregarPlayersPadrao, carregarMusicas = carregarMusicasPadrao, ...daMusica }: Props) {
+export function TelaDeLeaderboard({ aoVoltar, carregarPlayers = carregarPlayersPadrao, carregarMusicas = carregarMusicasPadrao, rotuloDasMusicas = "Músicas", abaDasMusicas, ...daMusica }: Props) {
   return (
     <div className="respiro-de-tela flex h-full flex-col">
       <header className="flex items-center gap-4 max-md:gap-2">
@@ -60,7 +64,7 @@ export function TelaDeLeaderboard({ aoVoltar, carregarPlayers = carregarPlayersP
             <Users className="opacity-70" /> Players
           </TabsTrigger>
           <TabsTrigger value="musicas">
-            <Music className="opacity-70" /> Músicas
+            <Music className="opacity-70" /> {rotuloDasMusicas}
           </TabsTrigger>
         </TabsList>
         {/* Cada aba só monta (e só pede à API) quando é aberta. */}
@@ -68,7 +72,7 @@ export function TelaDeLeaderboard({ aoVoltar, carregarPlayers = carregarPlayersP
           <AbaDePlayers carregar={carregarPlayers} />
         </TabsContent>
         <TabsContent value="musicas" className="mt-2 flex min-h-0 flex-1 flex-col gap-2 placa p-4 max-md:p-2">
-          <AbaDeMusicas carregar={carregarMusicas} {...daMusica} />
+          {abaDasMusicas ?? <AbaDeMusicas carregar={carregarMusicas} {...daMusica} />}
         </TabsContent>
       </Tabs>
     </div>

@@ -1,3 +1,4 @@
+import { lerModoAberto } from "@/shared/modo";
 import type { ApiDosAmigos, ListasDeAmigos, SugestaoDeAmizade } from "./api";
 
 export interface EstadoDosAmigos {
@@ -28,7 +29,7 @@ export class ListaDeAmigos {
   async recarregar() {
     const token = this.token();
     if (!token) return this.mudar({ listas: null, sugestoes: null });
-    const listas = await this.api.listas(token).catch(() => null);
+    const listas = await this.api.listas(token, lerModoAberto()).catch(() => null);
     if (listas) this.mudar({ ...this.atual, listas });
   }
 

@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
-use super::dominio::{Contagens, Pessoa, Relacao, Sugestao, Vinculo};
+use super::dominio::{Contagens, Modo, Pessoa, Relacao, Sugestao, Vinculo};
 use super::portas::RepositorioDeAmizades;
 use crate::modules::conta::FalhaExterna;
 
@@ -35,6 +35,7 @@ struct LinhaDaPessoa {
     avatar: Option<String>,
     xp_total: i64,
     visto_em: Option<DateTime<Utc>>,
+    ultimo_modo: Option<String>,
     desde: DateTime<Utc>,
     vinculo: String,
 }
@@ -69,7 +70,7 @@ const PESSOAS: &str = "
         UNION ALL
         SELECT bloqueado, criado_em, 'bloqueado' FROM bloqueios WHERE quem = $1
     )
-    SELECT c.id AS conta_id, c.nome, c.avatar, c.xp_total, f.visto_em, l.desde, l.vinculo
+    SELECT c.id AS conta_id, c.nome, c.avatar, c.xp_total, f.visto_em, f.ultimo_modo, l.desde, l.vinculo
     FROM ligados l
     JOIN contas c ON c.id = l.outro
     LEFT JOIN fichas_de_amizade f ON f.conta_id = c.id
@@ -122,10 +123,11 @@ impl RepositorioDeAmizades for AmizadesPostgres {
             .map_err(falha)
     }
 
-    async fn marcar_visto(&self, conta_id: Uuid, agora: DateTime<Utc>) -> Result<(), FalhaExterna> {
-        sqlx::query("UPDATE fichas_de_amizade SET visto_em = $2 WHERE conta_id = $1")
+    async fn marcar_visto(&self, conta_id: Uuid, agora: DateTime<Utc>, modo: Option<Modo>) -> Result<(), FalhaExterna> {
+        sqlx::query("UPDATE fichas_de_amizade SET visto_em = $2, ultimo_modo = COALESCE($3, ultimo_modo) WHERE conta_id = $1")
             .bind(conta_id)
             .bind(agora)
+            .bind(modo.map(Modo::como_texto))
             .execute(&self.0)
             .await
             .map_err(falha)?;
@@ -227,6 +229,7 @@ impl RepositorioDeAmizades for AmizadesPostgres {
                 avatar: l.avatar,
                 xp_total: l.xp_total.max(0) as u64,
                 visto_em: l.visto_em,
+                ultimo_modo: l.ultimo_modo.as_deref().and_then(Modo::do_texto),
                 desde: l.desde,
                 vinculo: match l.vinculo.as_str() {
                     "amigo" => Vinculo::Amigo,

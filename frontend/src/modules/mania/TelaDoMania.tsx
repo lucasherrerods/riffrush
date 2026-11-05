@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, Library, Search, Settings2 } from "lucide-react";
+import { ArrowLeft, ListMusic, Search, Settings2 } from "lucide-react";
 import { LogoDoJogo, PARTE_DA_TELA_DO_MODO, type PalcoCompartilhado } from "@/modules/menu";
-import { sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
+import { CartaoDaConta, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
+import { BotaoDeAmigos, PainelDeAmigos } from "@/modules/amigos";
+import { ChatGlobal, presenca, presencaDisponivel, useSouDaModeracao } from "@/modules/presenca";
+import { TelaDeLeaderboard } from "@/modules/ranking";
+import { carregarConfiguracoes, salvarConfiguracoes } from "@/modules/settings";
+import { AnimatePresence, motion } from "framer-motion";
+import { AbaDosMapasMaisJogados } from "./ranking/AbaDosMapasMaisJogados";
+import { EstatisticasDoMania } from "./perfil/EstatisticasDoMania";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
 import { abrirBibliotecaDoMania, valeXpNoMania, type BibliotecaDoMania, type ConjuntoSalvo, type DificuldadeSalva } from "./beatmaps/biblioteca";
@@ -24,7 +31,7 @@ import { TeclaDoMania } from "./menu/TeclaDoMania";
 import { FundoDoMania } from "./menu/FundoDoMania";
 import { MenuDoMania } from "./menu/MenuDoMania";
 
-type Tela = { nome: "menu" } | { nome: "selecao" } | { nome: "busca" } | { nome: "jogo"; mapa: MapaParaJogar; treino?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado };
+type Tela = { nome: "menu" } | { nome: "selecao" } | { nome: "busca" } | { nome: "leaderboard" } | { nome: "perfil" } | { nome: "jogo"; mapa: MapaParaJogar; treino?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado };
 
 interface Props {
   /** A alavanca que volta para o Rock, no cabeçalho. */
@@ -42,6 +49,8 @@ interface Props {
 export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
   const { conjuntos, importar, guardarBaixado, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
   const [tela, setTela] = useState<Tela>({ nome: "menu" });
+  const souDaModeracao = useSouDaModeracao();
+  const [amigosAbertos, setAmigosAbertos] = useState(false);
   useAtualizacaoAutomatica(tela.nome === "jogo");
   // A trilha dos menus: as músicas da biblioteca, no mesmo player do cabeçalho do Rock.
   const player = useMemo(() => (decodificar ? criarPlayerDoMania(undefined, decodificar) : playerDoMania), [decodificar]);
@@ -58,7 +67,27 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     return () => player.suspender(true, { esmaecer: true });
   }, [player]);
   const { volume } = useVolumeGeral();
-  const cabecalho = <CabecalhoDoPlayerDeMusica player={player as unknown as PlayerDeMusica<FaixaDoPlayer>} volume={volume} aoMudarVolume={definirVolumeGeral} />;
+  const cabecalho = (
+    <CabecalhoDoPlayerDeMusica player={player as unknown as PlayerDeMusica<FaixaDoPlayer>} volume={volume} aoMudarVolume={definirVolumeGeral}>
+      {contasLigadas && <BotaoDeAmigos aberto={amigosAbertos} aoAlternar={() => setAmigosAbertos((abertos) => !abertos)} />}
+      {contasLigadas && <CartaoDaConta mod={souDaModeracao} aoConfigurar={() => setConfigurando(true)} aoVerPerfil={() => setTela({ nome: "perfil" })} />}
+    </CabecalhoDoPlayerDeMusica>
+  );
+  const painelDeAmigos = (
+    <AnimatePresence>
+      {amigosAbertos && (
+        <motion.div
+          initial={{ opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 24 }}
+          transition={{ duration: 0.15 }}
+          className="absolute inset-y-0 right-0 z-30 p-4 max-md:inset-x-0 max-md:p-2"
+        >
+          <PainelDeAmigos aoFechar={() => setAmigosAbertos(false)} aoConvidar={(contaId, codigo) => presenca.convidar(contaId, codigo)} />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
   const aoMudarDeTela = palco?.aoMudarDeTela;
   useEffect(() => aoMudarDeTela?.(tela.nome === "menu"), [tela.nome, aoMudarDeTela]);
   const [mods, setMods] = useState(0);
@@ -70,6 +99,19 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   };
   const { conta } = useConta();
   const [xp, setXp] = useState<RegistroDaPartida | undefined>();
+  // As preferências do online e do chat são da conta, guardadas junto com as do Rock.
+  const [preferencias, setPreferencias] = useState(carregarConfiguracoes);
+  const responderAoChat = (chatGlobal: boolean) => {
+    const novas = { ...carregarConfiguracoes(), chatGlobal };
+    salvarConfiguracoes(novas);
+    setPreferencias(novas);
+  };
+  // Aparece online no Mania como no Rock: com conta, relay e a escolha de aparecer.
+  const online = presencaDisponivel && contasLigadas && !!conta && preferencias.mostrarOnline === true;
+  useEffect(() => {
+    if (online) presenca.ligar();
+  }, [online]);
+  useEffect(() => presenca.definirEstado(tela.nome === "selecao" ? { tipo: "selecao" } : { tipo: "menu" }), [tela.nome]);
   // A semente do Random muda a cada partida; o replay a guarda.
   const [semente, setSemente] = useState(() => (Math.random() * 2 ** 32) >>> 0);
 
@@ -161,13 +203,59 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
       <main data-parte={PARTE_DA_TELA_DO_MODO} className={cn("relative flex h-dvh w-screen flex-col overflow-hidden text-texto", !palco && "bg-fundo")}>
         {!palco && <FundoDoMania />}
         {cabecalho}
-        <MenuDoMania alavanca={alavanca} troca={palco?.troca} aoJogar={() => setTela({ nome: "selecao" })} aoBuscar={() => setTela({ nome: "busca" })} aoConfigurar={() => setConfigurando(true)} />
+        <div className="relative min-h-0 flex-1">
+          <MenuDoMania
+            alavanca={alavanca}
+            troca={palco?.troca}
+            aoJogar={() => setTela({ nome: "selecao" })}
+            aoBuscar={() => setTela({ nome: "busca" })}
+            aoConfigurar={() => setConfigurando(true)}
+            aoLeaderboard={contasLigadas ? () => setTela({ nome: "leaderboard" }) : undefined}
+            chat={
+              presencaDisponivel && contasLigadas && preferencias.chatGlobal !== false ? (
+                <ChatGlobal className="w-full" aceito={preferencias.chatGlobal} aoResponder={responderAoChat} />
+              ) : undefined
+            }
+          />
+          {painelDeAmigos}
+        </div>
         {janelaDeConfiguracoes}
         <Avisos />
       </main>
     );
 
-  const aba = (nome: "selecao" | "busca", rotulo: string, icone: typeof Library) => {
+  const nomeNaBiblioteca = (beatmapId: number) => {
+    for (const c of conjuntos ?? []) {
+      const mapa = c.mapas.find((m) => m.beatmapId === beatmapId);
+      if (mapa) return `${c.tituloUnicode || c.titulo} [${mapa.dificuldade}]`;
+    }
+    return undefined;
+  };
+
+  if (tela.nome === "leaderboard" || tela.nome === "perfil")
+    return (
+      <main className="relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
+        <FundoDoMania />
+        {cabecalho}
+        <div className="relative min-h-0 flex-1">
+          {tela.nome === "leaderboard" ? (
+            <TelaDeLeaderboard
+              aoVoltar={() => setTela({ nome: "menu" })}
+              tituloDaMusica={() => undefined}
+              rotuloDasMusicas="Mapas"
+              abaDasMusicas={<AbaDosMapasMaisJogados nomeNaBiblioteca={nomeNaBiblioteca} />}
+            />
+          ) : (
+            <TelaDePerfil mod={souDaModeracao} aoVoltar={() => setTela({ nome: "menu" })} tituloDaMusica={() => undefined} estatisticas={<EstatisticasDoMania />} />
+          )}
+          {painelDeAmigos}
+        </div>
+        {janelaDeConfiguracoes}
+        <Avisos />
+      </main>
+    );
+
+  const aba = (nome: "selecao" | "busca", rotulo: string, icone: typeof ListMusic) => {
     const ativa = tela.nome === nome;
     return (
       <button
@@ -197,7 +285,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
           <LogoDoJogo modo="Mania" pequena fofa />
         </div>
         <nav aria-label="Telas do Mania" className="flex gap-2">
-          {aba("selecao", "Biblioteca", Library)}
+          {aba("selecao", "Seleção", ListMusic)}
           {aba("busca", "Buscar mapas", Search)}
         </nav>
         <div className="flex items-center gap-4">
@@ -213,6 +301,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         ) : (
           <TelaDeSelecaoMania conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} />
         )}
+        {painelDeAmigos}
       </div>
       {janelaDeConfiguracoes}
       <Avisos />

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { obterContextoDeAudio } from "@/modules/audio";
 import { AudioContextFalso } from "@/test/audioFalso";
@@ -62,7 +62,7 @@ describe("TelaDoMania", () => {
     const { usuario } = await abrir();
     await screen.findByText(/Nenhum mapa ainda/);
     await usuario.upload(screen.getByLabelText("Arquivos .osz"), arquivoOsz());
-    expect(await screen.findByText("Música")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Música" })).toBeInTheDocument();
     expect(screen.getByText("Importado · sem XP")).toBeInTheDocument();
   });
 
@@ -70,16 +70,15 @@ describe("TelaDoMania", () => {
     await abrir();
     await screen.findByText(/Nenhum mapa ainda/);
     fireEvent.drop(screen.getByRole("region", { name: "Seleção de mapas" }), { dataTransfer: { files: [new File(["x"], "foto.png"), arquivoOsz()] } });
-    expect(await screen.findByText("Música")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Música" })).toBeInTheDocument();
   });
 
   it("escolhe a dificuldade, joga e chega no resultado", async () => {
     const { usuario } = await abrir();
     await screen.findByText(/Nenhum mapa ainda/);
     await usuario.upload(screen.getByLabelText("Arquivos .osz"), arquivoOsz());
-    expect(screen.getByRole("button", { name: "Jogar" })).toBeDisabled();
-    await usuario.click(await screen.findByText("Música"));
-    await usuario.click(within(screen.getByRole("list", { name: "Dificuldades" })).getByRole("button", { name: /4K.*Hard/ }));
+    await screen.findByRole("heading", { name: "Música" });
+    expect(screen.getByRole("radio", { name: /4K.*Hard/ })).toBeChecked();
     const fontesAntes = audio().fontes.length;
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     expect(await screen.findByLabelText("Pista do Mania")).toBeInTheDocument();
@@ -98,8 +97,8 @@ describe("TelaDoMania", () => {
     const { usuario } = await abrir();
     await screen.findByText(/Nenhum mapa ainda/);
     await usuario.upload(screen.getByLabelText("Arquivos .osz"), arquivoOsz());
-    await usuario.click(await screen.findByText("Música"));
-    await usuario.click(within(screen.getByRole("list", { name: "Dificuldades" })).getByRole("button", { name: /4K.*Hard/ }));
+    await screen.findByRole("heading", { name: "Música" });
+    expect(screen.getByRole("radio", { name: /4K.*Hard/ })).toBeChecked();
     await usuario.click(screen.getByRole("button", { name: "Treinar" }));
     expect(await screen.findByRole("heading", { name: "Treinar" })).toBeInTheDocument();
     await usuario.click(screen.getByRole("button", { name: /Sair da música/ }));
@@ -125,8 +124,8 @@ describe("TelaDoMania", () => {
     expect(await screen.findByText("Baixado")).toBeInTheDocument();
     const [salvo] = await biblioteca.listar();
     expect(salvo).toMatchObject({ id: "osu:7", origem: "osu", status: "ranked" });
-    await usuario.click(screen.getByRole("button", { name: "Biblioteca" }));
-    expect(await screen.findByText("Música")).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Seleção" }));
+    expect(await screen.findByRole("heading", { name: "Música" })).toBeInTheDocument();
     expect(screen.queryByText("Importado · sem XP")).not.toBeInTheDocument();
   });
 
@@ -140,9 +139,9 @@ describe("TelaDoMania", () => {
       await usuario.click(screen.getByRole("button", { name: "Buscar mapas" }));
       await usuario.click(await screen.findByRole("button", { name: "Baixar Musica" }));
       await screen.findByText("Baixado");
-      await usuario.click(screen.getByRole("button", { name: "Biblioteca" }));
-      await usuario.click(await screen.findByText("Música"));
-      await usuario.click(within(screen.getByRole("list", { name: "Dificuldades" })).getByRole("button", { name: /4K.*Hard/ }));
+      await usuario.click(screen.getByRole("button", { name: "Seleção" }));
+      await screen.findByRole("heading", { name: "Música" });
+      expect(screen.getByRole("radio", { name: /4K.*Hard/ })).toBeChecked();
       const fontesAntes = audio().fontes.length;
       await usuario.click(screen.getByRole("button", { name: "Jogar" }));
       await waitFor(() => expect(audio().fontes.length).toBeGreaterThan(fontesAntes));

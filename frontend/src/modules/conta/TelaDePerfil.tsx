@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { CapaPequena, DIFICULDADES, INSTRUMENTOS, nomeDaMusica } from "@/modules/rock/songs";
 import { useCarregamento } from "@/shared/hooks/useCarregamento";
@@ -5,6 +6,7 @@ import { haQuantoTempo, porcentagem } from "@/shared/lib/formatar";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
+import { NumeroDestacado } from "@/shared/ui/NumeroDestacado";
 import { ComCarregamento } from "@/shared/ui/ComCarregamento";
 import type { PerfilDaApi } from "./api";
 import { FotoDaConta } from "./FotoDaConta";
@@ -18,6 +20,8 @@ interface Props {
   /** Mostra o selo Mod embaixo do nome. */
   mod?: boolean;
   carregar?: (sinal: AbortSignal) => Promise<PerfilDaApi>;
+  /** Os números de outro modo no lugar dos do Rock. O cartão da conta, com nível e XP, é o mesmo nos dois. */
+  estatisticas?: ReactNode;
 }
 
 const formatar = (n: number) => n.toLocaleString("pt-BR");
@@ -26,18 +30,9 @@ const rotuloDoInstrumento = (instrumento: string) => INSTRUMENTOS.find((i) => i.
 const vezes = (n: number) => `${formatar(n)} ${n === 1 ? "vez" : "vezes"}`;
 const mesEAno = (data: string) => new Date(data).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
-function Numero({ rotulo, valor, detalhe }: { rotulo: string; valor: string; detalhe?: string }) {
-  return (
-    <div className="chapa flex flex-col gap-1 bg-superficie p-4 max-md:gap-0.5 max-md:p-2">
-      <span className="text-sm text-texto-suave max-md:text-xs">{rotulo}</span>
-      <span className="font-titulo text-4xl leading-none tracking-wide max-md:text-xl">{valor}</span>
-      {detalhe && <span className="text-sm text-texto-suave max-md:text-xs">{detalhe}</span>}
-    </div>
-  );
-}
 
 /** O perfil de quem está logado: nível, números das partidas, desempenho por dificuldade e as últimas jogadas. */
-export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar = (sinal) => sessaoDaConta.perfil(sinal) }: Props) {
+export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar = (sinal) => sessaoDaConta.perfil(sinal), estatisticas }: Props) {
   const { estado, tentarDeNovo } = useCarregamento(carregar);
 
   return (
@@ -51,16 +46,15 @@ export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar =
 
       <div className="sem-barra-de-rolagem rolagem-de-toque mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-4 max-md:gap-2">
         <ComCarregamento estado={estado} tentarDeNovo={tentarDeNovo} oQue="o perfil">
-          {(perfil) => <Conteudo perfil={perfil} tituloDaMusica={tituloDaMusica} mod={mod} />}
+          {(perfil) => <Conteudo perfil={perfil} tituloDaMusica={tituloDaMusica} mod={mod} estatisticas={estatisticas} />}
         </ComCarregamento>
       </div>
     </div>
   );
 }
 
-function Conteudo({ perfil, tituloDaMusica, mod }: { perfil: PerfilDaApi; tituloDaMusica: Props["tituloDaMusica"]; mod: boolean }) {
+function Conteudo({ perfil, tituloDaMusica, mod, estatisticas }: { perfil: PerfilDaApi; tituloDaMusica: Props["tituloDaMusica"]; mod: boolean; estatisticas?: ReactNode }) {
   const { nivel, xp_no_nivel, xp_para_o_proximo } = perfil.nivel;
-  const concluidas = perfil.partidas ? (perfil.partidas - perfil.derrotas) / perfil.partidas : 0;
 
   return (
     <>
@@ -88,11 +82,20 @@ function Conteudo({ perfil, tituloDaMusica, mod }: { perfil: PerfilDaApi; titulo
         </div>
       </section>
 
+      {estatisticas ?? <EstatisticasDoRock perfil={perfil} tituloDaMusica={tituloDaMusica} />}
+    </>
+  );
+}
+
+function EstatisticasDoRock({ perfil, tituloDaMusica }: { perfil: PerfilDaApi; tituloDaMusica: Props["tituloDaMusica"] }) {
+  const concluidas = perfil.partidas ? (perfil.partidas - perfil.derrotas) / perfil.partidas : 0;
+  return (
+    <>
       <section className="grid grid-cols-2 gap-4 max-md:gap-2 md:grid-cols-4">
-        <Numero rotulo="Partidas" valor={formatar(perfil.partidas)} detalhe={`${porcentagem(concluidas, 0)} concluídas`} />
-        <Numero rotulo="Precisão" valor={porcentagem(perfil.precisao)} detalhe="de todas as notas" />
-        <Numero rotulo="Melhor pontuação" valor={formatar(perfil.melhor_pontuacao)} />
-        <Numero rotulo="Músicas tocadas" valor={formatar(perfil.musicas_distintas)} detalhe={`${formatar(perfil.xp_total)} XP no total`} />
+        <NumeroDestacado rotulo="Partidas" valor={formatar(perfil.partidas)} detalhe={`${porcentagem(concluidas, 0)} concluídas`} />
+        <NumeroDestacado rotulo="Precisão" valor={porcentagem(perfil.precisao)} detalhe="de todas as notas" />
+        <NumeroDestacado rotulo="Melhor pontuação" valor={formatar(perfil.melhor_pontuacao)} />
+        <NumeroDestacado rotulo="Músicas tocadas" valor={formatar(perfil.musicas_distintas)} detalhe={`${formatar(perfil.xp_total)} XP no total`} />
       </section>
 
       {perfil.partidas === 0 ? (

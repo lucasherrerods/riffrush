@@ -150,8 +150,90 @@ pub async fn replay(State(estado): State<EstadoDoApp>, Path(id): Path<Uuid>) -> 
     Ok(([(header::CONTENT_TYPE, "application/octet-stream")], bytes))
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct RecordeDoMapaDoMania {
+    nome: String,
+    pontuacao: u32,
+    precisao: f64,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct MapaMaisJogadoDoMania {
+    posicao: u32,
+    beatmap_id: u64,
+    beatmapset_id: Option<u64>,
+    partidas: u32,
+    jogadores: u32,
+    /// Do `.osu` guardado pelo servidor; sem ele, o app usa o nome da biblioteca.
+    titulo: Option<String>,
+    artista: Option<String>,
+    dificuldade: Option<String>,
+    recorde: Option<RecordeDoMapaDoMania>,
+}
+
+/// As dificuldades do Mania com mais partidas no ranking, com o primeiro lugar de cada uma.
+#[utoipa::path(get, path = "/mania/mapas-mais-jogados", responses((status = 200, body = Vec<MapaMaisJogadoDoMania>)))]
+pub async fn mapas_mais_jogados(State(estado): State<EstadoDoApp>) -> Result<Json<Vec<MapaMaisJogadoDoMania>>, ErroDaApi> {
+    let mapas = estado.mania.mapas_mais_jogados().await?;
+    Ok(Json(
+        mapas
+            .into_iter()
+            .enumerate()
+            .map(|(i, m)| MapaMaisJogadoDoMania {
+                posicao: i as u32 + 1,
+                beatmap_id: m.beatmap_id,
+                beatmapset_id: m.beatmapset_id,
+                partidas: m.partidas,
+                jogadores: m.jogadores,
+                titulo: m.titulo,
+                artista: m.artista,
+                dificuldade: m.dificuldade,
+                recorde: m.recorde.map(|r| RecordeDoMapaDoMania {
+                    nome: r.nome,
+                    pontuacao: r.pontuacao,
+                    precisao: r.precisao,
+                }),
+            })
+            .collect(),
+    ))
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct EstatisticasDoManiaNoPerfil {
+    partidas: u32,
+    mapas: u32,
+    precisao_media: f64,
+    maior_combo: u32,
+    pontuacao_total: u64,
+    ss: u32,
+    s: u32,
+    /// Em quantos mapas a conta está no top 10.
+    no_top: u32,
+    /// Julgamentos somados, de MAX a Miss.
+    contagem: [u64; 6],
+}
+
+/// Os números do Mania de quem está logado, só das partidas que entram no ranking.
+#[utoipa::path(get, path = "/eu/mania/estatisticas", responses((status = 200, body = EstatisticasDoManiaNoPerfil), (status = 401)), security(("token" = [])))]
+pub async fn estatisticas(State(estado): State<EstadoDoApp>, Token(token): Token) -> Result<Json<EstatisticasDoManiaNoPerfil>, ErroDaApi> {
+    let e = estado.mania.estatisticas(&token).await?;
+    Ok(Json(EstatisticasDoManiaNoPerfil {
+        partidas: e.partidas,
+        mapas: e.mapas,
+        precisao_media: e.precisao_media,
+        maior_combo: e.maior_combo,
+        pontuacao_total: e.pontuacao_total,
+        ss: e.ss,
+        s: e.s,
+        no_top: e.no_top,
+        contagem: e.contagem,
+    }))
+}
+
 pub fn rotas() -> Router<EstadoDoApp> {
     Router::new()
+        .route("/mania/mapas-mais-jogados", get(mapas_mais_jogados))
+        .route("/eu/mania/estatisticas", get(estatisticas))
         .route("/mania/partidas", post(enviar_partida))
         .route("/mania/partidas/{id}/xp", get(situacao_da_partida))
         .route("/mania/partidas/{id}/replay", get(replay))

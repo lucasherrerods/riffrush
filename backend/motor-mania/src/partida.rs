@@ -127,6 +127,8 @@ pub struct Partida {
     pub teclas: u8,
     pub janelas: Janelas,
     hp: f64,
+    /// Multiplicador da recuperação de vida, calculado uma vez por mapa.
+    recuperacao: f64,
     opcoes: OpcoesDaPartida,
     estados: Vec<Estado>,
     /// Por coluna, os índices das notas em ordem e a próxima ainda não terminada.
@@ -164,12 +166,14 @@ pub fn criar_partida(beatmap: &Beatmap, opcoes: OpcoesDaPartida) -> Partida {
     for (indice, nota) in notas.iter().enumerate() {
         por_coluna[usize::from(nota.coluna)].push(indice);
     }
+    let recuperacao = recuperacao_do_mapa(&notas, beatmap.dificuldade.hp);
     Partida {
         estados: vec![Estado::Esperando; notas.len()],
         notas,
         teclas,
         janelas: Janelas::do_od(beatmap.dificuldade.od).escaladas(mods.fator_das_janelas() / velocidade),
         hp: beatmap.dificuldade.hp,
+        recuperacao,
         opcoes,
         proxima: vec![0; usize::from(teclas)],
         por_coluna,
@@ -236,16 +240,93 @@ pub fn classificacao(precisao: f64) -> Classificacao {
     }
 }
 
-/// Quanto cada julgamento mexe na vida. O HP do mapa (0 a 10) deixa o erro mais caro.
-fn variacao_da_vida(julgamento: Julgamento, hp: f64, mods: Mods) -> f64 {
-    let peso_do_hp = (1.0 + hp / 10.0) * if mods.tem(Mods::EZ) { 0.5 } else { 1.0 };
-    match julgamento {
-        Julgamento::Max | Julgamento::J300 => 0.01,
-        Julgamento::J200 => 0.005,
-        Julgamento::J100 => 0.0,
-        Julgamento::J50 => -0.01 * peso_do_hp,
-        Julgamento::Miss => -0.04 * peso_do_hp,
+/// Interpola um valor do mapa (0 a 10) entre o que vale em 0, em 5 e em 10, como o osu! faz.
+fn faixa_da_dificuldade(d: f64, em_0: f64, em_5: f64, em_10: f64) -> f64 {
+    if d > 5.0 {
+        em_5 + (em_10 - em_5) * (d - 5.0) / 5.0
+    } else if d < 5.0 {
+        em_5 - (em_5 - em_0) * (5.0 - d) / 5.0
+    } else {
+        em_5
     }
+}
+
+/// Quanto cada julgamento mexe na vida, com os valores do osu!mania (lazer, que segue o stable). Não há dreno com o
+/// tempo: só os julgamentos mexem na vida. O erro na cabeça ou na ponta de uma nota longa custa metade.
+fn variacao_da_vida(julgamento: Julgamento, hp: f64, recuperacao: f64, nota_longa: bool, mods: Mods) -> f64 {
+    let variacao = match julgamento {
+        Julgamento::Max => recuperacao * (0.0055 - hp * 0.0005),
+        Julgamento::J300 => recuperacao * (0.005 - hp * 0.0005),
+        Julgamento::J200 => recuperacao * (0.004 - hp * 0.0004),
+        Julgamento::J100 => 0.0,
+        Julgamento::J50 => -(hp + 1.0) * 0.0016,
+        Julgamento::Miss => -(hp + 1.0) * if nota_longa { 0.00375 } else { 0.0075 },
+    };
+    if variacao < 0.0 && mods.tem(Mods::EZ) {
+        variacao * 0.5
+    } else {
+        variacao
+    }
+}
+
+/// O multiplicador da recuperação de vida do mapa (`HpMultiplierNormal` do osu!): simula uma partida perfeita com um
+/// dreno de teste e aumenta a recuperação até o mapa terminar com vida sobrando. Mapas com poucas notas recuperam mais
+/// por acerto.
+fn recuperacao_do_mapa(notas: &[Nota], hp: f64) -> f64 {
+    let menor_vida = faixa_da_dificuldade(hp, 0.975, 0.8, 0.3);
+    let menor_vida_no_fim = faixa_da_dificuldade(hp, 0.99, 0.9, 0.4);
+    let recuperacao_minima = faixa_da_dificuldade(hp, 0.04, 0.02, 0.0);
+    let Some(primeira) = notas.first() else { return 1.0 };
+    let mut multiplicador = 1.0;
+    let mut dreno = 0.00025;
+    for _ in 0..10_000 {
+        let acerto = |m: f64| variacao_da_vida(Julgamento::Max, hp, m, false, Mods::default());
+        let (mut vida, mut sem_teto) = (1.0_f64, 1.0_f64);
+        let mut ultimo = primeira.tempo_ms;
+        let mut falhou = false;
+        for nota in notas {
+            let fim = nota.fim_ms.unwrap_or(nota.tempo_ms);
+            let reduzir = |vida: &mut f64, sem_teto: &mut f64, quanto: f64| {
+                *vida = (*vida - quanto).max(0.0);
+                *sem_teto = (*sem_teto - quanto).max(0.0);
+            };
+            reduzir(&mut vida, &mut sem_teto, dreno * f64::from(nota.tempo_ms - ultimo));
+            ultimo = fim;
+            if vida <= menor_vida {
+                falhou = true;
+                dreno *= 0.96;
+                break;
+            }
+            let reducao = dreno * f64::from(fim - nota.tempo_ms);
+            let excesso = (reducao - vida).max(0.0);
+            reduzir(&mut vida, &mut sem_teto, reducao);
+            let acertos = if nota.fim_ms.is_some() { 2.0 } else { 1.0 };
+            for _ in 0..acertos as u8 {
+                sem_teto += acerto(multiplicador);
+                vida = (vida + acerto(multiplicador)).clamp(0.0, 1.0);
+            }
+            if excesso > 0.0 && vida - excesso <= menor_vida {
+                falhou = true;
+                dreno *= 0.96;
+                break;
+            }
+        }
+        if !falhou && vida < menor_vida_no_fim {
+            falhou = true;
+            dreno *= 0.94;
+            multiplicador *= 1.01;
+        }
+        let recuperacao = (sem_teto - 1.0) / notas.len().max(1) as f64;
+        if !falhou && recuperacao < recuperacao_minima {
+            falhou = true;
+            dreno *= 0.96;
+            multiplicador *= 1.01;
+        }
+        if !falhou {
+            return if multiplicador.is_finite() { multiplicador } else { 1.0 };
+        }
+    }
+    multiplicador
 }
 
 fn registrar(partida: &mut Partida, nota: usize, julgamento: Julgamento, ponta: bool, desvio_ms: Option<i32>) {
@@ -257,7 +338,9 @@ fn registrar(partida: &mut Partida, nota: usize, julgamento: Julgamento, ponta: 
         partida.combo += 1;
         partida.maior_combo = partida.maior_combo.max(partida.combo);
     }
-    partida.vida = (partida.vida + variacao_da_vida(julgamento, partida.hp, partida.opcoes.mods)).clamp(0.0, 1.0);
+    let nota_longa = partida.notas[nota].fim_ms.is_some();
+    let variacao = variacao_da_vida(julgamento, partida.hp, partida.recuperacao, nota_longa, partida.opcoes.mods);
+    partida.vida = (partida.vida + variacao).clamp(0.0, 1.0);
     let coluna = partida.notas[nota].coluna;
     partida.eventos.push(Evento::Julgamento {
         nota,
@@ -603,6 +686,29 @@ mod tests {
         // 300 em ±49: com HR, ±35; com EZ, ±68,6.
         assert_eq!(tocar(&mut com_mods(Mods::HR, &[(0, 1000, None)]), 0, 1040), Some(Julgamento::J200));
         assert_eq!(tocar(&mut com_mods(Mods::EZ, &[(0, 1000, None)]), 0, 1060), Some(Julgamento::J300));
+    }
+
+    #[test]
+    fn errar_a_cabeca_e_a_ponta_da_nota_longa_custa_o_mesmo_que_uma_nota_simples() {
+        let mut simples = criar_partida(&mapa(5.0, 5.0, &[(0, 1000, None)]), OpcoesDaPartida::default());
+        let mut longa = criar_partida(&mapa(5.0, 5.0, &[(0, 1000, Some(1500))]), OpcoesDaPartida::default());
+        avancar(&mut simples, 3000);
+        avancar(&mut longa, 3000);
+        assert!((simples.vida - longa.vida).abs() < 1e-12);
+        assert!((1.0 - simples.vida - 6.0 * 0.0075).abs() < 1e-12);
+    }
+
+    #[test]
+    fn hp_8_com_um_erro_a_cada_dez_notas_nao_mata() {
+        let notas: Vec<_> = (0..400).map(|i| ((i % 4) as u8, 1000 + i * 150, None)).collect();
+        let mut p = criar_partida(&mapa(5.0, 8.0, &notas), OpcoesDaPartida::default());
+        for i in 0..400 {
+            if i % 10 != 0 {
+                tocar(&mut p, (i % 4) as u8, 1000 + i * 150);
+            }
+            avancar(&mut p, 1000 + i * 150 + 1);
+        }
+        assert!(!p.derrota, "vida no fim: {}", p.vida);
     }
 
     #[test]

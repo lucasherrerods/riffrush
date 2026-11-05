@@ -46,6 +46,8 @@ interface Props {
   className?: string;
   /** O que cada modo põe a mais na tela: chat, rodapé, janelas. */
   children?: ReactNode;
+  /** O chat global, no canto de baixo à esquerda. */
+  chat?: ReactNode;
   troca?: TrocaDeModo;
   /** Só a imagem da tela, desenhada no disco da troca: sem teclado e sem animação de entrada. */
   estatica?: boolean;
@@ -72,6 +74,7 @@ export function TelaInicial({
   classeDoMenu = "w-56 gap-1",
   className,
   children,
+  chat,
   troca,
   estatica = false,
 }: Props) {
@@ -105,7 +108,7 @@ export function TelaInicial({
 
   return (
     <div
-      className={cn("rolagem-de-toque relative flex h-full flex-col items-center gap-6 overflow-x-hidden py-6 max-md:px-4", className)}
+      className={cn("rolagem-de-toque relative flex h-full flex-col items-center gap-6 overflow-x-hidden py-6 max-md:px-4", chat && "max-md:pb-16", className)}
     >
       <motion.div
         initial={semEntrada ? false : { y: -40, opacity: 0, scale: 0.8 }}
@@ -150,6 +153,11 @@ export function TelaInicial({
         })}
       </nav>
 
+      {chat && (
+        <aside aria-label="Chat" className="absolute bottom-4 left-4 flex max-h-72 w-96 origin-bottom-left scale-[0.8] flex-col justify-end max-lg:hidden max-md:fixed max-md:bottom-0 max-md:left-[1%] max-md:z-10 max-md:flex max-md:w-[98%] max-md:scale-100">
+          {chat}
+        </aside>
+      )}
       {children}
     </div>
   );

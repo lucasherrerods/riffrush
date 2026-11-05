@@ -1,8 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@/shared/lib/utils";
 import { aplicarTokens } from "@/shared/styles/tokens";
 import type { Tema } from "@/shared/styles/temas";
-import { CURVA_DO_GIRO, DURACAO_DO_GIRO_MS, geometriaDaVolvelle } from "./geometria";
+import { CURVA_DO_GIRO, DURACAO_DO_GIRO_MS, curvaDoGiro, geometriaDaVolvelle, semiplanoDaCapa } from "./geometria";
 
 export interface LadoDaVolvelle {
   cena: ReactNode;
@@ -83,6 +83,8 @@ interface PropsDoFundo {
   virada: boolean;
   /** Durante o giro as duas metades aparecem e as animações de dentro param, para o giro sair liso. */
   girando: boolean;
+  /** A metade do modo que sai fica o giro inteiro embaixo da capa: não precisa ser desenhada duas vezes. */
+  coberta?: "cima" | "baixo";
 }
 
 /**
@@ -90,13 +92,13 @@ interface PropsDoFundo {
  * A tela mostra a metade de cima; meia volta em torno do eixo, no meio da borda de baixo, traz a outra
  * metade com o outro cenário. A tela do modo novo já fica por cima, usável, desde o começo do giro.
  */
-export function Volvelle({ cima, baixo, virada, girando }: PropsDoFundo) {
+export function Volvelle({ cima, baixo, virada, girando, coberta }: PropsDoFundo) {
   const geometria = useGeometria();
   return (
     <div aria-hidden="true" data-girando={girando || undefined} className="volvelle pointer-events-none fixed inset-0 overflow-hidden">
       <Disco geometria={geometria} virada={virada} girando={girando}>
-        {(girando || !virada) && <Metade lado={cima} geometria={geometria} />}
-        {(girando || virada) && <Metade lado={baixo} geometria={geometria} deCabeca />}
+        {(girando ? coberta !== "cima" : !virada) && <Metade lado={cima} geometria={geometria} />}
+        {(girando ? coberta !== "baixo" : virada) && <Metade lado={baixo} geometria={geometria} deCabeca />}
       </Disco>
     </div>
   );
@@ -114,43 +116,67 @@ interface PropsDaCapa {
  * cortando a tela antiga e revelando a nova, que já está montada por baixo.
  * Fica montada sempre que o disco aparece, para começar a girar do lugar certo.
  */
-/** Faz o navegador registrar a posição de partida assim que a camada monta, para a transição sair dela. */
-const registrarPartida = (elemento: HTMLElement | null) => {
-  if (elemento) void getComputedStyle(elemento).transform;
-};
-
 export function CapaDaVolvelle({ saindo, virada }: PropsDaCapa) {
   const geometria = useGeometria();
-  const { raio, cena } = geometria;
+  const { raio, eixo } = geometria;
   const angulo = virada ? 180 : 0;
+  // Quanto o disco já girou desde a partida: é o ângulo da linha que corta a foto.
+  const alvo = saindo ? angulo - (saindo.emCima ? 0 : 180) : 0;
+  const recorte = useRecorteQueGira(alvo, eixo, raio, !saindo);
   return (
     <div aria-hidden="true" data-girando={saindo ? true : undefined} className="volvelle pointer-events-none fixed inset-0 z-40 overflow-hidden">
       <Disco geometria={geometria} virada={virada} girando={!!saindo}>
-        {saindo && (
-          <Metade lado={saindo.lado} geometria={geometria} deCabeca={!saindo.emCima} bloqueia>
-            {/* Gira o contrário do disco: a foto da tela fica parada enquanto a metade passa. */}
-            <div
-              ref={registrarPartida}
-              className="absolute top-0 left-0 transition-transform"
-              style={{ width: raio * 2, height: raio * 2, transformOrigin: `${raio}px ${raio}px`, transform: `rotate(${-(angulo + (saindo.emCima ? 0 : 180))}deg)`, ...GIRO }}
-            >
-              <div className="absolute" style={{ left: cena.esquerda, top: cena.topo, width: cena.largura, height: cena.altura }}>
-                {saindo.foto && <Foto foto={saindo.foto} />}
-              </div>
-            </div>
-          </Metade>
-        )}
+        {saindo && <Metade lado={saindo.lado} geometria={geometria} deCabeca={!saindo.emCima} bloqueia />}
+      </Disco>
+      {/*
+        A foto da tela que saiu fica fora do disco, parada e em resolução cheia: girar a cópia junto com o disco
+        (e desgirar de volta) fazia o navegador desenhá-la mais borrada. Um recorte no ângulo da linha a corta.
+      */}
+      {saindo?.foto && (
+        <div ref={recorte} data-parte="foto" className="pointer-events-auto absolute inset-0">
+          <Foto foto={saindo.foto} />
+        </div>
+      )}
+      <Disco geometria={geometria} virada={virada} girando={!!saindo}>
         {/* A dobra do papel entre os dois mundos: a linha que varre a tela no giro. */}
         {saindo && <div className="absolute inset-x-0 h-1 -translate-y-1/2 bg-texto/60" style={{ top: raio }} />}
+        {/* O miolo do mecanismo, no eixo, girando junto com o disco: uma animação à parte por cima da capa fazia o navegador redesenhá-la a cada quadro. */}
+        {saindo && (
+          <div className="absolute rounded-full border-4 border-texto/60 bg-superficie-elevada" style={{ left: raio - 80, top: raio - 80, width: 160, height: 160 }}>
+            <div className="absolute inset-3 rounded-full bg-[repeating-conic-gradient(var(--cor-texto)_0deg_2deg,transparent_2deg_30deg)] opacity-50" />
+            <div className="absolute top-1/2 left-1/2 size-8 -translate-1/2 rounded-full bg-primaria" />
+          </div>
+        )}
       </Disco>
-      {/* O miolo do mecanismo, no eixo: um mostrador que gira ao contrário, mais devagar, e só aparece no giro. */}
-      <div
-        className={cn("absolute rounded-full border-4 border-texto/60 bg-superficie-elevada transition-[transform,opacity]", saindo ? "opacity-100" : "opacity-0")}
-        style={{ left: geometria.eixo.x - 80, top: geometria.eixo.y - 80, width: 160, height: 160, transform: `rotate(${virada ? -90 : 0}deg)`, ...GIRO }}
-      >
-        <div className="absolute inset-3 rounded-full bg-[repeating-conic-gradient(var(--cor-texto)_0deg_2deg,transparent_2deg_30deg)] opacity-50" />
-        <div className="absolute top-1/2 left-1/2 size-8 -translate-1/2 rounded-full bg-primaria" />
-      </div>
     </div>
+  );
+}
+
+/** Recorta o elemento no lado de cima da linha do disco, acompanhando o giro quadro a quadro com a mesma curva. */
+function useRecorteQueGira(alvo: number, eixo: { x: number; y: number }, raio: number, imediato: boolean) {
+  const elemento = useRef<HTMLDivElement | null>(null);
+  const atual = useRef(0);
+  useLayoutEffect(() => {
+    const de = atual.current;
+    const aplicar = (graus: number) => {
+      atual.current = graus;
+      if (elemento.current) elemento.current.style.clipPath = semiplanoDaCapa(eixo, raio * 2, graus);
+    };
+    // Sem troca, volta para a partida na hora, pronto para o próximo giro.
+    if (de === alvo || imediato) return aplicar(alvo);
+    const comeco = performance.now();
+    let quadro = requestAnimationFrame(function passo(agora) {
+      const t = Math.min(1, (agora - comeco) / DURACAO_DO_GIRO_MS);
+      aplicar(de + (alvo - de) * curvaDoGiro(t));
+      if (t < 1) quadro = requestAnimationFrame(passo);
+    });
+    return () => cancelAnimationFrame(quadro);
+  }, [alvo, imediato, eixo.x, eixo.y, raio]); // eslint-disable-line react-hooks/exhaustive-deps
+  return useCallback(
+    (el: HTMLDivElement | null) => {
+      elemento.current = el;
+      if (el) el.style.clipPath = semiplanoDaCapa(eixo, raio * 2, atual.current);
+    },
+    [eixo.x, eixo.y, raio], // eslint-disable-line react-hooks/exhaustive-deps
   );
 }

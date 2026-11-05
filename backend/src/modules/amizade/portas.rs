@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use super::dominio::{Contagens, Pessoa, Relacao, Sugestao};
+use super::dominio::{Contagens, Modo, Pessoa, Relacao, Sugestao};
 use crate::modules::conta::FalhaExterna;
 
 #[async_trait]
@@ -12,7 +12,8 @@ pub trait RepositorioDeAmizades: Send + Sync {
     /// `None` quando o código já é de outra conta: aí quem chama sorteia outro.
     async fn guardar_codigo(&self, conta_id: Uuid, codigo: &str) -> Result<Option<String>, FalhaExterna>;
     async fn conta_do_codigo(&self, codigo: &str) -> Result<Option<Uuid>, FalhaExterna>;
-    async fn marcar_visto(&self, conta_id: Uuid, agora: DateTime<Utc>) -> Result<(), FalhaExterna>;
+    /// Sem modo, o último guardado continua.
+    async fn marcar_visto(&self, conta_id: Uuid, agora: DateTime<Utc>, modo: Option<Modo>) -> Result<(), FalhaExterna>;
     /// Como `quem` está ligado a `outro`, olhando de `quem`.
     async fn relacao(&self, quem: Uuid, outro: Uuid) -> Result<Relacao, FalhaExterna>;
     async fn contagens(&self, quem: Uuid, outro: Uuid) -> Result<Contagens, FalhaExterna>;

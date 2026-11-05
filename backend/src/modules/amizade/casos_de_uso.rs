@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use chrono::Duration;
 use uuid::Uuid;
 
-use super::dominio::{decidir_pedido, gerar_codigo, normalizar_codigo, Decisao, PedidoRecusado, Pessoa, Relacao, Sugestao, PEDIDOS_POR_HORA, SUGESTOES};
+use super::dominio::{decidir_pedido, gerar_codigo, normalizar_codigo, Decisao, Modo, PedidoRecusado, Pessoa, Relacao, Sugestao, PEDIDOS_POR_HORA, SUGESTOES};
 use super::portas::RepositorioDeAmizades;
 use crate::modules::conta::{Conta, FalhaExterna, ServicosDaConta};
 use crate::shared::limite::{dentro_do_limite, Janela};
@@ -64,9 +64,14 @@ pub struct Listas {
 impl ServicosDeAmizade {
     /// As listas da conta. Quem abre as listas conta como visto agora.
     pub async fn listas(&self, token: &str) -> Result<Listas, ErroDaAmizade> {
+        self.listas_no_modo(token, None).await
+    }
+
+    /// As listas, guardando também o modo de jogo que a pessoa tem aberto.
+    pub async fn listas_no_modo(&self, token: &str, modo: Option<Modo>) -> Result<Listas, ErroDaAmizade> {
         let conta = self.conta_da_sessao(token).await?;
         let codigo = self.garantir_codigo(conta.id).await?;
-        self.repositorio.marcar_visto(conta.id, self.conta.relogio.agora()).await?;
+        self.repositorio.marcar_visto(conta.id, self.conta.relogio.agora(), modo).await?;
         Ok(Listas {
             codigo,
             pessoas: self.repositorio.pessoas(conta.id).await?,
@@ -197,6 +202,7 @@ pub mod fakes {
         pub contas: Arc<Banco>,
         pub codigos: Mutex<HashMap<Uuid, String>>,
         pub vistos: Mutex<HashMap<Uuid, DateTime<Utc>>>,
+        pub modos: Mutex<HashMap<Uuid, Modo>>,
         pub amizades: Mutex<Vec<LinhaDeAmizade>>,
         /// (quem, bloqueado, quando).
         pub bloqueios: Mutex<Vec<(Uuid, Uuid, DateTime<Utc>)>>,
@@ -238,6 +244,7 @@ pub mod fakes {
                 avatar: conta.avatar,
                 xp_total: conta.xp_total,
                 visto_em: self.vistos.lock().unwrap().get(&id).copied(),
+                ultimo_modo: self.modos.lock().unwrap().get(&id).copied(),
                 desde,
                 vinculo,
             }
@@ -263,8 +270,11 @@ pub mod fakes {
         async fn conta_do_codigo(&self, codigo: &str) -> Result<Option<Uuid>, FalhaExterna> {
             Ok(self.codigos.lock().unwrap().iter().find(|(_, c)| *c == codigo).map(|(id, _)| *id))
         }
-        async fn marcar_visto(&self, conta_id: Uuid, agora: DateTime<Utc>) -> Result<(), FalhaExterna> {
+        async fn marcar_visto(&self, conta_id: Uuid, agora: DateTime<Utc>, modo: Option<Modo>) -> Result<(), FalhaExterna> {
             self.vistos.lock().unwrap().insert(conta_id, agora);
+            if let Some(modo) = modo {
+                self.modos.lock().unwrap().insert(conta_id, modo);
+            }
             Ok(())
         }
         async fn relacao(&self, quem: Uuid, outro: Uuid) -> Result<Relacao, FalhaExterna> {
@@ -446,6 +456,20 @@ mod tests {
 
         assert_eq!(vinculo(&amizade.listas(&ana).await.unwrap(), beto_id), Some(Vinculo::Amigo));
         assert_eq!(vinculo(&amizade.listas(&beto).await.unwrap(), ana_id), Some(Vinculo::Amigo));
+    }
+
+    #[tokio::test]
+    async fn o_amigo_ve_o_ultimo_modo_aberto_e_abrir_sem_modo_nao_apaga() {
+        let (amizade, [(ana_id, ana), (beto_id, beto), _]) = tres_pessoas().await;
+        amizade.pedir(&ana, Alvo::Conta(beto_id)).await.unwrap();
+        amizade.aceitar(&beto, ana_id).await.unwrap();
+
+        amizade.listas_no_modo(&ana, Some(Modo::Mania)).await.unwrap();
+        amizade.listas(&ana).await.unwrap();
+
+        let listas_do_beto = amizade.listas(&beto).await.unwrap();
+        let ana_na_lista = listas_do_beto.pessoas.iter().find(|p| p.conta_id == ana_id).unwrap();
+        assert_eq!(ana_na_lista.ultimo_modo, Some(Modo::Mania));
     }
 
     #[tokio::test]

@@ -157,3 +157,13 @@ describe("fichaDoPedido", () => {
     expect(fichaDoPedido(pedido("https://r/chat"))).toEqual({ ficha: "", peloProtocolo: false });
   });
 });
+
+describe("modo na presença", () => {
+  it("guarda o modo de jogo que o app manda junto do estado", () => {
+    expect(lerEstado({ tipo: "menu", modo: "mania" })).toEqual({ tipo: "menu", modo: "mania" });
+  });
+
+  it("ignora um modo desconhecido", () => {
+    expect(lerEstado({ tipo: "menu", modo: "taiko" })).toEqual({ tipo: "menu" });
+  });
+});

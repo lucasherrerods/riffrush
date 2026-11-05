@@ -102,3 +102,8 @@ export function listarSalas(entradas: EntradaDaSala[], agora: number): SalaLista
     .sort((a, b) => Number(a.jogadores >= MAXIMO_DE_JOGADORES) - Number(b.jogadores >= MAXIMO_DE_JOGADORES) || b.atualizadaEm - a.atualizadaEm)
     .map(({ codigo, nome, jogadores }) => ({ codigo, nome, jogadores }));
 }
+
+/** O modo de jogo que o app diz estar aberto: só vira etiqueta, então basta o formato. */
+export type Modo = "rock" | "mania";
+
+export const lerModo = (valor: unknown): Modo | undefined => (valor === "rock" || valor === "mania" ? valor : undefined);

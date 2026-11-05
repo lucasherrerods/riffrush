@@ -1,4 +1,5 @@
 import { adiar } from "@/shared/lib/adiar";
+export { LinhaComPosicao } from "./LinhaComPosicao";
 export { PainelDeRanking } from "./PainelDeRanking";
 export { RankingDaSelecao } from "./RankingDaSelecao";
 export { PlacarAoVivo } from "./PlacarAoVivo";
