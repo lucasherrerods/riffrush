@@ -36,7 +36,8 @@ pub struct MotorDaPartida {
 
 #[wasm_bindgen]
 impl MotorDaPartida {
-    /// As notas vêm em quatro listas paralelas, que passam para o WASM sem um objeto por nota.
+    /// As notas vêm em listas paralelas, que passam para o WASM sem um objeto por nota. `tipos`: 0 strum, 1 HOPO, 2 tap.
+    /// `batidas` e `compassos` são os tempos (na música) de cada batida e de cada começo de compasso.
     // O wasm-bindgen só aceita argumentos soltos no construtor, sem um struct de opções.
     #[allow(clippy::too_many_arguments)]
     #[wasm_bindgen(constructor)]
@@ -45,22 +46,37 @@ impl MotorDaPartida {
         pistas: &[u8],
         frases: &[i32],
         duracoes: &[f64],
+        tipos: &[u8],
+        solos: &[i32],
+        batidas: &[f64],
+        compassos: &[f64],
         sem_falha: bool,
         fantasma: bool,
         velocidade: f64,
         sem_aberta: bool,
         jeito: u8,
-        pune_toque_em_vazio: bool,
     ) -> MotorDaPartida {
-        let notas: Vec<motor::Nota> = tempos
-            .iter()
-            .zip(pistas)
-            .zip(frases)
-            .zip(duracoes)
-            .map(|(((&tempo, &pista), &frase), &duracao)| motor::Nota { tempo, pista, frase, duracao })
+        let notas: Vec<motor::Nota> = (0..tempos.len())
+            .map(|i| motor::Nota {
+                tempo: tempos[i],
+                pista: pistas.get(i).copied().unwrap_or(0),
+                frase: frases.get(i).copied().unwrap_or(-1),
+                duracao: duracoes.get(i).copied().unwrap_or(0.0),
+                tipo: match tipos.get(i) {
+                    Some(1) => motor::TipoDaNota::Hopo,
+                    Some(2) => motor::TipoDaNota::Tap,
+                    _ => motor::TipoDaNota::Strum,
+                },
+                solo: solos.get(i).copied().unwrap_or(-1),
+            })
             .collect();
-        let partida = motor::criar_partida(
+        let ritmo = motor::Ritmo {
+            batidas: batidas.to_vec(),
+            compassos: compassos.to_vec(),
+        };
+        let partida = motor::criar_partida_com_ritmo(
             &notas,
+            &ritmo,
             motor::OpcoesDaPartida {
                 sem_falha,
                 fantasma,
@@ -72,7 +88,6 @@ impl MotorDaPartida {
                     2 => motor::JeitoDeJogar::Palhetada,
                     _ => motor::JeitoDeJogar::Gamepad,
                 },
-                pune_toque_em_vazio,
             },
         );
         let enviadas = partida.notas.iter().map(|n| (bandeiras(n), n.segurou_ate)).collect();
@@ -127,9 +142,10 @@ impl MotorDaPartida {
     }
 
     /// O que mudou desde a última chamada, na ordem:
-    /// - 19 números do estado: tempo (NaN antes de começar), pontos, sequência, maior sequência, acertos,
-    ///   perfeitos, ótimos, bons, valor dos acertos, erros, vida, ticks de star power, barra de star power (0 a 1),
-    ///   star power ativo, derrota, fantasma, a primeira nota que ainda importa, o multiplicador e a precisão;
+    /// - 22 números do estado: tempo (NaN antes de começar), pontos, sequência, maior sequência, acertos,
+    ///   perfeitos, ótimos, bons, valor dos acertos, erros, vida, compassos de star power, barra de star power (0 a 1),
+    ///   star power ativo, derrota, fantasma, a primeira nota que ainda importa, o multiplicador, a precisão,
+    ///   toques em vão, bônus de solo e full combo;
     /// - quantas notas mudaram e, para cada uma, índice, bandeiras e até onde o sustain rendeu;
     /// - quantos eventos e, para cada um, código e dois valores;
     /// - quantas frases falharam e cada uma.
@@ -147,7 +163,7 @@ impl MotorDaPartida {
             f64::from(p.valor_dos_acertos),
             f64::from(p.erros),
             p.vida,
-            p.estrela_em_ticks,
+            p.estrela_em_compassos,
             motor::estrela(p),
             f64::from(u8::from(p.estrela_ativa)),
             f64::from(u8::from(p.derrota)),
@@ -155,6 +171,9 @@ impl MotorDaPartida {
             p.primeira as f64,
             motor::multiplicador(p),
             motor::precisao(p),
+            f64::from(p.toques_em_vazio),
+            p.bonus_de_solo,
+            f64::from(u8::from(motor::full_combo(p))),
         ];
 
         let posicao_da_contagem = saida.len();

@@ -14,5 +14,5 @@ export function proximaVelocidade(velocidades: number[], atual: number, passo = 
   return ordenadas[(((posicao + passo) % ordenadas.length) + ordenadas.length) % ordenadas.length];
 }
 
-/** Quanto os pontos da partida são multiplicados. O motor multiplica pela velocidade da música. */
-export const multiplicadorDePontos = ({ velocidadeDaMusica }: Modificadores) => velocidadeDaMusica;
+/** Como no Clone Hero, a velocidade não mexe nos pontos: a partida entra no ranking da própria velocidade. */
+export const rankingDaVelocidade = ({ velocidadeDaMusica }: Modificadores) => (velocidadeDaMusica === 1 ? null : velocidadeDaMusica);

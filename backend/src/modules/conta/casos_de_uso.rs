@@ -107,6 +107,7 @@ pub struct PartidaRejulgada {
     /// Com o modificador sem falha a partida rende XP, mas fica fora do ranking.
     pub sem_falha: bool,
     pub jeito_de_jogar: JeitoDeJogar,
+    pub velocidade: f64,
     pub jogada_em: chrono::DateTime<chrono::Utc>,
     pub replay: Vec<u8>,
     pub rodada: Option<Uuid>,
@@ -208,6 +209,7 @@ impl ServicosDaConta {
                 replay: None,
                 precisao: None,
                 jeito_de_jogar: None,
+                velocidade: None,
                 rodada: partida.rodada,
             })
             .await?;
@@ -240,6 +242,7 @@ impl ServicosDaConta {
                 // O ranking só lê partidas com precisão: sem ela, a partida fica de fora.
                 precisao: vale_para_o_ranking.then_some(partida.precisao),
                 jeito_de_jogar: Some(partida.jeito_de_jogar),
+                velocidade: Some(partida.velocidade),
                 rodada: partida.rodada,
             })
             .await?;
@@ -632,6 +635,7 @@ mod tests {
             jogada_em: quando,
             replay: vec![2, 0],
             jeito_de_jogar: crate::modules::progresso::JeitoDeJogar::Gamepad,
+            velocidade: 1.0,
             rodada: None,
         }
     }

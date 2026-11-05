@@ -76,3 +76,44 @@ export function progressoDoMultiplicador(sequencia: number) {
   if (sequencia >= NOTAS_POR_NIVEL * (MULTIPLICADOR_MAXIMO - 1)) return 1;
   return (sequencia % NOTAS_POR_NIVEL) / NOTAS_POR_NIVEL;
 }
+
+export const DURACAO_DA_CHAMA = 0.35;
+const ACENDER_DA_CHAMA = 0.05;
+
+/** A chama do acerto: acende quase na hora e vai apagando (0 a 1). */
+export function forcaDaChama(idade: number) {
+  if (idade < 0 || idade >= DURACAO_DA_CHAMA) return 0;
+  if (idade < ACENDER_DA_CHAMA) return idade / ACENDER_DA_CHAMA;
+  return (1 - (idade - ACENDER_DA_CHAMA) / (DURACAO_DA_CHAMA - ACENDER_DA_CHAMA)) ** 1.5;
+}
+
+export const DURACAO_DO_ARO = 0.3;
+const SUBIDA_DO_ARO = 0.05;
+const DESCIDA_DO_ARO = 0.1;
+
+/** Quanto o aro do traste está levantado no acerto (0 a 1): sobe rápido, fica no alto e desce. */
+export function elevacaoDoAro(idade: number) {
+  if (idade < 0 || idade >= DURACAO_DO_ARO) return 0;
+  if (idade < SUBIDA_DO_ARO) return idade / SUBIDA_DO_ARO;
+  return Math.min(1, (DURACAO_DO_ARO - idade) / DESCIDA_DO_ARO);
+}
+
+const LINGUAS_DE_FOGO = 5;
+
+/** As línguas de uma chama: cada uma tem lugar fixo pela semente e treme com o tempo. Desvio de -1 a 1; altura e largura de 0 a 1. */
+export function linguasDeFogo(semente: number, tempo: number, forca: number) {
+  const aleatorio = aleatorioComSemente(semente);
+  return Array.from({ length: LINGUAS_DE_FOGO }, (_, i) => {
+    const fase = aleatorio() * Math.PI * 2;
+    const ritmo = 22 + aleatorio() * 26;
+    const lugar = (i / (LINGUAS_DE_FOGO - 1)) * 2 - 1;
+    // As do meio são as mais altas, para o conjunto ter forma de chama.
+    const porte = (1 - lugar * lugar * 0.55) * (0.72 + aleatorio() * 0.13);
+    const desvio = lugar * 0.8 + Math.sin(tempo * ritmo + fase) * 0.2;
+    return {
+      desvio,
+      altura: forca * porte * (0.85 + Math.sin(tempo * ritmo * 1.3 + fase) * 0.15),
+      largura: 0.3 + aleatorio() * 0.15,
+    };
+  });
+}

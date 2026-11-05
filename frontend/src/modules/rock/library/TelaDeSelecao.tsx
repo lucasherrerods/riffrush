@@ -18,7 +18,7 @@ import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/shared/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
-import { Carrossel } from "@/modules/selecao";
+import { Carrossel, indiceDandoAVolta } from "@/modules/selecao";
 import { AvatarPalhetando } from "./componentes/AvatarPalhetando";
 import { Capa } from "./componentes/Capa";
 import { alternarFavorita, carregarFavoritas, indicesVisiveis, salvarFavoritas, selecaoNoFiltro } from "./favoritas";
@@ -120,7 +120,7 @@ export function TelaDeSelecao(props: Props) {
     if (!visiveis.length) return;
     efeito("mover");
     const atual = Math.max(visiveis.indexOf(indice), 0);
-    aoSelecionar(visiveis[(((atual + passos) % visiveis.length) + visiveis.length) % visiveis.length]);
+    aoSelecionar(visiveis[indiceDandoAVolta(atual, passos, visiveis.length)]);
   };
   const escolherDificuldade = (id: Dificuldade) => {
     efeito("mover");

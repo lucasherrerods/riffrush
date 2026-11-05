@@ -23,27 +23,35 @@ pub enum ErroDoRanking {
     MusicaInvalida,
     #[error("a partida não existe")]
     PartidaNaoEncontrada,
+    #[error("velocidade da música que o jogo não oferece")]
+    VelocidadeInvalida,
     #[error(transparent)]
     Falha(#[from] FalhaExterna),
 }
 
 impl ServicosDoRanking {
+    #[allow(clippy::too_many_arguments)]
     pub async fn ranking(
         &self,
         musica_id: &str,
         dificuldade: Dificuldade,
         instrumento: Instrumento,
         jeito: JeitoDeJogar,
+        velocidade: f64,
         ordem: Ordem,
         token: Option<&str>,
     ) -> Result<Ranking, ErroDoRanking> {
         if musica_id.is_empty() || musica_id.len() > TAMANHO_MAXIMO_DO_ID_DA_MUSICA {
             return Err(ErroDoRanking::MusicaInvalida);
         }
+        // Como no Clone Hero, cada velocidade da música tem o próprio ranking.
+        if !riffrush_motor::VELOCIDADES.contains(&velocidade) {
+            return Err(ErroDoRanking::VelocidadeInvalida);
+        }
         let conta = self.conta_de(token).await;
         let linhas = self
             .repositorio
-            .linhas(musica_id, dificuldade, instrumento, jeito, ordem, TAMANHO_DO_TOP_DA_MUSICA, conta)
+            .linhas(musica_id, dificuldade, instrumento, jeito, velocidade, ordem, TAMANHO_DO_TOP_DA_MUSICA, conta)
             .await?;
         Ok(montar_ranking(linhas, conta, TAMANHO_DO_TOP_DA_MUSICA))
     }
@@ -134,6 +142,7 @@ pub mod fakes {
             dificuldade: Dificuldade,
             instrumento: Instrumento,
             jeito: JeitoDeJogar,
+            _velocidade: f64,
             ordem: Ordem,
             ate: u32,
             conta: Option<Uuid>,
@@ -229,6 +238,7 @@ mod tests {
                 Dificuldade::Expert,
                 Instrumento::Guitarra,
                 JeitoDeJogar::Gamepad,
+                1.0,
                 Ordem::Precisao,
                 None,
             )
@@ -248,6 +258,7 @@ mod tests {
                 Dificuldade::Expert,
                 Instrumento::Guitarra,
                 JeitoDeJogar::Gamepad,
+                1.0,
                 Ordem::Precisao,
                 None,
             )
@@ -267,6 +278,7 @@ mod tests {
                 Dificuldade::Expert,
                 Instrumento::Guitarra,
                 JeitoDeJogar::Gamepad,
+                1.0,
                 Ordem::Precisao,
                 Some(&entrada.token),
             )
@@ -285,6 +297,7 @@ mod tests {
                 Dificuldade::Expert,
                 Instrumento::Guitarra,
                 JeitoDeJogar::Gamepad,
+                1.0,
                 Ordem::Precisao,
                 Some("inventado"),
             )
@@ -298,14 +311,22 @@ mod tests {
         let (servicos, _) = ranking_com(servicos().0, vec![]);
         assert!(matches!(
             servicos
-                .ranking("", Dificuldade::Medio, Instrumento::Guitarra, JeitoDeJogar::Gamepad, Ordem::Precisao, None)
+                .ranking("", Dificuldade::Medio, Instrumento::Guitarra, JeitoDeJogar::Gamepad, 1.0, Ordem::Precisao, None)
                 .await,
             Err(ErroDoRanking::MusicaInvalida)
         ));
         let enorme = "x".repeat(TAMANHO_MAXIMO_DO_ID_DA_MUSICA + 1);
         assert!(matches!(
             servicos
-                .ranking(&enorme, Dificuldade::Medio, Instrumento::Guitarra, JeitoDeJogar::Gamepad, Ordem::Precisao, None)
+                .ranking(
+                    &enorme,
+                    Dificuldade::Medio,
+                    Instrumento::Guitarra,
+                    JeitoDeJogar::Gamepad,
+                    1.0,
+                    Ordem::Precisao,
+                    None
+                )
                 .await,
             Err(ErroDoRanking::MusicaInvalida)
         ));

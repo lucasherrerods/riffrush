@@ -10,7 +10,6 @@ const replay: Replay = {
   semAberta: true,
   velocidade: 1.25,
   jeito: "palhetada",
-  puneToqueEmVazio: true,
   hashDoChart: "00112233445566778899aabbccddeeff",
   entradas: [
     { tempo: -0.5, tipo: "tocar", pista: 2 },
@@ -31,9 +30,6 @@ describe("empacotarReplay", () => {
 
   it("o primeiro byte é a versão, fora da compressão, para a API conferir", async () => {
     expect((await empacotarReplay(replay))[0]).toBe(VERSAO_DO_REPLAY);
-    // Um replay antigo regravado (ao baixar do ranking, por exemplo) continua sem a punição do toque em vazio.
-    const semARegra = await desempacotarReplay(await empacotarReplay({ ...replay, puneToqueEmVazio: false }));
-    expect(semARegra.puneToqueEmVazio).toBe(false);
   });
 
   it("continua lendo os replays da versão 1, de antes da nota aberta", async () => {
@@ -46,8 +42,6 @@ describe("empacotarReplay", () => {
     expect(lido.semAberta).toBe(false);
     // E todos são do gamepad, o único jeito de jogar que existia.
     expect(lido.jeito).toBe("gamepad");
-    // E nenhum pune o toque em vazio: a regra veio na versão 5.
-    expect(lido.puneToqueEmVazio).toBe(false);
     expect(lido.entradas).toEqual([
       { tempo: 0, tipo: "tocar", pista: 0 },
       { tempo: 0.005, tipo: "soltar", pista: 0 },
@@ -174,7 +168,7 @@ describe("gravar e reproduzir", () => {
 
 describe("partidaNoInstante", () => {
   const notas = [nota(1), nota(2, 1), nota(3, 2), nota(4, 3)];
-  const opcoes = { semFalha: false, fantasma: false, semAberta: false, velocidade: 1, jeito: "tapping" as const, puneToqueEmVazio: true };
+  const opcoes = { semFalha: false, fantasma: false, semAberta: false, velocidade: 1, jeito: "tapping" as const };
   const entradas = [
     { tempo: 1, tipo: "tocar" as const, pista: 0 },
     { tempo: 1.05, tipo: "soltar" as const, pista: 0 },

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { PlayCircle } from "lucide-react";
+import { cn } from "@/shared/lib/utils";
 import { siglasDosMods } from "../gameplay/mods";
 import { apiDoRanking, type PosicaoNoRankingDoMania } from "./api";
 
@@ -6,10 +8,15 @@ interface Props {
   beatmapId: number;
   /** Para os testes. */
   buscar?: (beatmapId: number, sinal?: AbortSignal) => Promise<PosicaoNoRankingDoMania[]>;
+  /** Assistir ao replay de uma linha; sem ele (mapa fora da biblioteca), o botão não aparece. */
+  aoAssistir?: (linha: PosicaoNoRankingDoMania) => void;
 }
 
+/** Só o top 10 de cada mapa guarda replay: a linha de quem pede, fora dele, não tem o que assistir. */
+const TOP_COM_REPLAY = 10;
+
 /** O top 10 da dificuldade escolhida na seleção. */
-export function PainelDoRankingDoMania({ beatmapId, buscar = apiDoRanking.ranking }: Props) {
+export function PainelDoRankingDoMania({ beatmapId, buscar = apiDoRanking.ranking, aoAssistir }: Props) {
   const [linhas, setLinhas] = useState<PosicaoNoRankingDoMania[] | null>(null);
   const [erro, setErro] = useState(false);
 
@@ -32,7 +39,7 @@ export function PainelDoRankingDoMania({ beatmapId, buscar = apiDoRanking.rankin
       {!!linhas?.length && (
         <ol className="flex flex-col gap-1">
           {linhas.map((l) => (
-            <li key={l.partida_id} className="grid grid-cols-[2rem_1fr_auto_auto] items-baseline gap-3">
+            <li key={l.partida_id} className={cn("grid items-baseline gap-3", aoAssistir ? "grid-cols-[2rem_1fr_auto_auto_2rem]" : "grid-cols-[2rem_1fr_auto_auto]")}>
               <span className="font-titulo text-lg text-texto-suave">{l.posicao}</span>
               <span className="truncate">
                 {l.nome}
@@ -40,6 +47,14 @@ export function PainelDoRankingDoMania({ beatmapId, buscar = apiDoRanking.rankin
               </span>
               <span className="text-texto-suave">{(l.precisao * 100).toFixed(2).replace(".", ",")}%</span>
               <span className="font-titulo text-lg">{l.pontuacao.toLocaleString("pt-BR")}</span>
+              {aoAssistir &&
+                (l.posicao <= TOP_COM_REPLAY ? (
+                  <button type="button" onClick={() => aoAssistir(l)} aria-label={`Assistir ao replay de ${l.nome}`} className="self-center text-primaria hover:text-texto">
+                    <PlayCircle className="size-5" aria-hidden />
+                  </button>
+                ) : (
+                  <span />
+                ))}
             </li>
           ))}
         </ol>

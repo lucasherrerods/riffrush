@@ -6,7 +6,7 @@ import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
 import { carregarMusica, PISTA_ABERTA, type Nota } from "@/modules/rock/songs";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { OPCOES_PADRAO_DA_PARTIDA, TelaDeJogo, type OpcoesDaPartida } from "./TelaDeJogo";
-import { desempacotarReplay, hashDoChart, type EventoDaTransmissao, type Replay } from "./replay";
+import { VERSAO_DO_REPLAY, desempacotarReplay, hashDoChart, type EventoDaTransmissao, type Replay } from "./replay";
 import { MUSICAS_DE_TESTE } from "@/test/musicas";
 
 vi.mock("@/modules/rock/songs", async (original) => ({
@@ -16,7 +16,7 @@ vi.mock("@/modules/rock/songs", async (original) => ({
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => {}), isTauri: () => true }));
 
-const ENTRADA = 2.5;
+const ENTRADA = 4;
 const nota = (tempo: number, pista = 0): Nota => ({ tempo, pista, frase: -1, duracao: 0 });
 
 function carregarCom(notas: Nota[], duracao = 10) {
@@ -168,7 +168,7 @@ describe("TelaDeJogo", () => {
     await waitFor(() => expect(screen.getByLabelText("Sequência")).toHaveTextContent("0"));
     irPara(2);
     await waitFor(() => expect(aoTerminar).toHaveBeenCalled());
-    expect((await desempacotarReplay(await aoTerminar.mock.calls[0][1]())).puneToqueEmVazio).toBe(true);
+    expect((await aoTerminar.mock.calls[0][1]())[0]).toBe(VERSAO_DO_REPLAY);
   });
 
   it("Esc pausa a música e Continuar retoma", async () => {
@@ -380,7 +380,6 @@ describe("TelaDeJogo", () => {
       fantasma: false,
       semAberta: false,
       jeito: "gamepad",
-      puneToqueEmVazio: true,
       velocidade: 1,
       hashDoChart: await hashDoChart([nota(0.5), nota(0.8, 1)]),
       entradas: [{ tempo: 0.5, tipo: "tocar", pista: 0 }],
@@ -405,7 +404,6 @@ describe("TelaDeJogo", () => {
       fantasma: false,
       semAberta: false,
       jeito: "gamepad",
-      puneToqueEmVazio: true,
       velocidade: 1,
       hashDoChart: await hashDoChart(notas),
       entradas: [
@@ -530,7 +528,6 @@ describe("TelaDeJogo", () => {
       fantasma: false,
       semAberta: false,
       jeito: "gamepad",
-      puneToqueEmVazio: true,
       velocidade: 1,
       hashDoChart: await hashDoChart(notas),
       entradas: [
@@ -597,7 +594,6 @@ describe("TelaDeJogo", () => {
       fantasma: false,
       semAberta: true,
       jeito: "gamepad",
-      puneToqueEmVazio: true,
       velocidade: 1,
       hashDoChart: await hashDoChart([nota(0.5, PISTA_ABERTA)]),
       entradas: [{ tempo: 0.5, tipo: "tocar", pista: 0 }],
@@ -610,7 +606,7 @@ describe("TelaDeJogo", () => {
 
   it("replay gravado em outro chart avisa e não toca", async () => {
     carregarCom([nota(0.5)]);
-    abrir({}, undefined, { semFalha: false, fantasma: false, semAberta: false, jeito: "gamepad", puneToqueEmVazio: true, velocidade: 1, hashDoChart: "0".repeat(32), entradas: [] });
+    abrir({}, undefined, { semFalha: false, fantasma: false, semAberta: false, jeito: "gamepad", velocidade: 1, hashDoChart: "0".repeat(32), entradas: [] });
     expect(await screen.findByText(/outra versão do chart/)).toBeInTheDocument();
   });
 
@@ -641,7 +637,7 @@ describe("TelaDeJogo", () => {
 
   it("ao vivo, quem assiste não passa do que já chegou", async () => {
     carregarCom([nota(0.5)]);
-    const replay: Replay = { semFalha: false, fantasma: false, semAberta: false, jeito: "gamepad", puneToqueEmVazio: true, velocidade: 1, hashDoChart: await hashDoChart([nota(0.5)]), entradas: [], ateAgora: 0.2 };
+    const replay: Replay = { semFalha: false, fantasma: false, semAberta: false, jeito: "gamepad", velocidade: 1, hashDoChart: await hashDoChart([nota(0.5)]), entradas: [], ateAgora: 0.2 };
     abrir({}, undefined, replay);
     await partidaPronta();
     irPara(1);
@@ -676,7 +672,8 @@ describe("TelaDeJogo", () => {
     await waitFor(() => expect(aoTerminar).toHaveBeenCalled());
     const replay = await desempacotarReplay(await aoTerminar.mock.calls[0][1]());
     expect(replay.velocidade).toBe(1.5);
-    expect(aoTerminar.mock.calls[0][0].pontos).toBe(75);
+    // Como no Clone Hero, a velocidade não mexe nos pontos: o ranking separa as partidas por velocidade.
+    expect(aoTerminar.mock.calls[0][0].pontos).toBe(50);
   });
 
   it("mostra o selo BOT quando o bot está ligado", async () => {

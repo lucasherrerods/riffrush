@@ -8,18 +8,19 @@ export function quantizar(tempo: number): number;
  * 0 é perfeito, 1 ótimo e 2 bom.
  */
 export function julgar(distancia: number): number;
+export function janela_de_acerto(): number;
 /**
  * As velocidades da música que o jogo oferece.
  */
 export function velocidades(): Float64Array;
-export function janela_de_acerto(): number;
 export class MotorDaPartida {
   free(): void;
   /**
    * O que mudou desde a última chamada, na ordem:
-   * - 19 números do estado: tempo (NaN antes de começar), pontos, sequência, maior sequência, acertos,
-   *   perfeitos, ótimos, bons, valor dos acertos, erros, vida, ticks de star power, barra de star power (0 a 1),
-   *   star power ativo, derrota, fantasma, a primeira nota que ainda importa, o multiplicador e a precisão;
+   * - 22 números do estado: tempo (NaN antes de começar), pontos, sequência, maior sequência, acertos,
+   *   perfeitos, ótimos, bons, valor dos acertos, erros, vida, compassos de star power, barra de star power (0 a 1),
+   *   star power ativo, derrota, fantasma, a primeira nota que ainda importa, o multiplicador, a precisão,
+   *   toques em vão, bônus de solo e full combo;
    * - quantas notas mudaram e, para cada uma, índice, bandeiras e até onde o sustain rendeu;
    * - quantos eventos e, para cada um, código e dois valores;
    * - quantas frases falharam e cada uma.
@@ -33,9 +34,10 @@ export class MotorDaPartida {
    */
   grade_das_notas(): Float64Array;
   /**
-   * As notas vêm em quatro listas paralelas, que passam para o WASM sem um objeto por nota.
+   * As notas vêm em listas paralelas, que passam para o WASM sem um objeto por nota. `tipos`: 0 strum, 1 HOPO, 2 tap.
+   * `batidas` e `compassos` são os tempos (na música) de cada batida e de cada começo de compasso.
    */
-  constructor(tempos: Float64Array, pistas: Uint8Array, frases: Int32Array, duracoes: Float64Array, sem_falha: boolean, fantasma: boolean, velocidade: number, sem_aberta: boolean, jeito: number, pune_toque_em_vazio: boolean);
+  constructor(tempos: Float64Array, pistas: Uint8Array, frases: Int32Array, duracoes: Float64Array, tipos: Uint8Array, solos: Int32Array, batidas: Float64Array, compassos: Float64Array, sem_falha: boolean, fantasma: boolean, velocidade: number, sem_aberta: boolean, jeito: number);
   tocar(pista: number, tempo: number): boolean;
   soltar(pista: number, tempo: number): void;
   acertar(indice: number, tempo: number): void;
@@ -56,7 +58,7 @@ export interface InitOutput {
   readonly motordapartida_avancar: (a: number, b: number) => void;
   readonly motordapartida_grade_das_notas: (a: number) => [number, number];
   readonly motordapartida_multiplicador: (a: number) => number;
-  readonly motordapartida_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number) => number;
+  readonly motordapartida_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number) => number;
   readonly motordapartida_palhetar: (a: number, b: number) => number;
   readonly motordapartida_precisao: (a: number) => number;
   readonly motordapartida_sincronizar: (a: number) => [number, number];

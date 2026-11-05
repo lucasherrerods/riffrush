@@ -2,8 +2,9 @@ import { PISTA_ABERTA, type Batida, type TipoDaNota } from "@/modules/rock/songs
 import { cores } from "@/modules/rock/tema";
 import { comAlfa } from "@/shared/styles/tokens";
 import { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ABERTA, COR_DA_ESTRELA, COR_DA_NOTA_PERDIDA, TRILHO_DA_ESTRELA, corDaPista } from "../cores";
+import { descidaDaPista, teclaDaAbertura } from "../abertura";
 import type { NotaEmJogo } from "../partida";
-import { pontosDoRaio, pulo, tremor } from "./efeitos";
+import { DURACAO_DA_CHAMA, DURACAO_DO_ARO, elevacaoDoAro, forcaDaChama, linguasDeFogo, pontosDoRaio, pulo, tremor } from "./efeitos";
 import { cordasDaPista, layoutDaPista, projetar, xDaPista, type LayoutDaPista } from "./geometria";
 
 const LADOS = [-1, 1] as const;
@@ -44,6 +45,8 @@ export interface Cena {
   trovoes: { tempo: number; forca: number; semente: number }[];
   /** Instante em que o star power foi solto, para o tremor da pista. */
   estrelaDesde: number | null;
+  /** Segundos desde o começo da contagem, enquanto a abertura da partida roda. */
+  abertura?: number | null;
 }
 
 /** Imagens pré-desenhadas das notas e dos brilhos (ver sprites.ts). */
@@ -69,6 +72,13 @@ export const SPRITE_DA_ABERTA = { barra: 600, largura: 640, altura: 80 };
 /** Quantos trastes de largura o rastro do sustain da aberta tem, comparado com o de uma nota. */
 const LARGURA_DO_RASTRO_DA_ABERTA = 4;
 const DURACAO_DA_EXPLOSAO = 0.3;
+const FORCA_DA_CHAMA_DO_SUSTAIN = 0.75;
+/** Tamanho da chama em larguras de traste. */
+const CHAMA = { altura: 1.25, largura: 0.28 };
+/** Quanto o aro do traste levanta da base, em larguras de traste. */
+const ALTURA_DO_ARO = 0.33;
+/** O miolo do traste, onde o fogo acende, em larguras de traste. */
+const MIOLO = { largura: 0.23, altura: 0.12 };
 const DURACAO_DO_ERRO = 0.5;
 const DURACAO_DO_TROVAO = 0.5;
 const ATRAS_DA_LINHA = -0.12;
@@ -125,6 +135,12 @@ export function desenharPista(
   const layout = layoutDaPista(largura, altura);
   const { centro, linhaDeBatida, larguraDoTraste } = layout;
 
+  // Na abertura, a pista inteira sobe de baixo da tela.
+  const abertura = efeitos ? (cena.abertura ?? null) : null;
+  if (abertura !== null) {
+    c.save();
+    c.translate(0, altura * descidaDaPista(abertura));
+  }
   // O tremor e o pulo do star power giram e deslocam a pista em torno da linha de batida, na mesma transformação.
   const desde = efeitos && cena.estrelaDesde !== null ? tempo - cena.estrelaDesde : null;
   const sacudida = desde !== null ? tremor(desde) : null;
@@ -270,18 +286,7 @@ export function desenharPista(
       gradiente.addColorStop(1, cores.fundo);
       return gradiente;
     });
-    c.beginPath();
-    c.ellipse(x, linhaDeBatida + raio * 0.12, raio * 1.12, raio * 0.62, 0, 0, Math.PI * 2);
-    c.fillStyle = cromo;
-    c.fill();
-    c.beginPath();
-    c.ellipse(x, linhaDeBatida, raio, raio * 0.55, 0, 0, Math.PI * 2);
-    c.fillStyle = cor;
-    c.fill();
-    c.beginPath();
-    c.ellipse(x, linhaDeBatida, raio * 0.68, raio * 0.36, 0, 0, Math.PI * 2);
-    c.fillStyle = apertado ? comAlfa(cores.texto, 0.85) : comAlfa(cores.fundo, 0.9);
-    c.fill();
+    desenharAro(c, x, linhaDeBatida, raio, cromo, cor, apertado ? comAlfa(cores.texto, 0.85) : comAlfa(cores.fundo, 0.9));
   }
 
   // A tecla da aberta acende a linha de batida inteira, de ponta a ponta.
@@ -389,9 +394,12 @@ export function desenharPista(
 
   // Sem efeitos não há tremor, então não há transformação para desfazer.
   if (!efeitos) return;
+  // No acerto, o aro do traste levanta da base e o fogo sai de dentro dele.
   for (const explosao of soLeves ? [] : cena.explosoes) {
     const idade = tempo - explosao.tempo;
-    if (idade < 0 || idade > DURACAO_DA_EXPLOSAO) continue;
+    if (idade < 0 || idade > Math.max(DURACAO_DO_ARO, DURACAO_DA_CHAMA, DURACAO_DA_EXPLOSAO)) continue;
+    desenharAroLevantado(c, layout, explosao.pista, cena.estrelaAtiva, elevacaoDoAro(idade), Math.round(explosao.tempo * 1000), tempo, forcaDaChama(idade));
+    if (idade > DURACAO_DA_EXPLOSAO) continue;
     const k = idade / DURACAO_DA_EXPLOSAO;
     // A explosão da aberta sai do meio do braço e é bem maior, porque a nota cobre os cinco trastes.
     const aberta = explosao.pista === PISTA_ABERTA;
@@ -408,12 +416,95 @@ export function desenharPista(
   }
   c.globalAlpha = 1;
 
+  // Enquanto o sustain está sendo segurado, o traste continua pegando fogo.
+  if (!soLeves) {
+    for (let i = cena.primeira; i < ultima; i++) {
+      const nota = cena.notas[i];
+      if (!nota.segurando) continue;
+      desenharAroLevantado(c, layout, nota.pista, cena.estrelaAtiva, 1, nota.pista + 1, tempo, FORCA_DA_CHAMA_DO_SUSTAIN);
+    }
+  }
+
   for (const trovao of cena.trovoes) {
     const idade = tempo - trovao.tempo;
     if (idade < 0 || idade > DURACAO_DO_TROVAO) continue;
     desenharTrovao(c, largura, altura, layout, longe.y, trovao, idade / DURACAO_DO_TROVAO);
   }
+  if (abertura !== null && !soLeves) {
+    for (let traste = 0; traste < 5; traste++) {
+      const { elevacao, chama } = teclaDaAbertura(abertura, traste);
+      if (elevacao > 0) desenharAroLevantado(c, layout, traste, cena.estrelaAtiva, elevacao, traste + 1, tempo, chama);
+    }
+  }
   if (tremendo) c.restore();
+  if (abertura !== null) c.restore();
+}
+
+/** Um aro de traste: borda de metal, anel na cor do traste e o miolo. */
+function desenharAro(c: CanvasRenderingContext2D, x: number, y: number, raio: number, metal: string | CanvasGradient, cor: string, miolo: string) {
+  const elipse = (cy: number, largura: number, altura: number, preenchimento: string | CanvasGradient) => {
+    c.beginPath();
+    c.ellipse(x, cy, raio * largura, raio * altura, 0, 0, Math.PI * 2);
+    c.fillStyle = preenchimento;
+    c.fill();
+  };
+  elipse(y + raio * 0.12, 1.12, 0.62, metal);
+  elipse(y, 1, 0.55, cor);
+  elipse(y, 0.68, 0.36, miolo);
+}
+
+/** O aro sobe da base e o fogo sai de dentro dele; a nota aberta levanta os cinco trastes. */
+function desenharAroLevantado(c: CanvasRenderingContext2D, layout: LayoutDaPista, pista: number, estrela: boolean, elevacao: number, semente: number, tempo: number, forca: number) {
+  const { larguraDoTraste, linhaDeBatida } = layout;
+  const aberta = pista === PISTA_ABERTA;
+  const raio = larguraDoTraste * 0.34;
+  const y = linhaDeBatida - elevacao * larguraDoTraste * ALTURA_DO_ARO;
+  for (let traste = aberta ? 0 : pista; traste <= (aberta ? 4 : pista); traste++) {
+    const x = xDaPista(layout, traste, 1);
+    const cor = estrela ? COR_DA_ESTRELA : aberta ? COR_DA_ABERTA : corDaPista(traste);
+    if (elevacao > 0) {
+      // A coluna escura entre a base e o aro mostra que ele saiu do lugar.
+      c.fillStyle = cores.fundo;
+      c.fillRect(x - raio * 0.68, y, raio * 1.36, linhaDeBatida - y);
+      desenharAro(c, x, y, raio, cores.textoSuave, cor, cores.fundo);
+    }
+    if (forca > 0) desenharChama(c, x, y, larguraDoTraste, cor, semente + traste * 31, tempo, forca);
+  }
+}
+
+/** Línguas de fogo somando luz: de fora para dentro, a cor do traste, depois o miolo branco. */
+function desenharChama(c: CanvasRenderingContext2D, x: number, y: number, traste: number, cor: string, semente: number, tempo: number, forca: number) {
+  const linguas = linguasDeFogo(semente, tempo, forca);
+  // O fogo nasce dentro do miolo do traste, e as línguas saem dele.
+  const miolo = (fator: number) => {
+    c.beginPath();
+    c.ellipse(x, y, traste * MIOLO.largura * fator, traste * MIOLO.altura * fator, 0, 0, Math.PI * 2);
+    c.fill();
+  };
+  const lingua = (fator: number) => {
+    c.beginPath();
+    for (const { desvio, altura, largura } of linguas) {
+      const meia = traste * CHAMA.largura * largura * fator;
+      const base = x + desvio * traste * MIOLO.largura * 0.6 * fator;
+      const topo = y - traste * CHAMA.altura * altura * fator;
+      c.moveTo(base - meia, y);
+      c.quadraticCurveTo(base - meia * 0.9, (y + topo) / 2, base + desvio * meia * 0.6, topo);
+      c.quadraticCurveTo(base + meia * 0.9, (y + topo) / 2, base + meia, y);
+      // A base é arredondada, para a chama sair de dentro do traste.
+      c.quadraticCurveTo(base, y + meia * 0.6, base - meia, y);
+    }
+    c.fill();
+  };
+  c.globalCompositeOperation = "lighter";
+  c.globalAlpha = 0.85;
+  c.fillStyle = cor;
+  miolo(1);
+  lingua(1);
+  c.globalAlpha = 1;
+  c.fillStyle = cores.texto;
+  miolo(0.7);
+  lingua(0.55);
+  c.globalCompositeOperation = "source-over";
 }
 
 /** Camadas de cada corda, de fora para dentro: largura relativa, deslocamento lateral e cor. */

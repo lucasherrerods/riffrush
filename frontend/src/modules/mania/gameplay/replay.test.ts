@@ -1,5 +1,5 @@
 import { ReplayLido } from "./motor";
-import { VERSAO_DO_REPLAY_DO_MANIA, empacotarReplayDoMania, type ReplayDoMania } from "./replay";
+import { VERSAO_DO_REPLAY_DO_MANIA, empacotarReplayDoMania, lerReplayDoMania, type ReplayDoMania } from "./replay";
 
 const replay: ReplayDoMania = {
   mods: (1 << 3) | (1 << 11),
@@ -31,4 +31,8 @@ it("um mapa denso inteiro fica com poucos KB", async () => {
 
 it("o motor recusa replay quebrado", () => {
   expect(() => new ReplayLido(new Uint8Array([1, 2, 3]))).toThrow("Replay inválido");
+});
+
+it("o replay baixado do ranking volta igual ao que foi gravado, pronto para assistir", async () => {
+  expect(await lerReplayDoMania(await empacotarReplayDoMania(replay))).toEqual(replay);
 });

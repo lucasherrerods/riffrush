@@ -5,11 +5,12 @@ import { ativarEstrela, avancar, criarPartida, JEITOS_DE_JOGAR, palhetar, quanti
  * Um replay guarda só as entradas do jogador (como o .osr do osu!), não vídeo: a partida é
  * determinística, então reaplicar as entradas sobre o mesmo chart reproduz tudo, ponto por ponto.
  */
-export const VERSAO_DO_REPLAY = 5;
+/** A 6 é a das regras do Clone Hero. As anteriores tocam com as mesmas regras de hoje. */
+export const VERSAO_DO_REPLAY = 6;
 const TICKS_POR_SEGUNDO = 1000;
 /** Quantos códigos de tecla cada versão tem: a 2 ganhou os da nota aberta, a 3 só acrescentou a velocidade e a 4 ganhou a palheta.
- * A 5 tem os mesmos códigos e marca a punição do toque em vazio: as anteriores tocam sem ela. */
-const CODIGOS_DA_VERSAO: Record<number, number> = { 1: 11, 2: 13, 3: 13, 4: 14, 5: 14 };
+ * A 5 e a 6 têm os mesmos códigos. Todas tocam com as regras de hoje, as do Clone Hero. */
+const CODIGOS_DA_VERSAO: Record<number, number> = { 1: 11, 2: 13, 3: 13, 4: 14, 5: 14, 6: 14 };
 const CODIGOS = CODIGOS_DA_VERSAO[VERSAO_DO_REPLAY];
 const ESTRELA = 10;
 const APERTA_A_ABERTA = 11;
@@ -33,8 +34,6 @@ export interface Replay {
   velocidade: number;
   /** Os replays de antes da versão 4 são todos do gamepad. */
   jeito: JeitoDeJogar;
-  /** Tocar sem acertar nota quebra a sequência e tira vida. Só a partir da versão 5. */
-  puneToqueEmVazio: boolean;
   /** Identifica o chart: o replay só vale nas mesmas notas. */
   hashDoChart: string;
   entradas: EntradaDoReplay[];
@@ -44,7 +43,7 @@ export interface Replay {
 
 /** O que a partida conta para quem assiste ao vivo: quem leva isso à rede é o módulo de presença. */
 export type EventoDaTransmissao =
-  | { tipo: "inicio"; hashDoChart: string; semFalha: boolean; semAberta: boolean; velocidade: number; jeito: JeitoDeJogar; puneToqueEmVazio: boolean }
+  | { tipo: "inicio"; hashDoChart: string; semFalha: boolean; semAberta: boolean; velocidade: number; jeito: JeitoDeJogar }
   | { tipo: "lote"; entradas: EntradaDoReplay[]; ate: number }
   | { tipo: "pausa"; pausado: boolean }
   | { tipo: "fim" };
@@ -147,7 +146,7 @@ export async function empacotarReplay(replay: Replay) {
   }
   const comprimido = await transformar(new Uint8Array(bytes), new CompressionStream("deflate-raw"));
   const pacote = new Uint8Array(comprimido.length + 1);
-  pacote[0] = replay.puneToqueEmVazio ? VERSAO_DO_REPLAY : 4;
+  pacote[0] = VERSAO_DO_REPLAY;
   pacote.set(comprimido, 1);
   return pacote;
 }
@@ -175,7 +174,7 @@ export async function desempacotarReplay(pacote: Uint8Array): Promise<Replay> {
   }
   const jeito = JEITOS_DE_JOGAR[(opcoes >> 3) & 3];
   if (!jeito) throw new Error("Replay com um jeito de jogar que este app não conhece.");
-  return { semFalha: !!(opcoes & 1), fantasma: !!(opcoes & 2), semAberta: !!(opcoes & 4), velocidade, jeito, puneToqueEmVazio: pacote[0] >= 5, hashDoChart: hash, entradas };
+  return { semFalha: !!(opcoes & 1), fantasma: !!(opcoes & 2), semAberta: !!(opcoes & 4), velocidade, jeito, hashDoChart: hash, entradas };
 }
 
 export const emTicks = (tempo: number) => Math.round(tempo * TICKS_POR_SEGUNDO);

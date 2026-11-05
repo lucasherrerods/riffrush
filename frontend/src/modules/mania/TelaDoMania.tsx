@@ -13,7 +13,8 @@ import { Avisos, avisar } from "@/shared/ui/avisos";
 import { Button } from "@/shared/ui/button";
 import { abrirBibliotecaDoMania, valeXpNoMania, type BibliotecaDoMania, type ConjuntoSalvo, type DificuldadeSalva } from "./beatmaps/biblioteca";
 import { MODS } from "./gameplay/mods";
-import { empacotarReplayDoMania } from "./gameplay/replay";
+import { empacotarReplayDoMania, lerReplayDoMania, type ReplayDoMania } from "./gameplay/replay";
+import { apiDoRanking, type PosicaoNoRankingDoMania } from "./ranking/api";
 import { useBibliotecaDoMania } from "./beatmaps/useBibliotecaDoMania";
 import { ResultadoDoMania } from "./gameplay/ResultadoDoMania";
 import { TelaDeJogoMania, type MapaParaJogar, type OpcoesDoMania, type ResultadoDoMania as Resultado } from "./gameplay/TelaDeJogoMania";
@@ -31,7 +32,10 @@ import { TeclaDoMania } from "./menu/TeclaDoMania";
 import { FundoDoMania } from "./menu/FundoDoMania";
 import { MenuDoMania } from "./menu/MenuDoMania";
 
-type Tela = { nome: "menu" } | { nome: "selecao" } | { nome: "busca" } | { nome: "leaderboard" } | { nome: "perfil" } | { nome: "jogo"; mapa: MapaParaJogar; treino?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado };
+type Tela = { nome: "menu" } | { nome: "selecao" } | { nome: "busca" } | { nome: "leaderboard" } | { nome: "perfil" } | { nome: "jogo"; mapa: MapaParaJogar; treino?: boolean; replay?: ReplayAssistido } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado; replay?: ReplayAssistido };
+
+/** Um replay do ranking aberto para assistir: as entradas, os mods e a semente da partida, e de quem ela é. */
+type ReplayAssistido = ReplayDoMania & { nome: string };
 
 interface Props {
   /** A alavanca que volta para o Rock, no cabeçalho. */
@@ -132,7 +136,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   };
   const baixados = new Set((conjuntos ?? []).flatMap((c) => (c.origem === "osu" && c.beatmapsetId ? [c.beatmapsetId] : [])));
 
-  const aoJogar = async (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva, treino = false) => {
+  const aoJogar = async (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva, treino = false, replay?: ReplayAssistido) => {
     const pacote = await abrirPacote(conjunto.id);
     const lido = pacote?.mapas.find((m) => m.hash === dificuldade.hash);
     const audio = lido && pacote?.arquivos.get(lido.arquivoDeAudio);
@@ -142,6 +146,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     setTela({
       nome: "jogo",
       treino,
+      replay,
       mapa: {
         titulo: conjunto.tituloUnicode || conjunto.titulo,
         dificuldade: lido.dificuldade,
@@ -154,11 +159,22 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     });
   };
 
-  /** Com a conta conectada, o replay vai para a API, que confere a partida e devolve o XP. */
-  const aoTerminar = (mapa: MapaParaJogar, resultado: Resultado) => {
-    setTela({ nome: "resultado", mapa, resultado });
+  /** Como no Rock: baixa o replay da partida do ranking, confere que é desta dificuldade e assiste no mapa da biblioteca. */
+  const aoAssistir = async (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva, linha: PosicaoNoRankingDoMania) => {
+    const replay = await apiDoRanking
+      .replay(linha.partida_id)
+      .then(lerReplayDoMania)
+      .catch(() => null);
+    if (!replay) return avisar.error("Não deu para baixar este replay agora.");
+    if (replay.hash !== dificuldade.hash) return avisar.error("Este replay é de outra versão do mapa.");
+    await aoJogar(conjunto, dificuldade, false, { ...replay, nome: linha.nome });
+  };
+
+  /** Com a conta conectada, o replay vai para a API, que confere a partida e devolve o XP. Replay assistido não vale nada. */
+  const aoTerminar = (mapa: MapaParaJogar, resultado: Resultado, replay?: ReplayAssistido) => {
+    setTela({ nome: "resultado", mapa, resultado, replay });
     setXp(undefined);
-    if (!conta) return;
+    if (!conta || replay) return;
     if (!mapa.valeXp || !mapa.beatmapId || resultado.mods & MODS.AT) return setXp({ recusada: true });
     const beatmapId = mapa.beatmapId;
     setXp({ pendente: true, id: "" });
@@ -173,13 +189,15 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     return (
       <TelaDeJogoMania
         mapa={tela.mapa}
-        mods={mods}
-        semente={semente}
+        mods={tela.replay?.mods ?? mods}
+        semente={tela.replay?.semente ?? semente}
         opcoes={opcoes}
         decodificar={decodificar}
         treino={tela.treino}
+        replay={tela.replay?.entradas}
+        rotuloDoReplay={tela.replay && `REPLAY · ${tela.replay.nome}`}
         aoSair={() => setTela({ nome: "selecao" })}
-        aoTerminar={(resultado) => aoTerminar(tela.mapa, resultado)}
+        aoTerminar={(resultado) => aoTerminar(tela.mapa, resultado, tela.replay)}
       />
     );
 
@@ -190,8 +208,8 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         dificuldade={tela.mapa.dificuldade}
         resultado={tela.resultado}
         xp={xp}
-        valeXp={tela.mapa.valeXp}
-        aoJogarDeNovo={() => setTela({ nome: "jogo", mapa: tela.mapa })}
+        valeXp={tela.mapa.valeXp && !tela.replay}
+        aoJogarDeNovo={() => setTela({ nome: "jogo", mapa: tela.mapa, replay: tela.replay })}
         aoVoltar={() => setTela({ nome: "selecao" })}
       />
     );
@@ -299,7 +317,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         {tela.nome === "busca" ? (
           <TelaDeBuscaMania baixados={baixados} aoBaixar={aoBaixar} buscar={buscar} baixar={baixar} />
         ) : (
-          <TelaDeSelecaoMania conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} />
+          <TelaDeSelecaoMania conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
         )}
         {painelDeAmigos}
       </div>

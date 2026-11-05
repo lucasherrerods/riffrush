@@ -11,8 +11,10 @@ export interface Resultado {
   total: number;
   /** Partidas antigas, vindas do ranking, não têm. */
   julgamentos?: Record<Julgamento, number>;
-  /** De 0 a 1, pelo valor de cada nota do chart. Sem ela, vale acertos sobre o total. */
+  /** De 0 a 1: notas acertadas sobre as do chart, como a porcentagem do Clone Hero. Sem ela, vale acertos sobre o total. */
   precisao?: number;
+  /** Todas as notas sem nenhuma palhetada ou toque em vão. Partidas antigas, vindas do ranking, não têm. */
+  fullCombo?: boolean;
   maiorSequencia: number;
   derrota: boolean;
   /** No multijogador a vida zerou no meio, mas a música foi até o fim. */
@@ -33,7 +35,8 @@ export function resultadoDaPartida(partida: Partida, musicaId: string, dificulda
     acertos: partida.acertos,
     total: partida.notas.length,
     julgamentos: { ...partida.julgamentos },
-    precisao: partida.notas.length ? partida.valorDosAcertos / (partida.notas.length * VALOR_DO_JULGAMENTO.perfeito) : 0,
+    precisao: partida.notas.length ? partida.acertos / partida.notas.length : 0,
+    fullCombo: partida.fullCombo,
     maiorSequencia: partida.maiorSequencia,
     derrota: partida.derrota,
     fantasma: partida.fantasma,

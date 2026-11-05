@@ -579,6 +579,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 ranking={contasLigadas && escolhida ? (
                     <RankingDaSelecao
                       jeitoInicial={opcoes.jeitoDeJogar}
+                      velocidade={configuracoes.velocidadeDaMusica}
                       musicaId={idDoRanking(escolhida)}
                       dificuldade={dificuldadeDaSelecao}
                       instrumento={instrumentoDaSelecao}
@@ -710,6 +711,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 dificuldade={dificuldadeDaPartida}
                 instrumento={instrumentoDaPartida}
                 opcoes={opcoes}
+                esperandoEntrada={!!entrada}
                 personagem={personagemEmJogo}
                 recorde={assistindo || divididos || treinando ? undefined : recordeDe(recordes, idDoRanking(musica), dificuldadeDaPartida, instrumentoDaPartida)?.pontos}
                 replay={assistindo?.replay}
@@ -719,7 +721,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                     : undefined
                 }
                 // Em rede o canto mostra a sala; sozinho, o ranking global da música.
-                placar={contasLigadas && !emRede && !assistindo && !divididos && !treinando ? (pontos) => <PlacarAoVivo musicaId={idDoRanking(musica)} dificuldade={dificuldadeDaPartida} instrumento={instrumentoDaPartida} jeito={opcoes.jeitoDeJogar} pontos={pontos} /> : undefined}
+                placar={contasLigadas && !emRede && !assistindo && !divididos && !treinando ? (pontos) => <PlacarAoVivo musicaId={idDoRanking(musica)} dificuldade={dificuldadeDaPartida} instrumento={instrumentoDaPartida} jeito={opcoes.jeitoDeJogar} velocidade={configuracoes.velocidadeDaMusica} pontos={pontos} /> : undefined}
                 aoSair={assistindo ? sairDoReplay : () => setTela(emRede ? "multijogador" : "selecao")}
                 aoTerminar={assistindo ? sairDoReplay : terminar}
                 transmissao={transmissao}

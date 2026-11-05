@@ -71,3 +71,15 @@ describe("replay da partida", () => {
     expect(String((buscar.mock.calls[0] as unknown[])[0])).toBe("https://api.teste/partidas/p1/replay");
   });
 });
+
+describe("ranking por velocidade", () => {
+  it("pede o ranking da velocidade escolhida, e a normal não vai no pedido", async () => {
+    const buscar = vi.fn(async () => new Response(JSON.stringify({ top: [], meu: null }), { status: 200 }));
+    const api = criarApiDoRanking("https://api/", buscar as unknown as typeof fetch);
+    await api.buscar("encore:abc", "expert", { velocidade: 1.25 }).catch(() => {});
+    await api.buscar("encore:abc", "expert").catch(() => {});
+    const urls = (buscar.mock.calls as unknown as [string][]).map(([url]) => url);
+    expect(urls[0]).toContain("velocidade=1.25");
+    expect(urls[1]).not.toContain("velocidade");
+  });
+});

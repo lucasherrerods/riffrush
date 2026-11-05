@@ -36,3 +36,15 @@ Problemas encontrados de passagem, fora do escopo da mudança que estava sendo f
 - O que se viu: o `findByRole` estourou o tempo na suíte completa; rodando o arquivo sozinho, passou duas vezes.
 - Suspeita: a tela de configurações é carregada sob demanda e demora mais que o limite padrão com a máquina sob carga.
 - Próximo passo: repetir a suíte e, se voltar a falhar, aumentar o `timeout` desse `findByRole`.
+
+## Teste "monta o jogo do modo ativo" falha às vezes na suíte inteira
+- Onde: `frontend/src/app/App.modo.test.tsx`.
+- O que se viu: em 05/11/2026 falhou na suíte completa (já tinha falhado uma vez antes, no PR do giro de modo); rodando o arquivo sozinho, passou três vezes seguidas.
+- Suspeita: o modo é carregado sob demanda (`carregarTelaDoMania`) e demora mais que o limite padrão com a máquina sob carga, como o teste das configurações acima.
+- Próximo passo: ver qual `findBy` estoura e dar a ele um `timeout` maior, ou pré-carregar o modo no teste.
+
+## `frontend/src/app/App.modo.test.tsx` › "monta o jogo do modo ativo"
+- Onde: `npm test` com a suíte inteira, na branch da seleção do Mania.
+- O que se viu: falhou uma vez na suíte inteira; rodando o arquivo sozinho passa, com e sem a mudança.
+- Suspeita: tempo de espera curto para montar o modo com a máquina carregada (carregamento preguiçoso do modo).
+- Próximo passo: rodar a suíte algumas vezes e, se repetir, aumentar o tempo do `findBy` ou esperar o carregamento do modo.

@@ -1,3 +1,4 @@
+import { ReplayLido, iniciarMotorDoMania } from "./motor";
 import type { EntradaDoMania } from "./TelaDeJogoMania";
 
 /*
@@ -43,4 +44,18 @@ export async function empacotarReplayDoMania({ mods, semente, hash, entradas }: 
   pacote[0] = VERSAO_DO_REPLAY_DO_MANIA;
   pacote.set(comprimido, 1);
   return pacote;
+}
+
+/** Lê um replay baixado do ranking com o mesmo motor que a API usa. Falha com um replay quebrado ou de outra versão. */
+export async function lerReplayDoMania(bytes: Uint8Array): Promise<ReplayDoMania> {
+  await iniciarMotorDoMania();
+  const lido = new ReplayLido(bytes);
+  try {
+    const trios = lido.entradas();
+    const entradas: EntradaDoMania[] = [];
+    for (let i = 0; i < trios.length; i += 3) entradas.push([trios[i], trios[i + 1], trios[i + 2]]);
+    return { mods: lido.mods, semente: lido.semente, hash: lido.hash, entradas };
+  } finally {
+    lido.free();
+  }
 }

@@ -18,9 +18,9 @@ describe("paridade dos charts com o motor da API", () => {
       const atraso = (Number(pacote.metadados.delay) || 0) / 1000;
       for (const [trilha, hash] of Object.entries(caso.trilhas)) {
         const [instrumento, dificuldade] = trilha.split(":") as [Instrumento, Dificuldade];
-        const notas = escolherTrilha(chart, instrumento, dificuldade).map((n) => ({ tempo: n.tempo - atraso, pista: n.pista, frase: n.frase, duracao: n.duracao }));
+        const notas = escolherTrilha(chart, instrumento, dificuldade).map((n) => ({ tempo: n.tempo - atraso, pista: n.pista, frase: n.frase, duracao: n.duracao, ...(n.tipo && { tipo: n.tipo }), solo: n.solo ?? -1 }));
         expect(notas).toEqual(caso.notas[hash]);
-        expect(await hashDoChart(notas)).toBe(hash);
+        expect(await hashDoChart(notas.map(({ tempo, pista, frase, duracao }) => ({ tempo, pista, frase, duracao })))).toBe(hash);
       }
     }),
   );

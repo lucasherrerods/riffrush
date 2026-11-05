@@ -63,7 +63,7 @@ describe("TelaDoMania", () => {
     await screen.findByText(/Nenhum mapa ainda/);
     await usuario.upload(screen.getByLabelText("Arquivos .osz"), arquivoOsz());
     expect(await screen.findByRole("heading", { name: "Música" })).toBeInTheDocument();
-    expect(screen.getByText("Importado · sem XP")).toBeInTheDocument();
+    expect(screen.getByText("Importado · sem XP nem ranking")).toBeInTheDocument();
   });
 
   it("importa arrastando, e ignora o que não é .osz", async () => {
@@ -126,7 +126,7 @@ describe("TelaDoMania", () => {
     expect(salvo).toMatchObject({ id: "osu:7", origem: "osu", status: "ranked" });
     await usuario.click(screen.getByRole("button", { name: "Seleção" }));
     expect(await screen.findByRole("heading", { name: "Música" })).toBeInTheDocument();
-    expect(screen.queryByText("Importado · sem XP")).not.toBeInTheDocument();
+    expect(screen.queryByText("Importado · sem XP nem ranking")).not.toBeInTheDocument();
   });
 
   it("com a conta conectada, partida em mapa ranked manda o replay e mostra o XP", async () => {

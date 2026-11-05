@@ -39,8 +39,6 @@ pub struct Replay {
     pub velocidade: f64,
     /// Os replays de antes da versão 4 são todos do gamepad.
     pub jeito: JeitoDeJogar,
-    /// Só os replays da versão 5 em diante tocam com a punição do toque em vazio.
-    pub pune_toque_em_vazio: bool,
     pub hash_do_chart: String,
     pub entradas: Vec<Entrada>,
 }
@@ -53,6 +51,9 @@ pub enum ErroDoReplay {
 
 /// Quantos códigos de tecla cada versão tem: a 2 ganhou os da nota aberta.
 /// Se o motor sabe ler o replay dessa versão. A API confere por aqui, para nunca recusar o formato que o app grava.
+/// A versão que o app grava hoje.
+pub const VERSAO_ATUAL: u8 = 6;
+
 pub fn versao_do_replay_conhecida(versao: u8) -> bool {
     codigos_da_versao(versao).is_some()
 }
@@ -61,7 +62,8 @@ fn codigos_da_versao(versao: u8) -> Option<u64> {
     match versao {
         1 => Some(11),
         2 | 3 => Some(13),
-        4 | 5 => Some(14),
+        // A 6 é a das regras do Clone Hero; as anteriores são rejulgadas com elas.
+        4..=6 => Some(14),
         _ => None,
     }
 }
@@ -110,7 +112,6 @@ pub fn desempacotar_replay(pacote: &[u8]) -> Result<Replay, ErroDoReplay> {
         fantasma: opcoes & 2 != 0,
         sem_aberta: opcoes & 4 != 0,
         velocidade,
-        pune_toque_em_vazio: versao >= 5,
         jeito: match (opcoes >> 3) & 3 {
             0 => JeitoDeJogar::Gamepad,
             1 => JeitoDeJogar::Tapping,
@@ -122,7 +123,7 @@ pub fn desempacotar_replay(pacote: &[u8]) -> Result<Replay, ErroDoReplay> {
     })
 }
 
-/// O inverso de `desempacotar_replay`, no formato da versão atual (a 4 sem a punição do toque em vazio, a 5 com). A API não grava replays; serve aos testes dela.
+/// O inverso de `desempacotar_replay`, no formato da versão atual (6). A API não grava replays; serve aos testes dela.
 pub fn empacotar_replay(replay: &Replay) -> Vec<u8> {
     const CODIGOS: i64 = 14;
     // A velocidade vai em centésimos: 0,75x é 75.
@@ -162,7 +163,7 @@ pub fn empacotar_replay(replay: &Replay) -> Vec<u8> {
         escrever_varint(&mut bytes, ((ticks - anterior) * CODIGOS + codigo).unsigned_abs());
         anterior = ticks;
     }
-    let mut pacote = vec![if replay.pune_toque_em_vazio { 5 } else { 4 }];
+    let mut pacote = vec![VERSAO_ATUAL];
     pacote.extend(miniz_oxide::deflate::compress_to_vec(&bytes, 6));
     pacote
 }
@@ -259,7 +260,6 @@ mod tests {
             sem_aberta: false,
             velocidade: 0.75,
             jeito: JeitoDeJogar::Palhetada,
-            pune_toque_em_vazio: true,
             hash_do_chart: "00112233445566778899aabbccddeeff".into(),
             entradas: vec![
                 Entrada {
@@ -295,7 +295,6 @@ mod tests {
             sem_aberta: true,
             velocidade: 1.0,
             jeito: JeitoDeJogar::Gamepad,
-            pune_toque_em_vazio: false,
             hash_do_chart: "00112233445566778899aabbccddeeff".into(),
             entradas: vec![],
         };
@@ -323,7 +322,6 @@ mod tests {
         pacote.extend(miniz_oxide::deflate::compress_to_vec(&bytes, 6));
         let lido = desempacotar_replay(&pacote).unwrap();
         assert_eq!(lido.jeito, JeitoDeJogar::Gamepad);
-        assert!(!lido.pune_toque_em_vazio);
     }
 
     #[test]
