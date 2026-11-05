@@ -77,7 +77,7 @@ export function App({ maniaLigado = MANIA_LIGADO }: { maniaLigado?: boolean } = 
   const saindo = giro ? { lado: CENAS[giro.de], emCima: giro.de === "rock", foto: foto.current } : undefined;
   return (
     <>
-      {mostrarDisco && <Volvelle cima={CENAS.rock} baixo={CENAS.mania} virada={virada} girando={!!giro} />}
+      {mostrarDisco && <Volvelle cima={CENAS.rock} baixo={CENAS.mania} virada={virada} girando={!!giro} coberta={giro ? (giro.de === "rock" ? "cima" : "baixo") : undefined} />}
       {modo === "mania" ? (
         <Suspense fallback={<TelaCarregando />}>
           <TelaDoMania alavanca={alavanca} palco={palco} />
