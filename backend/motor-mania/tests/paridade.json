@@ -741,11 +741,11 @@
         0,
         0,
         3,
-        0,
-        11
+        1,
+        10
       ],
-      "pontuacao": 131585,
-      "precisao": 132240,
+      "pontuacao": 142404,
+      "precisao": 143169,
       "maior_combo": 1,
       "derrota": false
     }

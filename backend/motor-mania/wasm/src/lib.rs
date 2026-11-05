@@ -252,7 +252,7 @@ impl MotorDoMania {
                     f64::from(u8::from(ponta)),
                     desvio_ms.map_or(f64::NAN, f64::from),
                 ]),
-                motor::Evento::Derrota => None,
+                motor::Evento::Quebra { .. } | motor::Evento::Derrota => None,
             })
             .flatten()
             .collect()
