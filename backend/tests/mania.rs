@@ -196,6 +196,8 @@ async fn as_rotas_do_mania_estao_no_openapi() {
         "/mania/partidas/{id}/xp",
         "/mania/partidas/{id}/replay",
         "/mania/ranking/{beatmap_id}",
+        "/mania/mapas-mais-jogados",
+        "/eu/mania/estatisticas",
     ] {
         assert!(doc["paths"].get(caminho).is_some(), "{caminho}");
     }
@@ -390,6 +392,38 @@ async fn postgres_ranking_pega_o_melhor_de_cada_jogador_e_a_linha_de_quem_pede()
     assert_eq!(resumo, [(1, ana, 950_000), (2, bia, 950_000), (3, caio, 500_000)]);
     assert_eq!(linhas[0].nome, "Ana");
     assert_eq!(repositorio.replay(linhas[0].partida_id).await.unwrap(), Some(vec![1, 2, 3]));
+}
+
+#[tokio::test]
+async fn postgres_so_o_top_10_do_mapa_guarda_replay_e_quem_cai_perde_o_dele() {
+    let Some(pool) = banco().await else { return };
+    let repositorio = ManiaPostgres(pool.clone());
+    let beatmap = u64::from(Uuid::new_v4().as_u128() as u32) + 3_000_000;
+    let mut partidas = Vec::new();
+    for i in 0..11u32 {
+        let conta = nova_conta(&pool, &format!("Jogador {i}")).await;
+        let partida = registrada(conta, beatmap, 500_000 + i * 1_000, i64::from(i));
+        repositorio.registrar(&partida).await.unwrap();
+        partidas.push(partida);
+    }
+    let com_replay = || async {
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM replays_do_mania r JOIN partidas_do_mania p ON p.id = r.partida_id WHERE p.beatmap_id = $1")
+            .bind(beatmap as i64)
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+    };
+    assert_eq!(com_replay().await, 10);
+    // O primeiro, o de menos pontos, caiu para o 11º lugar.
+    assert_eq!(repositorio.replay(partidas[0].id).await.unwrap(), None);
+    assert_eq!(repositorio.replay(partidas[10].id).await.unwrap(), Some(vec![1, 2, 3]));
+
+    // Superar a própria marca troca o replay antigo pelo novo.
+    let melhor = registrada(partidas[10].conta_id, beatmap, 999_000, 20);
+    repositorio.registrar(&melhor).await.unwrap();
+    assert_eq!(repositorio.replay(partidas[10].id).await.unwrap(), None);
+    assert!(repositorio.replay(melhor.id).await.unwrap().is_some());
+    assert_eq!(com_replay().await, 10);
 }
 
 #[tokio::test]

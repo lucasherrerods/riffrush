@@ -60,7 +60,16 @@ describe("ConexaoDoChatGlobal", () => {
     expect(socket().protocolos).toEqual(["riffrush", "f"]);
     expect(chat.estado()).toMatchObject({ conectado: true, mensagens: [ana] });
     expect(chat.enviar("  e aí  ")).toBe(true);
-    expect(socket().enviadas).toEqual([{ tipo: "mensagem", texto: "e aí" }]);
+    expect(socket().enviadas).toEqual([{ tipo: "mensagem", texto: "e aí", modo: "rock" }]);
+  });
+
+  it("cada mensagem leva o modo aberto, e quem recebe vê a etiqueta", async () => {
+    const chat = await conectado();
+    chat.definirModo("mania");
+    chat.enviar("oi");
+    expect(socket().enviadas.at(-1)).toEqual({ tipo: "mensagem", texto: "oi", modo: "mania" });
+    socket().entregar({ tipo: "mensagem", mensagem: { n: 9, autor: { id: "b", nome: "Bia" }, texto: "opa", em: 1, modo: "mania" } });
+    expect(chat.estado().mensagens.at(-1)).toMatchObject({ texto: "opa", modo: "mania" });
   });
 
   it("sem permissão para escrever, nem tenta", async () => {

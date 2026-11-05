@@ -116,6 +116,8 @@ pub struct Pessoa {
     pub avatar: Option<String>,
     pub xp_total: u64,
     pub visto_em: Option<DateTime<Utc>>,
+    /// O modo aberto na última vez que foi vista.
+    pub ultimo_modo: Option<Modo>,
     /// Amizade aceita, pedido feito ou bloqueio.
     pub desde: DateTime<Utc>,
     pub vinculo: Vinculo,
@@ -192,5 +194,42 @@ mod tests {
         assert_eq!(decidir_pedido(A, B, Relacao::Nenhuma, pedidos), Err(PedidoRecusado::PedidosDemais));
         // Aceitar não cria pedido novo: o limite de enviados não conta.
         assert_eq!(decidir_pedido(A, B, Relacao::PedidoRecebido, pedidos), Ok(Decisao::Aceitar));
+    }
+}
+
+/// Os jogos do app: os amigos veem em qual a pessoa estava.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Modo {
+    Rock,
+    Mania,
+}
+
+impl Modo {
+    pub fn do_texto(texto: &str) -> Option<Self> {
+        match texto {
+            "rock" => Some(Self::Rock),
+            "mania" => Some(Self::Mania),
+            _ => None,
+        }
+    }
+
+    pub fn como_texto(self) -> &'static str {
+        match self {
+            Self::Rock => "rock",
+            Self::Mania => "mania",
+        }
+    }
+}
+
+#[cfg(test)]
+mod testes_do_modo {
+    use super::Modo;
+
+    #[test]
+    fn le_e_escreve_os_dois_modos_e_recusa_o_resto() {
+        for modo in [Modo::Rock, Modo::Mania] {
+            assert_eq!(Modo::do_texto(modo.como_texto()), Some(modo));
+        }
+        assert_eq!(Modo::do_texto("taiko"), None);
     }
 }

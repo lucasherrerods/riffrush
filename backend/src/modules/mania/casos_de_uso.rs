@@ -3,7 +3,7 @@ use std::sync::Arc;
 use chrono::Duration;
 use uuid::Uuid;
 
-use super::dominio::{rejulgar, status_vale_xp, vale_ranking, xp_do_mania, TAMANHO_MAXIMO_DO_REPLAY};
+use super::dominio::{metadados_do_osu, rejulgar, status_vale_xp, vale_ranking, xp_do_mania, EstatisticasDoMania, MapaPopular, TAMANHO_MAXIMO_DO_REPLAY};
 use super::portas::{
     BeatmapBaixado, BeatmapDoOsu, FonteDeBeatmaps, LinhaDoRanking, PartidaGuardada, PartidaNaFila, PartidaPendente, PartidaRegistrada, RepositorioDoMania,
 };
@@ -18,6 +18,8 @@ const MAXIMO_DE_TENTATIVAS: u32 = 20;
 /// Sem espaço no limite de pedidos ao osu!, a partida tenta de novo logo.
 const ESPERA_DO_LIMITE: Duration = Duration::seconds(30);
 pub const TAMANHO_DO_RANKING: u32 = 10;
+/// Quantos mapas o leaderboard dos mais jogados mostra.
+pub const MAPAS_MAIS_JOGADOS: u32 = 50;
 
 #[derive(Clone)]
 pub struct ServicosDoMania {
@@ -118,6 +120,29 @@ impl ServicosDoMania {
 
     pub async fn replay(&self, partida_id: Uuid) -> Result<Vec<u8>, ErroDoMania> {
         self.repositorio.replay(partida_id).await?.ok_or(ErroDoMania::NaoEncontrada)
+    }
+
+    /// As dificuldades mais jogadas, com o nome lido do `.osu` que o servidor guardou ao rejulgar.
+    pub async fn mapas_mais_jogados(&self) -> Result<Vec<MapaPopular>, ErroDoMania> {
+        let mapas = self.repositorio.mapas_mais_jogados(MAPAS_MAIS_JOGADOS).await?;
+        Ok(mapas
+            .into_iter()
+            .map(|(mapa, texto)| match texto.as_deref().and_then(metadados_do_osu) {
+                Some((titulo, artista, dificuldade)) => MapaPopular {
+                    titulo: Some(titulo),
+                    artista: Some(artista),
+                    dificuldade: Some(dificuldade),
+                    ..mapa
+                },
+                None => mapa,
+            })
+            .collect())
+    }
+
+    /// Os números do Mania de quem está logado, para o perfil.
+    pub async fn estatisticas(&self, token: &str) -> Result<EstatisticasDoMania, ErroDoMania> {
+        let conta = self.conta.conta_da_sessao(token).await?;
+        Ok(self.repositorio.estatisticas(conta.id).await?)
     }
 
     /// Rejulga as partidas na vez. Devolve o desfecho de cada uma (vazio: não tinha nada na fila).
@@ -338,6 +363,55 @@ pub mod fakes {
                 .any(|p| p.partida.id == id && p.partida.conta_id == conta_id)
                 .then_some(PartidaGuardada::NaFila))
         }
+        async fn mapas_mais_jogados(&self, limite: u32) -> Result<Vec<(MapaPopular, Option<String>)>, FalhaExterna> {
+            let mut por_mapa: HashMap<u64, (u32, Vec<Uuid>)> = HashMap::new();
+            for p in self.registradas.lock().unwrap().iter().filter(|p| p.vale_ranking) {
+                let (partidas, contas) = por_mapa.entry(p.beatmap_id).or_default();
+                *partidas += 1;
+                if !contas.contains(&p.conta_id) {
+                    contas.push(p.conta_id);
+                }
+            }
+            let beatmaps = self.beatmaps.lock().unwrap();
+            let mut mapas: Vec<_> = por_mapa
+                .into_iter()
+                .map(|(beatmap_id, (partidas, contas))| {
+                    let mapa = MapaPopular {
+                        beatmap_id,
+                        beatmapset_id: None,
+                        partidas,
+                        jogadores: contas.len() as u32,
+                        titulo: None,
+                        artista: None,
+                        dificuldade: None,
+                        recorde: None,
+                    };
+                    (mapa, beatmaps.get(&beatmap_id).map(|b| b.texto.clone()))
+                })
+                .collect();
+            mapas.sort_by_key(|a| std::cmp::Reverse(a.0.partidas));
+            mapas.truncate(limite as usize);
+            Ok(mapas)
+        }
+        async fn estatisticas(&self, conta_id: Uuid) -> Result<EstatisticasDoMania, FalhaExterna> {
+            let registradas = self.registradas.lock().unwrap();
+            let minhas: Vec<_> = registradas.iter().filter(|p| p.conta_id == conta_id && p.vale_ranking).collect();
+            let mut mapas: Vec<u64> = minhas.iter().map(|p| p.beatmap_id).collect();
+            mapas.sort_unstable();
+            mapas.dedup();
+            Ok(EstatisticasDoMania {
+                partidas: minhas.len() as u32,
+                mapas: mapas.len() as u32,
+                precisao_media: if minhas.is_empty() {
+                    0.0
+                } else {
+                    minhas.iter().map(|p| p.precisao).sum::<f64>() / minhas.len() as f64
+                },
+                maior_combo: minhas.iter().map(|p| p.maior_combo).max().unwrap_or(0),
+                pontuacao_total: minhas.iter().map(|p| u64::from(p.pontuacao)).sum(),
+                ..EstatisticasDoMania::default()
+            })
+        }
         async fn ranking(&self, beatmap_id: u64, limite: u32, _conta: Option<Uuid>) -> Result<Vec<LinhaDoRanking>, FalhaExterna> {
             let mut melhores: HashMap<Uuid, PartidaRegistrada> = HashMap::new();
             for p in self.registradas.lock().unwrap().iter().filter(|p| p.beatmap_id == beatmap_id && p.vale_ranking) {
@@ -485,6 +559,27 @@ mod tests {
             token,
             texto,
         }
+    }
+
+    #[tokio::test]
+    async fn os_mapas_mais_jogados_vem_com_o_nome_lido_do_osu_e_o_perfil_com_os_numeros() {
+        let c = cenario("ranked").await;
+        let replay = replay_perfeito(&c.texto, 400, motor::Mods::NENHUM);
+        c.servicos.enviar_partida(&c.token, BEATMAP, replay).await.unwrap();
+        c.servicos.processar_lote().await.unwrap();
+
+        let mapas = c.servicos.mapas_mais_jogados().await.unwrap();
+        assert_eq!(mapas.len(), 1);
+        assert_eq!((mapas[0].beatmap_id, mapas[0].partidas, mapas[0].jogadores), (BEATMAP, 1, 1));
+        let (titulo, artista, dificuldade) = metadados_do_osu(&c.texto).unwrap();
+        assert_eq!(
+            (mapas[0].titulo.clone(), mapas[0].artista.clone(), mapas[0].dificuldade.clone()),
+            (Some(titulo), Some(artista), Some(dificuldade))
+        );
+
+        let numeros = c.servicos.estatisticas(&c.token).await.unwrap();
+        assert_eq!((numeros.partidas, numeros.mapas, numeros.pontuacao_total), (1, 1, 1_000_000));
+        assert!(c.servicos.estatisticas("ficha falsa").await.is_err());
     }
 
     #[tokio::test]

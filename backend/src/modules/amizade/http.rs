@@ -1,4 +1,4 @@
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get, post};
 use axum::{Json, Router};
@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use super::casos_de_uso::{Alvo, ErroDaAmizade, Pedido};
-use super::dominio::{Pessoa, Sugestao, Vinculo};
+use super::dominio::{Modo, Pessoa, Sugestao, Vinculo};
 use crate::modules::conta::Token;
 use crate::modules::progresso::nivel_do_xp;
 use crate::shared::erro::ErroDaApi;
@@ -37,6 +37,8 @@ pub struct PessoaDaAmizade {
     nivel: u32,
     /// A última vez que a pessoa abriu o jogo logada.
     visto_em: Option<DateTime<Utc>>,
+    /// O modo de jogo (`rock` ou `mania`) aberto na última vez que foi vista.
+    ultimo_modo: Option<&'static str>,
     /// Desde quando são amigos, quando o pedido saiu ou quando bloqueou.
     desde: DateTime<Utc>,
 }
@@ -49,6 +51,7 @@ impl From<Pessoa> for PessoaDaAmizade {
             avatar: p.avatar,
             nivel: nivel_do_xp(p.xp_total).nivel,
             visto_em: p.visto_em,
+            ultimo_modo: p.ultimo_modo.map(Modo::como_texto),
             desde: p.desde,
         }
     }
@@ -101,9 +104,16 @@ pub struct RespostaDoPedido {
 }
 
 /// Amigos, pedidos e bloqueados da conta, com o código de amigo dela. Conta como "visto agora".
-#[utoipa::path(get, path = "/amigos", responses((status = 200, body = RespostaDosAmigos), (status = 401)), security(("token" = [])))]
-pub async fn amigos(State(estado): State<EstadoDoApp>, Token(token): Token) -> Result<Json<RespostaDosAmigos>, ErroDaApi> {
-    let listas = estado.amizade.listas(&token).await?;
+#[derive(Deserialize, utoipa::IntoParams)]
+pub struct ModoAberto {
+    /// O modo de jogo aberto no app (`rock` ou `mania`); outro valor é ignorado.
+    modo: Option<String>,
+}
+
+#[utoipa::path(get, path = "/amigos", params(ModoAberto), responses((status = 200, body = RespostaDosAmigos), (status = 401)), security(("token" = [])))]
+pub async fn amigos(State(estado): State<EstadoDoApp>, Token(token): Token, Query(aberto): Query<ModoAberto>) -> Result<Json<RespostaDosAmigos>, ErroDaApi> {
+    let modo = aberto.modo.as_deref().and_then(Modo::do_texto);
+    let listas = estado.amizade.listas_no_modo(&token, modo).await?;
     let mut resposta = RespostaDosAmigos {
         codigo: listas.codigo,
         amigos: Vec::new(),

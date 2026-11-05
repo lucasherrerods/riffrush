@@ -1,3 +1,4 @@
+import type { Modo } from "@/shared/modo";
 import { URL_DA_API, criarCliente } from "@/shared/lib/api";
 
 /** Alguém nas listas de amizade, como a API devolve. */
@@ -8,6 +9,8 @@ export interface PessoaDaAmizade {
   nivel: number;
   /** A última vez que abriu o jogo logada. */
   visto_em: string | null;
+  /** O modo de jogo aberto na última vez que foi vista. */
+  ultimo_modo?: Modo | null;
   desde: string;
 }
 
@@ -35,7 +38,7 @@ export function criarApiDosAmigos(base: string, buscar?: typeof fetch) {
   const chamar = criarCliente(base, buscar);
   const daConta = (id: string) => `/amigos/${encodeURIComponent(id)}`;
   return {
-    listas: (token: string) => chamar<ListasDeAmigos>("GET", "/amigos", { token }),
+    listas: (token: string, modo?: Modo) => chamar<ListasDeAmigos>("GET", modo ? `/amigos?modo=${modo}` : "/amigos", { token }),
     sugestoes: (token: string) => chamar<SugestaoDeAmizade[]>("GET", "/amigos/sugestoes", { token }),
     /** `amigos` vem `true` quando a outra pessoa já tinha pedido: viraram amigos na hora. */
     pedir: (token: string, alvo: AlvoDoPedido) => chamar<{ amigos: boolean }>("POST", "/amigos/pedidos", { token, corpo: alvo }),

@@ -474,7 +474,7 @@ export class ChatGlobal extends DurableObject<Env> {
     if (comando.tipo === "mensagem") {
       if (!permissoes(quem).podeEscrever) return;
       const n = ((await this.ctx.storage.get<number>("ultima")) ?? 0) + 1;
-      const mensagem: MensagemDoChat = { n, autor: quem.autor, texto: comando.texto, em: agora };
+      const mensagem: MensagemDoChat = { n, autor: quem.autor, texto: comando.texto, em: agora, ...(comando.modo && { modo: comando.modo }) };
       await this.ctx.storage.put({ ultima: n, [chaveDaMensagem(n)]: mensagem });
       if (n > MENSAGENS_GUARDADAS) await this.ctx.storage.delete(chaveDaMensagem(n - MENSAGENS_GUARDADAS));
       return this.paraTodos({ tipo: "mensagem", mensagem });

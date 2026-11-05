@@ -1,3 +1,4 @@
+import { lerModo, type Modo } from "@/shared/modo";
 import { BALDE_CHEIO, MENSAGENS_GUARDADAS, adicionarMensagem, gastarDoBalde, limparTexto } from "@/modules/chat";
 import { urlDoChat } from "./protocolo";
 import { SocketComFicha, type DependenciasDoSocket } from "./socketComFicha";
@@ -16,6 +17,8 @@ export interface MensagemGlobal {
   autor: AutorGlobal;
   texto: string;
   em: number;
+  /** Em que modo quem escreveu estava. Mensagens antigas não têm. */
+  modo?: Modo;
 }
 
 export interface Permissoes {
@@ -48,7 +51,8 @@ function lerMensagem(valor: unknown): MensagemGlobal | null {
   const texto = limparTexto(valor.texto);
   const autor = lerAutor(valor.autor);
   if (!texto || !autor || typeof valor.n !== "number" || typeof valor.em !== "number") return null;
-  return { n: valor.n, autor, texto, em: valor.em };
+  const modo = lerModo(valor.modo);
+  return { n: valor.n, autor, texto, em: valor.em, ...(modo && { modo }) };
 }
 
 function lerPermissoes(valor: unknown): Permissoes | null {
@@ -143,8 +147,14 @@ export class ConexaoDoChatGlobal {
   enviar(texto: string) {
     const limpo = limparTexto(texto);
     if (!limpo || !this.estadoAtual.voce?.podeEscrever) return false;
-    return this.comando({ tipo: "mensagem", texto: limpo });
+    return this.comando({ tipo: "mensagem", texto: limpo, modo: this.modo });
   }
+
+  private modo: Modo = "rock";
+  /** O modo de jogo aberto: vai como etiqueta em cada mensagem. */
+  definirModo = (modo: Modo) => {
+    this.modo = modo;
+  };
 
   /** O relay manda a cópia verdadeira da mensagem para a API, onde a moderação vê. */
   denunciar = (n: number) => this.comando({ tipo: "denunciar", n });

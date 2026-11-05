@@ -21,3 +21,34 @@ export function geometriaDaVolvelle(largura: number, altura: number) {
     cena: { esquerda: raio - largura / 2, topo: raio - altura, largura, altura },
   };
 }
+
+/** A curva do giro como função, para o que anda quadro a quadro junto com o disco: o mesmo `cubic-bezier(0.65, 0, 0.35, 1)`. */
+export function curvaDoGiro(t: number) {
+  if (t <= 0) return 0;
+  if (t >= 1) return 1;
+  const bezier = (a: number, b: number, s: number) => 3 * a * s * (1 - s) ** 2 + 3 * b * s ** 2 * (1 - s) + s ** 3;
+  // Acha o ponto da curva em x = t por bissecção (em x ela só cresce) e devolve o y dele.
+  let [baixo, alto] = [0, 1];
+  for (let i = 0; i < 30; i++) {
+    const meio = (baixo + alto) / 2;
+    if (bezier(0.65, 0.35, meio) < t) baixo = meio;
+    else alto = meio;
+  }
+  return bezier(0, 1, (baixo + alto) / 2);
+}
+
+/**
+ * O pedaço da tela que a metade de cima do disco cobre quando ele girou `graus` no sentido do relógio:
+ * o semiplano acima da linha que passa pelo eixo. Em 0 é a tela inteira; em meia volta, nada.
+ */
+export function semiplanoDaCapa(eixo: { x: number; y: number }, alcance: number, graus: number) {
+  const rad = (graus * Math.PI) / 180;
+  const [cos, sen] = [Math.cos(rad), Math.sin(rad)];
+  const pontos = [
+    [alcance, 0],
+    [alcance, -alcance],
+    [-alcance, -alcance],
+    [-alcance, 0],
+  ].map(([x, y]) => `${(eixo.x + x * cos - y * sen).toFixed(1)}px ${(eixo.y + x * sen + y * cos).toFixed(1)}px`);
+  return `polygon(${pontos.join(", ")})`;
+}

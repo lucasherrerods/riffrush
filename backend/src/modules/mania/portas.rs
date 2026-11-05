@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+use super::dominio::{EstatisticasDoMania, MapaPopular};
 use crate::modules::conta::FalhaExterna;
 
 /// Uma partida do Mania enviada pelo app, à espera do servidor rejulgar o replay.
@@ -105,6 +106,9 @@ pub trait RepositorioDoMania: Send + Sync {
     async fn ranking(&self, beatmap_id: u64, limite: u32, conta: Option<Uuid>) -> Result<Vec<LinhaDoRanking>, FalhaExterna>;
     /// O replay de uma partida do ranking.
     async fn replay(&self, partida_id: Uuid) -> Result<Option<Vec<u8>>, FalhaExterna>;
+    /// As dificuldades com mais partidas no ranking, com o `.osu` guardado quando o servidor já o baixou.
+    async fn mapas_mais_jogados(&self, limite: u32) -> Result<Vec<(MapaPopular, Option<String>)>, FalhaExterna>;
+    async fn estatisticas(&self, conta_id: Uuid) -> Result<EstatisticasDoMania, FalhaExterna>;
     async fn beatmap(&self, beatmap_id: u64) -> Result<Option<BeatmapDoOsu>, FalhaExterna>;
     async fn guardar_beatmap(&self, beatmap: &BeatmapDoOsu) -> Result<(), FalhaExterna>;
     /// Anota um pedido ao osu! e devolve true se ele cabe no limite; sem espaço, não anota nada.

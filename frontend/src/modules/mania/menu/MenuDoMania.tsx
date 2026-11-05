@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Play, Search, Settings2 } from "lucide-react";
+import { Play, Search, Settings2, Trophy } from "lucide-react";
 import { LogoDoJogo, TelaInicial, type TrocaDeModo } from "@/modules/menu";
 import { TeclaDoMania } from "./TeclaDoMania";
 
@@ -7,6 +7,10 @@ interface Props {
   aoJogar: () => void;
   aoBuscar: () => void;
   aoConfigurar: () => void;
+  /** O leaderboard de XP e dos mapas; sem ele (contas desligadas), a opção não aparece. */
+  aoLeaderboard?: () => void;
+  /** O chat global, o mesmo do Rock. */
+  chat?: ReactNode;
   /** A alavanca que volta para o Rock, embaixo da logo. */
   alavanca?: ReactNode;
   troca?: TrocaDeModo;
@@ -15,7 +19,7 @@ interface Props {
 }
 
 /** A tela inicial do Mania: a mesma do Rock, com as opções em teclas do mania. */
-export function MenuDoMania({ aoJogar, aoBuscar, aoConfigurar, alavanca, troca, estatica }: Props) {
+export function MenuDoMania({ aoJogar, aoBuscar, aoConfigurar, aoLeaderboard, chat, alavanca, troca, estatica }: Props) {
   return (
     <TelaInicial
       logo={<LogoDoJogo modo="Mania" fofa />}
@@ -23,10 +27,12 @@ export function MenuDoMania({ aoJogar, aoBuscar, aoConfigurar, alavanca, troca, 
       alavanca={alavanca}
       troca={troca}
       estatica={estatica}
+      chat={chat}
       rotuloDoMenu="Menu do Mania"
       opcoes={[
         { rotulo: "Jogar", icone: Play, acao: aoJogar },
         { rotulo: "Buscar mapas", icone: Search, acao: aoBuscar },
+        ...(aoLeaderboard ? [{ rotulo: "Leaderboard", icone: Trophy, acao: aoLeaderboard }] : []),
         { rotulo: "Configurações", icone: Settings2, acao: aoConfigurar },
       ]}
       classeDoMenu="w-60 gap-1.5"

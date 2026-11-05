@@ -3,7 +3,6 @@ import { Play, Radio, Search, Settings2, Shirt, Trophy, Users } from "lucide-rea
 import { tocarEfeito } from "@/modules/audio";
 import type { Documento } from "@/modules/legal";
 import { abrirLink } from "@/modules/platform";
-import { cn } from "@/shared/lib/utils";
 import { IconeGithub } from "@/shared/ui/IconeGithub";
 import { EscolhaDoMultiplayer } from "./EscolhaDoMultiplayer";
 import { LogoDoJogo } from "./LogoDoJogo";
@@ -70,7 +69,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
       pausada={escolhendoMultiplayer}
       aoMover={() => tocarEfeito("mover", volumeDosEfeitos)}
       aoEscolher={() => tocarEfeito("selecionar", volumeDosEfeitos)}
-      className={cn(chat && "max-md:pb-16")}
+      chat={chat}
     >
       {aoMultiplayerLocal && (
         <EscolhaDoMultiplayer
@@ -87,12 +86,6 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
             aoMultijogador();
           }}
         />
-      )}
-
-      {chat && (
-        <aside aria-label="Chat" className="absolute bottom-4 left-4 flex max-h-72 w-96 origin-bottom-left scale-[0.8] flex-col justify-end max-lg:hidden max-md:fixed max-md:bottom-0 max-md:left-[1%] max-md:z-10 max-md:flex max-md:w-[98%] max-md:scale-100">
-          {chat}
-        </aside>
       )}
 
       <footer className="flex flex-wrap items-center justify-center gap-3 text-xs [&_svg]:size-4 text-texto-suave md:absolute md:right-4 md:bottom-4">

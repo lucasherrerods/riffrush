@@ -17,6 +17,12 @@ describe("api dos amigos", () => {
     expect(pedido(buscar)).toMatchObject({ url: "https://api/amigos", metodo: "GET", token: "Bearer t" });
   });
 
+  it("avisa o modo aberto, que a API guarda como o último em que a pessoa foi vista", async () => {
+    const { api, buscar } = montar({ codigo: "RIFF-ABCDEF", amigos: [], recebidos: [], enviados: [], bloqueados: [] });
+    await api.listas("t", "mania");
+    expect(pedido(buscar).url).toBe("https://api/amigos?modo=mania");
+  });
+
   it("pede pelo código ou pela conta", async () => {
     const { api, buscar } = montar({ amigos: true });
     expect(await api.pedir("t", { codigo: "RIFF-ABCDEF" })).toEqual({ amigos: true });

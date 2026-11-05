@@ -20,6 +20,12 @@ describe("Volvelle", () => {
     expect(baixo.style.getPropertyValue("--cor-fundo")).toBe(TEMAS.mania.cores.fundo);
   });
 
+  it("girando, não desenha a metade do modo que sai, que fica embaixo da capa o giro inteiro", () => {
+    const { queryByText } = render(<Volvelle cima={rock} baixo={mania} virada={false} girando coberta="cima" />);
+    expect(queryByText("rock")).not.toBeInTheDocument();
+    expect(queryByText("mania")).toBeInTheDocument();
+  });
+
   it("virada, o disco dá meia volta", () => {
     const { container } = render(<Volvelle cima={rock} baixo={mania} virada girando={false} />);
     expect(container.querySelector<HTMLElement>("[data-parte='disco']")!.style.transform).toBe("rotate(180deg)");
@@ -43,5 +49,14 @@ describe("CapaDaVolvelle", () => {
     const { getByText } = render(<CapaDaVolvelle virada saindo={{ lado: rock, emCima: true, foto: { elemento, retangulo: { x: 0, y: 0, largura: 800, altura: 600 } } }} />);
     expect(getByText("rock")).toBeInTheDocument();
     expect(getByText("tela do rock")).toBeInTheDocument();
+  });
+
+  it("a foto da tela que saiu fica fora do disco que gira, parada e recortada na linha", () => {
+    const elemento = document.createElement("p");
+    elemento.textContent = "tela do rock";
+    const { getByText } = render(<CapaDaVolvelle virada saindo={{ lado: rock, emCima: true, foto: { elemento, retangulo: { x: 0, y: 0, largura: 800, altura: 600 } } }} />);
+    const foto = getByText("tela do rock").closest<HTMLElement>("[data-parte='foto']")!;
+    expect(foto.closest("[data-parte='disco']")).toBeNull();
+    expect(foto.style.clipPath).toMatch(/^polygon\(/);
   });
 });

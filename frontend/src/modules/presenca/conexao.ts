@@ -1,3 +1,4 @@
+import type { Modo } from "@/shared/modo";
 import { aplicarMensagem, lerConvite, urlDaPresenca, type ConviteParaSala, type EstadoOnline, type PessoaOnline } from "./protocolo";
 import { SocketComFicha, type DependenciasDoSocket } from "./socketComFicha";
 
@@ -20,12 +21,13 @@ export class ConexaoDePresenca {
   private ouvintesDeConvite = new Set<(convite: ConviteParaSala) => void>();
   private socket: SocketComFicha;
   private onde: EstadoOnline = { tipo: "menu" };
+  private modo: Modo = "rock";
 
   constructor(private deps: DependenciasDaPresenca) {
     this.socket = new SocketComFicha(deps, {
       url: urlDaPresenca(deps.urlDoRelay),
       aoAbrir: () => {
-        this.socket.enviar(JSON.stringify({ estado: this.onde }));
+        this.socket.enviar(JSON.stringify({ estado: { ...this.onde, modo: this.modo } }));
         this.mudar({ ...this.estadoAtual, conectada: true });
       },
       aoReceber: (texto) => {
@@ -70,10 +72,16 @@ export class ConexaoDePresenca {
   /** Onde a pessoa está agora; vai de novo a cada reconexão. */
   definirEstado(onde: EstadoOnline) {
     // A tela manda o estado a cada mudança da sala: só vale avisar o relay quando ele muda de fato.
-    const mensagem = JSON.stringify({ estado: onde });
-    if (mensagem === JSON.stringify({ estado: this.onde })) return;
+    if (JSON.stringify(onde) === JSON.stringify(this.onde)) return;
     this.onde = onde;
-    this.socket.enviar(mensagem);
+    this.socket.enviar(JSON.stringify({ estado: { ...onde, modo: this.modo } }));
+  }
+
+  /** O modo de jogo aberto, que vai junto com o estado para os amigos verem. */
+  definirModo(modo: Modo) {
+    if (modo === this.modo) return;
+    this.modo = modo;
+    this.socket.enviar(JSON.stringify({ estado: { ...this.onde, modo } }));
   }
 
   private mudar(estado: EstadoDaPresenca) {

@@ -13,9 +13,12 @@ use std::time::Duration;
 #[cfg(any(test, feature = "testes"))]
 pub use casos_de_uso::fakes;
 pub use casos_de_uso::{Desfecho, ErroDoMania, ServicosDoMania, Situacao};
-pub use dominio::{rejulgar, status_vale_xp, xp_do_mania, Recusa, Rejulgada};
+pub use dominio::{
+    metadados_do_osu, rejulgar, status_vale_xp, xp_do_mania, EstatisticasDoMania, MapaPopular, RecordeDoMapa, Recusa, Rejulgada, REPLAYS_POR_MAPA,
+};
 pub use http::{
-    __path_enviar_partida, __path_ranking, __path_replay, __path_situacao_da_partida, rotas, CorpoDaPartidaDoMania, PosicaoNoRankingDoMania,
+    __path_enviar_partida, __path_estatisticas, __path_mapas_mais_jogados, __path_ranking, __path_replay, __path_situacao_da_partida, estatisticas,
+    mapas_mais_jogados, rotas, CorpoDaPartidaDoMania, EstatisticasDoManiaNoPerfil, MapaMaisJogadoDoMania, PosicaoNoRankingDoMania, RecordeDoMapaDoMania,
     RespostaDaPartidaDoManiaNaFila, RespostaDoRankingDoMania, SituacaoDaPartidaDoMania, XpDaPartidaDoMania,
 };
 pub use osu::{CredenciaisDoOsu, Osu};

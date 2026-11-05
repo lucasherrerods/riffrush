@@ -1,3 +1,5 @@
+import type { Modo } from "@/shared/modo";
+import { EtiquetaDeModo } from "@/shared/ui/EtiquetaDeModo";
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Check, Copy, Ellipsis, Eye, Search, Send, UserPlus, Users, X } from "lucide-react";
 import { FotoDaConta } from "@/modules/conta";
@@ -125,7 +127,7 @@ function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar, aoAssistir }: { ami
         {!presenca.conectada && <p className="text-base text-texto-suave">Ative "Aparecer online" na tela Online para ver quem está jogando.</p>}
         <Secao titulo={`Online (${online.length})`} online>
           {online.map((amigo) => (
-            <LinhaDeAmigo key={amigo.conta_id} pessoa={amigo} online detalhe={descreverEstado(amigo.estado)}>
+            <LinhaDeAmigo key={amigo.conta_id} pessoa={amigo} online modo={amigo.estado.modo} detalhe={descreverEstado(amigo.estado)}>
               {aoAssistir && podeAssistir(amigo.estado) && (
                 <Button
                   variant="outline"
@@ -147,7 +149,7 @@ function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar, aoAssistir }: { ami
         </Secao>
         <Secao titulo={`Offline (${offline.length})`}>
           {offline.map((amigo) => (
-            <LinhaDeAmigo key={amigo.conta_id} pessoa={amigo} detalhe={vistoHa(amigo.visto_em, agora)}>
+            <LinhaDeAmigo key={amigo.conta_id} pessoa={amigo} modo={amigo.ultimo_modo} detalhe={vistoHa(amigo.visto_em, agora)}>
               <MenuDoAmigo pessoa={amigo} />
             </LinhaDeAmigo>
           ))}
@@ -311,13 +313,16 @@ function Secao({ titulo, online = false, children }: { titulo: string; online?: 
   );
 }
 
-function LinhaDeAmigo({ pessoa, detalhe, online = false, children }: { pessoa: { nome: string; avatar: string | null }; detalhe: string; online?: boolean; children?: ReactNode }) {
+function LinhaDeAmigo({ pessoa, detalhe, modo, online = false, children }: { pessoa: { nome: string; avatar: string | null }; detalhe: string; modo?: Modo | null; online?: boolean; children?: ReactNode }) {
   return (
     <li className="flex items-center gap-2 rounded-md px-2 py-2 hover:bg-superficie-hover">
       <FotoDaConta avatar={pessoa.avatar} online={online} className="size-10" />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className={online ? "truncate text-base font-bold" : "truncate text-base font-bold text-texto-suave"}>{pessoa.nome}</span>
-        <span className="truncate text-sm text-texto-suave">{detalhe}</span>
+        <span className="flex min-w-0 items-center gap-1.5 text-sm text-texto-suave">
+          {modo && <EtiquetaDeModo modo={modo} />}
+          <span className="truncate">{detalhe}</span>
+        </span>
       </span>
       {children}
     </li>

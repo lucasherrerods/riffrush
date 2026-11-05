@@ -1,4 +1,4 @@
-import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, RAIO_DA_CURVA, centroDoGrupoAberto, passosDaRoda, passosDoArraste, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "./carrossel";
+import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, RAIO_DA_CURVA, centroDoGrupoAberto, passosDaRoda, passosDoArraste, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "./geometriaDoCarrossel";
 
 describe("posicoesNoCarrossel", () => {
   it("põe a selecionada no zero, as de cima antes e as de baixo depois", () => {

@@ -198,3 +198,12 @@ describe("TelaDeLeaderboard: música lembrada por quem usa a tela", () => {
     expect(aoAbrirMusica).toHaveBeenCalledWith(null);
   });
 });
+
+describe("TelaDeLeaderboard em outro modo", () => {
+  it("a aba de XP é a mesma e a segunda aba é a do modo", async () => {
+    const { carregarMusicas, usuario } = abrir({ rotuloDasMusicas: "Mapas", abaDasMusicas: <p>mapas do mania</p> });
+    await usuario.click(screen.getByRole("tab", { name: "Mapas" }));
+    expect(screen.getByText("mapas do mania")).toBeInTheDocument();
+    expect(carregarMusicas).not.toHaveBeenCalled();
+  });
+});

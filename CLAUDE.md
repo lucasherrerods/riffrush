@@ -93,6 +93,12 @@ frontend/
   docs/design.md    regras visuais
 ```
 
+### Modos (Rock e Mania)
+- Funcionalidade que existe nos dois modos (amigos, chat, ranking, seleção, leaderboard, perfil, player) é um componente burro num módulo neutro (`modules/<recurso>`), que recebe dados, rótulos e callbacks por props. Cada modo só monta um adaptador em `modules/rock/...` ou `modules/mania/...` com os seus dados.
+- Módulos neutros nunca importam de `modules/rock` nem de `modules/mania`, e o Mania não importa do Rock (teste `fronteiras`).
+- Componente compartilhado não decide cor pelo modo: usa só tokens, e o tema de cada modo é aplicado no contêiner do modo. O tipo `Modo` é dado (etiquetas, status), nunca estilo.
+- Antes de criar uma tela nova num modo, veja se o outro já tem uma parecida e extraia a parte burra em vez de duplicar. O plano está em `docs/arquitetura-recursos-compartilhados.md`.
+
 ### Design
 - Toda mudança de interface segue `frontend/docs/design.md`.
 - Use os tokens de cor e espaçamento definidos em `src/shared/styles`, nunca cores soltas.

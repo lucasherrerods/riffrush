@@ -1,7 +1,7 @@
 // Partes puras da lista de quem está online e da transmissão ao vivo das partidas.
 
 import { ID_DA_CONTA } from "./chat";
-import { TAMANHO_MAXIMO_DA_MENSAGEM, codigoValido } from "./regras";
+import { TAMANHO_MAXIMO_DA_MENSAGEM, codigoValido, lerModo, type Modo } from "./regras";
 
 export interface Pessoa {
   id: string;
@@ -34,11 +34,15 @@ export function fichaDoPedido(pedido: Request): { ficha: string; peloProtocolo: 
  * Onde a pessoa está. A música vai com o id do ranking, para quem assiste achar a mesma.
  * O código da sala não vai no estado: a lista é de todos, e a sala só chega a quem foi convidado.
  */
-export type EstadoOnline =
+export type EstadoOnline = (
   | { tipo: "menu" }
   | { tipo: "selecao" }
   | { tipo: "multiplayer"; sala?: SalaNoEstado }
-  | { tipo: "tocando"; musica: string; titulo: string; artista: string; dificuldade: string; instrumento: string; transmitindo: boolean };
+  | { tipo: "tocando"; musica: string; titulo: string; artista: string; dificuldade: string; instrumento: string; transmitindo: boolean }
+) & {
+  /** O modo de jogo aberto no app. Versões antigas não mandam. */
+  modo?: Modo;
+};
 
 /** A sala em que a pessoa está, para a lista mostrar "Em sala". Sem o código, que só vai no convite. */
 export interface SalaNoEstado {
@@ -102,6 +106,12 @@ function lerSala(valor: unknown): SalaNoEstado | null {
 
 /** O estado vem do app: só passa o formato conhecido, com os textos cortados. */
 export function lerEstado(valor: unknown): EstadoOnline | null {
+  const lido = lerEstadoSemModo(valor);
+  const modo = lerModo((valor as Record<string, unknown> | null)?.modo);
+  return lido && modo ? { ...lido, modo } : lido;
+}
+
+function lerEstadoSemModo(valor: unknown): EstadoOnline | null {
   const estado = valor as Record<string, unknown> | null;
   if (estado?.tipo === "menu" || estado?.tipo === "selecao") return { tipo: estado.tipo };
   if (estado?.tipo === "multiplayer") {

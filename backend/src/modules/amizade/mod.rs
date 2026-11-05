@@ -11,7 +11,7 @@ mod postgres;
 pub use casos_de_uso::fakes;
 pub use casos_de_uso::{Alvo, ErroDaAmizade, Listas, Pedido, ServicosDeAmizade};
 pub use dominio::{
-    decidir_pedido, gerar_codigo, normalizar_codigo, Contagens, Decisao, PedidoRecusado, Pessoa, Relacao, Sugestao, Vinculo, MAXIMO_DE_AMIGOS,
+    decidir_pedido, gerar_codigo, normalizar_codigo, Contagens, Decisao, Modo, PedidoRecusado, Pessoa, Relacao, Sugestao, Vinculo, MAXIMO_DE_AMIGOS,
     MAXIMO_DE_PEDIDOS_ENVIADOS, PEDIDOS_POR_HORA, SUGESTOES,
 };
 pub use http::{
