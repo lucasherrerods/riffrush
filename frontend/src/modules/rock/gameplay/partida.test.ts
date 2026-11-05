@@ -15,12 +15,6 @@ describe("tocar", () => {
     expect(retirarEventos(partida)).toContainEqual({ tipo: "toqueEmVazio", pista: 1 });
   });
 
-  it("sem a regra (replays antigos), tocar em vazio não pune", () => {
-    const partida = criarPartida([nota(1)], { puneToqueEmVazio: false });
-    const vida = partida.vida;
-    tocar(partida, 0, 0.5);
-    expect(partida.vida).toBe(vida);
-  });
 
   it("acerta a nota da pista dentro da janela de acerto", () => {
     const partida = criarPartida([nota(1)]);
@@ -278,15 +272,15 @@ describe("pontuação", () => {
 describe("julgar", () => {
   it("dá o julgamento pela distância até a batida", () => {
     expect(julgar(0)).toBe("perfeito");
-    expect(julgar(0.035)).toBe("perfeito");
-    expect(julgar(-0.036)).toBe("otimo");
-    expect(julgar(0.07)).toBe("otimo");
-    expect(julgar(0.071)).toBe("bom");
-    expect(julgar(-0.11)).toBe("bom");
+    expect(julgar(0.025)).toBe("perfeito");
+    expect(julgar(-0.026)).toBe("otimo");
+    expect(julgar(0.05)).toBe("otimo");
+    expect(julgar(0.051)).toBe("bom");
+    expect(julgar(-0.07)).toBe("bom");
   });
 
-  it("a janela de acerto acaba onde acaba o bom, a mesma do motor", () => {
-    expect(JANELA_DE_ACERTO).toBe(0.11);
+  it("a janela de acerto é a do Clone Hero, 70 ms para cada lado, a mesma do motor", () => {
+    expect(JANELA_DE_ACERTO).toBe(0.07);
     expect(janelaDoMotor()).toBe(JANELA_DE_ACERTO);
   });
 });
@@ -299,19 +293,19 @@ describe("precisao", () => {
   it("conta os julgamentos de cada acerto", () => {
     const partida = criarPartida([nota(1), nota(2), nota(3)]);
     tocar(partida, 0, 1.01);
-    tocar(partida, 0, 2.05);
-    tocar(partida, 0, 2.91);
+    tocar(partida, 0, 2.04);
+    tocar(partida, 0, 2.94);
     expect(partida.julgamentos).toEqual({ perfeito: 1, otimo: 1, bom: 1 });
   });
 
-  it("soma o valor de cada nota sobre o máximo das que já passaram, e a nota perdida vale zero", () => {
+  it("é de notas acertadas sobre as que já passaram, como a porcentagem do Clone Hero", () => {
     const partida = criarPartida([nota(1), nota(2), nota(3), nota(4)]);
     tocar(partida, 0, 1);
-    tocar(partida, 0, 2.05);
-    tocar(partida, 0, 3.1);
+    tocar(partida, 0, 2.04);
+    tocar(partida, 0, 3.06);
     avancar(partida, 5);
     expect(partida.erros).toBe(1);
-    expect(precisao(partida)).toBeCloseTo((300 + 200 + 100 + 0) / (4 * 300));
+    expect(precisao(partida)).toBeCloseTo(3 / 4);
   });
 
   it("avisa o julgamento junto do acerto", () => {

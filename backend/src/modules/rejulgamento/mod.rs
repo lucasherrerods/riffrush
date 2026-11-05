@@ -10,7 +10,7 @@ use std::time::Duration;
 
 pub use casos_de_uso::{Desfecho, ServicosDoRejulgamento};
 pub use dominio::{cabe_mais_um, espera_da_tentativa, inicio_da_janela, rejulgar, ChartGuardado, Recusa, Rejulgada, JANELA_DO_ENCORE, PEDIDOS_AO_ENCORE};
-pub use portas::{CacheDeCharts, ChartBaixado, FilaDoRejulgamento, FonteDeCharts, LimiteDePedidos, PartidaPendente};
+pub use portas::{CacheDeCharts, ChartBaixado, FilaDoRejulgamento, FonteDeCharts, LimiteDePedidos, PartidaAntiga, PartidaPendente, PartidasAntigas};
 pub use postgres::RejulgamentoPostgres;
 
 /// Sem nada na fila, espera um pouco antes de olhar de novo.
@@ -22,7 +22,15 @@ pub fn iniciar_trabalhador(servicos: ServicosDoRejulgamento) -> tokio::task::Joi
     tokio::spawn(async move {
         loop {
             match servicos.processar_lote().await {
-                Ok(desfechos) if desfechos.is_empty() => tokio::time::sleep(PAUSA_COM_A_FILA_VAZIA).await,
+                // Com a fila vazia, aproveita para rejulgar as partidas das regras antigas.
+                Ok(desfechos) if desfechos.is_empty() => match servicos.rejulgar_antigas().await {
+                    Ok(0) => tokio::time::sleep(PAUSA_COM_A_FILA_VAZIA).await,
+                    Ok(_) => {}
+                    Err(falha) => {
+                        tracing::warn!(%falha, "o rejulgamento das partidas antigas falhou");
+                        tokio::time::sleep(PAUSA_DEPOIS_DE_FALHA).await;
+                    }
+                },
                 Ok(_) => {}
                 Err(falha) => {
                     tracing::warn!(%falha, "a fila do rejulgamento falhou");

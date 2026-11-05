@@ -9,13 +9,13 @@ function Abrir({ inicial = 1 }: { inicial?: number }) {
 }
 
 describe("ModalDeModificadores", () => {
-  it("começa sem modificador ativo e com multiplicador 1x", () => {
+  it("começa sem modificador ativo e no ranking normal", () => {
     render(<Abrir />);
-    expect(screen.getByText("Multiplicador de pontos: 1x")).toBeInTheDocument();
+    expect(screen.getByText("Ranking normal")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Velocidade/ })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("cada clique na velocidade muda o nível, mostra a velocidade ao lado e o multiplicador no topo", async () => {
+  it("cada clique na velocidade muda o nível, mostra a velocidade ao lado e o ranking no topo", async () => {
     const usuario = userEvent.setup();
     render(<Abrir />);
     const velocidade = screen.getByRole("button", { name: /Velocidade/ });
@@ -23,12 +23,12 @@ describe("ModalDeModificadores", () => {
     await usuario.click(velocidade);
     expect(velocidade).toHaveAttribute("aria-pressed", "true");
     expect(velocidade).toHaveTextContent("1,25x");
-    expect(screen.getByText("Multiplicador de pontos: 1,25x")).toBeInTheDocument();
+    expect(screen.getByText("Ranking de 1,25x")).toBeInTheDocument();
 
     await usuario.click(velocidade);
     await usuario.click(velocidade);
     expect(velocidade).toHaveTextContent("0,5x");
-    expect(screen.getByText("Multiplicador de pontos: 0,5x")).toBeInTheDocument();
+    expect(screen.getByText("Ranking de 0,5x")).toBeInTheDocument();
   });
 
   it("o botão direito volta um nível", async () => {

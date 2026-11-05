@@ -90,6 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     iniciar_trabalhador(ServicosDoRejulgamento {
         fila: rejulgamento.clone(),
+        antigas: rejulgamento.clone(),
         cache: rejulgamento,
         fonte: encore,
         conta: conta.clone(),

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use super::dominio::{espera_da_tentativa, rejulgar, ChartGuardado, MAXIMO_DE_TENTATIVAS};
-use super::portas::{CacheDeCharts, ChartBaixado, FilaDoRejulgamento, FonteDeCharts, PartidaPendente};
+use super::portas::{CacheDeCharts, ChartBaixado, FilaDoRejulgamento, FonteDeCharts, PartidaAntiga, PartidaPendente, PartidasAntigas};
 use crate::modules::conta::{FalhaExterna, PartidaRejulgada, Relogio, ServicosDaConta};
 
 pub const TAMANHO_DO_LOTE: u32 = 10;
@@ -9,6 +9,7 @@ pub const TAMANHO_DO_LOTE: u32 = 10;
 #[derive(Clone)]
 pub struct ServicosDoRejulgamento {
     pub fila: Arc<dyn FilaDoRejulgamento>,
+    pub antigas: Arc<dyn PartidasAntigas>,
     pub cache: Arc<dyn CacheDeCharts>,
     pub fonte: Arc<dyn FonteDeCharts>,
     pub conta: ServicosDaConta,
@@ -40,6 +41,41 @@ impl ServicosDoRejulgamento {
         Ok(desfechos)
     }
 
+    /// Rejulga com as regras do Clone Hero um lote das partidas guardadas com as regras antigas.
+    /// Devolve quantas mudaram de estado; com o Encore fora, para e tenta de novo depois.
+    pub async fn rejulgar_antigas(&self) -> Result<usize, FalhaExterna> {
+        let lote = self.antigas.pegar_antigas(TAMANHO_DO_LOTE).await?;
+        let mut feitas = 0;
+        for partida in lote {
+            if !self.rejulgar_antiga(&partida).await? {
+                break;
+            }
+            feitas += 1;
+        }
+        Ok(feitas)
+    }
+
+    /// `false` quando o chart está indisponível agora.
+    async fn rejulgar_antiga(&self, partida: &PartidaAntiga) -> Result<bool, FalhaExterna> {
+        let chart = match self.chart(&partida.md5).await {
+            Ok(chart) => chart,
+            Err(SemChart::Indisponivel) => return Ok(false),
+            Err(SemChart::Desistir(motivo)) => {
+                tracing::info!(partida = %partida.id, %motivo, "partida antiga sem como rejulgar");
+                self.antigas.sem_como_rejulgar(partida.id).await?;
+                return Ok(true);
+            }
+        };
+        match rejulgar(&chart, partida.instrumento, partida.dificuldade, &partida.replay) {
+            Ok(rejulgada) => self.antigas.atualizar(partida.id, &rejulgada).await?,
+            Err(recusa) => {
+                tracing::info!(partida = %partida.id, %recusa, "partida antiga sem como rejulgar");
+                self.antigas.sem_como_rejulgar(partida.id).await?;
+            }
+        }
+        Ok(true)
+    }
+
     async fn processar(&self, partida: PartidaPendente) -> Result<Desfecho, FalhaExterna> {
         let chart = match self.chart(&partida.md5).await {
             Ok(chart) => chart,
@@ -62,6 +98,7 @@ impl ServicosDoRejulgamento {
                 precisao: rejulgada.precisao,
                 sem_falha: rejulgada.sem_falha,
                 jeito_de_jogar: rejulgada.jeito_de_jogar,
+                velocidade: rejulgada.velocidade,
                 jogada_em: partida.enviada_em,
                 replay: partida.replay.clone(),
                 rodada: partida.rodada,
@@ -159,6 +196,44 @@ mod fakes {
     }
 
     #[derive(Default)]
+    pub struct AntigasFalsas {
+        pub guardadas: Mutex<Vec<PartidaAntiga>>,
+        pub atualizadas: Mutex<Vec<(Uuid, crate::modules::rejulgamento::Rejulgada)>>,
+        pub sem_como: Mutex<Vec<Uuid>>,
+    }
+
+    #[async_trait]
+    impl PartidasAntigas for AntigasFalsas {
+        async fn pegar_antigas(&self, limite: u32) -> Result<Vec<PartidaAntiga>, FalhaExterna> {
+            let feitas: Vec<Uuid> = self
+                .atualizadas
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|(id, _)| *id)
+                .chain(self.sem_como.lock().unwrap().iter().copied())
+                .collect();
+            Ok(self
+                .guardadas
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|p| !feitas.contains(&p.id))
+                .take(limite as usize)
+                .cloned()
+                .collect())
+        }
+        async fn atualizar(&self, id: Uuid, rejulgada: &crate::modules::rejulgamento::Rejulgada) -> Result<(), FalhaExterna> {
+            self.atualizadas.lock().unwrap().push((id, rejulgada.clone()));
+            Ok(())
+        }
+        async fn sem_como_rejulgar(&self, id: Uuid) -> Result<(), FalhaExterna> {
+            self.sem_como.lock().unwrap().push(id);
+            Ok(())
+        }
+    }
+
+    #[derive(Default)]
     pub struct CacheFalso(pub Mutex<HashMap<String, ChartGuardado>>);
 
     #[async_trait]
@@ -198,7 +273,7 @@ mod tests {
     use chrono::Duration;
     use uuid::Uuid;
 
-    use super::fakes::{CacheFalso, EncoreFalso, FilaFalsa};
+    use super::fakes::{AntigasFalsas, CacheFalso, EncoreFalso, FilaFalsa};
     use super::*;
     use crate::modules::conta::fakes::{pedido, servicos_com_fila, Banco};
     use crate::modules::progresso::{Dificuldade, Instrumento};
@@ -229,6 +304,7 @@ mod tests {
     struct Cenario {
         servicos: ServicosDoRejulgamento,
         fila: Arc<FilaFalsa>,
+        antigas: Arc<AntigasFalsas>,
         cache: Arc<CacheFalso>,
         encore: Arc<EncoreFalso>,
         banco: Arc<Banco>,
@@ -244,8 +320,10 @@ mod tests {
             resposta,
             chamadas: Mutex::new(0),
         });
+        let antigas = Arc::new(AntigasFalsas::default());
         let servicos = ServicosDoRejulgamento {
             fila: fila.clone(),
+            antigas: antigas.clone(),
             cache: cache.clone(),
             fonte: encore.clone(),
             conta,
@@ -254,6 +332,7 @@ mod tests {
         Cenario {
             servicos,
             fila,
+            antigas,
             cache,
             encore,
             banco,
@@ -336,5 +415,33 @@ mod tests {
             c.servicos.processar_lote().await.unwrap(),
             [Desfecho::Desistida("o .sng do Encore é ilegível".into())]
         );
+    }
+
+    #[tokio::test]
+    async fn as_partidas_antigas_sao_rejulgadas_com_as_regras_novas_e_as_sem_chart_saem() {
+        let guardado = chart();
+        let c = cenario(Ok(Some(sng(&guardado)))).await;
+        let (boa, sem_chart) = (Uuid::from_u128(1), Uuid::from_u128(2));
+        c.antigas.guardadas.lock().unwrap().extend([
+            PartidaAntiga {
+                id: boa,
+                md5: MD5.into(),
+                dificuldade: Dificuldade::Expert,
+                instrumento: Instrumento::Guitarra,
+                replay: replay(&guardado, &[(0, 0.0), (1, 0.0), (2, 0.0)]),
+            },
+            PartidaAntiga {
+                id: sem_chart,
+                md5: MD5.into(),
+                dificuldade: Dificuldade::Expert,
+                instrumento: Instrumento::Guitarra,
+                replay: vec![9, 9],
+            },
+        ]);
+        assert_eq!(c.servicos.rejulgar_antigas().await.unwrap(), 2);
+        let atualizadas: Vec<(Uuid, f64)> = c.antigas.atualizadas.lock().unwrap().iter().map(|(id, r)| (*id, r.velocidade)).collect();
+        assert_eq!(atualizadas, [(boa, 1.0)]);
+        assert_eq!(*c.antigas.sem_como.lock().unwrap(), [sem_chart]);
+        assert_eq!(c.servicos.rejulgar_antigas().await.unwrap(), 0);
     }
 }

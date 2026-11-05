@@ -154,9 +154,9 @@ export function PistaDoJogador(props: Props) {
     const { musica, dificuldade, instrumento } = atuais.current;
     const duracao = noTempoReal(carregada.duracao, velocidade);
     const batidas = carregada.batidas.map((b) => ({ ...b, tempo: noTempoReal(b.tempo, velocidade) }));
-    const opcoesDoReplay = replay && { semFalha: replay.semFalha, fantasma: replay.fantasma, semAberta: replay.semAberta, velocidade, jeito: replay.jeito, puneToqueEmVazio: replay.puneToqueEmVazio };
+    const opcoesDoReplay = replay && { semFalha: replay.semFalha, fantasma: replay.fantasma, semAberta: replay.semAberta, velocidade, jeito: replay.jeito, batidas: carregada.batidas };
     const notasDaPartida = trecho ? notasDoTrecho(carregada.notas, trecho) : carregada.notas;
-    const opcoesDoJogador = { semFalha: opcoes.semFalha || !!trecho, fantasma: emRede, semAberta: opcoes.semAberta, velocidade, jeito: opcoes.jeitoDeJogar };
+    const opcoesDoJogador = { semFalha: opcoes.semFalha || !!trecho, fantasma: emRede, semAberta: opcoes.semAberta, velocidade, jeito: opcoes.jeitoDeJogar, batidas: carregada.batidas };
     let partida = opcoesDoReplay ? criarPartida(carregada.notas, opcoesDoReplay) : criarPartida(notasDaPartida, opcoesDoJogador);
     const bot = opcoes.bot && !replay ? criarBot() : null;
     let gravador = criarGravador(partida);
@@ -180,7 +180,7 @@ export function PistaDoJogador(props: Props) {
       void hashDoChart(carregada.notas).then((hash) => {
         if (transmissaoAcabou) return;
         transmitindo = true;
-        transmitir({ tipo: "inicio", hashDoChart: hash, semFalha: opcoes.semFalha, semAberta: opcoes.semAberta, velocidade, jeito: opcoes.jeitoDeJogar, puneToqueEmVazio: true });
+        transmitir({ tipo: "inicio", hashDoChart: hash, semFalha: opcoes.semFalha, semAberta: opcoes.semAberta, velocidade, jeito: opcoes.jeitoDeJogar });
       });
     }
     const sprites = criarSprites();
@@ -238,7 +238,6 @@ export function PistaDoJogador(props: Props) {
           semAberta: opcoes.semAberta,
           velocidade,
           jeito: opcoes.jeitoDeJogar,
-          puneToqueEmVazio: true,
           hashDoChart: await hashDoChart(carregada.notas),
           entradas: gravador.entradas,
         });

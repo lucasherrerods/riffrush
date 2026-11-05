@@ -1,4 +1,4 @@
-import type { Nota } from "@/modules/rock/songs";
+import type { Batida, Nota } from "@/modules/rock/songs";
 import iniciarWasm, { initSync, janela_de_acerto, julgar as julgarNoMotor, MotorDaPartida, quantizar as quantizarNoMotor, velocidades } from "./wasm/motor";
 import urlDoWasm from "./wasm/motor_bg.wasm?url";
 
@@ -19,10 +19,11 @@ export function iniciarMotorComBytes(bytes: BufferSource) {
   initSync({ module: bytes });
 }
 
-/** Até onde, em segundos de cada lado da batida, o toque ganha cada julgamento. O teste de paridade confere com o motor. */
-export const JANELAS = { perfeito: 0.035, otimo: 0.07, bom: 0.11 } as const;
+/** Até onde, em segundos de cada lado da batida, o toque ganha cada julgamento. A janela de acerto é a do Clone Hero
+ * (70 ms para cada lado); as faixas dentro dela são só o retorno na tela. O teste de paridade confere com o motor. */
+export const JANELAS = { perfeito: 0.025, otimo: 0.05, bom: 0.07 } as const;
 export type Julgamento = keyof typeof JANELAS;
-/** Quanto cada julgamento vale na precisão, como no osu!. A nota perdida vale zero. */
+/** Quanto cada julgamento vale no valor dos acertos. A precisão é de notas acertadas, como no Clone Hero. */
 export const VALOR_DO_JULGAMENTO: Record<Julgamento, number> = { perfeito: 300, otimo: 200, bom: 100 };
 export const JANELA_DE_ACERTO = JANELAS.bom;
 export const PONTOS_POR_NOTA = 50;
@@ -65,15 +66,21 @@ export interface Partida {
   maiorSequencia: number;
   acertos: number;
   julgamentos: Record<Julgamento, number>;
-  /** Soma do valor de cada acerto, para a precisão. */
+  /** Soma do valor de cada acerto. */
   valorDosAcertos: number;
   /** Notas que passaram sem ser tocadas. */
   erros: number;
   vida: number;
-  /** De 0 a 1, derivado de `estrelaEmTicks`. */
+  /** De 0 a 1, derivado de `estrelaEmCompassos`. */
   estrela: number;
-  /** Quantos ticks de star power ativado a barra ainda rende. */
-  estrelaEmTicks: number;
+  /** Quantos compassos de star power a barra guarda (a cheia guarda 8). */
+  estrelaEmCompassos: number;
+  /** Palhetadas e toques que não acertaram nada. Qualquer um tira o full combo. */
+  toquesEmVazio: number;
+  /** O bônus dos solos já fechados, que já está dentro de `pontos`. */
+  bonusDeSolo: number;
+  /** Todas as notas acertadas sem nenhum toque em vão. */
+  fullCombo: boolean;
   estrelaAtiva: boolean;
   derrota: boolean;
   semFalha: boolean;
@@ -99,26 +106,37 @@ export const velocidadesDaMusica = () => [...velocidades()];
 
 /**
  * Como as teclas viram notas. No tapping cada aperto vale uma nota; no gamepad soltar a tecla também acerta a
- * próxima nota da pista; na palhetada os trastes só ficam apertados e a palheta toca o acorde.
+ * próxima nota da pista; a palhetada é a guitarra do Clone Hero: palheta, HOPO e tap só no traste, e âncora.
  * A posição na lista é o código que vai para o motor e para o replay.
  */
 export const JEITOS_DE_JOGAR = ["gamepad", "tapping", "palhetada"] as const;
 export type JeitoDeJogar = (typeof JEITOS_DE_JOGAR)[number];
 
-/** `velocidade` é a da música: as notas chegam no tempo da música e a partida roda no tempo real. */
-/** `semAberta`: a nota aberta vira verde, decidido no motor para o app e a API darem o mesmo resultado. */
-export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false, velocidade = 1, semAberta = false, jeito = "gamepad" as JeitoDeJogar, puneToqueEmVazio = true } = {}): Partida {
+const CODIGO_DO_TIPO = { hopo: 1, tap: 2 } as const;
+
+/**
+ * `velocidade` é a da música: as notas chegam no tempo da música e a partida roda no tempo real.
+ * `semAberta`: a nota aberta vira verde, decidido no motor para o app e a API darem o mesmo resultado.
+ * `batidas`: a grade da música; o sustain rende por batida e o star power dura em compassos, como no Clone Hero.
+ */
+export function criarPartida(
+  notas: Nota[],
+  { semFalha = false, fantasma = false, velocidade = 1, semAberta = false, jeito = "gamepad" as JeitoDeJogar, batidas = [] as Batida[] } = {},
+): Partida {
   const motor = new MotorDaPartida(
     Float64Array.from(notas, (n) => n.tempo),
     Uint8Array.from(notas, (n) => n.pista),
     Int32Array.from(notas, (n) => n.frase),
     Float64Array.from(notas, (n) => n.duracao),
+    Uint8Array.from(notas, (n) => (n.tipo ? CODIGO_DO_TIPO[n.tipo] : 0)),
+    Int32Array.from(notas, (n) => n.solo ?? -1),
+    Float64Array.from(batidas, (b) => b.tempo),
+    Float64Array.from(batidas.filter((b) => b.forte), (b) => b.tempo),
     semFalha,
     fantasma,
     velocidade,
     semAberta,
     JEITOS_DE_JOGAR.indexOf(jeito),
-    puneToqueEmVazio,
   );
   const grade = motor.grade_das_notas();
   const partida: Partida = {
@@ -136,7 +154,10 @@ export function criarPartida(notas: Nota[], { semFalha = false, fantasma = false
     erros: 0,
     vida: 0.5,
     estrela: 0,
-    estrelaEmTicks: 0,
+    estrelaEmCompassos: 0,
+    toquesEmVazio: 0,
+    bonusDeSolo: 0,
+    fullCombo: false,
     estrelaAtiva: false,
     derrota: false,
     semFalha,
@@ -164,7 +185,7 @@ function sincronizar(partida: Partida) {
   partida.valorDosAcertos = proximo();
   partida.erros = proximo();
   partida.vida = proximo();
-  partida.estrelaEmTicks = proximo();
+  partida.estrelaEmCompassos = proximo();
   partida.estrela = proximo();
   partida.estrelaAtiva = proximo() === 1;
   partida.derrota = proximo() === 1;
@@ -172,6 +193,9 @@ function sincronizar(partida: Partida) {
   partida.primeira = proximo();
   partida.multiplicadorAtual = proximo();
   partida.precisaoAtual = proximo();
+  partida.toquesEmVazio = proximo();
+  partida.bonusDeSolo = proximo();
+  partida.fullCombo = proximo() === 1;
   for (let n = proximo(); n > 0; n--) {
     const nota = partida.notas[proximo()];
     const bandeiras = proximo();
@@ -201,7 +225,7 @@ export function retirarEventos(partida: Partida) {
 
 export const multiplicador = (partida: Partida) => partida.multiplicadorAtual;
 
-/** Valor dos acertos sobre o máximo das notas que já passaram (0 a 1). No fim da música, vale para o chart inteiro. */
+/** Notas acertadas sobre as que já passaram (0 a 1), como a porcentagem do Clone Hero. No fim da música, vale para o chart inteiro. */
 export const precisao = (partida: Partida) => partida.precisaoAtual;
 
 /** Marca a nota como acertada no instante `tempo`, sem olhar a janela de acerto (o bot usa). */

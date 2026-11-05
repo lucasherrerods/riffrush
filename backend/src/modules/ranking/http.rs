@@ -19,7 +19,7 @@ use crate::shared::estado::EstadoDoApp;
 impl From<ErroDoRanking> for ErroDaApi {
     fn from(erro: ErroDoRanking) -> Self {
         match erro {
-            ErroDoRanking::MusicaInvalida => Self::Invalido(erro.to_string()),
+            ErroDoRanking::MusicaInvalida | ErroDoRanking::VelocidadeInvalida => Self::Invalido(erro.to_string()),
             ErroDoRanking::PartidaNaoEncontrada => Self::NaoEncontrado,
             ErroDoRanking::Falha(falha) => Self::Interno(falha.0),
         }
@@ -42,6 +42,14 @@ pub struct PedidoDoRanking {
     #[serde(default)]
     #[param(value_type = Option<String>, example = "precisao")]
     ordem: Ordem,
+    /// A velocidade da música (0.5, 0.75, 1, 1.25 ou 1.5): cada uma tem o próprio top. Sem ela, a normal.
+    #[serde(default = "velocidade_normal")]
+    #[param(value_type = Option<f64>, example = 1.25)]
+    velocidade: f64,
+}
+
+fn velocidade_normal() -> f64 {
+    1.0
 }
 
 #[derive(Serialize, ToSchema)]
@@ -217,6 +225,7 @@ pub async fn ranking(
             pedido.dificuldade,
             pedido.instrumento,
             pedido.jeito_de_jogar,
+            pedido.velocidade,
             pedido.ordem,
             token.as_deref(),
         )

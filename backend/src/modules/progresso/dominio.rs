@@ -442,7 +442,8 @@ mod tests {
         assert!(validar_replay(&[3, 0, 1]).is_ok());
         assert!(validar_replay(&[4, 0, 1]).is_ok());
         assert!(validar_replay(&[5, 0, 1]).is_ok());
-        assert_eq!(validar_replay(&[6, 0, 1]), Err(PartidaInvalida::ReplayInvalido));
+        assert!(validar_replay(&[6, 0, 1]).is_ok());
+        assert_eq!(validar_replay(&[7, 0, 1]), Err(PartidaInvalida::ReplayInvalido));
         assert_eq!(validar_replay(&[2]), Err(PartidaInvalida::ReplayInvalido));
         assert_eq!(validar_replay(&[9, 0, 1]), Err(PartidaInvalida::ReplayInvalido));
         let grande = vec![2; TAMANHO_MAXIMO_DO_REPLAY + 1];
@@ -457,7 +458,6 @@ mod tests {
             sem_aberta: false,
             velocidade: 1.0,
             jeito: riffrush_motor::JeitoDeJogar::Palhetada,
-            pune_toque_em_vazio: true,
             hash_do_chart: "00112233445566778899aabbccddeeff".into(),
             entradas: vec![],
         };

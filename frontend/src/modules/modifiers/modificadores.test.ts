@@ -1,4 +1,4 @@
-import { multiplicadorDePontos, proximaVelocidade } from "./modificadores";
+import { proximaVelocidade, rankingDaVelocidade } from "./modificadores";
 
 const VELOCIDADES = [0.5, 0.75, 1, 1.25, 1.5];
 
@@ -15,9 +15,9 @@ describe("modificadores", () => {
     expect(proximaVelocidade(VELOCIDADES, 3)).toBe(1);
   });
 
-  it("o multiplicador de pontos é o da velocidade da música", () => {
-    expect(multiplicadorDePontos({ velocidadeDaMusica: 1 })).toBe(1);
-    expect(multiplicadorDePontos({ velocidadeDaMusica: 1.25 })).toBe(1.25);
-    expect(multiplicadorDePontos({ velocidadeDaMusica: 0.5 })).toBe(0.5);
+  it("a velocidade não mexe nos pontos: fora da normal, a partida vai para o ranking da própria velocidade", () => {
+    expect(rankingDaVelocidade({ velocidadeDaMusica: 1 })).toBeNull();
+    expect(rankingDaVelocidade({ velocidadeDaMusica: 1.25 })).toBe(1.25);
+    expect(rankingDaVelocidade({ velocidadeDaMusica: 0.5 })).toBe(0.5);
   });
 });

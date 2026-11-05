@@ -8,6 +8,9 @@ use super::portas::{FalhaExterna, PartidaGuardada, PartidaRegistrada, Repositori
 use crate::modules::progresso::JeitoDeJogar;
 use crate::modules::ranking::TAMANHO_DO_TOP_DA_MUSICA;
 
+/// As partidas julgadas com as regras do Clone Hero. As de antes ficam com `NULL` até o servidor rejulgar o replay.
+pub const REGRAS_DO_CLONE_HERO: i16 = 2;
+
 pub struct ContasPostgres(pub PgPool);
 
 #[derive(FromRow)]
@@ -91,8 +94,8 @@ impl RepositorioDeContas for ContasPostgres {
                 .map_err(falha)?;
         }
         let inserida = sqlx::query(
-            "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, instrumento, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em, maior_sequencia, replay, precisao, valor_dos_acertos, jeito_de_jogar, rodada_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+            "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, instrumento, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em, maior_sequencia, replay, precisao, valor_dos_acertos, jeito_de_jogar, rodada_id, velocidade, regras)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
              ON CONFLICT (id) DO NOTHING",
         )
         .bind(partida.id)
@@ -113,6 +116,8 @@ impl RepositorioDeContas for ContasPostgres {
         .bind(resumo.valor_dos_acertos.map(|v| i32::try_from(v).unwrap_or(i32::MAX)))
         .bind(partida.jeito_de_jogar.map(JeitoDeJogar::como_texto))
         .bind(partida.rodada)
+        .bind(partida.velocidade)
+        .bind(REGRAS_DO_CLONE_HERO)
         .execute(&mut *transacao)
         .await
         .map_err(falha)?;
@@ -124,8 +129,9 @@ impl RepositorioDeContas for ContasPostgres {
         if partida.replay.is_some() {
             // Só os recordes do top de cada jeito guardam replay: quem saiu do top, ou superou a própria marca, perde o antigo.
             sqlx::query(
+                // As partidas de regras antigas guardam o replay até o servidor rejulgar.
                 "UPDATE partidas SET replay = NULL
-                 WHERE musica_id = $1 AND dificuldade = $2 AND instrumento = $3 AND replay IS NOT NULL
+                 WHERE musica_id = $1 AND dificuldade = $2 AND instrumento = $3 AND replay IS NOT NULL AND regras = 2
                    AND id NOT IN (SELECT partida_id FROM recordes_por_jeito
                                   WHERE musica_id = $1 AND dificuldade = $2 AND instrumento = $3 AND posicao <= $4)",
             )

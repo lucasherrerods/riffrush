@@ -3,8 +3,8 @@ use chrono::{DateTime, Duration, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::dominio::{cabe_mais_um, inicio_da_janela, ChartGuardado};
-use super::portas::{CacheDeCharts, FilaDoRejulgamento, LimiteDePedidos, PartidaPendente};
+use super::dominio::{cabe_mais_um, inicio_da_janela, ChartGuardado, Rejulgada};
+use super::portas::{CacheDeCharts, FilaDoRejulgamento, LimiteDePedidos, PartidaAntiga, PartidaPendente, PartidasAntigas};
 use crate::modules::conta::{FalhaExterna, FilaDePartidas, PartidaNaFila};
 use crate::modules::progresso::{Dificuldade, Instrumento};
 
@@ -66,6 +66,79 @@ impl FilaDePartidas for RejulgamentoPostgres {
         .await
         .map(|_| ())
         .map_err(falha)
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct LinhaAntiga {
+    id: Uuid,
+    md5: String,
+    dificuldade: String,
+    instrumento: String,
+    replay: Vec<u8>,
+}
+
+#[async_trait]
+impl PartidasAntigas for RejulgamentoPostgres {
+    async fn pegar_antigas(&self, limite: u32) -> Result<Vec<PartidaAntiga>, FalhaExterna> {
+        let linhas = sqlx::query_as::<_, LinhaAntiga>(
+            "SELECT id, substring(musica_id FROM 8) AS md5, dificuldade, instrumento, replay FROM partidas
+             WHERE regras IS NULL AND replay IS NOT NULL AND musica_id LIKE 'encore:%'
+             ORDER BY jogada_em LIMIT $1",
+        )
+        .bind(i64::from(limite))
+        .fetch_all(&self.0)
+        .await
+        .map_err(falha)?;
+        let mut partidas = Vec::with_capacity(linhas.len());
+        for linha in linhas {
+            match (Dificuldade::do_texto(&linha.dificuldade), Instrumento::do_texto(&linha.instrumento)) {
+                (Some(dificuldade), Some(instrumento)) => partidas.push(PartidaAntiga {
+                    id: linha.id,
+                    md5: linha.md5,
+                    dificuldade,
+                    instrumento,
+                    replay: linha.replay,
+                }),
+                _ => self.sem_como_rejulgar(linha.id).await?,
+            }
+        }
+        Ok(partidas)
+    }
+
+    async fn atualizar(&self, id: Uuid, rejulgada: &Rejulgada) -> Result<(), FalhaExterna> {
+        let resumo = &rejulgada.resumo;
+        let vale_ranking = !resumo.derrota && !resumo.fantasma && !rejulgada.sem_falha;
+        sqlx::query(
+            "UPDATE partidas SET pontos = $2, acertos = $3, total = $4, derrota = $5, fantasma = $6, maior_sequencia = $7,
+                    valor_dos_acertos = $8, precisao = $9, velocidade = $10, jeito_de_jogar = $11, regras = 2,
+                    replay = CASE WHEN $9::DOUBLE PRECISION IS NULL THEN NULL ELSE replay END
+             WHERE id = $1",
+        )
+        .bind(id)
+        .bind(i64::try_from(rejulgada.pontos).unwrap_or(i64::MAX))
+        .bind(i32::try_from(resumo.acertos).unwrap_or(i32::MAX))
+        .bind(i32::try_from(resumo.total).unwrap_or(i32::MAX))
+        .bind(resumo.derrota)
+        .bind(resumo.fantasma)
+        .bind(resumo.maior_sequencia.map(|s| i32::try_from(s).unwrap_or(i32::MAX)))
+        .bind(resumo.valor_dos_acertos.map(|v| i32::try_from(v).unwrap_or(i32::MAX)))
+        .bind(vale_ranking.then_some(rejulgada.precisao))
+        .bind(rejulgada.velocidade)
+        .bind(rejulgada.jeito_de_jogar.como_texto())
+        .execute(&self.0)
+        .await
+        .map(|_| ())
+        .map_err(falha)
+    }
+
+    async fn sem_como_rejulgar(&self, id: Uuid) -> Result<(), FalhaExterna> {
+        sqlx::query("UPDATE partidas SET regras = 1 WHERE id = $1")
+            .bind(id)
+            .execute(&self.0)
+            .await
+            .map(|_| ())
+            .map_err(falha)
     }
 }
 

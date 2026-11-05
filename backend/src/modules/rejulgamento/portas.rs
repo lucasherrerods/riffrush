@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use super::dominio::ChartGuardado;
+use super::dominio::{ChartGuardado, Rejulgada};
 use crate::modules::conta::FalhaExterna;
 use crate::modules::progresso::{Dificuldade, Instrumento};
 
@@ -30,6 +30,26 @@ pub trait FilaDoRejulgamento: Send + Sync {
     async fn reagendar(&self, id: Uuid, quando: DateTime<Utc>) -> Result<(), FalhaExterna>;
     /// A partida não tem como valer: fica guardada com o motivo, fora da vez.
     async fn desistir(&self, id: Uuid, motivo: &str) -> Result<(), FalhaExterna>;
+}
+
+/// Uma partida julgada com as regras de antes das do Clone Hero, com o replay guardado para rejulgar.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PartidaAntiga {
+    pub id: Uuid,
+    pub md5: String,
+    pub dificuldade: Dificuldade,
+    pub instrumento: Instrumento,
+    pub replay: Vec<u8>,
+}
+
+#[async_trait]
+pub trait PartidasAntigas: Send + Sync {
+    /// Até `limite` partidas que ainda têm as regras antigas, das mais velhas para as mais novas.
+    async fn pegar_antigas(&self, limite: u32) -> Result<Vec<PartidaAntiga>, FalhaExterna>;
+    /// Troca os números da partida pelos das regras novas. O XP que ela rendeu fica como está.
+    async fn atualizar(&self, id: Uuid, rejulgada: &Rejulgada) -> Result<(), FalhaExterna>;
+    /// Não há como rejulgar: a partida fica com as regras antigas, fora do ranking.
+    async fn sem_como_rejulgar(&self, id: Uuid) -> Result<(), FalhaExterna>;
 }
 
 #[async_trait]

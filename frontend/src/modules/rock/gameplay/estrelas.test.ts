@@ -1,8 +1,16 @@
-import { FAIXAS_DAS_ESTRELAS, estrelasPorPontos, progressoDasEstrelas } from "./estrelas";
+import { FAIXAS_DAS_ESTRELAS, estrelasPorPontos, pontuacaoBase, progressoDasEstrelas } from "./estrelas";
 
-/** 100 notas valem 5.000 pontos de base (50 por nota, sem multiplicador). */
 const NOTAS = 100;
-const base = (vezes: number) => vezes * NOTAS * 50;
+const base = (vezes: number) => vezes * pontuacaoBase(NOTAS);
+
+describe("pontuacaoBase", () => {
+  it("é a partida perfeita sem star power: o multiplicador sobe a cada 10 notas até 4x", () => {
+    expect(pontuacaoBase(9)).toBe(9 * 50);
+    expect(pontuacaoBase(10)).toBe(9 * 50 + 100);
+    // 9 a 1x, 10 a 2x, 10 a 3x e o resto a 4x.
+    expect(pontuacaoBase(100)).toBe(9 * 50 + 10 * 100 + 10 * 150 + 71 * 200);
+  });
+});
 
 describe("progressoDasEstrelas", () => {
   it("começa vazia", () => {
