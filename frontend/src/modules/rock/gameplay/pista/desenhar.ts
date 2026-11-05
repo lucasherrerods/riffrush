@@ -3,7 +3,7 @@ import { cores } from "@/modules/rock/tema";
 import { comAlfa } from "@/shared/styles/tokens";
 import { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ABERTA, COR_DA_ESTRELA, COR_DA_NOTA_PERDIDA, TRILHO_DA_ESTRELA, corDaPista } from "../cores";
 import type { NotaEmJogo } from "../partida";
-import { pontosDoRaio, pulo, tremor } from "./efeitos";
+import { DURACAO_DA_CHAMA, DURACAO_DO_SALTO, forcaDaChama, linguasDeFogo, pontosDoRaio, pulo, saltoDaNota, tremor } from "./efeitos";
 import { cordasDaPista, layoutDaPista, projetar, xDaPista, type LayoutDaPista } from "./geometria";
 
 const LADOS = [-1, 1] as const;
@@ -69,6 +69,11 @@ export const SPRITE_DA_ABERTA = { barra: 600, largura: 640, altura: 80 };
 /** Quantos trastes de largura o rastro do sustain da aberta tem, comparado com o de uma nota. */
 const LARGURA_DO_RASTRO_DA_ABERTA = 4;
 const DURACAO_DA_EXPLOSAO = 0.3;
+const FORCA_DA_CHAMA_DO_SUSTAIN = 0.75;
+/** Tamanho da chama em larguras de traste. */
+const CHAMA = { altura: 1.9, largura: 0.34 };
+/** Quanto a nota sobe no salto, em larguras de traste. */
+const SUBIDA_DO_SALTO = 0.55;
 const DURACAO_DO_ERRO = 0.5;
 const DURACAO_DO_TROVAO = 0.5;
 const ATRAS_DA_LINHA = -0.12;
@@ -389,9 +394,15 @@ export function desenharPista(
 
   // Sem efeitos não há tremor, então não há transformação para desfazer.
   if (!efeitos) return;
+  // A nota acertada salta do traste, e a chama sai por cima dela.
   for (const explosao of soLeves ? [] : cena.explosoes) {
     const idade = tempo - explosao.tempo;
-    if (idade < 0 || idade > DURACAO_DA_EXPLOSAO) continue;
+    if (idade < 0 || idade > Math.max(DURACAO_DO_SALTO, DURACAO_DA_CHAMA, DURACAO_DA_EXPLOSAO)) continue;
+    const salto = saltoDaNota(idade);
+    if (salto) desenharSaltoDaNota(c, layout, sprites, explosao.pista, cena.estrelaAtiva ? COR_DA_ESTRELA : corDaPista(explosao.pista), salto);
+    const forca = forcaDaChama(idade);
+    if (forca > 0) desenharChamaDaPista(c, layout, explosao.pista, cena.estrelaAtiva, Math.round(explosao.tempo * 1000), tempo, forca);
+    if (idade > DURACAO_DA_EXPLOSAO) continue;
     const k = idade / DURACAO_DA_EXPLOSAO;
     // A explosão da aberta sai do meio do braço e é bem maior, porque a nota cobre os cinco trastes.
     const aberta = explosao.pista === PISTA_ABERTA;
@@ -408,12 +419,69 @@ export function desenharPista(
   }
   c.globalAlpha = 1;
 
+  // Enquanto o sustain está sendo segurado, o traste continua pegando fogo.
+  if (!soLeves) {
+    for (let i = cena.primeira; i < ultima; i++) {
+      const nota = cena.notas[i];
+      if (nota.segurando) desenharChamaDaPista(c, layout, nota.pista, cena.estrelaAtiva, nota.pista + 1, tempo, FORCA_DA_CHAMA_DO_SUSTAIN);
+    }
+  }
+
   for (const trovao of cena.trovoes) {
     const idade = tempo - trovao.tempo;
     if (idade < 0 || idade > DURACAO_DO_TROVAO) continue;
     desenharTrovao(c, largura, altura, layout, longe.y, trovao, idade / DURACAO_DO_TROVAO);
   }
   if (tremendo) c.restore();
+}
+
+function desenharSaltoDaNota(c: CanvasRenderingContext2D, layout: LayoutDaPista, sprites: Sprites, pista: number, cor: string, salto: NonNullable<ReturnType<typeof saltoDaNota>>) {
+  const { centro, linhaDeBatida, larguraDoTraste } = layout;
+  const aberta = pista === PISTA_ABERTA;
+  const molde = aberta ? { largura: SPRITE_DA_ABERTA.largura, altura: SPRITE_DA_ABERTA.altura, base: SPRITE_DA_ABERTA.barra / (larguraDoTraste * 5) } : { largura: SPRITE_DA_NOTA.largura, altura: SPRITE_DA_NOTA.altura, base: SPRITE_DA_NOTA.raio / (larguraDoTraste * 0.36) };
+  const largura = (molde.largura / molde.base) * salto.escala;
+  const altura = (molde.altura / molde.base) * salto.escala;
+  const x = aberta ? centro : xDaPista(layout, pista, 1);
+  const y = linhaDeBatida - salto.subida * larguraDoTraste * SUBIDA_DO_SALTO;
+  c.globalAlpha = salto.opacidade;
+  c.drawImage(aberta ? sprites.aberta(cor, false, true) : sprites.nota(cor, false, true), x - largura / 2, y - altura / 2, largura, altura);
+  c.globalAlpha = 1;
+}
+
+/** A chama do traste; a da nota aberta acende os cinco trastes. */
+function desenharChamaDaPista(c: CanvasRenderingContext2D, layout: LayoutDaPista, pista: number, estrela: boolean, semente: number, tempo: number, forca: number) {
+  const aberta = pista === PISTA_ABERTA;
+  const cor = estrela ? COR_DA_ESTRELA : corDaPista(pista);
+  for (let traste = aberta ? 0 : pista; traste <= (aberta ? 4 : pista); traste++) {
+    desenharChama(c, xDaPista(layout, traste, 1), layout.linhaDeBatida, layout.larguraDoTraste, cor, semente + traste * 31, tempo, forca);
+  }
+}
+
+/** Línguas de fogo somando luz: de fora para dentro, a cor do traste, depois o miolo branco. */
+function desenharChama(c: CanvasRenderingContext2D, x: number, y: number, traste: number, cor: string, semente: number, tempo: number, forca: number) {
+  const linguas = linguasDeFogo(semente, tempo, forca);
+  const lingua = (fator: number) => {
+    c.beginPath();
+    for (const { desvio, altura, largura } of linguas) {
+      const meia = traste * CHAMA.largura * largura * fator;
+      const base = x + desvio * traste * CHAMA.largura * 0.7 * fator;
+      const topo = y - traste * CHAMA.altura * altura * fator;
+      c.moveTo(base - meia, y);
+      c.quadraticCurveTo(base - meia * 0.9, (y + topo) / 2, base + desvio * meia * 0.6, topo);
+      c.quadraticCurveTo(base + meia * 0.9, (y + topo) / 2, base + meia, y);
+      // A base é arredondada, para a chama sair de dentro do traste.
+      c.quadraticCurveTo(base, y + meia * 0.6, base - meia, y);
+    }
+    c.fill();
+  };
+  c.globalCompositeOperation = "lighter";
+  c.globalAlpha = 0.85;
+  c.fillStyle = cor;
+  lingua(1);
+  c.globalAlpha = 1;
+  c.fillStyle = cores.texto;
+  lingua(0.55);
+  c.globalCompositeOperation = "source-over";
 }
 
 /** Camadas de cada corda, de fora para dentro: largura relativa, deslocamento lateral e cor. */
