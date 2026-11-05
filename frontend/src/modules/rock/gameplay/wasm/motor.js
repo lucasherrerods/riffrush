@@ -17,6 +17,33 @@ function getStringFromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
 }
+/**
+ * O tempo arredondado para a grade da partida (1 ms).
+ * @param {number} tempo
+ * @returns {number}
+ */
+export function quantizar(tempo) {
+    const ret = wasm.quantizar(tempo);
+    return ret;
+}
+
+/**
+ * 0 é perfeito, 1 ótimo e 2 bom.
+ * @param {number} distancia
+ * @returns {number}
+ */
+export function julgar(distancia) {
+    const ret = wasm.julgar(distancia);
+    return ret;
+}
+
+/**
+ * @returns {number}
+ */
+export function janela_de_acerto() {
+    const ret = wasm.janela_de_acerto();
+    return ret;
+}
 
 let cachedFloat64ArrayMemory0 = null;
 
@@ -30,6 +57,16 @@ function getFloat64ArrayMemory0() {
 function getArrayF64FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return getFloat64ArrayMemory0().subarray(ptr / 8, ptr / 8 + len);
+}
+/**
+ * As velocidades da música que o jogo oferece.
+ * @returns {Float64Array}
+ */
+export function velocidades() {
+    const ret = wasm.velocidades();
+    var v1 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    return v1;
 }
 
 let WASM_VECTOR_LEN = 0;
@@ -63,44 +100,6 @@ function passArray32ToWasm0(arg, malloc) {
     WASM_VECTOR_LEN = arg.length;
     return ptr;
 }
-/**
- * O tempo arredondado para a grade da partida (1 ms).
- * @param {number} tempo
- * @returns {number}
- */
-export function quantizar(tempo) {
-    const ret = wasm.quantizar(tempo);
-    return ret;
-}
-
-/**
- * 0 é perfeito, 1 ótimo e 2 bom.
- * @param {number} distancia
- * @returns {number}
- */
-export function julgar(distancia) {
-    const ret = wasm.julgar(distancia);
-    return ret;
-}
-
-/**
- * As velocidades da música que o jogo oferece.
- * @returns {Float64Array}
- */
-export function velocidades() {
-    const ret = wasm.velocidades();
-    var v1 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
-    return v1;
-}
-
-/**
- * @returns {number}
- */
-export function janela_de_acerto() {
-    const ret = wasm.janela_de_acerto();
-    return ret;
-}
 
 const MotorDaPartidaFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
@@ -121,9 +120,10 @@ export class MotorDaPartida {
     }
     /**
      * O que mudou desde a última chamada, na ordem:
-     * - 19 números do estado: tempo (NaN antes de começar), pontos, sequência, maior sequência, acertos,
-     *   perfeitos, ótimos, bons, valor dos acertos, erros, vida, ticks de star power, barra de star power (0 a 1),
-     *   star power ativo, derrota, fantasma, a primeira nota que ainda importa, o multiplicador e a precisão;
+     * - 22 números do estado: tempo (NaN antes de começar), pontos, sequência, maior sequência, acertos,
+     *   perfeitos, ótimos, bons, valor dos acertos, erros, vida, compassos de star power, barra de star power (0 a 1),
+     *   star power ativo, derrota, fantasma, a primeira nota que ainda importa, o multiplicador, a precisão,
+     *   toques em vão, bônus de solo e full combo;
      * - quantas notas mudaram e, para cada uma, índice, bandeiras e até onde o sustain rendeu;
      * - quantos eventos e, para cada um, código e dois valores;
      * - quantas frases falharam e cada uma.
@@ -161,19 +161,23 @@ export class MotorDaPartida {
         return v1;
     }
     /**
-     * As notas vêm em quatro listas paralelas, que passam para o WASM sem um objeto por nota.
+     * As notas vêm em listas paralelas, que passam para o WASM sem um objeto por nota. `tipos`: 0 strum, 1 HOPO, 2 tap.
+     * `batidas` e `compassos` são os tempos (na música) de cada batida e de cada começo de compasso.
      * @param {Float64Array} tempos
      * @param {Uint8Array} pistas
      * @param {Int32Array} frases
      * @param {Float64Array} duracoes
+     * @param {Uint8Array} tipos
+     * @param {Int32Array} solos
+     * @param {Float64Array} batidas
+     * @param {Float64Array} compassos
      * @param {boolean} sem_falha
      * @param {boolean} fantasma
      * @param {number} velocidade
      * @param {boolean} sem_aberta
      * @param {number} jeito
-     * @param {boolean} pune_toque_em_vazio
      */
-    constructor(tempos, pistas, frases, duracoes, sem_falha, fantasma, velocidade, sem_aberta, jeito, pune_toque_em_vazio) {
+    constructor(tempos, pistas, frases, duracoes, tipos, solos, batidas, compassos, sem_falha, fantasma, velocidade, sem_aberta, jeito) {
         const ptr0 = passArrayF64ToWasm0(tempos, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
         const ptr1 = passArray8ToWasm0(pistas, wasm.__wbindgen_malloc);
@@ -182,7 +186,15 @@ export class MotorDaPartida {
         const len2 = WASM_VECTOR_LEN;
         const ptr3 = passArrayF64ToWasm0(duracoes, wasm.__wbindgen_malloc);
         const len3 = WASM_VECTOR_LEN;
-        const ret = wasm.motordapartida_new(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, sem_falha, fantasma, velocidade, sem_aberta, jeito, pune_toque_em_vazio);
+        const ptr4 = passArray8ToWasm0(tipos, wasm.__wbindgen_malloc);
+        const len4 = WASM_VECTOR_LEN;
+        const ptr5 = passArray32ToWasm0(solos, wasm.__wbindgen_malloc);
+        const len5 = WASM_VECTOR_LEN;
+        const ptr6 = passArrayF64ToWasm0(batidas, wasm.__wbindgen_malloc);
+        const len6 = WASM_VECTOR_LEN;
+        const ptr7 = passArrayF64ToWasm0(compassos, wasm.__wbindgen_malloc);
+        const len7 = WASM_VECTOR_LEN;
+        const ret = wasm.motordapartida_new(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, ptr6, len6, ptr7, len7, sem_falha, fantasma, velocidade, sem_aberta, jeito);
         this.__wbg_ptr = ret >>> 0;
         MotorDaPartidaFinalization.register(this, this.__wbg_ptr, this);
         return this;

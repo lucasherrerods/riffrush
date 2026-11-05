@@ -1,12 +1,12 @@
 //! Lê o .sng do Clone Hero e tira as notas de cada trilha, como `songs/cloneHero.ts` do app.
-//! O tipo da nota (HOPO, tap) muda só o visual, então fica de fora: aqui importam tempo, pista, frase e sustain.
+//! Tempo, pista, frase de star power, sustain, tipo (strum, HOPO, tap) e solo de cada nota, mais as batidas e os compassos.
 
 use std::collections::{BTreeMap, HashMap};
 
 use regex::Regex;
 use sha2::{Digest, Sha256};
 
-use crate::partida::{quantizar, Nota, PISTA_ABERTA};
+use crate::partida::{quantizar, Nota, Ritmo, TipoDaNota, PISTA_ABERTA};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Instrumento {
@@ -267,6 +267,51 @@ pub struct MapaDeTempo {
     pontos: Vec<PontoDeTempo>,
 }
 
+/// Uma fórmula de compasso: no tick, `numerador` batidas de 1/`denominador`.
+#[derive(Debug, Clone, Copy)]
+struct FormulaDeCompasso {
+    tick: f64,
+    numerador: f64,
+    denominador: f64,
+}
+
+/// As batidas (uma por semínima) e os começos de compasso, em segundos, até `ate_segundo`. Como as batidas do app.
+fn ritmo_do_mapa(mapa: &MapaDeTempo, resolucao: f64, formulas: &[FormulaDeCompasso], ate_segundo: f64) -> Ritmo {
+    let mut formulas = formulas.to_vec();
+    formulas.sort_by(|a, b| a.tick.total_cmp(&b.tick));
+    if formulas.first().is_none_or(|f| f.tick > 0.0) {
+        formulas.insert(
+            0,
+            FormulaDeCompasso {
+                tick: 0.0,
+                numerador: 4.0,
+                denominador: 4.0,
+            },
+        );
+    }
+    let mut compassos = Vec::new();
+    for (i, formula) in formulas.iter().enumerate() {
+        let tamanho = ((formula.numerador * 4.0 * resolucao) / formula.denominador).round().max(1.0);
+        let ate = formulas.get(i + 1).map_or(f64::INFINITY, |f| f.tick);
+        let mut tick = formula.tick;
+        while tick < ate && mapa.em_segundos(tick) <= ate_segundo + 1e-9 {
+            compassos.push(mapa.em_segundos(tick));
+            tick += tamanho;
+        }
+    }
+    let mut batidas = Vec::new();
+    let mut tick = 0.0;
+    loop {
+        let tempo = mapa.em_segundos(tick);
+        if tempo > ate_segundo + 1e-9 {
+            break;
+        }
+        batidas.push(tempo);
+        tick += resolucao;
+    }
+    Ritmo { batidas, compassos }
+}
+
 impl MapaDeTempo {
     /// `andamentos` em (tick, microssegundos por semínima).
     pub fn new(resolucao: f64, andamentos: &[(f64, f64)]) -> Self {
@@ -312,6 +357,68 @@ struct NotaEmTicks {
     duracao: f64,
 }
 
+/// O que o chart diz sobre todas as notas de um mesmo tick.
+#[derive(Debug, Clone, Copy, Default)]
+struct Marcas {
+    /// .chart: o marcador 5 inverte o HOPO natural.
+    inverter: bool,
+    /// .mid: as notas de forçar dizem direto se é HOPO (`Some(true)`) ou strum (`Some(false)`).
+    forcar: Option<bool>,
+    tap: bool,
+}
+
+/// Decide o tipo de cada acorde, como o Clone Hero: nota simples perto da anterior (até `limiar` ticks) e que não estava
+/// nela é HOPO natural; as marcas do chart mudam isso, e o tap vale por cima de tudo.
+/// Uma nota aberta junto com trastes não existe no Clone Hero: fica só o traste.
+fn classificar(brutas: &[NotaEmTicks], limiar: f64, marcas_em: &dyn Fn(f64) -> Marcas) -> Vec<(NotaEmTicks, TipoDaNota)> {
+    let mut por_tick: BTreeMap<i64, Vec<NotaEmTicks>> = BTreeMap::new();
+    for nota in brutas {
+        // Ticks vêm de inteiros; a chave inteira dá a mesma ordem numérica.
+        #[allow(clippy::cast_possible_truncation)]
+        por_tick.entry(nota.tick as i64).or_default().push(*nota);
+    }
+    let mut saida = Vec::new();
+    let mut anterior: Option<(f64, Vec<u8>)> = None;
+    for mut acorde in por_tick.into_values() {
+        let tick = acorde[0].tick;
+        if acorde.len() > 1 {
+            acorde.retain(|n| n.pista != PISTA_ABERTA);
+        }
+        let mut pistas: Vec<u8> = acorde.iter().map(|n| n.pista).collect();
+        pistas.sort_unstable();
+        pistas.dedup();
+        let natural = pistas.len() == 1 && anterior.as_ref().is_some_and(|(t, ps)| tick - t <= limiar && !ps.contains(&pistas[0]));
+        let marcas = marcas_em(tick);
+        let hopo = marcas.forcar.unwrap_or(natural != marcas.inverter);
+        let tipo = if marcas.tap {
+            TipoDaNota::Tap
+        } else if hopo {
+            TipoDaNota::Hopo
+        } else {
+            TipoDaNota::Strum
+        };
+        saida.extend(acorde.iter().map(|n| (*n, tipo)));
+        anterior = Some((tick, pistas));
+    }
+    saida
+}
+
+/// Distância máxima para uma nota virar HOPO natural, como o Clone Hero: no .chart, 65/192 de semínima (arredondado
+/// para baixo); no .mid, um terço de semínima mais um tick.
+/// Ticks vêm de inteiros: a chave inteira junta as marcas do mesmo tick.
+#[allow(clippy::cast_possible_truncation)]
+fn chave_do_tick(tick: f64) -> i64 {
+    tick as i64
+}
+
+fn limiar_do_chart(resolucao: f64) -> f64 {
+    (65.0 / 192.0 * resolucao).floor()
+}
+
+fn limiar_do_midi(resolucao: f64) -> f64 {
+    (resolucao / 3.0).floor() + 1.0
+}
+
 #[derive(Debug, Clone, Copy)]
 struct Trecho {
     tick: f64,
@@ -323,57 +430,62 @@ type Trilhas = BTreeMap<(usize, Dificuldade), Vec<Nota>>;
 pub struct ChartLido {
     /// Chave: índice do instrumento em `INSTRUMENTOS` e a dificuldade.
     trilhas: Trilhas,
+    /// Batidas e compassos da música inteira, em segundos.
+    pub ritmo: Ritmo,
 }
 
-/// Uma nota aberta junto com trastes não existe no Clone Hero: fica só o traste.
-fn tirar_abertas_dos_acordes(brutas: &[NotaEmTicks]) -> Vec<NotaEmTicks> {
-    let mut por_tick: BTreeMap<i64, Vec<NotaEmTicks>> = BTreeMap::new();
-    for nota in brutas {
-        // Ticks vêm de inteiros; a chave inteira dá a mesma ordem numérica.
-        #[allow(clippy::cast_possible_truncation)]
-        por_tick.entry(nota.tick as i64).or_default().push(*nota);
-    }
-    por_tick
-        .into_values()
-        .flat_map(|acorde| {
-            if acorde.len() > 1 {
-                acorde.into_iter().filter(|n| n.pista != PISTA_ABERTA).collect()
-            } else {
-                acorde
-            }
-        })
-        .collect()
-}
-
-fn montar_notas(brutas: &[NotaEmTicks], frases: &[Trecho], mapa: &MapaDeTempo, resolucao: f64) -> Vec<Nota> {
-    let mut brutas = tirar_abertas_dos_acordes(brutas);
-    brutas.sort_by(|a, b| a.tick.total_cmp(&b.tick).then(a.pista.cmp(&b.pista)));
+fn montar_notas(classificadas: &[(NotaEmTicks, TipoDaNota)], frases: &[Trecho], solos: &[Trecho], mapa: &MapaDeTempo, resolucao: f64) -> Vec<Nota> {
+    let mut brutas = classificadas.to_vec();
+    brutas.sort_by(|(a, _), (b, _)| a.tick.total_cmp(&b.tick).then(a.pista.cmp(&b.pista)));
     // Sustains muito curtos viram notas simples, como no Clone Hero.
     let sustain_minimo = resolucao / 3.0;
+    let indice = |trechos: &[Trecho], tick: f64| {
+        trechos
+            .iter()
+            .position(|f| tick >= f.tick && tick < f.tick + f.duracao)
+            .and_then(|i| i32::try_from(i).ok())
+            .unwrap_or(-1)
+    };
     brutas
         .iter()
-        .map(|n| {
+        .map(|(n, tipo)| {
             let tempo = mapa.em_segundos(n.tick);
-            let frase = frases.iter().position(|f| n.tick >= f.tick && n.tick < f.tick + f.duracao);
             Nota {
                 tempo,
                 pista: n.pista,
-                frase: frase.and_then(|i| i32::try_from(i).ok()).unwrap_or(-1),
+                frase: indice(frases, n.tick),
                 duracao: if n.duracao >= sustain_minimo {
                     mapa.em_segundos(n.tick + n.duracao) - tempo
                 } else {
                     0.0
                 },
+                tipo: *tipo,
+                solo: indice(solos, n.tick),
             }
         })
         .collect()
 }
 
-fn guardar(trilhas: &mut Trilhas, instrumento: usize, dificuldade: Dificuldade, brutas: &[NotaEmTicks], frases: &[Trecho], mapa: &MapaDeTempo, resolucao: f64) {
-    let notas = montar_notas(brutas, frases, mapa, resolucao);
+#[allow(clippy::too_many_arguments)]
+fn guardar(
+    trilhas: &mut Trilhas,
+    instrumento: usize,
+    dificuldade: Dificuldade,
+    classificadas: &[(NotaEmTicks, TipoDaNota)],
+    frases: &[Trecho],
+    solos: &[Trecho],
+    mapa: &MapaDeTempo,
+    resolucao: f64,
+) {
+    let notas = montar_notas(classificadas, frases, solos, mapa, resolucao);
     if !notas.is_empty() {
         trilhas.insert((instrumento, dificuldade), notas);
     }
+}
+
+/// O fim da última nota de todas as trilhas, para as batidas cobrirem a música inteira.
+fn fim_das_trilhas(trilhas: &Trilhas) -> f64 {
+    trilhas.values().flatten().map(|n| n.tempo + n.duracao).fold(0.0, f64::max) + 4.0
 }
 
 /// O `Number(texto) || padrao` do JavaScript, para os números que o chart escreve.
@@ -413,6 +525,8 @@ fn instrumento_do_chart(instrumento: Instrumento) -> &'static str {
 pub fn ler_chart(conteudo: &str) -> ChartLido {
     let secao = Regex::new(r"\[([^\]]+)\]\s*\{([^}]*)\}").unwrap();
     let andamento = Regex::new(r"^(\d+)\s*=\s*B\s+(\d+)").unwrap();
+    let compasso = Regex::new(r"^(\d+)\s*=\s*TS\s+(\d+)(?:\s+(\d+))?").unwrap();
+    let evento = Regex::new(r"^(\d+)\s*=\s*E\s+(\S+)").unwrap();
     let nota = Regex::new(r"^(\d+)\s*=\s*([NS])\s+(\d+)\s+(\d+)").unwrap();
 
     let mut secoes: HashMap<String, Vec<String>> = HashMap::new();
@@ -440,6 +554,20 @@ pub fn ler_chart(conteudo: &str) -> ChartLido {
         })
         .collect();
     let mapa = MapaDeTempo::new(resolucao, &andamentos);
+    let formulas: Vec<FormulaDeCompasso> = secoes
+        .get("SyncTrack")
+        .into_iter()
+        .flatten()
+        .filter_map(|linha| {
+            let c = compasso.captures(linha)?;
+            Some(FormulaDeCompasso {
+                tick: numero_ou(&c[1], 0.0),
+                numerador: numero_ou(&c[2], 4.0),
+                // O denominador vem como expoente de 2 (2 é 4, 3 é 8); sem ele, é 4.
+                denominador: c.get(3).map_or(4.0, |e| 2f64.powf(numero_ou(e.as_str(), 2.0))),
+            })
+        })
+        .collect();
 
     let mut trilhas = Trilhas::new();
     for (indice, &instrumento) in INSTRUMENTOS.iter().enumerate() {
@@ -449,7 +577,27 @@ pub fn ler_chart(conteudo: &str) -> ChartLido {
             };
             let mut brutas = Vec::new();
             let mut frases = Vec::new();
+            let mut marcas: HashMap<i64, Marcas> = HashMap::new();
+            let mut solos = Vec::new();
+            let mut solo_aberto: Option<f64> = None;
             for linha in linhas {
+                // Os solos vêm como eventos locais da trilha: "E solo" abre, "E soloend" fecha.
+                if let Some(e) = evento.captures(linha) {
+                    let tick = numero_ou(&e[1], 0.0);
+                    match &e[2] {
+                        "solo" => solo_aberto = Some(tick),
+                        "soloend" => {
+                            if let Some(inicio) = solo_aberto.take() {
+                                solos.push(Trecho {
+                                    tick: inicio,
+                                    duracao: tick - inicio + 1.0,
+                                });
+                            }
+                        }
+                        _ => {}
+                    }
+                    continue;
+                }
                 let Some(c) = nota.captures(linha) else { continue };
                 let tick = numero_ou(&c[1], 0.0);
                 let valor = numero_ou(&c[3], 0.0);
@@ -467,14 +615,27 @@ pub fn ler_chart(conteudo: &str) -> ChartLido {
                         pista: PISTA_ABERTA,
                         duracao,
                     }),
+                    // 5 inverte o HOPO natural e 6 é o tap das notas do mesmo tick.
+                    ("N", 5.0) => {
+                        let chave = chave_do_tick(tick);
+                        marcas.entry(chave).or_default().inverter = true;
+                    }
+                    ("N", 6.0) => {
+                        let chave = chave_do_tick(tick);
+                        marcas.entry(chave).or_default().tap = true;
+                    }
                     ("S", 2.0) => frases.push(Trecho { tick, duracao }),
                     _ => {}
                 }
             }
-            guardar(&mut trilhas, indice, dificuldade, &brutas, &frases, &mapa, resolucao);
+            let classificadas = classificar(&brutas, limiar_do_chart(resolucao), &|tick| {
+                marcas.get(&chave_do_tick(tick)).copied().unwrap_or_default()
+            });
+            guardar(&mut trilhas, indice, dificuldade, &classificadas, &frases, &solos, &mapa, resolucao);
         }
     }
-    ChartLido { trilhas }
+    let ritmo = ritmo_do_mapa(&mapa, resolucao, &formulas, fim_das_trilhas(&trilhas));
+    ChartLido { trilhas, ritmo }
 }
 
 fn base_do_midi(dificuldade: Dificuldade) -> u8 {
@@ -497,6 +658,7 @@ fn dificuldade_do_sysex(dificuldade: Dificuldade) -> u8 {
 }
 
 const SYSEX_ABERTA: u8 = 1;
+const SYSEX_TAP: u8 = 4;
 
 fn instrumento_da_faixa(nome: &str) -> Option<Instrumento> {
     match nome {
@@ -529,6 +691,7 @@ struct Faixa {
     sysex: Vec<Sysex>,
     /// (tick, microssegundos por semínima). Valem para o arquivo inteiro, venham de qual faixa vierem.
     andamentos: Vec<(f64, f64)>,
+    formulas: Vec<FormulaDeCompasso>,
 }
 
 /// Trechos marcados por notas MIDI ou sysex: vale do início até antes do fim (ou só o tick, se não durar nada).
@@ -550,6 +713,7 @@ fn ler_faixa(dados: &[u8], inicio: usize, fim: usize) -> Faixa {
         aberturas_melhoradas: false,
         sysex: Vec::new(),
         andamentos: Vec::new(),
+        formulas: Vec::new(),
     };
     let mut abertas: HashMap<u8, f64> = HashMap::new();
     let mut sysex_ligados: HashMap<(u8, u8), f64> = HashMap::new();
@@ -583,6 +747,13 @@ fn ler_faixa(dados: &[u8], inicio: usize, fim: usize) -> Faixa {
             // Com este texto, a nota logo abaixo do verde de cada dificuldade é a aberta.
             if tipo == 0x01 && texto(p, tamanho).contains("ENHANCED_OPENS") {
                 faixa.aberturas_melhoradas = true;
+            }
+            if tipo == 0x58 {
+                faixa.formulas.push(FormulaDeCompasso {
+                    tick,
+                    numerador: f64::from(byte(p)),
+                    denominador: 2f64.powi(i32::from(byte(p + 1))),
+                });
             }
             if tipo == 0x51 {
                 let microssegundos = (u32::from(byte(p)) << 16) | (u32::from(byte(p + 1)) << 8) | u32::from(byte(p + 2));
@@ -659,6 +830,7 @@ pub fn ler_midi(dados: &[u8]) -> Result<ChartLido, ErroDoChart> {
     }
     let andamentos: Vec<(f64, f64)> = faixas.iter().flat_map(|f| f.andamentos.iter().copied()).collect();
     let mapa = MapaDeTempo::new(resolucao, &andamentos);
+    let formulas: Vec<FormulaDeCompasso> = faixas.iter().flat_map(|f| f.formulas.iter().copied()).collect();
 
     let mut por_instrumento: HashMap<Instrumento, &Faixa> = HashMap::new();
     for faixa in &faixas {
@@ -678,15 +850,20 @@ pub fn ler_midi(dados: &[u8]) -> Result<ChartLido, ErroDoChart> {
     let mut trilhas = Trilhas::new();
     for (indice, instrumento) in INSTRUMENTOS.iter().enumerate() {
         let Some(faixa) = por_instrumento.get(instrumento) else { continue };
-        let frases: Vec<Trecho> = faixa
-            .notas
-            .iter()
-            .filter(|n| n.nota == 116)
-            .map(|n| Trecho {
-                tick: n.tick,
-                duracao: n.duracao,
-            })
-            .collect();
+        let trechos_da_nota = |nota: u8| -> Vec<Trecho> {
+            faixa
+                .notas
+                .iter()
+                .filter(|n| n.nota == nota)
+                .map(|n| Trecho {
+                    tick: n.tick,
+                    duracao: n.duracao,
+                })
+                .collect()
+        };
+        let frases = trechos_da_nota(116);
+        let solos = trechos_da_nota(103);
+        let taps = trechos_da_nota(104);
         for dificuldade in DIFICULDADES {
             let base = base_do_midi(dificuldade);
             let trechos_abertos: Vec<Trecho> = faixa
@@ -698,6 +875,21 @@ pub fn ler_midi(dados: &[u8]) -> Result<ChartLido, ErroDoChart> {
                     duracao: s.duracao,
                 })
                 .collect();
+            let do_sysex = |tipo: u8| -> Vec<Trecho> {
+                faixa
+                    .sysex
+                    .iter()
+                    .filter(|s| s.tipo == tipo && (s.dificuldade == dificuldade_do_sysex(dificuldade) || s.dificuldade == 0xff))
+                    .map(|s| Trecho {
+                        tick: s.tick,
+                        duracao: s.duracao,
+                    })
+                    .collect()
+            };
+            let mut trechos_de_tap = taps.clone();
+            trechos_de_tap.extend(do_sysex(SYSEX_TAP));
+            let forca_hopo = trechos_da_nota(base + 5);
+            let forca_strum = trechos_da_nota(base + 6);
             let mut brutas = Vec::new();
             for n in &faixa.notas {
                 if faixa.aberturas_melhoradas && n.nota == base - 1 {
@@ -716,10 +908,23 @@ pub fn ler_midi(dados: &[u8]) -> Result<ChartLido, ErroDoChart> {
                     });
                 }
             }
-            guardar(&mut trilhas, indice, dificuldade, &brutas, &frases, &mapa, resolucao);
+            let marcas_em = |tick: f64| Marcas {
+                inverter: false,
+                forcar: if dentro(&forca_hopo, tick) {
+                    Some(true)
+                } else if dentro(&forca_strum, tick) {
+                    Some(false)
+                } else {
+                    None
+                },
+                tap: dentro(&trechos_de_tap, tick),
+            };
+            let classificadas = classificar(&brutas, limiar_do_midi(resolucao), &marcas_em);
+            guardar(&mut trilhas, indice, dificuldade, &classificadas, &frases, &solos, &mapa, resolucao);
         }
     }
-    Ok(ChartLido { trilhas })
+    let ritmo = ritmo_do_mapa(&mapa, resolucao, &formulas, fim_das_trilhas(&trilhas));
+    Ok(ChartLido { trilhas, ritmo })
 }
 
 impl ChartLido {
@@ -776,6 +981,21 @@ pub fn notas_do_chart(chart: &ChartGuardado, instrumento: Instrumento, dificulda
         .collect())
 }
 
+/// As batidas e os compassos do chart, já descontado o atraso, como as notas.
+pub fn ritmo_do_chart(chart: &ChartGuardado) -> Result<Ritmo, ErroDoChart> {
+    let lido = if chart.midi {
+        ler_midi(&chart.arquivo)?
+    } else {
+        ler_chart(&String::from_utf8_lossy(&chart.arquivo))
+    };
+    let atraso = chart.atraso_ms / 1000.0;
+    let deslocar = |grade: Vec<f64>| grade.into_iter().map(|t| t - atraso).collect();
+    Ok(Ritmo {
+        batidas: deslocar(lido.ritmo.batidas),
+        compassos: deslocar(lido.ritmo.compassos),
+    })
+}
+
 pub fn notas_do_sng(sng: &[u8], instrumento: Instrumento, dificuldade: Dificuldade) -> Result<Vec<Nota>, ErroDoChart> {
     notas_do_chart(&extrair_chart(sng)?, instrumento, dificuldade)
 }
@@ -815,6 +1035,80 @@ mod tests {
         let mapa = MapaDeTempo::new(100.0, &[(0.0, 500_000.0), (200.0, 1_000_000.0)]);
         assert!((mapa.em_segundos(300.0) - 2.0).abs() < 1e-9);
         assert!((MapaDeTempo::new(480.0, &[]).em_segundos(480.0) - 0.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn nota_perto_da_anterior_e_em_outra_pista_vira_hopo_e_as_marcas_mudam_isso() {
+        // Resolução 192: o limiar do HOPO é 65 ticks.
+        let chart = ler_chart(
+            "[Song]
+{
+ Resolution = 192
+}
+[ExpertSingle]
+{
+0 = N 0 0
+64 = N 1 0
+128 = N 1 0
+300 = N 2 0
+364 = N 3 0
+364 = N 5 0
+500 = N 4 0
+500 = N 6 0
+}",
+        );
+        let tipos: Vec<TipoDaNota> = chart.trilha(Instrumento::Guitarra, Dificuldade::Expert).iter().map(|n| n.tipo).collect();
+        assert_eq!(
+            tipos,
+            [
+                TipoDaNota::Strum,
+                TipoDaNota::Hopo,
+                TipoDaNota::Strum,
+                TipoDaNota::Strum,
+                TipoDaNota::Strum,
+                TipoDaNota::Tap
+            ]
+        );
+    }
+
+    #[test]
+    fn os_eventos_de_solo_marcam_as_notas_do_solo() {
+        let chart = ler_chart(
+            "[ExpertSingle]
+{
+0 = N 0 0
+192 = E solo
+192 = N 1 0
+384 = N 2 0
+384 = E soloend
+576 = N 3 0
+}",
+        );
+        let solos: Vec<i32> = chart.trilha(Instrumento::Guitarra, Dificuldade::Expert).iter().map(|n| n.solo).collect();
+        assert_eq!(solos, [-1, 0, 0, -1]);
+    }
+
+    #[test]
+    fn o_ritmo_segue_a_formula_de_compasso() {
+        // 120 BPM, compasso de 3/4: uma batida a cada 0,5 s e um compasso a cada 1,5 s.
+        let chart = ler_chart(
+            "[Song]
+{
+ Resolution = 192
+}
+[SyncTrack]
+{
+0 = TS 3
+0 = B 120000
+}
+[ExpertSingle]
+{
+0 = N 0 0
+768 = N 0 0
+}",
+        );
+        assert_eq!(&chart.ritmo.batidas[..4], &[0.0, 0.5, 1.0, 1.5]);
+        assert_eq!(&chart.ritmo.compassos[..3], &[0.0, 1.5, 3.0]);
     }
 
     #[test]

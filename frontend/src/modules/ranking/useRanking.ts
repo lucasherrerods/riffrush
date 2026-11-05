@@ -14,23 +14,25 @@ export interface OpcoesDoRanking {
   jeito?: JeitoDeJogar;
   /** Sem ela, pelos pontos. */
   ordem?: OrdemDoRanking;
+  /** Como no Clone Hero, cada velocidade da música tem o próprio ranking. Sem ela, a normal. */
+  velocidade?: number;
 }
 
 export type EstadoDoRanking = { tipo: "carregando" } | { tipo: "pronto"; ranking: RespostaDoRanking } | { tipo: "erro" };
 
 /** Busca o ranking da música; descarta respostas de pedidos que já mudaram. */
-export function useRanking(musicaId: string, dificuldade: Dificuldade, instrumento: Instrumento, { api = apiDoRanking, atrasoMs = 300, lerToken = () => sessaoDaConta.token(), jeito = "gamepad", ordem = "pontos" }: OpcoesDoRanking = {}) {
+export function useRanking(musicaId: string, dificuldade: Dificuldade, instrumento: Instrumento, { api = apiDoRanking, atrasoMs = 300, lerToken = () => sessaoDaConta.token(), jeito = "gamepad", ordem = "pontos", velocidade = 1 }: OpcoesDoRanking = {}) {
   // Entrar ou sair da conta muda o recorde pessoal: a conta entra no pedido.
   const contaId = useConta().conta?.id ?? null;
-  const pedido = useValorAtrasado(`${musicaId}\n${dificuldade}\n${instrumento}\n${jeito}\n${ordem}\n${contaId}`, atrasoMs);
+  const pedido = useValorAtrasado(`${musicaId}\n${dificuldade}\n${instrumento}\n${jeito}\n${ordem}\n${velocidade}\n${contaId}`, atrasoMs);
   const [estado, setEstado] = useState<EstadoDoRanking>({ tipo: "carregando" });
 
   useEffect(() => {
-    const [id, dificuldadePedida, instrumentoPedido, jeitoPedido, ordemPedida] = pedido.split("\n") as [string, Dificuldade, Instrumento, JeitoDeJogar, OrdemDoRanking];
+    const [id, dificuldadePedida, instrumentoPedido, jeitoPedido, ordemPedida, velocidadePedida] = pedido.split("\n") as [string, Dificuldade, Instrumento, JeitoDeJogar, OrdemDoRanking, string];
     const controle = new AbortController();
     setEstado({ tipo: "carregando" });
     api
-      .buscar(id, dificuldadePedida, { instrumento: instrumentoPedido, jeito: jeitoPedido, ordem: ordemPedida, token: lerToken() ?? undefined, sinal: controle.signal })
+      .buscar(id, dificuldadePedida, { instrumento: instrumentoPedido, jeito: jeitoPedido, ordem: ordemPedida, velocidade: Number(velocidadePedida), token: lerToken() ?? undefined, sinal: controle.signal })
       .then((ranking) => !controle.signal.aborted && setEstado({ tipo: "pronto", ranking }))
       .catch(() => !controle.signal.aborted && setEstado({ tipo: "erro" }));
     return () => controle.abort();

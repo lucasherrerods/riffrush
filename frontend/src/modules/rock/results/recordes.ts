@@ -87,7 +87,7 @@ export function anotarRecorde(resultado: Resultado) {
   if (anterior && anterior.pontos >= resultado.pontos) return false;
   mudar({
     ...atuais,
-    [chave]: { pontos: resultado.pontos, estrelas: estrelasDoResultado(resultado), fullCombo: resultado.acertos === resultado.total, precisao: resultado.precisao },
+    [chave]: { pontos: resultado.pontos, estrelas: estrelasDoResultado(resultado), fullCombo: resultado.fullCombo ?? resultado.acertos === resultado.total, precisao: resultado.precisao },
   });
   return true;
 }

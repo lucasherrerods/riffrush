@@ -11,7 +11,9 @@ use riffrush_api::modules::moderacao::{Denuncia, ModeracaoPostgres, RepositorioD
 use riffrush_api::modules::perfil::{PerfilPostgres, RepositorioDoPerfil};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar, ResumoDaPartida};
 use riffrush_api::modules::ranking::{MusicaPopular, Ordem, RankingPostgres, RepositorioDoRanking};
-use riffrush_api::modules::rejulgamento::{CacheDeCharts, ChartGuardado, FilaDoRejulgamento, LimiteDePedidos, RejulgamentoPostgres, PEDIDOS_AO_ENCORE};
+use riffrush_api::modules::rejulgamento::{
+    CacheDeCharts, ChartGuardado, FilaDoRejulgamento, LimiteDePedidos, PartidasAntigas, RejulgamentoPostgres, PEDIDOS_AO_ENCORE,
+};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -94,6 +96,7 @@ async fn partida_soma_xp_e_marca_a_ultima() {
         replay: None,
         precisao: None,
         jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
+        velocidade: Some(1.0),
         rodada: None,
     };
     assert_eq!(banco.registrar_partida(&partida).await.unwrap().xp_total, 120);
@@ -132,6 +135,7 @@ async fn excluir_apaga_a_conta_com_sessoes_e_partidas() {
         replay: None,
         precisao: None,
         jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
+        velocidade: Some(1.0),
         rodada: None,
     };
     banco.registrar_partida(&partida).await.unwrap();
@@ -170,6 +174,7 @@ async fn ranking_pega_o_recorde_de_cada_jogador_pelos_pontos() {
         replay: None,
         precisao,
         jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
+        velocidade: Some(1.0),
         rodada: None,
     };
     let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -205,6 +210,7 @@ async fn ranking_pega_o_recorde_de_cada_jogador_pelos_pontos() {
             Dificuldade::Expert,
             Instrumento::Guitarra,
             JeitoDeJogar::Gamepad,
+            1.0,
             Ordem::Pontos,
             2,
             Some(caio.id),
@@ -220,6 +226,7 @@ async fn ranking_pega_o_recorde_de_cada_jogador_pelos_pontos() {
             Dificuldade::Facil,
             Instrumento::Guitarra,
             JeitoDeJogar::Gamepad,
+            1.0,
             Ordem::Pontos,
             50,
             None
@@ -228,7 +235,16 @@ async fn ranking_pega_o_recorde_de_cada_jogador_pelos_pontos() {
         .unwrap()
         .is_empty());
     let baixo = ranking
-        .linhas(&musica, Dificuldade::Expert, Instrumento::Baixo, JeitoDeJogar::Gamepad, Ordem::Pontos, 50, None)
+        .linhas(
+            &musica,
+            Dificuldade::Expert,
+            Instrumento::Baixo,
+            JeitoDeJogar::Gamepad,
+            1.0,
+            Ordem::Pontos,
+            50,
+            None,
+        )
         .await
         .unwrap();
     assert_eq!(baixo.iter().map(|l| (l.conta_id, l.pontos)).collect::<Vec<_>>(), [(caio.id, 9999)]);
@@ -259,6 +275,7 @@ async fn o_ranking_mostra_o_jeito_de_jogar_de_cada_recorde() {
         replay: None,
         precisao: Some(0.9),
         jeito_de_jogar,
+        velocidade: Some(1.0),
         rodada: None,
     };
     let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -267,7 +284,7 @@ async fn o_ranking_mostra_o_jeito_de_jogar_de_cada_recorde() {
     banco.registrar_partida(&jogar(ana.id, 500, Some(JeitoDeJogar::Tapping))).await.unwrap();
     banco.registrar_partida(&jogar(bia.id, 800, Some(JeitoDeJogar::Tapping))).await.unwrap();
 
-    let pedir = |jeito| ranking.linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, jeito, Ordem::Pontos, 10, None);
+    let pedir = |jeito| ranking.linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, jeito, 1.0, Ordem::Pontos, 10, None);
     let tapping = pedir(JeitoDeJogar::Tapping).await.unwrap();
     assert_eq!(
         tapping.iter().map(|l| (l.conta_id, l.pontos, l.posicao, l.jogadores)).collect::<Vec<_>>(),
@@ -276,6 +293,69 @@ async fn o_ranking_mostra_o_jeito_de_jogar_de_cada_recorde() {
     let palhetada = pedir(JeitoDeJogar::Palhetada).await.unwrap();
     assert_eq!(palhetada.iter().map(|l| (l.conta_id, l.pontos)).collect::<Vec<_>>(), [(ana.id, 900)]);
     assert!(pedir(JeitoDeJogar::Gamepad).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn cada_velocidade_tem_o_proprio_ranking_e_as_partidas_antigas_ficam_fora_ate_rejulgar() {
+    let Some(banco) = banco().await else { return };
+    let ranking = RankingPostgres(banco.0.clone());
+    let musica = format!("encore:{}", Uuid::new_v4().simple());
+    let jogar = |conta_id: Uuid, pontos: u64, velocidade: f64| PartidaRegistrada {
+        id: Uuid::new_v4(),
+        conta_id,
+        musica_id: musica.clone(),
+        instrumento: Instrumento::Guitarra,
+        pontos,
+        resumo: ResumoDaPartida {
+            dificuldade: Dificuldade::Expert,
+            acertos: 9,
+            total: 10,
+            derrota: false,
+            fantasma: false,
+            maior_sequencia: Some(5),
+            valor_dos_acertos: None,
+        },
+        xp_ganho: 0,
+        jogada_em: Utc::now(),
+        replay: Some(vec![6, 1, 2]),
+        precisao: Some(0.9),
+        jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
+        velocidade: Some(velocidade),
+        rodada: None,
+    };
+    let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
+    let antiga = jogar(bia.id, 5000, 1.0);
+    banco.registrar_partida(&jogar(ana.id, 900, 1.0)).await.unwrap();
+    banco.registrar_partida(&jogar(ana.id, 1200, 1.5)).await.unwrap();
+    banco.registrar_partida(&antiga).await.unwrap();
+    // Uma partida das regras antigas: sai do ranking até o servidor rejulgar o replay dela.
+    sqlx::query("UPDATE partidas SET regras = NULL, velocidade = NULL WHERE id = $1")
+        .bind(antiga.id)
+        .execute(&banco.0)
+        .await
+        .unwrap();
+
+    let pedir = |velocidade| {
+        ranking.linhas(
+            &musica,
+            Dificuldade::Expert,
+            Instrumento::Guitarra,
+            JeitoDeJogar::Gamepad,
+            velocidade,
+            Ordem::Pontos,
+            10,
+            None,
+        )
+    };
+    assert_eq!(pedir(1.0).await.unwrap().iter().map(|l| l.pontos).collect::<Vec<_>>(), [900]);
+    assert_eq!(pedir(1.5).await.unwrap().iter().map(|l| l.pontos).collect::<Vec<_>>(), [1200]);
+
+    let rejulgamento = RejulgamentoPostgres(banco.0.clone());
+    let antigas = rejulgamento.pegar_antigas(1000).await.unwrap();
+    assert!(antigas.iter().any(|p| p.id == antiga.id && p.md5 == musica["encore:".len()..]));
+    rejulgamento.sem_como_rejulgar(antiga.id).await.unwrap();
+    assert!(!rejulgamento.pegar_antigas(1000).await.unwrap().iter().any(|p| p.id == antiga.id));
 }
 
 #[tokio::test]
@@ -319,6 +399,7 @@ async fn ranking_por_precisao_pega_a_partida_de_mais_precisao_de_cada_jogador() 
         replay: None,
         precisao,
         jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
+        velocidade: Some(1.0),
         rodada: None,
     };
     let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -341,6 +422,7 @@ async fn ranking_por_precisao_pega_a_partida_de_mais_precisao_de_cada_jogador() 
             Dificuldade::Expert,
             Instrumento::Guitarra,
             JeitoDeJogar::Gamepad,
+            1.0,
             Ordem::Precisao,
             10,
             None,
@@ -378,6 +460,7 @@ async fn perfil_soma_por_dificuldade_e_traz_as_ultimas_partidas() {
         replay: None,
         precisao: None,
         jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
+        velocidade: Some(1.0),
         rodada: None,
     };
     for partida in [
@@ -450,6 +533,7 @@ async fn ranking_geral_ordena_por_xp_e_ignora_quem_nao_jogou() {
             replay: None,
             precisao: None,
             jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
+            velocidade: Some(1.0),
             rodada: None,
         })
         .await
@@ -497,6 +581,7 @@ async fn musicas_mais_jogadas_contam_partidas_e_jogadores_diferentes() {
                 replay: None,
                 precisao: None,
                 jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
+                velocidade: Some(1.0),
                 rodada: None,
             })
             .await
@@ -544,6 +629,7 @@ async fn a_rodada_da_sala_conta_uma_partida_so_nas_mais_jogadas() {
                 replay: None,
                 precisao: None,
                 jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
+                velocidade: Some(1.0),
                 rodada,
             })
             .await
@@ -579,6 +665,7 @@ async fn ranking_geral_da_a_posicao_certa_fora_do_top_e_no_empate() {
         replay: None,
         precisao: None,
         jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
+        velocidade: Some(1.0),
         rodada: None,
     };
     let primeiro = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
@@ -631,6 +718,7 @@ async fn a_linha_do_ranking_abre_a_partida_com_a_maior_sequencia() {
             replay: None,
             precisao: Some(0.9),
             jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
+            velocidade: Some(1.0),
             rodada: None,
         })
         .await
@@ -642,6 +730,7 @@ async fn a_linha_do_ranking_abre_a_partida_com_a_maior_sequencia() {
             Dificuldade::Dificil,
             Instrumento::Baixo,
             JeitoDeJogar::Gamepad,
+            1.0,
             Ordem::Pontos,
             10,
             None,
@@ -689,6 +778,7 @@ async fn so_o_top_10_guarda_replay_e_quem_cai_perde_o_dele() {
         replay: Some(vec![1, replay]),
         precisao: Some(0.9),
         jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
+        velocidade: Some(1.0),
         rodada: None,
     };
     let com_replay = || async {
@@ -710,6 +800,7 @@ async fn so_o_top_10_guarda_replay_e_quem_cai_perde_o_dele() {
             Dificuldade::Facil,
             Instrumento::Guitarra,
             JeitoDeJogar::Gamepad,
+            1.0,
             Ordem::Pontos,
             10,
             None,
@@ -830,6 +921,7 @@ async fn recordes_pegam_a_melhor_partida_terminada_de_cada_musica() {
         replay: None,
         precisao: Some(pontos as f64 / 1000.0),
         jeito_de_jogar: Some(JeitoDeJogar::Gamepad),
+        velocidade: Some(1.0),
         rodada: None,
     };
     for partida in [

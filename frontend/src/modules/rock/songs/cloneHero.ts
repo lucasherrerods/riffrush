@@ -181,7 +181,7 @@ function classificar(brutas: NotaEmTicks[], limiar: number, marcasEm: (tick: num
 const dentro = (trechos: { tick: number; duracao: number }[], tick: number) =>
   trechos.some((t) => tick >= t.tick && (tick < t.tick + t.duracao || (t.duracao === 0 && tick === t.tick)));
 
-function montarNotas(brutas: NotaClassificada[], frases: { tick: number; duracao: number }[], mapa: MapaDeTempo, resolucao: number): Nota[] {
+function montarNotas(brutas: NotaClassificada[], frases: { tick: number; duracao: number }[], solos: { tick: number; duracao: number }[], mapa: MapaDeTempo, resolucao: number): Nota[] {
   brutas.sort((a, b) => a.tick - b.tick || a.pista - b.pista);
   // Sustains muito curtos viram notas simples, como no Clone Hero.
   const sustainMinimo = resolucao / 3;
@@ -193,6 +193,7 @@ function montarNotas(brutas: NotaClassificada[], frases: { tick: number; duracao
       ...(n.tipo && { tipo: n.tipo }),
       frase: frases.findIndex((f) => n.tick >= f.tick && n.tick < f.tick + f.duracao),
       duracao: n.duracao >= sustainMinimo ? mapa.emSegundos(n.tick + n.duracao) - tempo : 0,
+      solo: solos.findIndex((f) => n.tick >= f.tick && n.tick < f.tick + f.duracao),
     };
   });
 }
@@ -211,9 +212,10 @@ function guardarTrilha(notas: ChartLido["notas"], instrumento: Instrumento, difi
   (notas[instrumento] ??= {})[dificuldade] = trilha;
 }
 
-/** Distância máxima, em semínimas, para uma nota virar HOPO natural (os padrões do Clone Hero). */
-const LIMIAR_DO_HOPO_NO_CHART = 65 / 192;
-const LIMIAR_DO_HOPO_NO_MIDI = 170 / 480;
+/** Distância máxima, em ticks, para uma nota virar HOPO natural, como o Clone Hero: no .chart, 65/192 de semínima
+ * arredondado para baixo; no .mid, um terço de semínima mais um tick. O motor em Rust usa os mesmos. */
+const limiarDoChart = (resolucao: number) => Math.floor((65 / 192) * resolucao);
+const limiarDoMidi = (resolucao: number) => Math.floor(resolucao / 3) + 1;
 
 /** Formato .chart, em texto. */
 export function lerChart(conteudo: string): ChartLido {
@@ -258,8 +260,20 @@ export function lerChart(conteudo: string): ChartLido {
     if (!linhas) continue;
     const brutas: NotaEmTicks[] = [];
     const frases: { tick: number; duracao: number }[] = [];
+    const solos: { tick: number; duracao: number }[] = [];
+    let soloAberto: number | null = null;
     const marcas = new Map<number, Marcas>();
     for (const linha of linhas) {
+      // Os solos vêm como eventos locais da trilha: "E solo" abre, "E soloend" fecha.
+      const evento = linha.match(/^(\d+)\s*=\s*E\s+(\S+)/);
+      if (evento) {
+        if (evento[2] === "solo") soloAberto = Number(evento[1]);
+        else if (evento[2] === "soloend" && soloAberto !== null) {
+          solos.push({ tick: soloAberto, duracao: Number(evento[1]) - soloAberto + 1 });
+          soloAberto = null;
+        }
+        continue;
+      }
       const encontrado = linha.match(/^(\d+)\s*=\s*([NS])\s+(\d+)\s+(\d+)/);
       if (!encontrado) continue;
       const tick = Number(encontrado[1]);
@@ -271,8 +285,8 @@ export function lerChart(conteudo: string): ChartLido {
       else if (encontrado[2] === "N" && (valor === 5 || valor === 6)) marcas.set(tick, { ...marcas.get(tick), [valor === 5 ? "inverter" : "tap"]: true });
       else if (encontrado[2] === "S" && valor === 2) frases.push({ tick, duracao });
     }
-    const classificadas = classificar(brutas, LIMIAR_DO_HOPO_NO_CHART * resolucao, (tick) => marcas.get(tick) ?? {});
-    if (classificadas.length) guardarTrilha(notas, instrumento, dificuldade, montarNotas(classificadas, frases, mapa, resolucao));
+    const classificadas = classificar(brutas, limiarDoChart(resolucao), (tick) => marcas.get(tick) ?? {});
+    if (classificadas.length) guardarTrilha(notas, instrumento, dificuldade, montarNotas(classificadas, frases, solos, mapa, resolucao));
   }
   return { notas, mapa, secoes: lerSecoes(eventos, mapa) };
 }
@@ -283,6 +297,7 @@ const NOTA_MIDI_STAR_POWER = 116;
 const FORCAR_HOPO = 5;
 const FORCAR_COMUM = 6;
 const NOTA_MIDI_TAP = 104;
+const NOTA_MIDI_SOLO = 103;
 /** Dificuldade nos sysex do Phase Shift: 0 é o fácil, 3 o expert, 0xFF todas. */
 const DIFICULDADE_DO_SYSEX: Record<Dificuldade, number> = { facil: 0, medio: 1, dificil: 2, expert: 3 };
 const SYSEX_ABERTA = 1;
@@ -402,6 +417,7 @@ export function lerMidi(dados: Uint8Array): ChartLido {
     if (!faixa) continue;
     const frases = faixa.notas.filter((n) => n.nota === NOTA_MIDI_STAR_POWER).map((n) => ({ tick: n.tick, duracao: n.duracao }));
     const taps = faixa.notas.filter((n) => n.nota === NOTA_MIDI_TAP);
+    const solos = faixa.notas.filter((n) => n.nota === NOTA_MIDI_SOLO).map((n) => ({ tick: n.tick, duracao: n.duracao }));
     for (const [dificuldade, base] of Object.entries(NOTA_MIDI_BASE) as [Dificuldade, number][]) {
       const doSysex = (tipo: number) => faixa.sysex.filter((s) => s.tipo === tipo && (s.dificuldade === DIFICULDADE_DO_SYSEX[dificuldade] || s.dificuldade === 0xff));
       const trechosAbertos = doSysex(SYSEX_ABERTA);
@@ -417,11 +433,11 @@ export function lerMidi(dados: Uint8Array): ChartLido {
           brutas.push({ tick: n.tick, pista: aberta ? PISTA_ABERTA : n.nota - base, duracao: n.duracao });
         }
       }
-      const classificadas = classificar(brutas, LIMIAR_DO_HOPO_NO_MIDI * resolucao, (tick) => ({
+      const classificadas = classificar(brutas, limiarDoMidi(resolucao), (tick) => ({
         tap: dentro(trechosDeTap, tick),
         forcar: dentro(forcaHopo, tick) ? "hopo" : dentro(forcaComum, tick) ? "comum" : undefined,
       }));
-      if (classificadas.length) guardarTrilha(notas, instrumento, dificuldade, montarNotas(classificadas, frases, mapa, resolucao));
+      if (classificadas.length) guardarTrilha(notas, instrumento, dificuldade, montarNotas(classificadas, frases, solos, mapa, resolucao));
     }
   }
   const eventos = faixas.find((f) => f.nome === "EVENTS")?.textos ?? [];

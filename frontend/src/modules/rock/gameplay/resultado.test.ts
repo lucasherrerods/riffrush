@@ -19,6 +19,7 @@ describe("resultadoDaPartida", () => {
       total: 3,
       julgamentos: { perfeito: 2, otimo: 0, bom: 0 },
       precisao: 2 / 3,
+      fullCombo: false,
       maiorSequencia: 2,
       derrota: false,
       fantasma: false,

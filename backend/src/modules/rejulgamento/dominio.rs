@@ -18,6 +18,8 @@ pub struct Rejulgada {
     /// Jogou com o modificador sem falha: a vida não acaba, então a partida não vale para o ranking.
     pub sem_falha: bool,
     pub jeito_de_jogar: JeitoDeJogar,
+    /// A velocidade da música no replay: o ranking separa as partidas por ela.
+    pub velocidade: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
@@ -74,15 +76,16 @@ pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Di
     if motor::hash_do_chart(&notas) != replay.hash_do_chart {
         return Err(Recusa::ChartDiferente);
     }
-    let mut partida = motor::criar_partida(
+    let ritmo = motor::ritmo_do_chart(chart).map_err(|_| Recusa::ChartInvalido)?;
+    let mut partida = motor::criar_partida_com_ritmo(
         &notas,
+        &ritmo,
         motor::OpcoesDaPartida {
             sem_falha: replay.sem_falha,
             fantasma: replay.fantasma,
             velocidade: replay.velocidade,
             sem_aberta: replay.sem_aberta,
             jeito: replay.jeito,
-            pune_toque_em_vazio: replay.pune_toque_em_vazio,
         },
     );
     motor::aplicar_entradas(&mut partida, &replay.entradas);
@@ -106,7 +109,9 @@ pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Di
         perfeitos: partida.perfeitos,
         otimos: partida.otimos,
         bons: partida.bons,
-        precisao: f64::from(partida.valor_dos_acertos) / (f64::from(total) * 300.0),
+        // Notas acertadas sobre as do chart, como a porcentagem do Clone Hero.
+        precisao: f64::from(partida.acertos) / f64::from(total),
+        velocidade: replay.velocidade,
         sem_falha: replay.sem_falha,
         jeito_de_jogar: match replay.jeito {
             motor::JeitoDeJogar::Tapping => JeitoDeJogar::Tapping,
@@ -187,7 +192,6 @@ pub mod testes {
             sem_aberta: false,
             velocidade,
             jeito: motor::JeitoDeJogar::Gamepad,
-            pune_toque_em_vazio: false,
             hash_do_chart: motor::hash_do_chart(&notas),
             entradas,
         })
@@ -208,14 +212,15 @@ mod tests {
             &chart,
             Instrumento::Guitarra,
             Dificuldade::Expert,
-            &replay(&chart, &[(0, 0.0), (1, 0.05), (2, 0.1)]),
+            &replay(&chart, &[(0, 0.0), (1, 0.03), (2, 0.06)]),
         )
         .unwrap();
         assert_eq!((rejulgada.resumo.acertos, rejulgada.resumo.total), (3, 4));
         assert_eq!((rejulgada.perfeitos, rejulgada.otimos, rejulgada.bons), (1, 1, 1));
         assert_eq!(rejulgada.resumo.maior_sequencia, Some(3));
         assert_eq!(rejulgada.resumo.valor_dos_acertos, Some(600));
-        assert!((rejulgada.precisao - 600.0 / 1200.0).abs() < 1e-9);
+        // A precisão é de notas acertadas, como a porcentagem do Clone Hero.
+        assert!((rejulgada.precisao - 3.0 / 4.0).abs() < 1e-9);
         assert_eq!(rejulgada.pontos, 150);
     }
 
@@ -259,7 +264,6 @@ mod tests {
                 sem_aberta,
                 velocidade: 1.0,
                 jeito: motor::JeitoDeJogar::Gamepad,
-                pune_toque_em_vazio: false,
                 // O hash é sempre o do chart original, com a aberta.
                 hash_do_chart: motor::hash_do_chart(&notas),
                 entradas: toques(pista_da_aberta).collect(),
@@ -296,7 +300,7 @@ mod tests {
     }
 
     #[test]
-    fn rejulga_o_toque_em_vazio_so_nos_replays_que_tem_a_regra() {
+    fn o_toque_em_vazio_quebra_a_sequencia_em_qualquer_replay() {
         let chart = chart();
         let mut lido = motor::desempacotar_replay(&replay(&chart, &[(0, 0.0), (1, 0.0)])).unwrap();
         let primeira = lido.entradas[0];
@@ -308,12 +312,10 @@ mod tests {
                 ..primeira
             },
         );
-        let sem_regra = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &motor::empacotar_replay(&lido)).unwrap();
-        lido.pune_toque_em_vazio = true;
-        let com_regra = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &motor::empacotar_replay(&lido)).unwrap();
-        assert_eq!(sem_regra.resumo.maior_sequencia, Some(2));
-        assert_eq!(com_regra.resumo.maior_sequencia, Some(1));
-        assert_eq!(com_regra.resumo.acertos, 2);
+        // Todo replay, de qualquer versão, toca com as regras do Clone Hero: o aperto em vão quebra a sequência.
+        let rejulgada = rejulgar(&chart, Instrumento::Guitarra, Dificuldade::Expert, &motor::empacotar_replay(&lido)).unwrap();
+        assert_eq!(rejulgada.resumo.maior_sequencia, Some(1));
+        assert_eq!(rejulgada.resumo.acertos, 2);
     }
 
     #[test]
@@ -345,7 +347,9 @@ mod tests {
         )
         .unwrap();
         assert_eq!((normal.resumo.acertos, lenta.resumo.acertos, rapida.resumo.acertos), (4, 4, 4));
-        assert_eq!((normal.pontos, lenta.pontos, rapida.pontos), (200, 100, 300));
+        // Como no Clone Hero, a velocidade não mexe nos pontos: ela vai junto para o ranking separar.
+        assert_eq!((normal.pontos, lenta.pontos, rapida.pontos), (200, 200, 200));
+        assert_eq!((normal.velocidade, lenta.velocidade, rapida.velocidade), (1.0, 0.5, 1.5));
         assert_eq!(
             rejulgar(
                 &chart,

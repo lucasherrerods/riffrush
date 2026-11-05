@@ -1,7 +1,7 @@
 import { rotuloDaVelocidade, velocidadesDaMusica } from "@/modules/rock/gameplay";
 import { cn } from "@/shared/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/ui/dialog";
-import { multiplicadorDePontos, proximaVelocidade } from "../modificadores";
+import { proximaVelocidade, rankingDaVelocidade } from "../modificadores";
 import { IconeDeModificador } from "./IconeDeModificador";
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
 
 /** Os modificadores da partida, escolhidos antes de tocar. Clique avança o nível; o botão direito volta. */
 export function ModalDeModificadores({ aberto, aoMudarAberto, velocidadeDaMusica, aoMudarVelocidade }: Props) {
-  const multiplicador = multiplicadorDePontos({ velocidadeDaMusica });
+  const ranking = rankingDaVelocidade({ velocidadeDaMusica });
   const velocidadeAtiva = velocidadeDaMusica !== 1;
   const mudarVelocidade = (passo: number) => aoMudarVelocidade(proximaVelocidade(velocidadesDaMusica(), velocidadeDaMusica, passo));
 
@@ -21,8 +21,8 @@ export function ModalDeModificadores({ aberto, aoMudarAberto, velocidadeDaMusica
     <Dialog open={aberto} onOpenChange={aoMudarAberto}>
       <DialogContent className="max-w-xl">
         <DialogTitle>Modificadores</DialogTitle>
-        <p className={cn("font-titulo text-2xl tracking-wide", multiplicador > 1 ? "text-sucesso" : multiplicador < 1 ? "text-destaque" : "text-texto")}>
-          Multiplicador de pontos: {rotuloDaVelocidade(multiplicador)}
+        <p className={cn("font-titulo text-2xl tracking-wide", ranking ? "text-destaque" : "text-texto")}>
+          {ranking ? `Ranking de ${rotuloDaVelocidade(ranking)}` : "Ranking normal"}
         </p>
         <DialogDescription>Clique para mudar o nível. O botão direito volta um nível.</DialogDescription>
         <div className="flex flex-wrap gap-4">

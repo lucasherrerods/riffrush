@@ -25,6 +25,8 @@ pub struct PartidaRegistrada {
     pub precisao: Option<f64>,
     /// Só as partidas que o servidor rejulgou sabem: vem do replay.
     pub jeito_de_jogar: Option<JeitoDeJogar>,
+    /// A velocidade da música, do replay. O ranking separa as partidas por ela.
+    pub velocidade: Option<f64>,
     /// A mesma para as partidas de uma música tocada junto na sala. Solo fica sem.
     pub rodada: Option<Uuid>,
 }

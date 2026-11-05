@@ -40,6 +40,8 @@ export interface Nota {
   frase: number;
   /** Segundos de sustain; 0 é nota simples. */
   duracao: number;
+  /** Notas do mesmo solo têm o mesmo id; sem ele (ou -1), fora de solo. */
+  solo?: number;
 }
 
 // As seções e as batidas também servem ao treino do Mania: a definição fica no treino compartilhado.

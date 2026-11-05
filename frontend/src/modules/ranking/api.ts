@@ -99,10 +99,24 @@ export function criarApiDoRanking(base: string, buscar?: typeof fetch) {
     buscar: (
       musicaId: string,
       dificuldade: Dificuldade,
-      { instrumento = "guitarra", jeito = "gamepad", ordem = "pontos", token, sinal }: { instrumento?: Instrumento; jeito?: JeitoDeJogar; ordem?: OrdemDoRanking; token?: string; sinal?: AbortSignal } = {},
+      {
+        instrumento = "guitarra",
+        jeito = "gamepad",
+        velocidade = 1,
+        ordem = "pontos",
+        token,
+        sinal,
+      }: { instrumento?: Instrumento; jeito?: JeitoDeJogar; velocidade?: number; ordem?: OrdemDoRanking; token?: string; sinal?: AbortSignal } = {},
     ) => {
-      // Os pontos são o padrão da API: o pedido só leva a ordem quando ela muda.
-      const parametros = new URLSearchParams({ musica_id: musicaId, dificuldade, instrumento, jeito_de_jogar: jeito, ...(ordem === "precisao" && { ordem }) });
+      // Os pontos e a velocidade normal são o padrão da API: o pedido só leva o que muda.
+      const parametros = new URLSearchParams({
+        musica_id: musicaId,
+        dificuldade,
+        instrumento,
+        jeito_de_jogar: jeito,
+        ...(ordem === "precisao" && { ordem }),
+        ...(velocidade !== 1 && { velocidade: String(velocidade) }),
+      });
       return chamar<unknown>("GET", `/ranking?${parametros}`, { token, sinal }).then(conferirRanking<PosicaoNoRanking>);
     },
     geral: ({ token, sinal }: { token?: string; sinal?: AbortSignal } = {}) =>

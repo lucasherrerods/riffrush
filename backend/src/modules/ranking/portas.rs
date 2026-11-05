@@ -7,7 +7,7 @@ use crate::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar};
 
 #[async_trait]
 pub trait RepositorioDoRanking: Send + Sync {
-    /// As linhas do `jeito` até a posição `ate` e, se `conta` tiver recorde nele, a linha dela, já numeradas pela `ordem`.
+    /// As linhas do `jeito` e da `velocidade` até a posição `ate` e, se `conta` tiver recorde nele, a linha dela, já numeradas pela `ordem`.
     #[allow(clippy::too_many_arguments)]
     async fn linhas(
         &self,
@@ -15,6 +15,7 @@ pub trait RepositorioDoRanking: Send + Sync {
         dificuldade: Dificuldade,
         instrumento: Instrumento,
         jeito: JeitoDeJogar,
+        velocidade: f64,
         ordem: Ordem,
         ate: u32,
         conta: Option<Uuid>,

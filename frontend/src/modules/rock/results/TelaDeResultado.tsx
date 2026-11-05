@@ -40,7 +40,7 @@ export function TelaDeResultado(props: Props) {
   const estreita = useTelaEstreita();
   const estrelas = estrelasDoResultado(resultado);
   const precisao = resultado.precisao ?? (resultado.total ? resultado.acertos / resultado.total : 0);
-  const fullCombo = resultado.total > 0 && resultado.acertos === resultado.total;
+  const fullCombo = resultado.fullCombo ?? (resultado.total > 0 && resultado.acertos === resultado.total);
 
   useEffect(() => {
     const contagem = animate(0, resultado.pontos, {
