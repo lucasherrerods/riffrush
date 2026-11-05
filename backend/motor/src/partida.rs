@@ -12,6 +12,8 @@ const JANELA_DO_OTIMO: f64 = 0.05;
 const FOLGA_DA_PALHETADA: f64 = 0.05;
 /// Depois de acertar um HOPO ou tap, uma palhetada logo em seguida é engolida, sem punir.
 const FOLGA_DO_HOPO: f64 = 0.08;
+/// Até quanto antes da nota uma troca de trastes ainda vale para o HOPO ou tap que chega depois dela.
+const FRENTE_DA_TROCA: f64 = 0.08;
 const VIDA_INICIAL: f64 = 0.5;
 const VIDA_POR_ACERTO: f64 = 0.02;
 const VIDA_POR_ERRO: f64 = 0.03;
@@ -166,9 +168,9 @@ pub struct NotaEmJogo {
 /// Como as teclas viram notas.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum JeitoDeJogar {
-    /// Cada aperto acerta uma nota, e só uma.
+    /// Cada aperto acerta uma nota, e só uma. Soltar só toca o pull-off para o traste segurado.
     Tapping,
-    /// Soltar a tecla depois de um acerto também acerta a próxima nota da pista.
+    /// Soltar a tecla depois de um acerto também acerta a próxima nota da pista, e o pull-off para o traste segurado.
     #[default]
     Gamepad,
     /// Como a guitarra do Clone Hero: trastes, palheta, HOPO, tap e âncora.
@@ -280,6 +282,9 @@ pub struct Partida {
     palhetada_pendente: Option<f64>,
     /// Até quando uma palhetada é engolida, depois de um HOPO ou tap acertado só no traste.
     engole_palhetada_ate: f64,
+    /// Quando os trastes mudaram pela última vez sem que uma nota usasse a troca. Como no Clone Hero e no YARG,
+    /// o HOPO ou tap que entra na janela com os trastes já certos sai sozinho, se a troca veio a tempo.
+    troca_pendente: Option<f64>,
     eventos: Vec<Evento>,
 }
 
@@ -365,6 +370,7 @@ pub fn criar_partida_com_ritmo(notas: &[Nota], ritmo: &Ritmo, opcoes: OpcoesDaPa
         apertados: HashSet::new(),
         palhetada_pendente: None,
         engole_palhetada_ate: f64::NEG_INFINITY,
+        troca_pendente: None,
         eventos: Vec::new(),
     }
 }
@@ -455,6 +461,7 @@ pub fn acertar(partida: &mut Partida, indice: usize, tempo: f64) {
     if partida.notas[indice].acertada || partida.notas[indice].perdida {
         return;
     }
+    partida.troca_pendente = None;
     let mesmo_acorde = partida
         .notas
         .iter()
@@ -515,6 +522,7 @@ fn quebrar_sequencia(partida: &mut Partida) {
 }
 
 fn errar(partida: &mut Partida, indice: usize) {
+    partida.troca_pendente = None;
     let nota = &mut partida.notas[indice];
     nota.perdida = true;
     let (frase, solo) = (nota.frase, nota.solo);
@@ -582,11 +590,13 @@ pub fn tocar(partida: &mut Partida, pista: u8, tempo: f64) -> bool {
     if partida.derrota {
         return false;
     }
+    // A nota aberta tem tecla própria no gamepad e no tapping: ela não conta como traste apertado.
+    if pista != PISTA_ABERTA {
+        partida.apertados.insert(pista);
+    }
+    partida.troca_pendente = Some(tempo);
     match partida.jeito {
-        JeitoDeJogar::Palhetada => {
-            partida.apertados.insert(pista);
-            mudou_os_trastes(partida, tempo, Some(pista))
-        }
+        JeitoDeJogar::Palhetada => mudou_os_trastes(partida, tempo, Some(pista)),
         JeitoDeJogar::Tapping => {
             let acertou = acertar_mais_proxima(partida, pista, tempo);
             if !acertou && !acabou_de_acertar(partida, pista, tempo) {
@@ -761,6 +771,7 @@ pub fn soltar(partida: &mut Partida, pista: u8, tempo: f64) {
     let tempo = trazer_ate(partida, tempo);
     let armada = partida.armadas.remove(&pista);
     partida.apertados.remove(&pista);
+    partida.troca_pendente = Some(tempo);
     let mut largou_cedo = false;
     for nota in partida.notas.iter_mut().skip(partida.primeira) {
         if nota.tempo > tempo {
@@ -780,8 +791,21 @@ pub fn soltar(partida: &mut Partida, pista: u8, tempo: f64) {
     }
     if partida.jeito == JeitoDeJogar::Palhetada {
         mudou_os_trastes(partida, tempo, None);
-    } else if armada && !largou_cedo {
-        acertar_mais_proxima(partida, pista, tempo);
+    } else if !(partida.jeito == JeitoDeJogar::Gamepad && armada && !largou_cedo && acertar_mais_proxima(partida, pista, tempo)) {
+        pull_off_no_traste_segurado(partida, tempo);
+    }
+}
+
+/// Sem palheta (gamepad e tapping): soltar o traste de cima toca o HOPO ou tap do traste que ficou segurado embaixo,
+/// como o pull-off da palhetada. A nota aberta tem tecla própria nesses jeitos e fica de fora.
+fn pull_off_no_traste_segurado(partida: &mut Partida, tempo: f64) {
+    if partida.apertados.is_empty() {
+        return;
+    }
+    let Some(acorde) = proximo_acorde(partida, tempo) else { return };
+    let sem_aberta = acorde.iter().all(|&i| partida.notas[i].pista != PISTA_ABERTA);
+    if sem_aberta && trastes_tocam(partida, &acorde) && sai_sem_palheta(partida, &acorde) {
+        acertar_acorde(partida, &acorde, tempo);
     }
 }
 
@@ -841,8 +865,32 @@ fn fim_da_estrela(partida: &Partida, agora: f64) -> f64 {
 
 enum Acontecimento {
     Perdida(usize),
+    HopoNosTrastes(Vec<usize>),
     FimDaEstrela,
     PalhetadaEmVao,
+}
+
+/// O próximo HOPO ou tap que os trastes já apertados tocam: sai quando a janela dele abre (ou na troca, se ela veio
+/// depois), desde que a troca de trastes tenha sido no máximo `FRENTE_DA_TROCA` antes da nota. É o que deixa soltar
+/// o traste de cima antes da hora no começo de Through the Fire and Flames e ainda pegar o verde segurado.
+fn hopo_nos_trastes(partida: &Partida) -> Option<(f64, Acontecimento)> {
+    let trocou = partida.troca_pendente?;
+    let inicio = (partida.primeira..partida.notas.len()).find(|&i| !partida.notas[i].acertada && !partida.notas[i].perdida)?;
+    let batida = partida.notas[inicio].tempo;
+    let acorde: Vec<usize> = (inicio..partida.notas.len())
+        .take_while(|&i| partida.notas[i].tempo == batida)
+        .filter(|&i| !partida.notas[i].acertada && !partida.notas[i].perdida)
+        .collect();
+    let aberta = acorde.iter().any(|&i| partida.notas[i].pista == PISTA_ABERTA);
+    if batida - trocou > FRENTE_DA_TROCA + 1e-9
+        || (aberta && partida.jeito != JeitoDeJogar::Palhetada)
+        || !sai_sem_palheta(partida, &acorde)
+        || !trastes_tocam(partida, &acorde)
+    {
+        return None;
+    }
+    let quando = quantizar((batida - JANELA_DE_ACERTO).max(trocou));
+    (quando <= quantizar(batida + JANELA_DE_ACERTO)).then_some((quando, Acontecimento::HopoNosTrastes(acorde)))
 }
 
 /// O próximo acontecimento até `tempo`: uma nota perdida, o fim do star power ou a folga da palhetada acabando.
@@ -861,6 +909,9 @@ fn proximo_acontecimento(partida: &Partida, tempo: f64) -> Option<(f64, Aconteci
     }
     if let (true, Some(agora)) = (partida.estrela_ativa, partida.tempo) {
         candidatos.push((fim_da_estrela(partida, agora), Acontecimento::FimDaEstrela));
+    }
+    if let Some(acontecimento) = hopo_nos_trastes(partida) {
+        candidatos.push(acontecimento);
     }
     if let Some(palhetou) = partida.palhetada_pendente {
         candidatos.push((quantizar(palhetou + FOLGA_DA_PALHETADA), Acontecimento::PalhetadaEmVao));
@@ -889,6 +940,10 @@ pub fn avancar(partida: &mut Partida, tempo: f64) {
         assentar(partida, quando.max(partida.tempo.unwrap_or(quando)));
         match acontecimento {
             Acontecimento::Perdida(indice) => errar(partida, indice),
+            Acontecimento::HopoNosTrastes(acorde) => {
+                acertar_acorde(partida, &acorde, quando);
+                partida.engole_palhetada_ate = quando + FOLGA_DO_HOPO;
+            }
             Acontecimento::FimDaEstrela => {
                 mudar_estrela(partida, 0.0);
                 partida.estrela_ativa = false;
@@ -1059,6 +1114,135 @@ mod tests {
         assert!(tocar(&mut partida, 1, 1.2));
         assert!(tocar(&mut partida, 2, 1.4));
         assert_eq!(partida.sequencia, 3);
+    }
+
+    #[test]
+    fn o_pull_off_para_o_verde_segurado_acerta_sem_apertar_o_verde_de_novo() {
+        // O começo de Through the Fire and Flames: verde, vermelho, verde, amarelo, verde em HOPO.
+        let notas = [
+            na_pista(1.0, 0),
+            do_tipo(1.2, 1, TipoDaNota::Hopo),
+            do_tipo(1.4, 0, TipoDaNota::Hopo),
+            do_tipo(1.6, 2, TipoDaNota::Hopo),
+            do_tipo(1.8, 0, TipoDaNota::Hopo),
+        ];
+        let mut partida = palhetada(&notas);
+        tocar(&mut partida, 0, 0.95);
+        assert!(palhetar(&mut partida, 1.0));
+        assert!(tocar(&mut partida, 1, 1.2));
+        soltar(&mut partida, 1, 1.4);
+        assert!(tocar(&mut partida, 2, 1.6));
+        soltar(&mut partida, 2, 1.8);
+        assert_eq!((partida.acertos, partida.sequencia, partida.toques_em_vazio), (5, 5, 0));
+    }
+
+    /// Through the Fire and Flames em qualquer jeito: o verde segurado e os de cima apertados e soltos.
+    fn verde_segurado(jeito: JeitoDeJogar) -> Partida {
+        let notas = [
+            na_pista(1.0, 0),
+            do_tipo(1.075, 1, TipoDaNota::Hopo),
+            do_tipo(1.15, 0, TipoDaNota::Hopo),
+            do_tipo(1.225, 2, TipoDaNota::Hopo),
+            do_tipo(1.3, 0, TipoDaNota::Hopo),
+        ];
+        let mut partida = criar_partida(&notas, com_jeito(jeito));
+        tocar(&mut partida, 0, 1.0);
+        if jeito == JeitoDeJogar::Palhetada {
+            palhetar(&mut partida, 1.0);
+        }
+        tocar(&mut partida, 1, 1.075);
+        soltar(&mut partida, 1, 1.15);
+        tocar(&mut partida, 2, 1.225);
+        soltar(&mut partida, 2, 1.3);
+        partida
+    }
+
+    #[test]
+    fn o_pull_off_para_o_traste_segurado_vale_em_todos_os_jeitos() {
+        for jeito in [JeitoDeJogar::Palhetada, JeitoDeJogar::Gamepad, JeitoDeJogar::Tapping] {
+            let partida = verde_segurado(jeito);
+            assert_eq!((partida.acertos, partida.sequencia, partida.toques_em_vazio), (5, 5, 0), "{jeito:?}");
+        }
+    }
+
+    #[test]
+    fn fora_da_palhetada_soltar_nao_toca_a_nota_comum_do_traste_segurado() {
+        for jeito in [JeitoDeJogar::Gamepad, JeitoDeJogar::Tapping] {
+            let mut partida = criar_partida(&[na_pista(1.0, 1), na_pista(1.1, 0)], com_jeito(jeito));
+            tocar(&mut partida, 0, 0.9);
+            tocar(&mut partida, 1, 1.0);
+            soltar(&mut partida, 1, 1.1);
+            assert_eq!(partida.acertos, 1, "{jeito:?}");
+        }
+    }
+
+    /// O começo de Through the Fire and Flames tocado rápido: cada traste de cima é apertado 40 ms antes e solto
+    /// 20 ms depois, antes de a janela do verde abrir.
+    fn verde_com_toques_rapidos(jeito: JeitoDeJogar) -> Partida {
+        let passo = 0.075;
+        let pistas = [0, 1, 0, 2, 0, 3, 0, 2, 0];
+        let notas: Vec<Nota> = pistas
+            .iter()
+            .enumerate()
+            .map(|(i, &p)| {
+                if i == 0 {
+                    na_pista(1.0, p)
+                } else {
+                    do_tipo(1.0 + i as f64 * passo, p, TipoDaNota::Hopo)
+                }
+            })
+            .collect();
+        let mut partida = criar_partida(&notas, com_jeito(jeito));
+        tocar(&mut partida, 0, 0.98);
+        if jeito == JeitoDeJogar::Palhetada {
+            palhetar(&mut partida, 1.0);
+        }
+        for (i, &p) in pistas.iter().enumerate().skip(1).step_by(2) {
+            let tempo = 1.0 + i as f64 * passo;
+            tocar(&mut partida, p, tempo - 0.04);
+            soltar(&mut partida, p, tempo - 0.02);
+        }
+        avancar(&mut partida, 2.0);
+        partida
+    }
+
+    #[test]
+    fn soltar_antes_da_janela_ainda_pega_o_hopo_do_traste_segurado() {
+        for jeito in [JeitoDeJogar::Palhetada, JeitoDeJogar::Gamepad, JeitoDeJogar::Tapping] {
+            let partida = verde_com_toques_rapidos(jeito);
+            assert_eq!((partida.acertos, partida.erros, partida.toques_em_vazio), (9, 0, 0), "{jeito:?}");
+        }
+    }
+
+    #[test]
+    fn a_troca_de_trastes_so_vale_ate_80_ms_antes_do_hopo() {
+        let notas = [na_pista(1.0, 0), do_tipo(1.2, 1, TipoDaNota::Hopo), do_tipo(1.5, 0, TipoDaNota::Hopo)];
+        let mut partida = palhetada(&notas);
+        tocar(&mut partida, 0, 0.98);
+        palhetar(&mut partida, 1.0);
+        tocar(&mut partida, 1, 1.2);
+        // Soltou o vermelho 100 ms antes do verde: a troca já não vale, e o verde passa.
+        soltar(&mut partida, 1, 1.4);
+        avancar(&mut partida, 2.0);
+        assert_eq!((partida.acertos, partida.erros), (2, 1));
+    }
+
+    #[test]
+    fn sem_troca_de_trastes_o_hopo_do_mesmo_traste_nao_sai_sozinho() {
+        let notas = [na_pista(1.0, 1), do_tipo(1.075, 1, TipoDaNota::Hopo)];
+        let mut partida = palhetada(&notas);
+        tocar(&mut partida, 1, 0.98);
+        palhetar(&mut partida, 1.0);
+        avancar(&mut partida, 2.0);
+        assert_eq!((partida.acertos, partida.erros), (1, 1));
+    }
+
+    #[test]
+    fn sem_sequencia_o_hopo_nao_sai_sozinho() {
+        let mut partida = palhetada(&[do_tipo(1.0, 1, TipoDaNota::Hopo)]);
+        tocar(&mut partida, 1, 0.95);
+        avancar(&mut partida, 2.0);
+        assert_eq!(partida.acertos, 0);
     }
 
     #[test]

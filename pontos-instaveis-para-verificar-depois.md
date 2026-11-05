@@ -43,6 +43,12 @@ Problemas encontrados de passagem, fora do escopo da mudança que estava sendo f
 - Suspeita: o modo é carregado sob demanda (`carregarTelaDoMania`) e demora mais que o limite padrão com a máquina sob carga, como o teste das configurações acima.
 - Próximo passo: ver qual `findBy` estoura e dar a ele um `timeout` maior, ou pré-carregar o modo no teste.
 
+## Testes do menu e da sala estouram o tempo na suíte inteira
+- Onde: `frontend/src/modules/menu/MenuPrincipal.test.tsx` ("Tutoriais abre os tutoriais...") e `frontend/src/modules/multiplayer/sala.test.ts` ("criar a sala abre o servidor...").
+- O que se viu: em 05/11/2026 falharam na suíte completa junto com os de carregamento e de modo; rodando os arquivos sozinhos, passaram.
+- Suspeita: o mesmo limite de 5 s com a máquina sob carga (a suíte levou mais de 8 minutos).
+- Próximo passo: ver se a suíte com `pool: 'vmThreads'` ou menos workers some com esses estouros antes de mexer em cada `timeout`.
+
 ## `frontend/src/app/App.modo.test.tsx` › "monta o jogo do modo ativo"
 - Onde: `npm test` com a suíte inteira, na branch da seleção do Mania.
 - O que se viu: falhou uma vez na suíte inteira; rodando o arquivo sozinho passa, com e sem a mudança.
