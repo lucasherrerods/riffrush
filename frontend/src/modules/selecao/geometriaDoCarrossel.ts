@@ -38,6 +38,12 @@ export function passosDoArraste(acumulado: number) {
   return { passos, resto: acumulado - passos * ALTURA_DA_MUSICA };
 }
 
+/** O índice depois de andar pela roda: passa da última para a primeira e vice-versa, como o teclado e a roda do mouse fazem. */
+export function indiceDandoAVolta(indice: number, passos: number, quantidade: number) {
+  if (quantidade <= 0) return 0;
+  return (((indice + passos) % quantidade) + quantidade) % quantidade;
+}
+
 /** Limita os passos para o arraste parar na primeira e na última música, sem dar a volta. */
 export function passosSemDarAVolta(indice: number, passos: number, quantidade: number) {
   return Math.min(Math.max(indice + passos, 0), quantidade - 1) - indice;
