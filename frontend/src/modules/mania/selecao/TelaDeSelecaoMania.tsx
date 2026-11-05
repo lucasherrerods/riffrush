@@ -229,7 +229,7 @@ export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, a
       <div className="col-span-7 flex min-h-0 flex-col gap-4 max-md:col-span-1">
         {!!todos.length && (
           <div className="flex flex-wrap items-end gap-4">
-            <Input type="search" placeholder="Título, artista, mapper ou dificuldade" aria-label="Filtrar mapas" value={texto} onChange={(e) => setTexto(e.target.value)} className="min-w-48 flex-1" />
+            <Input type="search" placeholder="Buscar na biblioteca" aria-label="Filtrar mapas" value={texto} onChange={(e) => setTexto(e.target.value)} className="min-w-48 flex-1" />
             {opcoesDeTeclas.length > 1 && (
               <GrupoDeOpcoes
                 titulo="Teclas"
