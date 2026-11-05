@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronsUp } from "lucide-react";
 import { PALHETA_DO_CONTROLE, veioDoControle } from "@/modules/gamepad";
 import { tocarEfeito } from "@/modules/audio";
@@ -20,6 +20,7 @@ import { NOMES_DAS_PISTAS } from "./cores";
 import { progressoDasEstrelas } from "./estrelas";
 import { useLoja, type LojaDoHud } from "./lojaDoHud";
 import { avancar, criarPartida, multiplicador, precisao, retirarEventos, type Julgamento } from "./partida";
+import { ABERTURA, aberturaPodeComecar, ritmoDaAbertura } from "./abertura";
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { trovaoDoEvento } from "./pista/efeitos";
 import type { layoutDaPista } from "./pista/geometria";
@@ -107,6 +108,8 @@ interface Props {
   instrumento: Instrumento;
   opcoes: OpcoesDaPartida;
   velocidade: number;
+  /** A entrada com o trovão ainda cobre a tela: a abertura da pista espera. */
+  esperandoEntrada?: boolean;
   /** Segundos de abertura antes da música, para o palco e a pista. */
   entrada: number;
   relogio: RelogioDaPartida;
@@ -148,6 +151,7 @@ export function PistaDoJogador(props: Props) {
   const marcarFaixa = (pista: number, apertada: boolean) => faixas.current[pista]?.toggleAttribute("data-apertada", apertada);
   const toques = useRef<{ apertar: (pista: number, evento: Event) => void; largar: (pista: number) => void }>({ apertar: nada, largar: nada });
   const temAberta = useMemo(() => carregada.notas.some((n) => n.pista === PISTA_ABERTA), [carregada]);
+  const [hudEntrou, setHudEntrou] = useState(false);
   const [aviso, setAviso] = useState<{ id: number; texto: string; estrela: boolean } | null>(null);
 
   useEffect(() => {
@@ -204,6 +208,10 @@ export function PistaDoJogador(props: Props) {
     let reacao: Reacao | null = null;
     const reagir = (tipo: Reacao["tipo"]) => (reacao = novaReacao(reacao, tipo));
     let ultimoTrovao = -Infinity;
+    // A abertura só existe quando a partida começa pela contagem.
+    let inicioDaAbertura: number | null | undefined = opcoes.efeitos ? undefined : null;
+    let ritmo = 1;
+    let quadroAnterior = -Infinity;
     let terminou = false;
     let quadro = 0;
     // Com o bot o recorde não vale, então também não tem festa.
@@ -416,9 +424,20 @@ export function PistaDoJogador(props: Props) {
         reacao,
       };
 
+      const agoraNoQuadro = performance.now();
+      if (inicioDaAbertura === undefined) {
+        if (tempo >= 0) inicioDaAbertura = null;
+        else if (aberturaPodeComecar(!!atuais.current.esperandoEntrada, agoraNoQuadro - quadroAnterior)) {
+          inicioDaAbertura = tempo;
+          ritmo = ritmoDaAbertura(-tempo);
+        }
+      }
+      quadroAnterior = agoraNoQuadro;
+      const desdeAAbertura = inicioDaAbertura === null ? null : inicioDaAbertura === undefined ? 0 : (tempo - inicioDaAbertura) * ritmo;
+      if (desdeAAbertura === null || desdeAAbertura >= ABERTURA.atrasoDoHud) setHudEntrou(true);
       const elemento = canvas.current;
       // Com palco, a pista some na abertura para a cena dominar e volta até a música começar. Só escreve quando muda.
-      const opacidade = atuais.current.comPalco ? opacidadeDaPista(tempo, entrada) : 1;
+      const opacidade = atuais.current.comPalco && inicioDaAbertura === null ? opacidadeDaPista(tempo, entrada) : 1;
       if (elemento && opacidade !== opacidadeEscrita) {
         opacidadeEscrita = opacidade;
         elemento.style.opacity = String(opacidade);
@@ -449,6 +468,7 @@ export function PistaDoJogador(props: Props) {
             frasesFalhas: partida.frasesFalhas,
             trovoes,
             estrelaDesde,
+            abertura: desdeAAbertura,
           },
           opcoes.efeitos,
           sprites,
@@ -585,7 +605,7 @@ export function PistaDoJogador(props: Props) {
         </div>
       )}
 
-      <HudDaPartida loja={loja} layout={layout} estreita={estreita} comPalco={comPalco} pausado={pausado} derrota={derrota} personagem={personagemDoHud} bpm={(props.musica.bpm || 120) * velocidade} aoEstrela={() => controle.current.estrela()} />
+      <HudDaPartida loja={loja} layout={layout} estreita={estreita} comPalco={comPalco} pausado={pausado} derrota={derrota} comAbertura={opcoes.efeitos} hudEntrou={hudEntrou} personagem={personagemDoHud} bpm={(props.musica.bpm || 120) * velocidade} aoEstrela={() => controle.current.estrela()} />
 
       <AnimatePresence>
         {aviso && (
@@ -613,6 +633,9 @@ interface PropsDoHud {
   comPalco: boolean;
   pausado: boolean;
   derrota: boolean;
+  /** O amplificador e o medidor entram na tela, cada um do seu lado. */
+  comAbertura: boolean;
+  hudEntrou: boolean;
   /** Sem ele, o HUD não mostra o personagem. */
   personagem: Personagem | null;
   bpm: number;
@@ -620,8 +643,14 @@ interface PropsDoHud {
 }
 
 /** Tudo que muda junto com o placar. Cada pedaço lê da loja só o que mostra, então só ele re-renderiza. */
-function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, personagem, bpm, aoEstrela }: PropsDoHud) {
+function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, comAbertura, hudEntrou, personagem, bpm, aoEstrela }: PropsDoHud) {
   const avatarDoJogador = (className: string) => personagem && <AvatarDoHud loja={loja} personagem={personagem} derrota={derrota} bpm={bpm} className={className} />;
+
+  const semMovimento = useReducedMotion();
+  const entrarDoLado = (lado: -1 | 1) =>
+    comAbertura && !semMovimento
+      ? { initial: { x: `${lado * 100}vw` }, animate: { x: hudEntrou ? 0 : `${lado * 100}vw` }, transition: { duration: ABERTURA.duracaoDoHud, ease: "easeOut" as const } }
+      : {};
 
   return (
     <>
@@ -632,6 +661,7 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
         style={estreita ? undefined : { left: Math.max(layout.centro - layout.largura / 2 - 24, LARGURA_DO_PAINEL + MARGEM_DO_HUD) }}
       >
         {/* O aviso fica no painel, acima da precisão, e não em cima da pista: não tapa as notas que vêm chegando. */}
+        <motion.div data-parte="entrada-do-placar" {...entrarDoLado(-1)}>
         <PlacarDoHud
           loja={loja}
           compacto={estreita}
@@ -645,16 +675,17 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, pers
             )
           }
         />
+        </motion.div>
       </div>
 
       {!estreita && (
         <div data-parte="hud-lateral" className="absolute bottom-10 flex flex-col items-center" style={{ left: Math.min(layout.centro + layout.largura / 2 + 24, layout.centro * 2 - LARGURA_DO_HUD_LATERAL - MARGEM_DO_HUD) }}>
           {/* Com o palco, o personagem já está em cena atrás da pista. */}
           {!comPalco && avatarDoJogador("mb-2 h-44 w-auto")}
-          <div className="flex items-end gap-4">
+          <motion.div data-parte="entrada-do-medidor" className="flex items-end gap-4" {...entrarDoLado(1)}>
             <EstrelasDoHud loja={loja} />
             <MedidorDoHud loja={loja} />
-          </div>
+          </motion.div>
         </div>
       )}
 
@@ -703,5 +734,5 @@ function MedidorDoHud({ loja }: { loja: LojaDoHud<Hud> }) {
 
 function ContagemDoHud({ loja, pausado }: { loja: LojaDoHud<Hud>; pausado: boolean }) {
   const contagem = useLoja(loja, (h) => h.contagem);
-  return <AnimatePresence>{contagem > 0 && !pausado && <NumeroDaContagem key={contagem} valor={contagem} />}</AnimatePresence>;
+  return <AnimatePresence>{contagem > 0 && contagem <= 3 && !pausado && <NumeroDaContagem key={contagem} valor={contagem} />}</AnimatePresence>;
 }

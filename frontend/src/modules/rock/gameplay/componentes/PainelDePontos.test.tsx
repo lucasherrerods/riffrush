@@ -47,6 +47,13 @@ describe("PainelDePontos", () => {
     expect(screen.getByTestId("numero-do-multiplicador")).toHaveTextContent(/^3$/);
   });
 
+  it("o painel tem largura fixa, para o aviso de acerto não mover o amplificador", () => {
+    render(<PainelDePontos {...base} aviso={<p>PERFEITO</p>} />);
+    expect(screen.getByTestId("painel")).toHaveClass("w-56", "items-start");
+    // O aviso tem linha própria, para caber na largura do painel e não sair em cima da pista.
+    expect(screen.getByTestId("linha-do-aviso").parentElement).toBe(screen.getByTestId("painel"));
+  });
+
   it("combo e precisão ficam fora do amplificador, logo abaixo", () => {
     render(<PainelDePontos {...base} />);
     expect(screen.getByTestId("grade")).not.toContainElement(screen.getByLabelText("Sequência"));

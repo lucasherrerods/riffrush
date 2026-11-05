@@ -130,9 +130,9 @@ describe("desenharPista", () => {
     expect(desenhar(apertado, 0, false).desenhos()).toHaveLength(0);
   });
 
-  it("a nota acertada salta do traste e a chama soma luz por cima", () => {
+  it("no acerto o aro levanta sem desenhar outra nota, e a chama soma luz", () => {
     const canvas = desenhar(cena([], { explosoes: [{ pista: 2, tempo: 1 }] }), 1.06);
-    expect(canvas.desenhos()).toContainEqual(expect.objectContaining({ tipo: "nota" }));
+    expect(canvas.desenhos()).not.toContainEqual(expect.objectContaining({ tipo: "nota" }));
     expect(canvas.chamadas.some((ch) => ch.metodo === "quadraticCurveTo")).toBe(true);
     expect(canvas.chamadas.some((ch) => ch.metodo === "=globalCompositeOperation" && ch.args[0] === "lighter")).toBe(true);
   });
@@ -147,9 +147,16 @@ describe("desenharPista", () => {
     expect(temChama(true, true)).toBe(false);
   });
 
+  it("na abertura a pista sobe de baixo da tela, e sem efeitos não há abertura", () => {
+    const desenhada = desenhar(cena([], { abertura: 0 }), -3);
+    expect(desenhada.chamadas).toContainEqual({ metodo: "translate", args: [0, 800] });
+    const semEfeitos = desenhar(cena([], { abertura: 0 }), -3, false);
+    expect(semEfeitos.chamadas.some((ch) => ch.metodo === "translate")).toBe(false);
+  });
+
   it("desenha a explosão de acerto por 0,3 s", () => {
     const comExplosao = cena([], { explosoes: [{ pista: 2, tempo: 1 }] });
-    expect(desenhar(comExplosao, 1.2).desenhos()).toHaveLength(1);
+    expect(desenhar(comExplosao, 1.1).desenhos()).toHaveLength(1);
     expect(desenhar(comExplosao, 1.4).desenhos()).toHaveLength(0);
   });
 

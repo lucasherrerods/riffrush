@@ -1,4 +1,4 @@
-import { estiloDoJulgamento, trovaoDoEvento, pontosDoRaio, progressoDoMultiplicador, tremor, pulo, forcaDaChama, saltoDaNota, linguasDeFogo, DURACAO_DA_CHAMA, DURACAO_DO_SALTO } from "./efeitos";
+import { estiloDoJulgamento, trovaoDoEvento, pontosDoRaio, progressoDoMultiplicador, tremor, pulo, forcaDaChama, elevacaoDoAro, linguasDeFogo, DURACAO_DA_CHAMA, DURACAO_DO_ARO } from "./efeitos";
 
 describe("trovaoDoEvento", () => {
   it("troveja forte quando o star power fica pronto para usar", () => {
@@ -84,15 +84,12 @@ describe("chamas do acerto", () => {
     expect(forcaDaChama(DURACAO_DA_CHAMA)).toBe(0);
   });
 
-  it("a nota acertada sobe, encolhe e some", () => {
-    const comeco = saltoDaNota(0);
-    const meio = saltoDaNota(DURACAO_DO_SALTO / 2)!;
-    expect(comeco).toEqual({ subida: 0, opacidade: 1, escala: 1 });
-    expect(meio.subida).toBeGreaterThan(0);
-    expect(meio.opacidade).toBeLessThan(1);
-    expect(meio.escala).toBeLessThan(1);
-    expect(saltoDaNota(DURACAO_DO_SALTO)).toBeNull();
-    expect(saltoDaNota(-0.01)).toBeNull();
+  it("o aro do traste sobe rápido, fica no alto e desce", () => {
+    expect(elevacaoDoAro(-0.01)).toBe(0);
+    expect(elevacaoDoAro(0.025)).toBeCloseTo(0.5);
+    expect(elevacaoDoAro(0.1)).toBe(1);
+    expect(elevacaoDoAro(DURACAO_DO_ARO - 0.05)).toBeCloseTo(0.5);
+    expect(elevacaoDoAro(DURACAO_DO_ARO)).toBe(0);
   });
 
   it("as línguas de fogo têm o mesmo desenho no mesmo instante e tremem com o tempo", () => {

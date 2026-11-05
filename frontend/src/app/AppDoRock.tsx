@@ -711,6 +711,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 dificuldade={dificuldadeDaPartida}
                 instrumento={instrumentoDaPartida}
                 opcoes={opcoes}
+                esperandoEntrada={!!entrada}
                 personagem={personagemEmJogo}
                 recorde={assistindo || divididos || treinando ? undefined : recordeDe(recordes, idDoRanking(musica), dificuldadeDaPartida, instrumentoDaPartida)?.pontos}
                 replay={assistindo?.replay}

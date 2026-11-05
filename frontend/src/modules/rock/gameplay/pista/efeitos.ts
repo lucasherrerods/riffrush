@@ -87,13 +87,15 @@ export function forcaDaChama(idade: number) {
   return (1 - (idade - ACENDER_DA_CHAMA) / (DURACAO_DA_CHAMA - ACENDER_DA_CHAMA)) ** 1.5;
 }
 
-export const DURACAO_DO_SALTO = 0.16;
+export const DURACAO_DO_ARO = 0.3;
+const SUBIDA_DO_ARO = 0.05;
+const DESCIDA_DO_ARO = 0.1;
 
-/** A nota acertada salta para fora do traste: sobe (0 a 1), encolhe e some. Fora do salto, null. */
-export function saltoDaNota(idade: number) {
-  if (idade < 0 || idade >= DURACAO_DO_SALTO) return null;
-  const k = idade / DURACAO_DO_SALTO;
-  return { subida: 1 - (1 - k) ** 2, opacidade: 1 - k * k, escala: 1 - k * 0.35 };
+/** Quanto o aro do traste está levantado no acerto (0 a 1): sobe rápido, fica no alto e desce. */
+export function elevacaoDoAro(idade: number) {
+  if (idade < 0 || idade >= DURACAO_DO_ARO) return 0;
+  if (idade < SUBIDA_DO_ARO) return idade / SUBIDA_DO_ARO;
+  return Math.min(1, (DURACAO_DO_ARO - idade) / DESCIDA_DO_ARO);
 }
 
 const LINGUAS_DE_FOGO = 5;

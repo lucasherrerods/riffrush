@@ -82,10 +82,12 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
     </div>
   );
 
+  // Altura reservada: a linha não pula quando o aviso aparece e some.
+  const linhaDoAviso = <div data-testid="linha-do-aviso" className={cn("texto-aviso-da-partida", compacto ? "h-5" : "h-7")}>{aviso}</div>;
+
   const acerto = (
     <div className="flex flex-col items-start">
-      {/* Altura reservada: a linha não pula quando o aviso aparece e some. */}
-      <div className={cn("texto-aviso-da-partida", compacto ? "h-5" : "h-7")}>{aviso}</div>
+      {compacto && linhaDoAviso}
       <p className={cn("font-bold tracking-[0.1em] text-texto-suave", compacto ? "text-xs" : "text-base")}>
         PRECISÃO{" "}
         <span aria-label="Precisão" className={cn("font-titulo tracking-normal tabular-nums", compacto ? "text-base" : "text-2xl", corDaPrecisao(precisao))}>
@@ -155,14 +157,16 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
   );
 
   return (
-    <div className="flex flex-col items-center gap-3">
+    // Largura fixa: o aviso, o combo e a precisão não deslocam o amplificador nem invadem a pista.
+    <div data-testid="painel" className="flex w-56 flex-col items-start gap-3">
       {/* A imagem é a moldura; o visor e o mostrador ficam por cima, na grade do alto-falante. */}
       <div data-testid="grade" className="relative aspect-[352/467] w-56">
         <img src={amplificador} alt="" draggable={false} className="absolute inset-0 size-full select-none" />
         {lcd}
         {mostrador}
       </div>
-      <div className="flex items-end gap-4">
+      {linhaDoAviso}
+      <div className="flex w-full items-end justify-between gap-2 whitespace-nowrap">
         {combo}
         {acerto}
       </div>
