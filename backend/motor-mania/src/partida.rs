@@ -112,7 +112,10 @@ pub enum Evento {
     },
     /// A nota longa foi solta antes da ponta: quebra o combo e tira vida, sem contar como julgamento.
     /// Ela continua: apertar de novo volta a segurar, mas a ponta fica no máximo 50.
-    Quebra { nota: usize, coluna: u8 },
+    Quebra {
+        nota: usize,
+        coluna: u8,
+    },
     Derrota,
 }
 
