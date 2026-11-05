@@ -1,4 +1,4 @@
-import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, RAIO_DA_CURVA, centroDoGrupoAberto, passosDaRoda, passosDoArraste, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "./geometriaDoCarrossel";
+import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, RAIO_DA_CURVA, centroDoGrupoAberto, passosDaRoda, passosDoArraste, indiceDandoAVolta, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "./geometriaDoCarrossel";
 
 describe("posicoesNoCarrossel", () => {
   it("põe a selecionada no zero, as de cima antes e as de baixo depois", () => {
@@ -73,5 +73,17 @@ describe("passosSemDarAVolta", () => {
   it("anda só até a borda", () => {
     expect(passosSemDarAVolta(3, 3, 5)).toBe(1);
     expect(passosSemDarAVolta(1, -3, 5)).toBe(-1);
+  });
+});
+
+describe("indiceDandoAVolta", () => {
+  it("passa da última para a primeira e da primeira para a última", () => {
+    expect(indiceDandoAVolta(4, 1, 5)).toBe(0);
+    expect(indiceDandoAVolta(0, -1, 5)).toBe(4);
+    expect(indiceDandoAVolta(2, 10, 5)).toBe(2);
+  });
+
+  it("sem itens, fica no zero", () => {
+    expect(indiceDandoAVolta(0, 1, 0)).toBe(0);
   });
 });

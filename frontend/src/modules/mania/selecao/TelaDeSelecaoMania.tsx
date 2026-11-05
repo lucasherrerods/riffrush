@@ -1,13 +1,20 @@
-import { useEffect, useRef, useState, type DragEvent } from "react";
-import { Music, Upload } from "lucide-react";
-import { Carrossel, passosSemDarAVolta, type DificuldadeDoCarrossel, type ItemDoCarrossel } from "@/modules/selecao";
+import { useMemo, useRef, useState, type DragEvent } from "react";
+import { Dices, Info, ListOrdered, Music, Upload } from "lucide-react";
+import { Carrossel, indiceDandoAVolta, passosSemDarAVolta, type DificuldadeDoCarrossel, type ItemDoCarrossel } from "@/modules/selecao";
+import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
+import { CampoDeSelecao } from "@/shared/ui/CampoDeSelecao";
+import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
+import { Input } from "@/shared/ui/input";
+import { NumeroDestacado } from "@/shared/ui/NumeroDestacado";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import type { ConjuntoSalvo, DificuldadeSalva } from "../beatmaps/biblioteca";
 import { faixaDasEstrelas, type FaixaDeDificuldade } from "../beatmaps/dificuldades";
 import { TeclaDoMania } from "../menu/TeclaDoMania";
 import type { PosicaoNoRankingDoMania } from "../ranking/api";
 import { PainelDoRankingDoMania } from "../ranking/PainelDoRankingDoMania";
+import { filtrarConjuntos, teclasDaBiblioteca, type OrdemDaSelecao } from "./filtroDaSelecao";
 import { SeletorDeMods } from "./SeletorDeMods";
 
 interface Props {
@@ -24,6 +31,9 @@ interface Props {
 
 const ehOsz = (arquivo: File) => arquivo.name.toLowerCase().endsWith(".osz");
 
+/** Quantos mapas o Page Up e o Page Down pulam. */
+const PAGINA = 8;
+
 /** A faixa de estrelas do osu! dá a cor da faixa lateral, do verde ao rosa, como as dificuldades do Rock. */
 const COR_DA_FAIXA: Record<FaixaDeDificuldade, string> = {
   Easy: "bg-sucesso",
@@ -34,33 +44,85 @@ const COR_DA_FAIXA: Record<FaixaDeDificuldade, string> = {
   "Expert+": "bg-texto",
 };
 
+const ORDENS: { id: OrdemDaSelecao; rotulo: string }[] = [
+  { id: "recentes", rotulo: "Jogados por último" },
+  { id: "titulo", rotulo: "Título" },
+  { id: "artista", rotulo: "Artista" },
+  { id: "estrelas", rotulo: "Estrelas" },
+];
+
+const formatarEstrelas = (estrelas: number) => `${estrelas.toFixed(2).replace(".", ",")}★`;
+const formatarDuracao = (ms: number) => {
+  const segundos = Math.round(ms / 1000);
+  return `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, "0")}`;
+};
+
 function rotuloDaDificuldade(conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) {
   const estrelas = conjunto.estrelas?.[dificuldade.hash];
   return (
     <span className="flex items-baseline gap-2">
       <span>{dificuldade.teclas}K</span>
       <span className="truncate normal-case">{dificuldade.dificuldade}</span>
-      {estrelas !== undefined && <span className="font-mono text-base text-texto-suave">{estrelas.toFixed(2).replace(".", ",")}★</span>}
+      {estrelas !== undefined && <span className="font-mono text-base text-texto-suave">{formatarEstrelas(estrelas)}</span>}
     </span>
   );
 }
 
 const capa = <TeclaDoMania icone={Music} className="size-full" />;
 
-/** A seleção do Mania: os conjuntos na mesma roda da seleção do Rock, com as dificuldades abertas no selecionado. */
+/** A seleção do Mania: os conjuntos na mesma roda da seleção do Rock, com busca, filtro de teclas, ordem e as abas de detalhes e ranking. */
 export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, aoJogar, aoTreinar, aoAssistir }: Props) {
-  const [indice, setIndice] = useState(0);
+  // A seleção segue o id do conjunto: muda a ordem ou o filtro e ela continua no mesmo mapa, se ele ainda aparecer.
+  const [id, setId] = useState<string | null>(null);
   const [hash, setHash] = useState<string | null>(null);
+  const [texto, setTexto] = useState("");
+  const [teclas, setTeclas] = useState<number | "todas">("todas");
+  const [ordem, setOrdem] = useState<OrdemDaSelecao>("recentes");
   const [arrastando, setArrastando] = useState(false);
   const seletor = useRef<HTMLInputElement>(null);
 
-  const lista = conjuntos ?? [];
-  const conjunto = lista[Math.min(indice, lista.length - 1)] as ConjuntoSalvo | undefined;
+  const todos = conjuntos ?? [];
+  const lista = useMemo(() => filtrarConjuntos(conjuntos ?? [], { texto, teclas, ordem }), [conjuntos, texto, teclas, ordem]);
+  const opcoesDeTeclas = teclasDaBiblioteca(todos);
+  const indice = Math.max(
+    lista.findIndex((c) => c.id === id),
+    0,
+  );
+  const conjunto = lista[indice] as ConjuntoSalvo | undefined;
   const dificuldade = conjunto?.mapas.find((m) => m.hash === hash) ?? conjunto?.mapas[0];
-  // Ao chegar um mapa novo (importado), a seleção não sai do lugar; se a lista encolher, volta para dentro dela.
-  useEffect(() => {
-    if (indice >= lista.length && lista.length) setIndice(lista.length - 1);
-  }, [indice, lista.length]);
+
+  const escolher = (i: number) => {
+    const proximo = lista[i];
+    if (!proximo || proximo.id === conjunto?.id) return;
+    setId(proximo.id);
+    setHash(null);
+  };
+  const andar = (passos: number) => escolher(indiceDandoAVolta(indice, passos, lista.length));
+  const pular = (passos: number) => escolher(indice + passosSemDarAVolta(indice, passos, lista.length));
+  const sortear = () => lista.length > 1 && escolher(indiceDandoAVolta(indice, 1 + Math.floor(Math.random() * (lista.length - 1)), lista.length));
+  const jogar = () => conjunto && dificuldade && aoJogar(conjunto, dificuldade);
+
+  useTeclado((evento) => {
+    // Com o foco num campo (a busca), as teclas são dele, menos as que andam pela roda.
+    const digitando = evento.target instanceof HTMLInputElement || evento.target instanceof HTMLSelectElement;
+    if (evento.code === "ArrowDown" || evento.code === "ArrowUp") {
+      evento.preventDefault();
+      return andar(evento.code === "ArrowDown" ? 1 : -1);
+    }
+    if (evento.code === "PageDown" || evento.code === "PageUp") {
+      evento.preventDefault();
+      return pular(evento.code === "PageDown" ? PAGINA : -PAGINA);
+    }
+    if (evento.code === "Enter" && !(evento.target instanceof HTMLButtonElement)) return jogar();
+    if (digitando) return;
+    if (evento.code === "Home") return escolher(0);
+    if (evento.code === "End") return escolher(lista.length - 1);
+    if ((evento.code === "ArrowLeft" || evento.code === "ArrowRight") && conjunto && dificuldade) {
+      const posicao = conjunto.mapas.indexOf(dificuldade);
+      const proxima = conjunto.mapas[posicao + (evento.code === "ArrowRight" ? 1 : -1)];
+      if (proxima) setHash(proxima.hash);
+    }
+  });
 
   const receber = (arquivos: FileList | null) => {
     const osz = [...(arquivos ?? [])].filter(ehOsz);
@@ -77,7 +139,23 @@ export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, a
     const estrelas = conjunto?.estrelas?.[m.hash];
     return { id: m.hash, rotulo: rotuloDaDificuldade(conjunto!, m), cor: estrelas === undefined ? "bg-borda" : COR_DA_FAIXA[faixaDasEstrelas(estrelas)] };
   });
-  const jogar = () => conjunto && dificuldade && aoJogar(conjunto, dificuldade);
+
+  const estrelas = conjunto && dificuldade ? conjunto.estrelas?.[dificuldade.hash] : undefined;
+  const detalhes = dificuldade && (
+    <div className="grid grid-cols-3 gap-2 max-md:grid-cols-2">
+      <NumeroDestacado rotulo="Duração" valor={formatarDuracao(dificuldade.duracaoMs)} />
+      <NumeroDestacado rotulo="Notas" valor={String(dificuldade.notas)} />
+      <NumeroDestacado rotulo="Notas longas" valor={String(dificuldade.notasLongas)} />
+      <NumeroDestacado rotulo="Teclas" valor={`${dificuldade.teclas}K`} />
+      <NumeroDestacado rotulo="OD" valor={String(dificuldade.od).replace(".", ",")} />
+      <NumeroDestacado rotulo="HP" valor={String(dificuldade.hp).replace(".", ",")} />
+      {estrelas !== undefined && <NumeroDestacado rotulo="Estrelas" valor={formatarEstrelas(estrelas)} />}
+      {conjunto?.status && <NumeroDestacado rotulo="Status" valor={conjunto.status} />}
+    </div>
+  );
+  const ranking = dificuldade?.beatmapId && conjunto?.origem === "osu" && (
+    <PainelDoRankingDoMania beatmapId={dificuldade.beatmapId} aoAssistir={aoAssistir && ((linha) => aoAssistir(conjunto, dificuldade, linha))} />
+  );
 
   return (
     <section
@@ -102,19 +180,34 @@ export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, a
 
         {conjunto && (
           <div className="chapa bg-superficie-elevada/95 px-4 py-3">
-            <h2 className="font-titulo text-3xl tracking-wide uppercase">{conjunto.tituloUnicode || conjunto.titulo}</h2>
-            <p className="text-texto-suave">
+            <h2 className="truncate font-titulo text-3xl tracking-wide uppercase">{conjunto.tituloUnicode || conjunto.titulo}</h2>
+            <p className="truncate text-texto-suave">
               {conjunto.artistaUnicode || conjunto.artista} · mapa de {conjunto.mapper}
             </p>
-            {conjunto.origem === "importado" && <p className="text-sm text-texto-suave">Importado · sem XP</p>}
+            {conjunto.origem === "importado" && <p className="text-sm text-texto-suave">Importado · sem XP nem ranking</p>}
           </div>
         )}
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {dificuldade?.beatmapId && conjunto?.origem === "osu" && (
-            <PainelDoRankingDoMania beatmapId={dificuldade.beatmapId} aoAssistir={aoAssistir && ((linha) => aoAssistir(conjunto, dificuldade, linha))} />
-          )}
-        </div>
+        {conjunto && (
+          // Como no Rock: o ranking ao lado da roda e os números da dificuldade na aba vizinha.
+          <Tabs key={ranking ? "com-ranking" : "sem-ranking"} defaultValue={ranking ? "ranking" : "detalhes"} className="min-h-0 flex-1">
+            <TabsList className="w-full">
+              <TabsTrigger value="detalhes">
+                <Info className="opacity-70" /> Detalhes
+              </TabsTrigger>
+              <TabsTrigger value="ranking">
+                <ListOrdered className="opacity-70" /> Ranking
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="detalhes" className="min-h-0 overflow-y-auto">
+              {detalhes}
+            </TabsContent>
+            <TabsContent value="ranking" className="flex min-h-0 flex-col overflow-y-auto">
+              {ranking || <p className="chapa bg-superficie-elevada/90 p-4 text-texto-suave">Só os mapas baixados pela busca do osu! têm ranking.</p>}
+            </TabsContent>
+          </Tabs>
+        )}
+        {!conjunto && <div className="flex-1" />}
 
         <div className="flex justify-end gap-2">
           {aoTreinar && (
@@ -133,31 +226,52 @@ export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, a
         </div>
       </aside>
 
-      {conjuntos === null && <p className="col-span-7 text-texto-suave">Abrindo a biblioteca…</p>}
-      {conjuntos?.length === 0 && (
-        <p className="chapa col-span-7 m-auto max-w-md bg-superficie-elevada/90 px-6 py-4 text-center text-texto-suave">Nenhum mapa ainda. Arraste um .osz para cá ou use o botão de importar.</p>
-      )}
-      {!!lista.length && (
-        <Carrossel
-          rotulo="Mapas"
-          itens={itens}
-          indice={Math.min(indice, lista.length - 1)}
-          dificuldade={dificuldade?.hash ?? ""}
-          dificuldades={dificuldades}
-          aoEscolherItem={(i) => {
-            setIndice(i);
-            setHash(null);
-          }}
-          aoEscolherDificuldade={setHash}
-          aoJogar={jogar}
-          aoGirar={(passos) => {
-            const permitidos = passosSemDarAVolta(indice, passos, lista.length);
-            if (!permitidos) return;
-            setIndice(indice + permitidos);
-            setHash(null);
-          }}
-        />
-      )}
+      <div className="col-span-7 flex min-h-0 flex-col gap-4 max-md:col-span-1">
+        {!!todos.length && (
+          <div className="flex flex-wrap items-end gap-4">
+            <Input type="search" placeholder="Título, artista, mapper ou dificuldade" aria-label="Filtrar mapas" value={texto} onChange={(e) => setTexto(e.target.value)} className="min-w-48 flex-1" />
+            {opcoesDeTeclas.length > 1 && (
+              <GrupoDeOpcoes
+                titulo="Teclas"
+                opcoes={[{ id: "todas", rotulo: "Todas" }, ...opcoesDeTeclas.map((t) => ({ id: String(t), rotulo: `${t}K` }))]}
+                valor={String(teclas)}
+                aoEscolher={(valor) => setTeclas(valor === "todas" ? "todas" : Number(valor))}
+              />
+            )}
+            <CampoDeSelecao titulo="Ordem" opcoes={ORDENS} valor={ordem} aoEscolher={setOrdem} />
+            <Button variant="outline" disabled={lista.length < 2} onClick={sortear} aria-label="Aleatório">
+              <Dices className="opacity-70" />
+              <span className="max-md:sr-only">Aleatório</span>
+            </Button>
+          </div>
+        )}
+        {!!todos.length && (
+          <p className="text-sm text-texto-suave" aria-live="polite">
+            {lista.length ? `${indice + 1} de ${lista.length} ${lista.length === 1 ? "mapa" : "mapas"}` : ""}
+            {lista.length < todos.length && lista.length ? ` · ${todos.length} na biblioteca` : ""}
+          </p>
+        )}
+
+        {conjuntos === null && <p className="text-texto-suave">Abrindo a biblioteca…</p>}
+        {conjuntos?.length === 0 && (
+          <p className="chapa m-auto max-w-md bg-superficie-elevada/90 px-6 py-4 text-center text-texto-suave">Nenhum mapa ainda. Arraste um .osz para cá ou use o botão de importar.</p>
+        )}
+        {!!todos.length && !lista.length && <p className="chapa m-auto max-w-md bg-superficie-elevada/90 px-6 py-4 text-center text-texto-suave">Nenhum mapa com esse filtro.</p>}
+        {!!lista.length && (
+          <Carrossel
+            className="flex-1"
+            rotulo="Mapas"
+            itens={itens}
+            indice={indice}
+            dificuldade={dificuldade?.hash ?? ""}
+            dificuldades={dificuldades}
+            aoEscolherItem={escolher}
+            aoEscolherDificuldade={setHash}
+            aoJogar={jogar}
+            aoGirar={andar}
+          />
+        )}
+      </div>
     </section>
   );
 }
