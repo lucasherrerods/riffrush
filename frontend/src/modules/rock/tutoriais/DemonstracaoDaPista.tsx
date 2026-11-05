@@ -74,7 +74,7 @@ export function DemonstracaoDaPista({ roteiro, rotulo }: Props) {
   const estado = estadoNoInstante(roteiro, tempo);
   return (
     <figure className="flex flex-col items-center gap-2">
-      <svg viewBox={`0 0 ${LARGURA} ${roteiro.comPalheta ? ALTURA : LINHA + 30}`} role="img" aria-label={rotulo} className="w-full max-w-72">
+      <svg viewBox={`0 0 ${LARGURA} ${roteiro.comPalheta ? ALTURA : LINHA + 30}`} role="img" aria-label={rotulo} className="max-h-[45dvh] w-full max-w-72">
         <rect x={MARGEM} y={0} width={LARGURA - MARGEM * 2} height={LINHA + 22} rx={8} fill={estado.estrelaAtiva ? COR_DA_ESTRELA : "var(--cor-fundo)"} opacity={estado.estrelaAtiva ? 0.18 : 1} />
         {[1, 2, 3, 4].map((i) => (
           <line key={i} x1={MARGEM + LARGURA_DA_PISTA * i} x2={MARGEM + LARGURA_DA_PISTA * i} y1={0} y2={LINHA + 22} stroke="var(--cor-borda)" strokeWidth={1} />

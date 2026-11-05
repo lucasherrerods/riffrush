@@ -40,9 +40,9 @@ export function ModalDeTutoriais({ aberto, aoFechar, tutoriais = TUTORIAIS }: Pr
           </TabsList>
         </Tabs>
 
-        <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:grid-cols-1 max-md:gap-4">
-          <nav aria-label="Tópicos" className="col-span-4 max-md:col-span-1">
-            <ul className="rolagem-de-toque abas-rolaveis flex max-h-full flex-col gap-1 max-md:flex-row max-md:gap-2">
+        <div className="grid min-h-0 flex-1 grid-cols-12 grid-rows-[minmax(0,1fr)] gap-6 max-md:grid-cols-1 max-md:grid-rows-[auto_minmax(0,1fr)] max-md:gap-4">
+          <nav aria-label="Tópicos" className="col-span-4 min-h-0 max-md:col-span-1">
+            <ul className="md:rolagem-de-toque abas-rolaveis flex h-full max-md:h-auto flex-col gap-1 max-md:flex-row max-md:gap-2">
               {doGrupo.map((t) => {
                 const atual = t.id === tutorial?.id;
                 return (

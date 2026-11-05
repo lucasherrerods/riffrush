@@ -42,3 +42,9 @@ Problemas encontrados de passagem, fora do escopo da mudança que estava sendo f
 - O que se viu: em 05/11/2026 falhou na suíte completa (já tinha falhado uma vez antes, no PR do giro de modo); rodando o arquivo sozinho, passou três vezes seguidas.
 - Suspeita: o modo é carregado sob demanda (`carregarTelaDoMania`) e demora mais que o limite padrão com a máquina sob carga, como o teste das configurações acima.
 - Próximo passo: ver qual `findBy` estoura e dar a ele um `timeout` maior, ou pré-carregar o modo no teste.
+
+## Testes do menu e da sala estouram o tempo na suíte inteira
+- Onde: `frontend/src/modules/menu/MenuPrincipal.test.tsx` ("Tutoriais abre os tutoriais...") e `frontend/src/modules/multiplayer/sala.test.ts` ("criar a sala abre o servidor...").
+- O que se viu: em 05/11/2026 falharam na suíte completa junto com os de carregamento e de modo; rodando os arquivos sozinhos, passaram.
+- Suspeita: o mesmo limite de 5 s com a máquina sob carga (a suíte levou mais de 8 minutos).
+- Próximo passo: ver se a suíte com `pool: 'vmThreads'` ou menos workers some com esses estouros antes de mexer em cada `timeout`.

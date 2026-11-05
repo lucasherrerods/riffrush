@@ -59,6 +59,7 @@ export const TUTORIAIS: Tutorial[] = [
     texto: [
       "O jeito padrão, para teclado e controle. Não há palheta: apertar o traste já toca a nota.",
       "Em notas rápidas na mesma pista, soltar a tecla depois de um acerto também acerta a próxima nota dela. Assim dá para fazer trechos rápidos apertando e soltando.",
+      "No HOPO e no tap vale também o pull-off: segurando um traste de baixo, soltar o de cima toca a nota do de baixo. Veja Âncora em Mecânicas.",
     ],
     dicas: ["É o mesmo modo gamepad do Clone Hero.", "Troque o jeito de jogar em Configurações."],
     demo: {
@@ -78,8 +79,11 @@ export const TUTORIAIS: Tutorial[] = [
     id: "tapping",
     grupo: "modos",
     titulo: "Jeito de jogar: Tapping",
-    resumo: "Cada aperto vale uma nota, e só uma. Soltar não toca nada.",
-    texto: ["Para quem prefere um toque por nota, como num piano. Bom no celular, onde cada dedo toca uma pista na tela."],
+    resumo: "Cada aperto vale uma nota, e só uma. Soltar só toca o pull-off do HOPO.",
+    texto: [
+      "Para quem prefere um toque por nota, como num piano. Bom no celular, onde cada dedo toca uma pista na tela.",
+      "A exceção é o pull-off: no HOPO e no tap, segurando um traste de baixo, soltar o de cima toca a nota do de baixo.",
+    ],
     demo: {
       duracao: 5,
       notas: escala(1.8, 0.35, [2, 1, 2, 3, 2]),
@@ -94,7 +98,7 @@ export const TUTORIAIS: Tutorial[] = [
     resumo: "Como a guitarra do Clone Hero: segure os trastes e toque a palheta.",
     texto: [
       "Os trastes só ficam apertados; quem toca a nota é a palheta. Segure o traste (ou o acorde) e palhete quando a nota passar pela linha.",
-      "É o jeito em que valem todas as mecânicas da guitarra: HOPO, tap, âncora e palhetada em vão. Veja cada uma em Mecânicas.",
+      "Aqui o HOPO e o tap saem só no traste enquanto as notas comuns pedem a palheta, e palhetar sem nota é palhetada em vão. Veja cada mecânica em Mecânicas.",
     ],
     dicas: ["Escolha a tecla da palheta em Configurações.", "A palheta espera até 50 ms os trastes chegarem: palhetar um tiquinho antes não erra."],
     demo: {
@@ -236,7 +240,7 @@ export const TUTORIAIS: Tutorial[] = [
     titulo: "HOPO (hammer-on e pull-off)",
     resumo: "As notas com contorno claro: com a sequência ativa, saem só no traste, sem palheta.",
     texto: [
-      "Uma nota simples logo depois de outra, numa pista diferente, costuma virar HOPO. Na palhetada, basta apertar (hammer-on) ou soltar (pull-off) o traste: a nota sai sem palhetar.",
+      "Uma nota simples logo depois de outra, numa pista diferente, costuma virar HOPO. Na palhetada, basta apertar (hammer-on) ou soltar (pull-off) o traste: a nota sai sem palhetar. No gamepad e no tapping, o pull-off também vale: soltar o traste de cima toca o HOPO do traste segurado embaixo.",
       "Só vale com a sequência ativa. Depois de um erro, o próximo HOPO precisa da palheta. Palhetar logo depois de um HOPO não é punido.",
     ],
     dicas: ["Apertar um traste errado acima do HOPO que está chegando faz ele pedir a palheta (anti-ghosting)."],
@@ -297,33 +301,40 @@ export const TUTORIAIS: Tutorial[] = [
     id: "ancora",
     grupo: "mecanicas",
     titulo: "Âncora (anchoring)",
-    resumo: "Segure os trastes de baixo e toque os de cima: só o traste mais alto conta.",
+    resumo: "Segure o traste de baixo e toque os de cima: soltar o de cima já toca o de baixo.",
     texto: [
-      "Na nota simples, os trastes abaixo dela podem continuar apertados. É o que deixa segurar o verde e tocar as notas de cima, como no começo de Through the Fire and Flames.",
-      "Vale também no acorde HOPO ou tap, com os trastes extras abaixo do mais baixo do acorde. O acorde palhetado e a nota aberta não aceitam âncora.",
+      "Na nota simples, o jogo confere só o traste mais alto apertado. Os trastes abaixo dele podem ficar segurados sem errar.",
+      "É assim que se toca o começo de Through the Fire and Flames, que alterna o verde com as outras notas em HOPO. O verde fica segurado o tempo todo: apertar o vermelho é um hammer-on, e soltar o vermelho é um pull-off que já toca o verde, sem apertar o verde de novo.",
+      "Vale em todos os jeitos de jogar: no gamepad e no tapping, soltar o traste de cima também toca o HOPO do de baixo. Como no Clone Hero, o acorde HOPO ou tap também aceita âncora: trastes extras abaixo do mais baixo do acorde. No acorde palhetado, não.",
+    ],
+    dicas: [
+      "A âncora só vale para baixo: um traste acima da nota apertado é erro.",
+      "Não precisa soltar no tempo exato: soltar o de cima até um pouco antes da nota de baixo chegar já vale, como no Clone Hero.",
+      "O pull-off só sai no traste se o de baixo já estiver apertado. Se você soltar tudo, a nota se perde.",
+      "O acorde palhetado pede os trastes exatos, e a nota aberta pede todos os trastes soltos.",
     ],
     demo: {
-      duracao: 5,
+      duracao: 6,
       comPalheta: true,
       notas: [
         { tempo: 1.8, pista: 0 },
-        { tempo: 2.1, pista: 2, tipo: "hopo" },
-        { tempo: 2.4, pista: 3, tipo: "hopo" },
-        { tempo: 2.7, pista: 2, tipo: "hopo" },
-        { tempo: 3, pista: 3, tipo: "hopo" },
+        ...([1, 0, 2, 0, 3, 0, 2, 0] as const).map((pista, i) => ({ tempo: 2.1 + i * 0.3, pista, tipo: "hopo" as const })),
       ],
-      entradas: ordenar([
-        { tempo: 1.5, tipo: "aperta", pista: 0 },
-        { tempo: 1.8, tipo: "palheta" },
-        { tempo: 2.1, tipo: "aperta", pista: 2 },
-        { tempo: 2.4, tipo: "aperta", pista: 3 },
-        { tempo: 2.7, tipo: "solta", pista: 3 },
-        { tempo: 3, tipo: "aperta", pista: 3 },
-        { tempo: 3.4, tipo: "solta", pista: 3 },
-        { tempo: 3.4, tipo: "solta", pista: 2 },
-        { tempo: 3.6, tipo: "solta", pista: 0 },
-      ]),
-      legendas: [{ de: 1.5, ate: 3.6, texto: "O verde fica segurado o tempo todo." }],
+      entradas: ordenar(
+        [
+          { tempo: 1.5, tipo: "aperta", pista: 0 },
+          { tempo: 1.8, tipo: "palheta" },
+          { tempo: 4.8, tipo: "solta", pista: 0 },
+        ],
+        ...([1, 2, 3, 2] as const).map((pista, i) => [
+          { tempo: 2.1 + i * 0.6, tipo: "aperta" as const, pista },
+          { tempo: 2.4 + i * 0.6, tipo: "solta" as const, pista },
+        ]),
+      ),
+      legendas: [
+        { de: 1.4, ate: 2.1, texto: "Palhete o verde e não solte mais." },
+        { de: 2.1, ate: 5, texto: "Aperte e solte o de cima: soltar já toca o verde." },
+      ],
     },
   },
   {

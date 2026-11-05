@@ -17,7 +17,7 @@ describe("ModalDeTutoriais", () => {
     expect(screen.getByRole("heading", { name: "Jeito de jogar: Palhetada" })).toBeInTheDocument();
     await usuario.click(screen.getByRole("tab", { name: "Mecânicas" }));
     await usuario.click(screen.getByRole("button", { name: "Âncora (anchoring)" }));
-    expect(screen.getByText(/Through the Fire and Flames/)).toBeInTheDocument();
+    expect(screen.getByText(/soltar o vermelho é um pull-off que já toca o verde/)).toBeInTheDocument();
   });
 
   it("todo tópico tem texto, e todo roteiro tem as notas em ordem dentro do laço", () => {
