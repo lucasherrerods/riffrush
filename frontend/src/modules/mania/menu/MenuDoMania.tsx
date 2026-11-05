@@ -10,18 +10,19 @@ interface Props {
   /** A alavanca que volta para o Rock, embaixo da logo. */
   alavanca?: ReactNode;
   troca?: TrocaDeModo;
-  aoMedirTitulo?: (retangulo: DOMRect) => void;
+  /** Só a imagem da tela, para o disco da troca. */
+  estatica?: boolean;
 }
 
 /** A tela inicial do Mania: a mesma do Rock, com as opções em teclas do mania. */
-export function MenuDoMania({ aoJogar, aoBuscar, aoConfigurar, alavanca, troca, aoMedirTitulo }: Props) {
+export function MenuDoMania({ aoJogar, aoBuscar, aoConfigurar, alavanca, troca, estatica }: Props) {
   return (
     <TelaInicial
       logo={<LogoDoJogo modo="Mania" fofa />}
       subtitulo="SIGA O RITMO"
       alavanca={alavanca}
       troca={troca}
-      aoMedirTitulo={aoMedirTitulo}
+      estatica={estatica}
       rotuloDoMenu="Menu do Mania"
       opcoes={[
         { rotulo: "Jogar", icone: Play, acao: aoJogar },

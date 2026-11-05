@@ -6,22 +6,21 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe("useTrocaDeModo", () => {
-  it("pedir o outro modo faz as opções saírem, e o modo só troca no fim do giro", () => {
+  it("pedir o outro modo monta a capa, troca o modo no quadro seguinte e então gira", () => {
     const trocar = vi.fn();
     const { result } = renderHook(() => useTrocaDeModo("rock", { trocar, preCarregar: vi.fn() }));
     act(() => result.current.pedir("mania"));
-    expect(result.current.giro).toEqual({ de: "rock", para: "mania", sentido: 1, fase: "saindo" });
-    act(() => vi.advanceTimersByTime(DURACAO_DO_GIRO_MS - 1));
+    expect(result.current.giro).toEqual({ de: "rock", para: "mania", sentido: 1, fase: "chegando", girou: false });
     expect(trocar).not.toHaveBeenCalled();
-    act(() => vi.advanceTimersByTime(1));
+    act(() => vi.advanceTimersByTime(40));
     expect(trocar).toHaveBeenCalledWith("mania");
-    expect(result.current.giro?.fase).toBe("chegando");
+    expect(result.current.giro?.girou).toBe(true);
   });
 
-  it("depois que as opções do novo modo chegam, a troca acaba", () => {
+  it("quando a capa sai da tela, a troca acaba", () => {
     const { result } = renderHook(() => useTrocaDeModo("rock", { trocar: vi.fn(), preCarregar: vi.fn() }));
     act(() => result.current.pedir("mania"));
-    act(() => vi.advanceTimersByTime(DURACAO_DO_GIRO_MS + 1000));
+    act(() => vi.advanceTimersByTime(DURACAO_DO_GIRO_MS + 200));
     expect(result.current.giro).toBeNull();
   });
 

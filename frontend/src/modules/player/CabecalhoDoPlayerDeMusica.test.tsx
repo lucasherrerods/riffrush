@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { AudioContextFalso } from "@/test/audioFalso";
 import { CabecalhoDoPlayerDeMusica } from "./CabecalhoDoPlayerDeMusica";
+import { PlayerDeMusica } from "./playerDeMusica";
+
+const player = new PlayerDeMusica(() => new AudioContextFalso() as unknown as AudioContext, async () => ({ duration: 1 }) as AudioBuffer);
 
 function abrir(volumeInicial = 0.3) {
   const aoMudarVolume = vi.fn();
@@ -9,6 +13,7 @@ function abrir(volumeInicial = 0.3) {
     const [volume, setVolume] = useState(volumeInicial);
     return (
       <CabecalhoDoPlayerDeMusica
+        player={player}
         volume={volume}
         aoMudarVolume={(novo) => {
           aoMudarVolume(novo);
