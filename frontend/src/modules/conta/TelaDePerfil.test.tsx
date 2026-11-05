@@ -81,3 +81,13 @@ describe("TelaDePerfil", () => {
     expect(aoVoltar).toHaveBeenCalled();
   });
 });
+
+describe("TelaDePerfil em outro modo", () => {
+  it("mantém o cartão da conta e troca os números do Rock pelos do modo", async () => {
+    render(<TelaDePerfil aoVoltar={() => {}} tituloDaMusica={tituloDaMusica} carregar={async () => perfil} estatisticas={<p>números do mania</p>} />);
+    expect(await screen.findByRole("heading", { name: "Lucas" })).toBeInTheDocument();
+    expect(screen.getByText("Nv 4")).toBeInTheDocument();
+    expect(screen.getByText("números do mania")).toBeInTheDocument();
+    expect(screen.queryByText("87,65%")).not.toBeInTheDocument();
+  });
+});

@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useReducedMotion } from "framer-motion";
 import { FundoDoMania, IDENTIDADE_DO_MANIA, TelaDoMania, carregarTelaDoMania } from "@/modules/mania";
 import { AlavancaDeModo, Fundo, PARTE_DA_TELA_DO_MODO } from "@/modules/menu";
+import { chatGlobal, presenca } from "@/modules/presenca";
 import { IDENTIDADE_DO_ROCK } from "@/modules/rock";
 import { definirTema } from "@/shared/styles/tema";
 import { TEMAS } from "@/shared/styles/tokens";
@@ -50,6 +51,11 @@ export function App({ maniaLigado = MANIA_LIGADO }: { maniaLigado?: boolean } = 
     document.documentElement.dataset.modo = modo;
     document.title = identidade.nome;
   }, [identidade, modo]);
+  // Os amigos veem em que modo a pessoa está, e cada mensagem do chat leva a etiqueta dele.
+  useEffect(() => {
+    presenca.definirModo(modo);
+    chatGlobal.definirModo(modo);
+  }, [modo]);
   const semMovimento = useReducedMotion() ?? false;
   const { giro, pedir } = useTrocaDeModo(modo, { trocar: trocarModo, preCarregar, semMovimento });
   // A foto da tela que sai, tirada no clique, antes de o modo trocar.

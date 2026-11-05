@@ -1,5 +1,5 @@
 import { adiar } from "@/shared/lib/adiar";
-export { presenca, presencaDisponivel, transmitirPartida, usePresenca, useSouDaModeracao } from "./presenca";
+export { chatGlobal, presenca, presencaDisponivel, transmitirPartida, usePresenca, useSouDaModeracao } from "./presenca";
 export type { ConviteParaSala, EstadoOnline, PessoaOnline } from "./protocolo";
 export { descreverEstado } from "./descrever";
 export { podeAssistir } from "./lobby";

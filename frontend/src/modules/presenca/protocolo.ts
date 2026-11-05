@@ -1,5 +1,6 @@
 import { codigoDaEntrada, emTicks, entradaDoCodigo, type EntradaDoReplay, type JeitoDeJogar } from "@/modules/rock/gameplay";
 import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
+import type { Modo } from "@/shared/modo";
 
 // O mesmo contrato do relay (backend/relay/src/presenca.ts), que é publicado à parte.
 
@@ -7,11 +8,15 @@ import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
  * Onde a pessoa está. A música vai com o id do ranking, para quem assiste achar a mesma.
  * O código da sala não vai no estado: ele só chega a quem foi convidado.
  */
-export type EstadoOnline =
+export type EstadoOnline = (
   | { tipo: "menu" }
   | { tipo: "selecao" }
   | { tipo: "multiplayer"; sala?: SalaNoEstado }
-  | { tipo: "tocando"; musica: string; titulo: string; artista: string; dificuldade: Dificuldade; instrumento: Instrumento; transmitindo: boolean };
+  | { tipo: "tocando"; musica: string; titulo: string; artista: string; dificuldade: Dificuldade; instrumento: Instrumento; transmitindo: boolean }
+) & {
+  /** O modo de jogo aberto. Versões antigas do app não mandam. */
+  modo?: Modo;
+};
 
 /** A sala em que a pessoa está, para a lista mostrar "Em sala". */
 export interface SalaNoEstado {

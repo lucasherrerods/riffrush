@@ -2,7 +2,7 @@
 //! (o CI sobe um Postgres); sem ela, os testes passam sem fazer nada.
 
 use chrono::{Duration, Utc};
-use riffrush_api::modules::amizade::{AmizadesPostgres, Relacao, RepositorioDeAmizades, Vinculo};
+use riffrush_api::modules::amizade::{AmizadesPostgres, Modo, Relacao, RepositorioDeAmizades, Vinculo};
 use riffrush_api::modules::catalogo::{CatalogoPostgres, DadosDaMusica, RepositorioDoCatalogo};
 use riffrush_api::modules::conta::{
     ContasPostgres, FilaDePartidas, PartidaNaFila, PartidaRegistrada, PerfilDoGoogle, RepositorioDeContas, RepositorioDeSessoes,
@@ -958,7 +958,9 @@ async fn amizades_pedem_aceitam_bloqueiam_e_sugerem_amigos_de_amigos() {
     assert_eq!(amizades.guardar_codigo(beto, &codigo).await.unwrap(), None);
     assert_eq!(amizades.guardar_codigo(ana, "RIFF-OUTRO2").await.unwrap().as_deref(), Some(codigo.as_str()));
     assert_eq!(amizades.conta_do_codigo(&codigo).await.unwrap(), Some(ana));
-    amizades.marcar_visto(ana, agora).await.unwrap();
+    amizades.marcar_visto(ana, agora, Some(Modo::Mania)).await.unwrap();
+    // Sem modo, o último guardado continua.
+    amizades.marcar_visto(ana, agora, None).await.unwrap();
 
     amizades.criar_pedido(ana, beto, agora).await.unwrap();
     // O pedido cruzado não cria uma segunda linha para o mesmo par.
@@ -973,6 +975,7 @@ async fn amizades_pedem_aceitam_bloqueiam_e_sugerem_amigos_de_amigos() {
     assert_eq!(do_beto.len(), 1);
     assert_eq!(do_beto[0].vinculo, Vinculo::Amigo);
     assert!(do_beto[0].visto_em.is_some());
+    assert_eq!(do_beto[0].ultimo_modo, Some(Modo::Mania));
 
     amizades.criar_pedido(caio, beto, agora).await.unwrap();
     amizades.aceitar(caio, beto, agora).await.unwrap();

@@ -3,6 +3,7 @@ use chrono::{DateTime, Duration, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use super::dominio::{EstatisticasDoMania, MapaPopular, RecordeDoMapa, PRECISAO_DO_S, REPLAYS_POR_MAPA};
 use super::portas::{BeatmapDoOsu, LinhaDoRanking, PartidaGuardada, PartidaNaFila, PartidaPendente, PartidaRegistrada, RepositorioDoMania};
 use crate::modules::conta::FalhaExterna;
 
@@ -143,8 +144,8 @@ impl RepositorioDoMania for ManiaPostgres {
         let mut transacao = self.0.begin().await.map_err(falha)?;
         let inserida = sqlx::query(
             "INSERT INTO partidas_do_mania
-                 (id, conta_id, beatmap_id, beatmapset_id, pontuacao, precisao, contagem, maior_combo, derrota, mods, xp_ganho, vale_ranking, replay, jogada_em)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                 (id, conta_id, beatmap_id, beatmapset_id, pontuacao, precisao, contagem, maior_combo, derrota, mods, xp_ganho, vale_ranking, jogada_em)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
              ON CONFLICT (id) DO NOTHING",
         )
         .bind(partida.id)
@@ -159,7 +160,6 @@ impl RepositorioDoMania for ManiaPostgres {
         .bind(i32::try_from(partida.mods).unwrap_or(0))
         .bind(i64::try_from(partida.xp_ganho).unwrap_or(i64::MAX))
         .bind(partida.vale_ranking)
-        .bind(partida.replay.as_deref())
         .bind(partida.jogada_em)
         .execute(&mut *transacao)
         .await
@@ -172,6 +172,38 @@ impl RepositorioDoMania for ManiaPostgres {
                 .execute(&mut *transacao)
                 .await
                 .map_err(falha)?;
+        }
+        if let (1, Some(replay)) = (inserida.rows_affected(), partida.replay.as_deref()) {
+            // Duas partidas do mesmo mapa ao mesmo tempo não podem deixar o top com 11 replays.
+            sqlx::query("SELECT pg_advisory_xact_lock(hashtext('replays_do_mania'), $1::int)")
+                .bind(i32::try_from(partida.beatmap_id % i32::MAX as u64).unwrap_or(0))
+                .execute(&mut *transacao)
+                .await
+                .map_err(falha)?;
+            sqlx::query("INSERT INTO replays_do_mania (partida_id, replay) VALUES ($1, $2) ON CONFLICT (partida_id) DO NOTHING")
+                .bind(partida.id)
+                .bind(replay)
+                .execute(&mut *transacao)
+                .await
+                .map_err(falha)?;
+            // Fica só o replay do melhor de cada conta entre os primeiros do mapa; a partida nova entra e sai na mesma hora se não chegou lá.
+            sqlx::query(
+                "DELETE FROM replays_do_mania r USING partidas_do_mania p
+                 WHERE r.partida_id = p.id AND p.beatmap_id = $1
+                   AND r.partida_id NOT IN (
+                       SELECT id FROM (
+                           SELECT DISTINCT ON (conta_id) id, pontuacao, jogada_em FROM partidas_do_mania
+                           WHERE beatmap_id = $1 AND vale_ranking
+                           ORDER BY conta_id, pontuacao DESC, jogada_em ASC
+                       ) melhores
+                       ORDER BY pontuacao DESC, jogada_em ASC
+                       LIMIT $2)",
+            )
+            .bind(id_do_banco(partida.beatmap_id))
+            .bind(i64::from(REPLAYS_POR_MAPA))
+            .execute(&mut *transacao)
+            .await
+            .map_err(falha)?;
         }
         sqlx::query("DELETE FROM partidas_do_mania_pendentes WHERE id = $1")
             .bind(partida.id)
@@ -260,12 +292,105 @@ impl RepositorioDoMania for ManiaPostgres {
     }
 
     async fn replay(&self, partida_id: Uuid) -> Result<Option<Vec<u8>>, FalhaExterna> {
-        sqlx::query_scalar::<_, Option<Vec<u8>>>("SELECT replay FROM partidas_do_mania WHERE id = $1 AND vale_ranking")
+        sqlx::query_scalar::<_, Vec<u8>>("SELECT replay FROM replays_do_mania WHERE partida_id = $1")
             .bind(partida_id)
             .fetch_optional(&self.0)
             .await
-            .map(Option::flatten)
             .map_err(falha)
+    }
+
+    async fn mapas_mais_jogados(&self, limite: u32) -> Result<Vec<(MapaPopular, Option<String>)>, FalhaExterna> {
+        let linhas = sqlx::query_as::<_, LinhaDoMapaPopular>(
+            "WITH contados AS (
+                 SELECT beatmap_id, max(beatmapset_id) AS beatmapset_id, count(*) AS partidas, count(DISTINCT conta_id) AS jogadores
+                 FROM partidas_do_mania WHERE vale_ranking
+                 GROUP BY beatmap_id
+                 ORDER BY count(*) DESC, beatmap_id
+                 LIMIT $1
+             )
+             SELECT ct.beatmap_id, ct.beatmapset_id, ct.partidas, ct.jogadores, b.texto,
+                    r.nome AS recorde_nome, r.pontuacao AS recorde_pontuacao, r.precisao AS recorde_precisao
+             FROM contados ct
+             LEFT JOIN beatmaps_do_osu b ON b.beatmap_id = ct.beatmap_id
+             LEFT JOIN LATERAL (
+                 SELECT c.nome, p.pontuacao, p.precisao FROM partidas_do_mania p JOIN contas c ON c.id = p.conta_id
+                 WHERE p.beatmap_id = ct.beatmap_id AND p.vale_ranking
+                 ORDER BY p.pontuacao DESC, p.jogada_em ASC LIMIT 1
+             ) r ON true
+             ORDER BY ct.partidas DESC, ct.beatmap_id",
+        )
+        .bind(i64::from(limite))
+        .fetch_all(&self.0)
+        .await
+        .map_err(falha)?;
+        Ok(linhas
+            .into_iter()
+            .map(|l| {
+                let recorde = match (l.recorde_nome, l.recorde_pontuacao, l.recorde_precisao) {
+                    (Some(nome), Some(pontuacao), Some(precisao)) => Some(RecordeDoMapa {
+                        nome,
+                        pontuacao: u32::try_from(pontuacao).unwrap_or(0),
+                        precisao,
+                    }),
+                    _ => None,
+                };
+                let mapa = MapaPopular {
+                    beatmap_id: u64::try_from(l.beatmap_id).unwrap_or(0),
+                    beatmapset_id: l.beatmapset_id.and_then(|id| u64::try_from(id).ok()),
+                    partidas: u32::try_from(l.partidas).unwrap_or(u32::MAX),
+                    jogadores: u32::try_from(l.jogadores).unwrap_or(u32::MAX),
+                    titulo: None,
+                    artista: None,
+                    dificuldade: None,
+                    recorde,
+                };
+                (mapa, l.texto)
+            })
+            .collect())
+    }
+
+    async fn estatisticas(&self, conta_id: Uuid) -> Result<EstatisticasDoMania, FalhaExterna> {
+        let l = sqlx::query_as::<_, LinhaDasEstatisticas>(
+            "SELECT count(*) AS partidas,
+                    count(DISTINCT beatmap_id) AS mapas,
+                    COALESCE(avg(precisao), 0) AS precisao_media,
+                    COALESCE(max(maior_combo), 0) AS maior_combo,
+                    COALESCE(sum(pontuacao), 0)::BIGINT AS pontuacao_total,
+                    count(*) FILTER (WHERE NOT derrota AND precisao >= 1) AS ss,
+                    count(*) FILTER (WHERE NOT derrota AND precisao >= $2 AND precisao < 1) AS s,
+                    COALESCE(sum(contagem[1]), 0)::BIGINT AS max, COALESCE(sum(contagem[2]), 0)::BIGINT AS j300,
+                    COALESCE(sum(contagem[3]), 0)::BIGINT AS j200, COALESCE(sum(contagem[4]), 0)::BIGINT AS j100,
+                    COALESCE(sum(contagem[5]), 0)::BIGINT AS j50, COALESCE(sum(contagem[6]), 0)::BIGINT AS miss,
+                    (SELECT count(*) FROM (
+                         SELECT conta_id, row_number() OVER (PARTITION BY beatmap_id ORDER BY pontuacao DESC, jogada_em ASC) AS posicao
+                         FROM (
+                             SELECT DISTINCT ON (beatmap_id, conta_id) beatmap_id, conta_id, pontuacao, jogada_em
+                             FROM partidas_do_mania
+                             WHERE vale_ranking AND beatmap_id IN (SELECT DISTINCT beatmap_id FROM partidas_do_mania WHERE conta_id = $1 AND vale_ranking)
+                             ORDER BY beatmap_id, conta_id, pontuacao DESC, jogada_em ASC
+                         ) melhores
+                     ) posicoes WHERE conta_id = $1 AND posicao <= $3) AS no_top
+             FROM partidas_do_mania WHERE conta_id = $1 AND vale_ranking",
+        )
+        .bind(conta_id)
+        .bind(PRECISAO_DO_S)
+        .bind(i64::from(REPLAYS_POR_MAPA))
+        .fetch_one(&self.0)
+        .await
+        .map_err(falha)?;
+        let n = |v: i64| u32::try_from(v).unwrap_or(u32::MAX);
+        let c = |v: i64| u64::try_from(v).unwrap_or(0);
+        Ok(EstatisticasDoMania {
+            partidas: n(l.partidas),
+            mapas: n(l.mapas),
+            precisao_media: l.precisao_media,
+            maior_combo: u32::try_from(l.maior_combo).unwrap_or(0),
+            pontuacao_total: c(l.pontuacao_total),
+            ss: n(l.ss),
+            s: n(l.s),
+            no_top: n(l.no_top),
+            contagem: [c(l.max), c(l.j300), c(l.j200), c(l.j100), c(l.j50), c(l.miss)],
+        })
     }
 
     async fn beatmap(&self, beatmap_id: u64) -> Result<Option<BeatmapDoOsu>, FalhaExterna> {
@@ -329,4 +454,34 @@ impl RepositorioDoMania for ManiaPostgres {
         transacao.commit().await.map_err(falha)?;
         Ok(cabe)
     }
+}
+
+#[derive(sqlx::FromRow)]
+struct LinhaDoMapaPopular {
+    beatmap_id: i64,
+    beatmapset_id: Option<i64>,
+    partidas: i64,
+    jogadores: i64,
+    texto: Option<String>,
+    recorde_nome: Option<String>,
+    recorde_pontuacao: Option<i32>,
+    recorde_precisao: Option<f64>,
+}
+
+#[derive(sqlx::FromRow)]
+struct LinhaDasEstatisticas {
+    partidas: i64,
+    mapas: i64,
+    precisao_media: f64,
+    maior_combo: i32,
+    pontuacao_total: i64,
+    ss: i64,
+    s: i64,
+    max: i64,
+    j300: i64,
+    j200: i64,
+    j100: i64,
+    j50: i64,
+    miss: i64,
+    no_top: i64,
 }

@@ -26,25 +26,65 @@ function passArray8ToWasm0(arg, malloc) {
     WASM_VECTOR_LEN = arg.length;
     return ptr;
 }
-
-function takeFromExternrefTable0(idx) {
-    const value = wasm.__wbindgen_export_0.get(idx);
-    wasm.__externref_table_dealloc(idx);
-    return value;
-}
-
-let cachedInt32ArrayMemory0 = null;
-
-function getInt32ArrayMemory0() {
-    if (cachedInt32ArrayMemory0 === null || cachedInt32ArrayMemory0.byteLength === 0) {
-        cachedInt32ArrayMemory0 = new Int32Array(wasm.memory.buffer);
+/**
+ * @param {Uint8Array} bytes
+ * @returns {string}
+ */
+export function hashDoBeatmap(bytes) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.hashDoBeatmap(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
     }
-    return cachedInt32ArrayMemory0;
 }
 
-function getArrayI32FromWasm0(ptr, len) {
-    ptr = ptr >>> 0;
-    return getInt32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
+/**
+ * Confere se a combinação de mods é válida; devolve a mensagem do problema, ou `undefined`.
+ * @param {number} mods
+ * @returns {string | undefined}
+ */
+export function problemaDosMods(mods) {
+    const ret = wasm.problemaDosMods(mods);
+    let v1;
+    if (ret[0] !== 0) {
+        v1 = getStringFromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v1;
+}
+
+/**
+ * @param {number} mods
+ * @returns {number}
+ */
+export function multiplicadorDosMods(mods) {
+    const ret = wasm.multiplicadorDosMods(mods);
+    return ret;
+}
+
+/**
+ * @param {number} mods
+ * @returns {number}
+ */
+export function velocidadeDosMods(mods) {
+    const ret = wasm.velocidadeDosMods(mods);
+    return ret;
+}
+
+/**
+ * @param {number} mods
+ * @returns {boolean}
+ */
+export function modsValemRanking(mods) {
+    const ret = wasm.modsValemRanking(mods);
+    return ret !== 0;
 }
 
 const cachedTextEncoder = (typeof TextEncoder !== 'undefined' ? new TextEncoder('utf-8') : { encode: () => { throw Error('TextEncoder not available') } } );
@@ -101,6 +141,26 @@ function passStringToWasm0(arg, malloc, realloc) {
     return ptr;
 }
 
+function takeFromExternrefTable0(idx) {
+    const value = wasm.__wbindgen_export_0.get(idx);
+    wasm.__externref_table_dealloc(idx);
+    return value;
+}
+
+let cachedInt32ArrayMemory0 = null;
+
+function getInt32ArrayMemory0() {
+    if (cachedInt32ArrayMemory0 === null || cachedInt32ArrayMemory0.byteLength === 0) {
+        cachedInt32ArrayMemory0 = new Int32Array(wasm.memory.buffer);
+    }
+    return cachedInt32ArrayMemory0;
+}
+
+function getArrayI32FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getInt32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
+}
+
 let cachedFloat64ArrayMemory0 = null;
 
 function getFloat64ArrayMemory0() {
@@ -127,66 +187,6 @@ function getUint32ArrayMemory0() {
 function getArrayU32FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return getUint32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
-}
-/**
- * @param {Uint8Array} bytes
- * @returns {string}
- */
-export function hashDoBeatmap(bytes) {
-    let deferred2_0;
-    let deferred2_1;
-    try {
-        const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.hashDoBeatmap(ptr0, len0);
-        deferred2_0 = ret[0];
-        deferred2_1 = ret[1];
-        return getStringFromWasm0(ret[0], ret[1]);
-    } finally {
-        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
-    }
-}
-
-/**
- * Confere se a combinação de mods é válida; devolve a mensagem do problema, ou `undefined`.
- * @param {number} mods
- * @returns {string | undefined}
- */
-export function problemaDosMods(mods) {
-    const ret = wasm.problemaDosMods(mods);
-    let v1;
-    if (ret[0] !== 0) {
-        v1 = getStringFromWasm0(ret[0], ret[1]).slice();
-        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    }
-    return v1;
-}
-
-/**
- * @param {number} mods
- * @returns {number}
- */
-export function velocidadeDosMods(mods) {
-    const ret = wasm.velocidadeDosMods(mods);
-    return ret;
-}
-
-/**
- * @param {number} mods
- * @returns {number}
- */
-export function multiplicadorDosMods(mods) {
-    const ret = wasm.multiplicadorDosMods(mods);
-    return ret;
-}
-
-/**
- * @param {number} mods
- * @returns {boolean}
- */
-export function modsValemRanking(mods) {
-    const ret = wasm.modsValemRanking(mods);
-    return ret !== 0;
 }
 
 const InfoDoBeatmapFinalization = (typeof FinalizationRegistry === 'undefined')

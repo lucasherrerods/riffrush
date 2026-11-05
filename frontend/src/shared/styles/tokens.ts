@@ -37,3 +37,6 @@ const paraVariavel = (nome: string) => `--cor-${nome.replace(/[A-Z]/g, (letra) =
 export function aplicarTokens(raiz: HTMLElement, tema: Tema = TEMA_PADRAO) {
   for (const [nome, valor] of Object.entries(tema.cores)) raiz.style.setProperty(paraVariavel(nome), valor);
 }
+
+/** As cores do tema como estilo inline: o que estiver dentro do elemento usa esse tema, mesmo dentro de outro. */
+export const estiloDoTema = (tema: Tema): Record<string, string> => Object.fromEntries(Object.entries(tema.cores).map(([nome, valor]) => [paraVariavel(nome), valor]));

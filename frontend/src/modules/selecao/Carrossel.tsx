@@ -1,31 +1,48 @@
 import { useRef, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Heart, Star } from "lucide-react";
-import { recordeDe, type Recordes } from "@/modules/rock/results";
-import { idDoRanking, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
-import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, centroDoGrupoAberto, passosDaRoda, passosDoArraste, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "../carrossel";
-import { Capa } from "./Capa";
+import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, centroDoGrupoAberto, passosDaRoda, passosDoArraste, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "./geometriaDoCarrossel";
+
+/** Uma música (Rock) ou um conjunto de mapas (Mania) na roda. */
+export interface ItemDoCarrossel {
+  id: string;
+  titulo: string;
+  artista: string;
+  /** A capa já montada pelo modo. */
+  capa: ReactNode;
+  favorita?: boolean;
+  /** Estrelas da melhor partida, de 0 a 5; sem partida, nada aparece. */
+  estrelas?: number;
+}
+
+/** Uma dificuldade aberta embaixo do item selecionado, com a melhor partida da pessoa nela. */
+export interface DificuldadeDoCarrossel {
+  id: string;
+  rotulo: ReactNode;
+  /** Classe de fundo da faixa lateral (um token, ex.: `bg-sucesso`). */
+  cor: string;
+  fullCombo?: boolean;
+  precisao?: number;
+  pontos?: number;
+}
 
 interface Props {
-  musicas: Musica[];
+  itens: ItemDoCarrossel[];
   indice: number;
-  dificuldade: Dificuldade;
-  instrumento: Instrumento;
-  /** As dificuldades que a música selecionada tem. */
-  dificuldades: { id: Dificuldade; rotulo: string }[];
-  recordes: Recordes;
-  /** Ids das músicas favoritas, marcadas com um coração. */
-  favoritas?: Set<string>;
-  aoEscolherMusica: (indice: number) => void;
-  aoEscolherDificuldade: (dificuldade: Dificuldade) => void;
+  dificuldade: string;
+  /** As dificuldades do item selecionado. */
+  dificuldades: DificuldadeDoCarrossel[];
+  aoEscolherItem: (indice: number) => void;
+  aoEscolherDificuldade: (id: string) => void;
   aoJogar: () => void;
-  /** Músicas a andar pela roda do mouse (negativo sobe). */
+  /** Itens a andar pela roda do mouse (negativo sobe). */
   aoGirar: (passos: number) => void;
-  /** Botão de opções no canto da música selecionada (ex.: apagar a importada). */
+  /** Botão de opções no canto do item selecionado (ex.: apagar o importado). */
   menuDaSelecionada?: ReactNode;
+  rotulo?: string;
   className?: string;
 }
 
@@ -35,14 +52,6 @@ const AVANCO_DA_SELECIONADA = 24;
 const ALCANCE = 1200;
 const MOLA = { type: "spring", stiffness: 260, damping: 32 } as const;
 
-/** Cada dificuldade tem a sua cor na faixa lateral, do verde ao vermelho. */
-const COR_DA_DIFICULDADE: Record<Dificuldade, string> = {
-  facil: "bg-sucesso",
-  medio: "bg-ouro",
-  dificil: "bg-destaque",
-  expert: "bg-primaria",
-};
-
 const ESCALA_NO_CELULAR = 0.7;
 const AFASTAMENTO_NO_CELULAR = 1.12;
 /** Quantos px o dedo anda antes de o toque deixar de ser um clique. */
@@ -51,8 +60,8 @@ const LIMITE_DO_TOQUE = 8;
 const TEMPO_DO_TOQUE = 250;
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
-/** Lista de músicas em roda, como no osu!lazer: a selecionada fica no meio, com as dificuldades abertas embaixo. */
-export function Carrossel({ musicas, indice, dificuldade, instrumento, dificuldades, recordes, favoritas, aoEscolherMusica, aoEscolherDificuldade, aoJogar, aoGirar, menuDaSelecionada, className }: Props) {
+/** Lista em roda, como no osu!lazer: a selecionada fica no meio, com as dificuldades abertas embaixo. */
+export function Carrossel({ itens, indice, dificuldade, dificuldades, aoEscolherItem, aoEscolherDificuldade, aoJogar, aoGirar, menuDaSelecionada, rotulo = "Músicas", className }: Props) {
   const giro = useRef(0);
   // No celular a roda gira arrastando o dedo: guarda a última altura do toque e o que sobrou do arraste.
   const toque = useRef<{ y: number; resto: number } | null>(null);
@@ -60,7 +69,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
   const inicioDoToque = useRef(0);
   const arrastou = useRef(false);
   const momentoDoToque = useRef(0);
-  const posicoes = posicoesNoCarrossel(musicas.length, indice, dificuldades.length);
+  const posicoes = posicoesNoCarrossel(itens.length, indice, dificuldades.length);
   const centro = centroDoGrupoAberto(dificuldades.length);
   // No celular a roda inteira encolhe, para caberem mais músicas e dar para ver que a lista continua.
   const estreita = useTelaEstreita();
@@ -70,7 +79,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
 
   return (
     <ul
-      aria-label="Músicas"
+      aria-label={rotulo}
       onWheel={(evento) => {
         const { passos, resto } = passosDaRoda(giro.current + evento.deltaY);
         giro.current = resto;
@@ -88,7 +97,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
         if (Math.abs(y - inicioDoToque.current) > LIMITE_DO_TOQUE) arrastou.current = true;
         const { passos, resto } = passosDoArraste(toque.current.resto + toque.current.y - y);
         toque.current = { y, resto };
-        const permitidos = passosSemDarAVolta(indice, passos, musicas.length);
+        const permitidos = passosSemDarAVolta(indice, passos, itens.length);
         if (permitidos) aoGirar(permitidos);
       }}
       onTouchEnd={() => {
@@ -104,11 +113,10 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
       }}
       className={cn("relative col-span-7 min-h-0 min-w-0 touch-none overflow-hidden max-md:col-span-1 max-md:min-h-40", className)}
     >
-      {musicas.map((m, i) => {
+      {itens.map((m, i) => {
         const posicao = posicoes[i];
         if (Math.abs(posicao) > ALCANCE) return null;
         const selecionada = i === indice;
-        const recorde = recordeDe(recordes, idDoRanking(m), dificuldade, instrumento);
         const x = selecionada ? -AVANCO_DA_SELECIONADA : recuoNaCurva(posicao + ALTURA_DA_MUSICA / 2 - centro);
         return (
           <motion.li
@@ -122,7 +130,7 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
             <div className="relative">
             <button
               aria-current={selecionada}
-              onClick={() => (selecionada ? aoJogar() : aoEscolherMusica(i))}
+              onClick={() => (selecionada ? aoJogar() : aoEscolherItem(i))}
               style={{ height: ALTURA_DA_MUSICA * escala }}
               className={cn(
                 "chapa flex w-full items-center gap-4 px-4 text-left transition-colors max-md:gap-2 max-md:px-2",
@@ -130,18 +138,18 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
                 selecionada && menuDaSelecionada && "pr-16",
               )}
             >
-              <Capa musica={m} decorativa className="size-14 rounded-sm max-md:size-9" />
+              <span className="size-14 shrink-0 overflow-hidden rounded-sm max-md:size-9">{m.capa}</span>
               <span className="min-w-0 flex-1">
                 <span className={cn("flex items-center gap-2 font-titulo text-2xl leading-[1.1] tracking-wide max-md:text-lg", selecionada && "text-destaque")}>
-                  {favoritas?.has(m.id) && <Heart className="size-4 shrink-0 fill-primaria text-primaria" aria-label="Favorita" />}
+                  {m.favorita && <Heart className="size-4 shrink-0 fill-primaria text-primaria" aria-label="Favorita" />}
                   <span className="truncate">{m.titulo}</span>
                 </span>
                 <span className="block truncate text-base text-texto-suave max-md:text-xs">{m.artista}</span>
               </span>
-              {recorde && (
-                <span className="flex gap-1" aria-label={`${recorde.estrelas} estrelas`}>
+              {m.estrelas !== undefined && (
+                <span className="flex gap-1" aria-label={`${m.estrelas} estrelas`}>
                   {Array.from({ length: 5 }, (_, k) => (
-                    <Star key={k} className={cn("size-3", k < recorde.estrelas ? "fill-ouro text-ouro" : "text-borda")} />
+                    <Star key={k} className={cn("size-3", k < m.estrelas! ? "fill-ouro text-ouro" : "text-borda")} />
                   ))}
                 </span>
               )}
@@ -153,7 +161,6 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
               <div role="radiogroup" aria-label="Dificuldade" style={{ marginTop: ESPACO * escala, gap: ESPACO * escala }} className="flex flex-col pl-12 max-md:pl-8">
                 {dificuldades.map((d) => {
                   const escolhida = d.id === dificuldade;
-                  const recordeDaDificuldade = recordeDe(recordes, idDoRanking(m), d.id, instrumento);
                   return (
                     <motion.button
                       key={d.id}
@@ -168,11 +175,11 @@ export function Carrossel({ musicas, indice, dificuldade, instrumento, dificulda
                         escolhida ? "border-destaque bg-destaque/15" : "border-transparent bg-superficie hover:bg-superficie-hover",
                       )}
                     >
-                      <span className={cn("w-1 self-stretch rounded-sm", COR_DA_DIFICULDADE[d.id])} />
+                      <span className={cn("w-1 self-stretch rounded-sm", d.cor)} />
                       <span className={cn("flex-1 font-titulo text-xl tracking-wide uppercase max-md:text-base", escolhida && "text-destaque")}>{d.rotulo}</span>
-                      {recordeDaDificuldade?.fullCombo && <span className="font-titulo text-xl text-destaque">FC</span>}
-                      {recordeDaDificuldade?.precisao !== undefined && <SeloDaNota precisao={recordeDaDificuldade.precisao} />}
-                      <span className="font-mono text-base text-texto-suave max-md:text-xs">{recordeDaDificuldade ? formatar(recordeDaDificuldade.pontos) : "—"}</span>
+                      {d.fullCombo && <span className="font-titulo text-xl text-destaque">FC</span>}
+                      {d.precisao !== undefined && <SeloDaNota precisao={d.precisao} />}
+                      <span className="font-mono text-base text-texto-suave max-md:text-xs">{d.pontos !== undefined ? formatar(d.pontos) : "—"}</span>
                     </motion.button>
                   );
                 })}

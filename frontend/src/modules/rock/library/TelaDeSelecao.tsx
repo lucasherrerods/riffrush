@@ -18,9 +18,9 @@ import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/shared/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { Carrossel } from "@/modules/selecao";
 import { AvatarPalhetando } from "./componentes/AvatarPalhetando";
 import { Capa } from "./componentes/Capa";
-import { Carrossel } from "./componentes/Carrossel";
 import { alternarFavorita, carregarFavoritas, indicesVisiveis, salvarFavoritas, selecaoNoFiltro } from "./favoritas";
 import { ehImportada, semAudio } from "./storage/historico";
 
@@ -55,6 +55,14 @@ interface Props {
 /** Os botões acima da lista têm o recorte do botão principal: vermelhos ligados, da cor do header desligados. */
 const estiloDoFiltro = (ligado: boolean) =>
   ligado ? { variant: "default" as const } : { variant: "ghost" as const, className: "corte gasto bg-superficie hover:bg-superficie-hover" };
+
+/** Cada dificuldade tem a sua cor na faixa lateral, do verde ao vermelho. */
+const COR_DA_DIFICULDADE: Record<Dificuldade, string> = {
+  facil: "bg-sucesso",
+  medio: "bg-ouro",
+  dificil: "bg-destaque",
+  expert: "bg-primaria",
+};
 
 const TIPOS_IMPORTAVEIS = "audio/*,video/*,.sng";
 const formatar = (n: number) => n.toLocaleString("pt-BR");
@@ -264,18 +272,28 @@ export function TelaDeSelecao(props: Props) {
   const lista = visiveis.length ? (
     <Carrossel
       className="flex-1"
-      musicas={visiveis.map((i) => musicas[i])}
+      itens={visiveis.map((i) => {
+        const m = musicas[i];
+        return {
+          id: m.id,
+          titulo: m.titulo,
+          artista: m.artista,
+          capa: <Capa musica={m} decorativa className="size-full" />,
+          favorita: favoritas.has(m.id),
+          estrelas: recordeDe(recordes, idDoRanking(m), dificuldade, instrumento)?.estrelas,
+        };
+      })}
       indice={visiveis.indexOf(indice)}
       dificuldade={dificuldade}
-      instrumento={instrumento}
-      dificuldades={dificuldades}
-      recordes={recordes}
-      favoritas={favoritas}
-      aoEscolherMusica={(i) => {
+      dificuldades={dificuldades.map((d) => {
+        const recorde = recordeDe(recordes, idDoRanking(musica), d.id, instrumento);
+        return { id: d.id, rotulo: d.rotulo, cor: COR_DA_DIFICULDADE[d.id], fullCombo: recorde?.fullCombo, precisao: recorde?.precisao, pontos: recorde?.pontos };
+      })}
+      aoEscolherItem={(i) => {
         efeito("mover");
         aoSelecionar(visiveis[i]);
       }}
-      aoEscolherDificuldade={escolherDificuldade}
+      aoEscolherDificuldade={(id) => escolherDificuldade(id as Dificuldade)}
       aoJogar={jogar}
       aoGirar={andar}
       menuDaSelecionada={

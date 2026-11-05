@@ -1,3 +1,5 @@
+import { lerModo, type Modo } from "./regras";
+
 // Partes puras do chat global. As regras são as mesmas de frontend/src/modules/chat/chat.ts:
 // o relay é publicado à parte e não importa o app, então os dois lados precisam andar juntos.
 
@@ -26,6 +28,8 @@ export interface MensagemDoChat {
   n: number;
   autor: Autor;
   texto: string;
+  /** Em que modo de jogo a pessoa estava ao mandar. Mensagens antigas não têm. */
+  modo?: Modo;
   /** Hora de chegada no relay, em ms. */
   em: number;
 }
@@ -45,7 +49,7 @@ export type MensagemDoChatGlobal =
   | { tipo: "voce"; voce: Permissoes };
 
 export type Comando =
-  | { tipo: "mensagem"; texto: string }
+  | { tipo: "mensagem"; texto: string; modo?: Modo }
   | { tipo: "denunciar"; n: number }
   | { tipo: "apagar"; n: number };
 
@@ -82,7 +86,8 @@ export function lerComando(bruta: string): Comando | null {
   const tipo = dados.tipo ?? "mensagem";
   if (tipo === "mensagem") {
     const texto = limparTexto(dados.texto);
-    return texto ? { tipo, texto } : null;
+    const modo = lerModo(dados.modo);
+    return texto ? { tipo, texto, ...(modo && { modo }) } : null;
   }
   if ((tipo === "denunciar" || tipo === "apagar") && Number.isInteger(dados.n) && (dados.n as number) > 0) return { tipo, n: dados.n as number };
   return null;

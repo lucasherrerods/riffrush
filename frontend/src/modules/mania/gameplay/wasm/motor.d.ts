@@ -5,8 +5,8 @@ export function hashDoBeatmap(bytes: Uint8Array): string;
  * Confere se a combinação de mods é válida; devolve a mensagem do problema, ou `undefined`.
  */
 export function problemaDosMods(mods: number): string | undefined;
-export function velocidadeDosMods(mods: number): number;
 export function multiplicadorDosMods(mods: number): number;
+export function velocidadeDosMods(mods: number): number;
 export function modsValemRanking(mods: number): boolean;
 /**
  * O que a biblioteca e a seleção mostram de um `.osu`, sem montar a partida.
@@ -149,9 +149,9 @@ export interface InitOutput {
   readonly velocidadeDosMods: (a: number) => number;
   readonly __wbindgen_export_0: WebAssembly.Table;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
-  readonly __externref_table_dealloc: (a: number) => void;
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+  readonly __externref_table_dealloc: (a: number) => void;
   readonly __wbindgen_start: () => void;
 }
 

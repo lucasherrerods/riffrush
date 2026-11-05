@@ -24,7 +24,7 @@ describe("ConexaoDePresenca", () => {
     expect(socket().url).toBe("wss://relay/presenca");
     expect(socket().protocolos).toEqual(["riffrush", "ficha"]);
     socket().abrir();
-    expect(socket().enviadas).toEqual([{ estado: { tipo: "menu" } }]);
+    expect(socket().enviadas).toEqual([{ estado: { tipo: "menu", modo: "rock" } }]);
     socket().entregar({ tipo: "lista", pessoas: [{ id: "a", nome: "Ana", avatar: null, estado: { tipo: "menu" } }] });
     expect(conexao.estado()).toMatchObject({ conectada: true, pessoas: [{ nome: "Ana" }] });
   });
@@ -36,7 +36,7 @@ describe("ConexaoDePresenca", () => {
     socket().abrir();
     const tocando = { tipo: "tocando", musica: "m", titulo: "T", artista: "A", dificuldade: "facil", instrumento: "guitarra", transmitindo: false } as const;
     conexao.definirEstado(tocando);
-    expect(socket().enviadas.at(-1)).toEqual({ estado: tocando });
+    expect(socket().enviadas.at(-1)).toEqual({ estado: { ...tocando, modo: "rock" } });
   });
 
   it("o mesmo estado de novo não vai ao relay", async () => {
@@ -47,7 +47,18 @@ describe("ConexaoDePresenca", () => {
     const naSala = { tipo: "multiplayer", sala: { jogadores: 2, online: true } } as const;
     conexao.definirEstado(naSala);
     conexao.definirEstado({ tipo: "multiplayer", sala: { jogadores: 2, online: true } });
-    expect(socket().enviadas).toEqual([{ estado: { tipo: "menu" } }, { estado: naSala }]);
+    expect(socket().enviadas).toEqual([{ estado: { tipo: "menu", modo: "rock" } }, { estado: { ...naSala, modo: "rock" } }]);
+  });
+
+  it("a troca de modo vai ao relay junto com onde a pessoa está, e volta a cada reconexão", async () => {
+    const { conexao } = montar();
+    conexao.definirModo("mania");
+    conexao.ligar();
+    await umInstante();
+    socket().abrir();
+    expect(socket().enviadas).toEqual([{ estado: { tipo: "menu", modo: "mania" } }]);
+    conexao.definirModo("rock");
+    expect(socket().enviadas.at(-1)).toEqual({ estado: { tipo: "menu", modo: "rock" } });
   });
 
   it("convida pela mesma conexão e avisa quem ouve os convites, sem mexer na lista", async () => {

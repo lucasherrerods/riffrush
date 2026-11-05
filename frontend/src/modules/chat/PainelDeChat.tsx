@@ -12,6 +12,8 @@ export interface MensagemDoChat {
   minha?: boolean;
   /** Um selo ao lado do nome, como "Moderação". */
   selo?: string;
+  /** Uma etiqueta antes do nome, como o modo de jogo de quem escreveu. */
+  etiqueta?: ReactNode;
 }
 
 export interface AcaoDaMensagem {
@@ -103,6 +105,7 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
             {mensagens.map((m) => (
               <li key={m.id} className="group flex items-start gap-1 break-words">
                 <p className="min-w-0 flex-1">
+                  {m.etiqueta && <span className="mr-1 align-middle">{m.etiqueta}</span>}
                   <span className={cn("font-bold", m.minha ? "text-destaque" : "text-texto")}>{m.autor}</span>
                   {m.selo && <span className="ml-1 rounded-full bg-ouro px-2 text-base font-bold text-fundo max-md:px-1.5 max-md:text-[10px]">{m.selo}</span>}
                   <span className="text-texto-suave">: </span>

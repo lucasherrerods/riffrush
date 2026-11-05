@@ -99,3 +99,13 @@ describe("lerAvisoDaApi", () => {
     expect(lerAvisoDaApi("lixo")).toBeNull();
   });
 });
+
+describe("modo no chat", () => {
+  it("a mensagem leva o modo em que a pessoa estava", () => {
+    expect(lerComando(JSON.stringify({ texto: "oi", modo: "rock" }))).toEqual({ tipo: "mensagem", texto: "oi", modo: "rock" });
+  });
+
+  it("sem modo, ou com um desconhecido, a mensagem passa sem etiqueta", () => {
+    expect(lerComando(JSON.stringify({ texto: "oi", modo: "x" }))).toEqual({ tipo: "mensagem", texto: "oi" });
+  });
+});
