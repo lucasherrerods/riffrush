@@ -26,7 +26,7 @@ describe("MenuPrincipal", () => {
   it("mostra o nome do jogo e as opções", () => {
     abrir();
     expect(screen.getByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Multiplayer", "Buscar músicas", "Leaderboard", "Personagem"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Multiplayer", "Buscar músicas", "Leaderboard", "Personagem", "Tutoriais"]);
   });
 
   it("sem conta, Configurações fica no menu, porque não há o menu da conta", () => {
@@ -42,8 +42,15 @@ describe("MenuPrincipal", () => {
 
   it("as setas trocam a opção selecionada, dando a volta", async () => {
     const { aoPersonagem, usuario } = abrir();
-    await usuario.keyboard("{ArrowUp}{Enter}");
+    await usuario.keyboard("{ArrowUp}{ArrowUp}{Enter}");
     expect(aoPersonagem).toHaveBeenCalled();
+  });
+
+  it("Tutoriais abre os tutoriais dos modos e das mecânicas", async () => {
+    const { usuario } = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Tutoriais" }));
+    expect(await screen.findByRole("dialog", { name: "Tutoriais" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Mecânicas" })).toBeInTheDocument();
   });
 
   it("marca a opção selecionada para leitores de tela", async () => {
@@ -138,7 +145,7 @@ describe("MenuPrincipal rodapé", () => {
 describe("MenuPrincipal no celular que entrou pelo QR code", () => {
   it("começa por entrar na sala", () => {
     abrir({ noCelular: true });
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Entrar na sala", "Jogar sozinho", "Buscar músicas", "Leaderboard", "Personagem"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Entrar na sala", "Jogar sozinho", "Buscar músicas", "Leaderboard", "Personagem", "Tutoriais"]);
   });
 
   it("Enter já leva para a sala", async () => {
