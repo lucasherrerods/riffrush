@@ -72,6 +72,10 @@ interface Props {
   treino?: boolean;
   /** Para os testes: o decodificador do áudio. */
   decodificar?: (contexto: AudioContext, bytes: Uint8Array) => Promise<AudioBuffer>;
+  /** Assistir: as entradas do replay tocam sozinhas, no tempo da música, e o teclado só serve para sair. */
+  replay?: EntradaDoMania[];
+  /** O selo no alto da tela durante o replay, como "REPLAY · Ana". */
+  rotuloDoReplay?: string;
 }
 
 const decodificarPadrao = (contexto: AudioContext, bytes: Uint8Array) => contexto.decodeAudioData(bytes.slice().buffer);
@@ -79,7 +83,7 @@ const decodificarPadrao = (contexto: AudioContext, bytes: Uint8Array) => context
 /** No treino ninguém falha, e os mods que derrubam a partida no primeiro erro não fazem sentido. */
 const modsDoTreino = (mods: number) => (mods & ~(MODS.SD | MODS.PF)) | MODS.NF;
 
-export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_PADRAO_DO_MANIA, aoTerminar, aoSair, treino = false, decodificar = decodificarPadrao }: Props) {
+export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_PADRAO_DO_MANIA, aoTerminar, aoSair, treino = false, decodificar = decodificarPadrao, replay, rotuloDoReplay }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [pronta, setPronta] = useState(false);
@@ -195,7 +199,7 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
           return;
         }
         const coluna = colunaDaTecla(teclas, evento.code);
-        if (coluna < 0) return;
+        if (coluna < 0 || replay) return;
         evento.preventDefault();
         if (evento.repeat || apertadas[coluna]) return;
         apertadas[coluna] = true;
@@ -206,7 +210,7 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
       };
       const aoSoltar = (evento: KeyboardEvent) => {
         const coluna = colunaDaTecla(teclas, evento.code);
-        if (coluna < 0 || !apertadas[coluna]) return;
+        if (coluna < 0 || replay || !apertadas[coluna]) return;
         apertadas[coluna] = false;
         const tempo = emMs(momentoDoEvento(contexto, evento));
         motor.soltar(coluna, tempo);
@@ -235,12 +239,27 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
       const observador = tela && typeof ResizeObserver !== "undefined" ? new ResizeObserver(medir) : null;
       if (tela) observador?.observe(tela);
 
+      // No replay, cada entrada gravada entra no motor quando a música chega no tempo dela, como se fosse tocada agora.
+      let proximaDoReplay = 0;
+      const tocarReplayAte = (agoraMs: number) => {
+        if (!replay) return;
+        while (proximaDoReplay < replay.length && replay[proximaDoReplay][0] <= agoraMs) {
+          const [tempo, coluna, toca] = replay[proximaDoReplay++];
+          if (toca) motor.tocar(coluna, tempo);
+          else motor.soltar(coluna, tempo);
+          apertadas[coluna] = toca === 1;
+          entradas.push([tempo, coluna, toca]);
+          lerEventos();
+        }
+      };
+
       let pedido = 0;
       let faltaNaTela = 0;
       let voltasFeitas = 0;
       const desenhar = () => {
         const agora = agoraNoAudio(contexto);
         quadro.agoraMs = emMs(agora);
+        tocarReplayAte(quadro.agoraMs);
         motor.avancar(quadro.agoraMs);
         lerEventos();
         quadro.combo = motor.combo;
@@ -283,13 +302,14 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
       cancelado = true;
       pararTudo();
     };
-  }, [mapa, mods, semente, opcoes, decodificar, treino, trecho, contagemNoTreino]);
+  }, [mapa, mods, semente, opcoes, decodificar, treino, trecho, contagemNoTreino, replay]);
 
   const escolhendo = treino && !trecho;
   return (
     <main className="relative h-full bg-fundo text-texto">
       <header className="absolute inset-x-0 top-0 flex items-baseline justify-between gap-4 px-6 py-4">
         <h1 className="font-titulo text-2xl tracking-wide">{mapa.titulo}</h1>
+        {replay && <p className="rounded bg-primaria px-2 font-black">{rotuloDoReplay ?? "REPLAY"}</p>}
         {trecho && (
           <p className="rounded bg-primaria px-2 font-black">{["TREINO", trecho.nome, rotuloDasVoltas(voltas)].filter(Boolean).join(" · ")}</p>
         )}

@@ -25,3 +25,18 @@ it("a api pede a rota do Mania", async () => {
   expect(await criarApiDoRanking("https://api.exemplo/", buscar).ranking(42)).toEqual([linha]);
   expect(buscar.mock.calls[0][0]).toBe("https://api.exemplo/mania/ranking/42");
 });
+
+it("com onde assistir, cada linha do top 10 tem o botão do replay", async () => {
+  const aoAssistir = vi.fn();
+  const fora = { ...linha, partida_id: "q", nome: "Bia", posicao: 37 };
+  render(<PainelDoRankingDoMania beatmapId={42} buscar={async () => [linha, fora]} aoAssistir={aoAssistir} />);
+  (await screen.findByRole("button", { name: "Assistir ao replay de Ana" })).click();
+  expect(aoAssistir).toHaveBeenCalledWith(linha);
+  expect(screen.queryByRole("button", { name: "Assistir ao replay de Bia" })).not.toBeInTheDocument();
+});
+
+it("a api baixa o replay da partida em bytes", async () => {
+  const buscar = vi.fn(async (_url: string | URL | Request) => new Response(new Uint8Array([1, 2, 3])));
+  expect(await criarApiDoRanking("https://api.exemplo/", buscar).replay("p1")).toEqual(new Uint8Array([1, 2, 3]));
+  expect(buscar.mock.calls[0][0]).toBe("https://api.exemplo/mania/partidas/p1/replay");
+});

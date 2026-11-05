@@ -6,6 +6,7 @@ import { Button } from "@/shared/ui/button";
 import type { ConjuntoSalvo, DificuldadeSalva } from "../beatmaps/biblioteca";
 import { faixaDasEstrelas, type FaixaDeDificuldade } from "../beatmaps/dificuldades";
 import { TeclaDoMania } from "../menu/TeclaDoMania";
+import type { PosicaoNoRankingDoMania } from "../ranking/api";
 import { PainelDoRankingDoMania } from "../ranking/PainelDoRankingDoMania";
 import { SeletorDeMods } from "./SeletorDeMods";
 
@@ -17,6 +18,8 @@ interface Props {
   aoJogar: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void;
   /** Abre o mapa no treino; sem ele o botão não aparece. */
   aoTreinar?: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void;
+  /** Assistir ao replay de uma partida do ranking da dificuldade escolhida. */
+  aoAssistir?: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva, linha: PosicaoNoRankingDoMania) => void;
 }
 
 const ehOsz = (arquivo: File) => arquivo.name.toLowerCase().endsWith(".osz");
@@ -45,7 +48,7 @@ function rotuloDaDificuldade(conjunto: ConjuntoSalvo, dificuldade: DificuldadeSa
 const capa = <TeclaDoMania icone={Music} className="size-full" />;
 
 /** A seleção do Mania: os conjuntos na mesma roda da seleção do Rock, com as dificuldades abertas no selecionado. */
-export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, aoJogar, aoTreinar }: Props) {
+export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, aoJogar, aoTreinar, aoAssistir }: Props) {
   const [indice, setIndice] = useState(0);
   const [hash, setHash] = useState<string | null>(null);
   const [arrastando, setArrastando] = useState(false);
@@ -108,7 +111,9 @@ export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, a
         )}
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {dificuldade?.beatmapId && conjunto?.origem === "osu" && <PainelDoRankingDoMania beatmapId={dificuldade.beatmapId} />}
+          {dificuldade?.beatmapId && conjunto?.origem === "osu" && (
+            <PainelDoRankingDoMania beatmapId={dificuldade.beatmapId} aoAssistir={aoAssistir && ((linha) => aoAssistir(conjunto, dificuldade, linha))} />
+          )}
         </div>
 
         <div className="flex justify-end gap-2">

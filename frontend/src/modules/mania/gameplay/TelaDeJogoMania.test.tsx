@@ -69,6 +69,26 @@ describe("TelaDeJogoMania", () => {
     expect(audio().fontes.at(-1)!.parada).toBe(true);
   });
 
+  it("assistindo um replay, as entradas tocam sozinhas e o teclado não joga", async () => {
+    const aoTerminar = vi.fn();
+    const replay: [number, number, 0 | 1][] = [
+      [1000, 0, 1],
+      [1010, 0, 0],
+      [1500, 1, 1],
+      [2000, 1, 0],
+    ];
+    render(<TelaDeJogoMania mapa={mapa} aoTerminar={aoTerminar} aoSair={vi.fn()} decodificar={decodificar} replay={replay} rotuloDoReplay="REPLAY · Ana" />);
+    expect(screen.getByText("REPLAY · Ana")).toBeInTheDocument();
+    await pronta();
+    fireEvent.keyDown(window, { code: "KeyD" });
+    await irPara(1000);
+    await irPara(1500);
+    await irPara(2000);
+    await irPara(3300);
+    await waitFor(() => expect(aoTerminar).toHaveBeenCalledTimes(1));
+    expect(aoTerminar.mock.calls[0][0]).toMatchObject({ pontuacao: 1_000_000, contagem: [3, 0, 0, 0, 0, 0] });
+  });
+
   it("segurar a tecla não toca de novo", async () => {
     const { aoTerminar } = abrir();
     await pronta();
