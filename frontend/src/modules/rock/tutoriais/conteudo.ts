@@ -155,9 +155,9 @@ export const TUTORIAIS: Tutorial[] = [
     id: "notas",
     grupo: "mecanicas",
     titulo: "Notas e janela de acerto",
-    resumo: "Você tem 70 ms antes e 70 ms depois da linha para acertar cada nota.",
+    resumo: "Você tem 110 ms antes e 110 ms depois da linha para acertar cada nota.",
     texto: [
-      "A nota vale se for tocada até 70 milésimos de segundo antes ou depois de passar pela linha, como no Clone Hero. Fora disso, ela passa como erro.",
+      "A nota vale se for tocada até 110 milésimos de segundo antes ou depois de passar pela linha. Fora disso, ela passa como erro.",
       "O retorno na tela diz quão perto você chegou: Perfeito, Ótimo ou Bom. Para os pontos e a porcentagem, todo acerto vale igual.",
     ],
     demo: {

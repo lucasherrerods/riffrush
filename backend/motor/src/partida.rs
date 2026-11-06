@@ -3,11 +3,11 @@
 
 use std::collections::{HashMap, HashSet};
 
-/// Até onde, em segundos de cada lado da batida, o toque acerta a nota (140 ms no total, como o Clone Hero).
-pub const JANELA_DE_ACERTO: f64 = 0.07;
+/// Até onde, em segundos de cada lado da batida, o toque acerta a nota (220 ms no total).
+pub const JANELA_DE_ACERTO: f64 = 0.11;
 /// Faixas só para o retorno na tela: a precisão é a de notas acertadas, como no Clone Hero.
-const JANELA_DO_PERFEITO: f64 = 0.025;
-const JANELA_DO_OTIMO: f64 = 0.05;
+const JANELA_DO_PERFEITO: f64 = 0.035;
+const JANELA_DO_OTIMO: f64 = 0.07;
 /// Depois de palhetar, quanto tempo os trastes ainda podem chegar ao acorde antes de virar palhetada em vão.
 const FOLGA_DA_PALHETADA: f64 = 0.05;
 /// Depois de acertar um HOPO ou tap, uma palhetada logo em seguida é engolida, sem punir.
@@ -38,7 +38,7 @@ fn arredondar(x: f64) -> f64 {
     (x + 0.5).floor()
 }
 
-/// O toque a `distancia` segundos da nota cai na janela? Compara em ticks, para 70 ms ser 70 ms.
+/// O toque a `distancia` segundos da nota cai na janela? Compara em ticks, para 110 ms ser 110 ms.
 fn na_janela(distancia: f64) -> bool {
     arredondar(distancia.abs() * TICKS_POR_SEGUNDO) <= JANELA_DE_ACERTO * TICKS_POR_SEGUNDO
 }
@@ -1002,11 +1002,11 @@ mod tests {
     }
 
     #[test]
-    fn a_janela_e_de_70_ms_para_cada_lado() {
+    fn a_janela_e_de_110_ms_para_cada_lado() {
         let mut partida = criar_partida(&[nota(1.0)], OpcoesDaPartida::default());
-        assert!(!tocar(&mut partida, 0, 0.92));
+        assert!(!tocar(&mut partida, 0, 0.88));
         let mut partida = criar_partida(&[nota(1.0)], OpcoesDaPartida::default());
-        assert!(tocar(&mut partida, 0, 1.07));
+        assert!(tocar(&mut partida, 0, 1.11));
     }
 
     #[test]
@@ -1233,14 +1233,14 @@ mod tests {
     }
 
     #[test]
-    fn a_troca_de_trastes_so_vale_ate_80_ms_antes_do_hopo() {
+    fn a_troca_de_trastes_fora_da_janela_nao_toca_o_hopo() {
         let notas = [na_pista(1.0, 0), do_tipo(1.2, 1, TipoDaNota::Hopo), do_tipo(1.5, 0, TipoDaNota::Hopo)];
         let mut partida = palhetada(&notas);
         tocar(&mut partida, 0, 0.98);
         palhetar(&mut partida, 1.0);
         tocar(&mut partida, 1, 1.2);
-        // Soltou o vermelho 100 ms antes do verde: a troca já não vale, e o verde passa.
-        soltar(&mut partida, 1, 1.4);
+        // Soltou o vermelho 120 ms antes do verde: a troca já não vale, e o verde passa.
+        soltar(&mut partida, 1, 1.38);
         avancar(&mut partida, 2.0);
         assert_eq!((partida.acertos, partida.erros), (2, 1));
     }
@@ -1422,9 +1422,9 @@ mod tests {
 
     #[test]
     fn julga_pela_distancia_ate_a_batida() {
-        assert_eq!(julgar(0.025), Julgamento::Perfeito);
-        assert_eq!(julgar(-0.04), Julgamento::Otimo);
-        assert_eq!(julgar(0.07), Julgamento::Bom);
+        assert_eq!(julgar(0.035), Julgamento::Perfeito);
+        assert_eq!(julgar(-0.05), Julgamento::Otimo);
+        assert_eq!(julgar(0.11), Julgamento::Bom);
     }
 
     #[test]
