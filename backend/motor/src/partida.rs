@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 
 /// Até onde, em segundos de cada lado da batida, o toque acerta a nota (220 ms no total).
 pub const JANELA_DE_ACERTO: f64 = 0.11;
-/// Faixas só para o retorno na tela: a precisão é a de notas acertadas, como no Clone Hero.
+/// Faixas de cada julgamento, que dão o peso do acerto na precisão.
 const JANELA_DO_PERFEITO: f64 = 0.035;
 const JANELA_DO_OTIMO: f64 = 0.07;
 /// Depois de palhetar, quanto tempo os trastes ainda podem chegar ao acorde antes de virar palhetada em vão.
@@ -55,7 +55,7 @@ pub enum Julgamento {
 }
 
 impl Julgamento {
-    /// Quanto o acerto vale na conta do valor dos acertos. A precisão da partida não usa: ela é de notas acertadas.
+    /// Quanto o acerto vale na precisão da partida.
     pub fn valor(self) -> u32 {
         match self {
             Self::Perfeito => 300,
@@ -248,7 +248,7 @@ pub struct Partida {
     pub perfeitos: u32,
     pub otimos: u32,
     pub bons: u32,
-    /// Soma do valor de cada acerto, para quem quiser o detalhe dos julgamentos.
+    /// Soma do valor de cada acerto, para a precisão.
     pub valor_dos_acertos: u32,
     /// Notas que passaram sem ser tocadas.
     pub erros: u32,
@@ -393,13 +393,13 @@ pub fn multiplicador(partida: &Partida) -> f64 {
     f64::from(base * if partida.estrela_ativa { 2 } else { 1 })
 }
 
-/// Notas acertadas sobre as que já passaram (0 a 1), como a porcentagem do Clone Hero.
+/// O valor dos acertos sobre o máximo das notas que já passaram (0 a 1): só PERFEITO em todas dá 100%.
 pub fn precisao(partida: &Partida) -> f64 {
     let tocadas = partida.acertos + partida.erros;
     if tocadas == 0 {
         return 1.0;
     }
-    f64::from(partida.acertos) / f64::from(tocadas)
+    f64::from(partida.valor_dos_acertos) / (f64::from(tocadas) * f64::from(Julgamento::Perfeito.valor()))
 }
 
 /// Full combo: todas as notas acertadas sem nenhuma palhetada ou toque em vão.
@@ -1010,12 +1010,13 @@ mod tests {
     }
 
     #[test]
-    fn a_precisao_e_de_notas_acertadas_como_no_clone_hero() {
+    fn a_precisao_pesa_cada_acerto_pelo_julgamento() {
         let mut partida = criar_partida(&[nota(1.0), nota(2.0)], OpcoesDaPartida::default());
         assert!(tocar(&mut partida, 0, 1.05));
         avancar(&mut partida, 3.0);
         assert_eq!((partida.acertos, partida.erros), (1, 1));
-        assert!((precisao(&partida) - 0.5).abs() < 1e-9);
+        // Um ótimo (200) e uma nota perdida, sobre o máximo de dois perfeitos (600).
+        assert!((precisao(&partida) - 200.0 / 600.0).abs() < 1e-9);
     }
 
     #[test]
