@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, ListMusic, Search, Settings2 } from "lucide-react";
-import { LogoDoJogo, PARTE_DA_TELA_DO_MODO, type PalcoCompartilhado } from "@/modules/menu";
+import { PARTE_DA_TELA_DO_MODO, type PalcoCompartilhado } from "@/modules/menu";
 import { CartaoDaConta, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { BotaoDeAmigos, PainelDeAmigos } from "@/modules/amigos";
 import { ChatGlobal, presenca, presencaDisponivel, useSouDaModeracao } from "@/modules/presenca";
@@ -9,8 +8,8 @@ import { carregarConfiguracoes, salvarConfiguracoes } from "@/modules/settings";
 import { AnimatePresence, motion } from "framer-motion";
 import { AbaDosMapasMaisJogados } from "./ranking/AbaDosMapasMaisJogados";
 import { EstatisticasDoMania } from "./perfil/EstatisticasDoMania";
+import { cn } from "@/shared/lib/utils";
 import { Avisos, avisar } from "@/shared/ui/avisos";
-import { Button } from "@/shared/ui/button";
 import { abrirBibliotecaDoMania, valeXpNoMania, type BibliotecaDoMania, type ConjuntoSalvo, type DificuldadeSalva } from "./beatmaps/biblioteca";
 import { MODS } from "./gameplay/mods";
 import { empacotarReplayDoMania, lerReplayDoMania, type ReplayDoMania } from "./gameplay/replay";
@@ -27,18 +26,16 @@ import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 import { definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
 import { CabecalhoDoPlayerDeMusica, type FaixaDoPlayer, type PlayerDeMusica } from "@/modules/player";
 import { criarPlayerDoMania, faixasDaBiblioteca, playerDoMania } from "./player/trilhaDoMania";
-import { cn } from "@/shared/lib/utils";
-import { TeclaDoMania } from "./menu/TeclaDoMania";
 import { FundoDoMania } from "./menu/FundoDoMania";
 import { MenuDoMania } from "./menu/MenuDoMania";
 
-type Tela = { nome: "menu" } | { nome: "selecao" } | { nome: "busca" } | { nome: "leaderboard" } | { nome: "perfil" } | { nome: "jogo"; mapa: MapaParaJogar; treino?: boolean; replay?: ReplayAssistido } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado; replay?: ReplayAssistido };
+type Tela = { nome: "menu" } | { nome: "selecao" } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil" } | { nome: "jogo"; mapa: MapaParaJogar; treino?: boolean; replay?: ReplayAssistido } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado; replay?: ReplayAssistido };
 
 /** Um replay do ranking aberto para assistir: as entradas, os mods e a semente da partida, e de quem ela é. */
 type ReplayAssistido = ReplayDoMania & { nome: string };
 
 interface Props {
-  /** A alavanca que volta para o Rock, no cabeçalho. */
+  /** A alavanca que volta para o Rock, na tela inicial. */
   alavanca?: ReactNode;
   /** Com a tela inicial compartilhada, o disco do app fica atrás dela no lugar do fundo do Mania. */
   palco?: PalcoCompartilhado;
@@ -273,51 +270,15 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
       </main>
     );
 
-  const aba = (nome: "selecao" | "busca", rotulo: string, icone: typeof ListMusic) => {
-    const ativa = tela.nome === nome;
-    return (
-      <button
-        type="button"
-        aria-current={ativa}
-        onClick={() => setTela({ nome })}
-        className={cn(
-          "chapa flex items-center gap-2 py-1 pr-4 pl-1.5 font-titulo text-lg tracking-wide uppercase transition-colors",
-          ativa ? "border-primaria bg-primaria text-texto" : "border-borda bg-superficie-elevada text-texto-suave hover:text-texto",
-        )}
-      >
-        <TeclaDoMania icone={icone} apagado={!ativa} className="h-6 w-5" />
-        {rotulo}
-      </button>
-    );
-  };
-
   return (
     <main className="relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
       <FundoDoMania />
       {cabecalho}
-      <header className="relative flex items-center justify-between gap-4 border-b border-borda bg-superficie-elevada/80 px-6 py-3 backdrop-blur-sm max-md:flex-wrap max-md:px-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => setTela({ nome: "menu" })} aria-label="Voltar ao menu">
-            <ArrowLeft aria-hidden />
-          </Button>
-          <LogoDoJogo modo="Mania" pequena fofa />
-        </div>
-        <nav aria-label="Telas do Mania" className="flex gap-2">
-          {aba("selecao", "Seleção", ListMusic)}
-          {aba("busca", "Buscar mapas", Search)}
-        </nav>
-        <div className="flex items-center gap-4">
-          <button type="button" onClick={() => setConfigurando(true)} aria-label="Configurações do Mania" className="rounded-[4px]">
-            <TeclaDoMania icone={Settings2} className="h-9 w-8" />
-          </button>
-          {alavanca}
-        </div>
-      </header>
       <div className="relative min-h-0 flex-1">
         {tela.nome === "busca" ? (
-          <TelaDeBuscaMania baixados={baixados} aoBaixar={aoBaixar} buscar={buscar} baixar={baixar} />
+          <TelaDeBuscaMania aoVoltar={() => setTela({ nome: tela.veioDaSelecao ? "selecao" : "menu" })} baixados={baixados} aoBaixar={aoBaixar} buscar={buscar} baixar={baixar} />
         ) : (
-          <TelaDeSelecaoMania conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
+          <TelaDeSelecaoMania aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", veioDaSelecao: true })} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
         )}
         {painelDeAmigos}
       </div>

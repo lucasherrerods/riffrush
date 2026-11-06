@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type DragEvent } from "react";
-import { Dices, Info, ListOrdered, Music, Upload } from "lucide-react";
+import { ArrowLeft, Dices, Info, ListOrdered, Music, Search, Upload } from "lucide-react";
 import { Carrossel, indiceDandoAVolta, passosSemDarAVolta, type DificuldadeDoCarrossel, type ItemDoCarrossel } from "@/modules/selecao";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
@@ -18,6 +18,8 @@ import { filtrarConjuntos, teclasDaBiblioteca, type OrdemDaSelecao } from "./fil
 import { SeletorDeMods } from "./SeletorDeMods";
 
 interface Props {
+  aoVoltar?: () => void;
+  aoBuscarMapas?: () => void;
   conjuntos: ConjuntoSalvo[] | null;
   mods: number;
   aoMudarMods: (mods: number) => void;
@@ -71,7 +73,7 @@ function rotuloDaDificuldade(conjunto: ConjuntoSalvo, dificuldade: DificuldadeSa
 const capa = <TeclaDoMania icone={Music} className="size-full" />;
 
 /** A seleção do Mania: os conjuntos na mesma roda da seleção do Rock, com busca, filtro de teclas, ordem e as abas de detalhes e ranking. */
-export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, aoJogar, aoTreinar, aoAssistir }: Props) {
+export function TelaDeSelecaoMania({ aoVoltar, aoBuscarMapas, conjuntos, mods, aoMudarMods, aoImportar, aoJogar, aoTreinar, aoAssistir }: Props) {
   // A seleção segue o id do conjunto: muda a ordem ou o filtro e ela continua no mesmo mapa, se ele ainda aparecer.
   const [id, setId] = useState<string | null>(null);
   const [hash, setHash] = useState<string | null>(null);
@@ -170,11 +172,26 @@ export function TelaDeSelecaoMania({ conjuntos, mods, aoMudarMods, aoImportar, a
     >
       <aside className="col-span-5 flex min-h-0 flex-col gap-4 max-md:col-span-1">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <SeletorDeMods mods={mods} aoMudar={aoMudarMods} />
-          <Button variant="secondary" className="chapa h-10 rounded-none border-borda bg-superficie-elevada" onClick={() => seletor.current?.click()}>
-            <Upload aria-hidden className="text-primaria" />
-            Importar .osz
-          </Button>
+          <div className="flex items-center gap-2">
+            {aoVoltar && (
+              <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
+                <ArrowLeft aria-hidden />
+              </Button>
+            )}
+            <SeletorDeMods mods={mods} aoMudar={aoMudarMods} />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {aoBuscarMapas && (
+              <Button variant="secondary" className="chapa h-10 rounded-none border-borda bg-superficie-elevada" onClick={aoBuscarMapas}>
+                <Search aria-hidden className="text-primaria" />
+                Buscar mapas
+              </Button>
+            )}
+            <Button variant="secondary" className="chapa h-10 rounded-none border-borda bg-superficie-elevada" onClick={() => seletor.current?.click()}>
+              <Upload aria-hidden className="text-primaria" />
+              Importar .osz
+            </Button>
+          </div>
           <input ref={seletor} type="file" accept=".osz" multiple aria-label="Arquivos .osz" className="sr-only" onChange={(e) => receber(e.target.files)} />
         </div>
 

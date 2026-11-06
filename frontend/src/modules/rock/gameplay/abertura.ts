@@ -10,7 +10,7 @@ export const ABERTURA = {
   duracaoDoHud: 0.8,
   /** Os trastes são teclados um de cada vez, da esquerda para a direita. */
   atrasoDosTrastes: 2,
-  passoDosTrastes: 0.22,
+  passoDosTrastes: 0.14,
 };
 
 /** Quanto da altura da tela falta para a pista chegar ao lugar (1 a 0), freando no fim. */
