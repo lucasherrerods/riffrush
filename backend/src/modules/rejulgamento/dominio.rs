@@ -212,7 +212,7 @@ mod tests {
             &chart,
             Instrumento::Guitarra,
             Dificuldade::Expert,
-            &replay(&chart, &[(0, 0.0), (1, 0.03), (2, 0.06)]),
+            &replay(&chart, &[(0, 0.0), (1, 0.05), (2, 0.09)]),
         )
         .unwrap();
         assert_eq!((rejulgada.resumo.acertos, rejulgada.resumo.total), (3, 4));

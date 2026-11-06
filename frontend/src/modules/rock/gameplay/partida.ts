@@ -19,9 +19,9 @@ export function iniciarMotorComBytes(bytes: BufferSource) {
   initSync({ module: bytes });
 }
 
-/** Até onde, em segundos de cada lado da batida, o toque ganha cada julgamento. A janela de acerto é a do Clone Hero
- * (70 ms para cada lado); as faixas dentro dela são só o retorno na tela. O teste de paridade confere com o motor. */
-export const JANELAS = { perfeito: 0.025, otimo: 0.05, bom: 0.07 } as const;
+/** Até onde, em segundos de cada lado da batida, o toque ganha cada julgamento. A janela de acerto é de
+ * 110 ms para cada lado; as faixas dentro dela são só o retorno na tela. O teste de paridade confere com o motor. */
+export const JANELAS = { perfeito: 0.035, otimo: 0.07, bom: 0.11 } as const;
 export type Julgamento = keyof typeof JANELAS;
 /** Quanto cada julgamento vale no valor dos acertos. A precisão é de notas acertadas, como no Clone Hero. */
 export const VALOR_DO_JULGAMENTO: Record<Julgamento, number> = { perfeito: 300, otimo: 200, bom: 100 };
