@@ -75,3 +75,10 @@ it("explica o formato da imagem e leva ao site de highways prontas", async () =>
   await usuario.click(screen.getByRole("button", { name: /Baixar highways prontas/ }));
   expect(abrirLink).toHaveBeenCalledWith("https://www.fullcombo.net/clone-hero/clone-hero-highways/");
 });
+
+it("as pistas prontas dos personagens não podem ser apagadas, só as importadas", () => {
+  localStorage.setItem("riffrush.highways", JSON.stringify([importada]));
+  abrir();
+  expect(screen.queryByRole("button", { name: "Apagar Faísca" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Apagar Madeira" })).toBeInTheDocument();
+});

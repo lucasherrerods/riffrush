@@ -86,22 +86,22 @@ export function PersonalizacaoDaPista({ escolhida, aoEscolher, abrir = abrirImag
     if (id === escolhida) aoEscolher(SKIN_PADRAO.id);
   };
 
-  const cartao = (skin: SkinDaPista) => (
+  const cartao = (skin: SkinDaPista, importada = false) => (
     <CartaoDeSkin
       key={skin.id}
       nome={skin.nome}
       marcada={skin.id === escolhida}
       aoEscolher={() => aoEscolher(skin.id)}
       amostra={<Amostra skin={skin} />}
-      aoApagar={skin.highway ? () => apagar(skin.id) : undefined}
+      aoApagar={importada ? () => apagar(skin.id) : undefined}
     />
   );
 
   return (
     <div className="flex flex-col gap-4 p-2">
       <div role="radiogroup" aria-label="Skin da pista" className={GRADE_DE_SKINS}>
-        {SKINS_PRONTAS.map(cartao)}
-        {importadas.map(cartao)}
+        {SKINS_PRONTAS.map((skin) => cartao(skin))}
+        {importadas.map((skin) => cartao(skin, true))}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-borda bg-superficie px-4 py-2 text-sm font-semibold hover:bg-superficie-hover">
