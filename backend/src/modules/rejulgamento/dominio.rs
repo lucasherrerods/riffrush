@@ -1,7 +1,7 @@
 use chrono::{DateTime, Duration, Utc};
 use riffrush_motor as motor;
 
-use crate::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar, ResumoDaPartida};
+use crate::modules::progresso::{precisao_pelo_valor, Dificuldade, Instrumento, JeitoDeJogar, ResumoDaPartida};
 
 pub use motor::ChartGuardado;
 
@@ -109,8 +109,7 @@ pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Di
         perfeitos: partida.perfeitos,
         otimos: partida.otimos,
         bons: partida.bons,
-        // Notas acertadas sobre as do chart, como a porcentagem do Clone Hero.
-        precisao: f64::from(partida.acertos) / f64::from(total),
+        precisao: precisao_pelo_valor(u64::from(partida.valor_dos_acertos), u64::from(total)),
         velocidade: replay.velocidade,
         sem_falha: replay.sem_falha,
         jeito_de_jogar: match replay.jeito {
@@ -219,8 +218,7 @@ mod tests {
         assert_eq!((rejulgada.perfeitos, rejulgada.otimos, rejulgada.bons), (1, 1, 1));
         assert_eq!(rejulgada.resumo.maior_sequencia, Some(3));
         assert_eq!(rejulgada.resumo.valor_dos_acertos, Some(600));
-        // A precisão é de notas acertadas, como a porcentagem do Clone Hero.
-        assert!((rejulgada.precisao - 3.0 / 4.0).abs() < 1e-9);
+        assert!((rejulgada.precisao - 600.0 / 1200.0).abs() < 1e-9);
         assert_eq!(rejulgada.pontos, 150);
     }
 

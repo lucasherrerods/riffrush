@@ -5,6 +5,13 @@ import { resultadoDaPartida, valorDosAcertos } from "./resultado";
 const nota = (tempo: number): Nota => ({ tempo, pista: 0, frase: -1, duracao: 0 });
 
 describe("resultadoDaPartida", () => {
+  it("a precisão do resultado pesa cada acerto pelo julgamento", () => {
+    const partida = criarPartida([nota(1), nota(2)]);
+    tocar(partida, 0, 1);
+    tocar(partida, 0, 2.09);
+    expect(resultadoDaPartida(partida, "musica", "expert").precisao).toBeCloseTo(400 / 600);
+  });
+
   it("resume a partida para a tela de resultado e os recordes", () => {
     const partida = criarPartida([nota(1), nota(2), nota(3)]);
     tocar(partida, 0, 1);

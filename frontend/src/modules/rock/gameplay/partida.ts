@@ -23,7 +23,7 @@ export function iniciarMotorComBytes(bytes: BufferSource) {
  * 110 ms para cada lado; as faixas dentro dela são só o retorno na tela. O teste de paridade confere com o motor. */
 export const JANELAS = { perfeito: 0.035, otimo: 0.07, bom: 0.11 } as const;
 export type Julgamento = keyof typeof JANELAS;
-/** Quanto cada julgamento vale no valor dos acertos. A precisão é de notas acertadas, como no Clone Hero. */
+/** Quanto cada julgamento vale na precisão. */
 export const VALOR_DO_JULGAMENTO: Record<Julgamento, number> = { perfeito: 300, otimo: 200, bom: 100 };
 export const JANELA_DE_ACERTO = JANELAS.bom;
 export const PONTOS_POR_NOTA = 50;
@@ -225,7 +225,7 @@ export function retirarEventos(partida: Partida) {
 
 export const multiplicador = (partida: Partida) => partida.multiplicadorAtual;
 
-/** Notas acertadas sobre as que já passaram (0 a 1), como a porcentagem do Clone Hero. No fim da música, vale para o chart inteiro. */
+/** O valor dos acertos sobre o máximo das notas que já passaram (0 a 1). No fim da música, vale para o chart inteiro. */
 export const precisao = (partida: Partida) => partida.precisaoAtual;
 
 /** Marca a nota como acertada no instante `tempo`, sem olhar a janela de acerto (o bot usa). */

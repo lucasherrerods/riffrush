@@ -10,7 +10,7 @@ import { AbaDosMapasMaisJogados } from "./ranking/AbaDosMapasMaisJogados";
 import { EstatisticasDoMania } from "./perfil/EstatisticasDoMania";
 import { cn } from "@/shared/lib/utils";
 import { Avisos, avisar } from "@/shared/ui/avisos";
-import { abrirBibliotecaDoMania, valeXpNoMania, type BibliotecaDoMania, type ConjuntoSalvo, type DificuldadeSalva } from "./beatmaps/biblioteca";
+import { abrirBibliotecaDoMania, beatmapIdParaAApi, valeXpNoMania, type BibliotecaDoMania, type ConjuntoSalvo, type DificuldadeSalva } from "./beatmaps/biblioteca";
 import { MODS } from "./gameplay/mods";
 import { empacotarReplayDoMania, lerReplayDoMania, type ReplayDoMania } from "./gameplay/replay";
 import { apiDoRanking, type PosicaoNoRankingDoMania } from "./ranking/api";
@@ -147,7 +147,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
       mapa: {
         titulo: conjunto.tituloUnicode || conjunto.titulo,
         dificuldade: lido.dificuldade,
-        beatmapId: lido.beatmapId,
+        beatmapId: beatmapIdParaAApi(conjunto, lido.beatmapId),
         valeXp: valeXpNoMania(conjunto) && !!lido.beatmapId,
         texto: lido.texto,
         hash: lido.hash,
@@ -167,12 +167,13 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     await aoJogar(conjunto, dificuldade, false, { ...replay, nome: linha.nome });
   };
 
-  /** Com a conta conectada, o replay vai para a API, que confere a partida e devolve o XP. Replay assistido não vale nada. */
+  /** Com a conta conectada, o replay vai para a API, que confere a partida e devolve o XP. Fora do ranked ela vai também,
+   * sem XP, para aparecer no ranking com todas as partidas. Replay assistido não vale nada. */
   const aoTerminar = (mapa: MapaParaJogar, resultado: Resultado, replay?: ReplayAssistido) => {
     setTela({ nome: "resultado", mapa, resultado, replay });
     setXp(undefined);
     if (!conta || replay) return;
-    if (!mapa.valeXp || !mapa.beatmapId || resultado.mods & MODS.AT) return setXp({ recusada: true });
+    if (!mapa.beatmapId || resultado.mods & MODS.AT) return setXp({ recusada: true });
     const beatmapId = mapa.beatmapId;
     setXp({ pendente: true, id: "" });
     void empacotarReplayDoMania({ mods: resultado.mods, semente: resultado.semente, hash: resultado.hash, entradas: resultado.entradas })

@@ -3,7 +3,7 @@
 import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { osu, pacote } from "@/test/beatmaps";
-import { abrirBibliotecaDoMania, importarOsz } from "./biblioteca";
+import { abrirBibliotecaDoMania, beatmapIdParaAApi, importarOsz, type ConjuntoSalvo } from "./biblioteca";
 
 const motor = vi.hoisted(() => ({ iniciado: 0 }));
 vi.mock("../gameplay/motor", async (original) => {
@@ -82,4 +82,12 @@ describe("biblioteca do Mania", () => {
     const bancos = await indexedDB.databases();
     expect(bancos.map((b) => b.name)).toEqual(["riffrush-mania"]);
   });
+});
+
+it("partida em mapa do osu! vai para a API mesmo fora do ranked; importado e sem id, não", () => {
+  const conjunto = (origem: ConjuntoSalvo["origem"], status?: string) => ({ origem, status }) as ConjuntoSalvo;
+  expect(beatmapIdParaAApi(conjunto("osu", "graveyard"), 42)).toBe(42);
+  expect(beatmapIdParaAApi(conjunto("osu", "ranked"), 42)).toBe(42);
+  expect(beatmapIdParaAApi(conjunto("importado"), 42)).toBeUndefined();
+  expect(beatmapIdParaAApi(conjunto("osu", "ranked"), 0)).toBeUndefined();
 });
