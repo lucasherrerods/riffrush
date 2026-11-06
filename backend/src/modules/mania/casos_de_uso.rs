@@ -110,12 +110,13 @@ impl ServicosDoMania {
         })
     }
 
-    pub async fn ranking(&self, beatmap_id: u64, token: Option<&str>) -> Result<Vec<LinhaDoRanking>, ErroDoMania> {
+    /// Com `todas`, entram também as partidas que não valem ranking (Random, derrota, mapa fora do ranked).
+    pub async fn ranking(&self, beatmap_id: u64, todas: bool, token: Option<&str>) -> Result<Vec<LinhaDoRanking>, ErroDoMania> {
         let conta = match token {
             Some(token) => self.conta.conta_da_sessao(token).await.ok().map(|c| c.id),
             None => None,
         };
-        Ok(self.repositorio.ranking(beatmap_id, TAMANHO_DO_RANKING, conta).await?)
+        Ok(self.repositorio.ranking(beatmap_id, TAMANHO_DO_RANKING, todas, conta).await?)
     }
 
     pub async fn replay(&self, partida_id: Uuid) -> Result<Vec<u8>, ErroDoMania> {
@@ -412,9 +413,15 @@ pub mod fakes {
                 ..EstatisticasDoMania::default()
             })
         }
-        async fn ranking(&self, beatmap_id: u64, limite: u32, _conta: Option<Uuid>) -> Result<Vec<LinhaDoRanking>, FalhaExterna> {
+        async fn ranking(&self, beatmap_id: u64, limite: u32, todas: bool, _conta: Option<Uuid>) -> Result<Vec<LinhaDoRanking>, FalhaExterna> {
             let mut melhores: HashMap<Uuid, PartidaRegistrada> = HashMap::new();
-            for p in self.registradas.lock().unwrap().iter().filter(|p| p.beatmap_id == beatmap_id && p.vale_ranking) {
+            for p in self
+                .registradas
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|p| p.beatmap_id == beatmap_id && (todas || p.vale_ranking))
+            {
                 let melhor = melhores.entry(p.conta_id).or_insert_with(|| p.clone());
                 if p.pontuacao > melhor.pontuacao {
                     *melhor = p.clone();
@@ -437,6 +444,7 @@ pub mod fakes {
                     maior_combo: p.maior_combo,
                     mods: p.mods,
                     jogada_em: p.jogada_em,
+                    vale_ranking: p.vale_ranking,
                 })
                 .collect())
         }
@@ -597,7 +605,7 @@ mod tests {
         assert!(registrada.xp_ganho > 0);
         assert_eq!(registrada.replay, Some(replay));
         assert!(matches!(c.servicos.situacao(&c.token, id).await.unwrap(), Situacao::Registrada { xp_ganho, .. } if xp_ganho == registrada.xp_ganho));
-        assert_eq!(c.servicos.ranking(BEATMAP, None).await.unwrap().len(), 1);
+        assert_eq!(c.servicos.ranking(BEATMAP, false, None).await.unwrap().len(), 1);
         assert!(c.repositorio.beatmaps.lock().unwrap().contains_key(&BEATMAP));
     }
 
@@ -688,6 +696,9 @@ mod tests {
         c.servicos.processar_lote().await.unwrap();
         let registrada = c.repositorio.registradas.lock().unwrap()[0].clone();
         assert!(!registrada.vale_ranking);
+        assert!(c.servicos.ranking(BEATMAP, false, None).await.unwrap().is_empty());
+        let todas = c.servicos.ranking(BEATMAP, true, None).await.unwrap();
+        assert_eq!(todas.iter().map(|l| l.vale_ranking).collect::<Vec<_>>(), [false]);
     }
 
     #[tokio::test]

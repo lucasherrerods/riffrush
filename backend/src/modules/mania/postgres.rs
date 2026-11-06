@@ -55,6 +55,7 @@ struct LinhaDoRankingNoBanco {
     maior_combo: i32,
     mods: i32,
     jogada_em: DateTime<Utc>,
+    vale_ranking: bool,
 }
 
 #[async_trait]
@@ -253,17 +254,17 @@ impl RepositorioDoMania for ManiaPostgres {
         }))
     }
 
-    async fn ranking(&self, beatmap_id: u64, limite: u32, conta: Option<Uuid>) -> Result<Vec<LinhaDoRanking>, FalhaExterna> {
+    async fn ranking(&self, beatmap_id: u64, limite: u32, todas: bool, conta: Option<Uuid>) -> Result<Vec<LinhaDoRanking>, FalhaExterna> {
         let linhas = sqlx::query_as::<_, LinhaDoRankingNoBanco>(
             "WITH melhores AS (
-                 SELECT DISTINCT ON (p.conta_id) p.id, p.conta_id, p.pontuacao, p.precisao, p.maior_combo, p.mods, p.jogada_em
+                 SELECT DISTINCT ON (p.conta_id) p.id, p.conta_id, p.pontuacao, p.precisao, p.maior_combo, p.mods, p.jogada_em, p.vale_ranking
                  FROM partidas_do_mania p
-                 WHERE p.beatmap_id = $1 AND p.vale_ranking
+                 WHERE p.beatmap_id = $1 AND (p.vale_ranking OR $4)
                  ORDER BY p.conta_id, p.pontuacao DESC, p.jogada_em ASC
              ), posicoes AS (
                  SELECT m.*, row_number() OVER (ORDER BY m.pontuacao DESC, m.jogada_em ASC) AS posicao FROM melhores m
              )
-             SELECT posicao, ps.id AS partida_id, ps.conta_id, c.nome, c.avatar, ps.pontuacao, ps.precisao, ps.maior_combo, ps.mods, ps.jogada_em
+             SELECT posicao, ps.id AS partida_id, ps.conta_id, c.nome, c.avatar, ps.pontuacao, ps.precisao, ps.maior_combo, ps.mods, ps.jogada_em, ps.vale_ranking
              FROM posicoes ps JOIN contas c ON c.id = ps.conta_id
              WHERE ps.posicao <= $2 OR ps.conta_id = $3
              ORDER BY ps.posicao",
@@ -271,6 +272,7 @@ impl RepositorioDoMania for ManiaPostgres {
         .bind(id_do_banco(beatmap_id))
         .bind(i64::from(limite))
         .bind(conta)
+        .bind(todas)
         .fetch_all(&self.0)
         .await
         .map_err(falha)?;
@@ -287,6 +289,7 @@ impl RepositorioDoMania for ManiaPostgres {
                 maior_combo: u32::try_from(l.maior_combo).unwrap_or(0),
                 mods: u32::try_from(l.mods).unwrap_or(0),
                 jogada_em: l.jogada_em,
+                vale_ranking: l.vale_ranking,
             })
             .collect())
     }

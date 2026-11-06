@@ -387,7 +387,7 @@ async fn postgres_ranking_pega_o_melhor_de_cada_jogador_e_a_linha_de_quem_pede()
     ] {
         repositorio.registrar(&partida).await.unwrap();
     }
-    let linhas = repositorio.ranking(beatmap, 2, Some(caio)).await.unwrap();
+    let linhas = repositorio.ranking(beatmap, 2, false, Some(caio)).await.unwrap();
     let resumo: Vec<_> = linhas.iter().map(|l| (l.posicao, l.conta_id, l.pontuacao)).collect();
     assert_eq!(resumo, [(1, ana, 950_000), (2, bia, 950_000), (3, caio, 500_000)]);
     assert_eq!(linhas[0].nome, "Ana");

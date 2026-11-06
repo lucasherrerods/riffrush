@@ -1,4 +1,4 @@
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
@@ -106,6 +106,8 @@ pub struct PosicaoNoRankingDoMania {
     /// Os bits dos mods, como no replay.
     mods: u32,
     jogada_em: DateTime<Utc>,
+    /// Falso nas partidas que só vêm com `todas=true`; elas não têm replay.
+    vale_ranking: bool,
 }
 
 impl From<LinhaDoRanking> for PosicaoNoRankingDoMania {
@@ -121,6 +123,7 @@ impl From<LinhaDoRanking> for PosicaoNoRankingDoMania {
             maior_combo: l.maior_combo,
             mods: l.mods,
             jogada_em: l.jogada_em,
+            vale_ranking: l.vale_ranking,
         }
     }
 }
@@ -130,14 +133,22 @@ pub struct RespostaDoRankingDoMania {
     linhas: Vec<PosicaoNoRankingDoMania>,
 }
 
+#[derive(Deserialize, utoipa::IntoParams)]
+pub struct FiltroDoRankingDoMania {
+    /// Inclui as partidas que não valem ranking (Random, derrota, mapa fora do ranked).
+    #[serde(default)]
+    todas: bool,
+}
+
 /// O top 10 da dificuldade, um lugar por jogador, pela pontuação. Logado, a sua linha vem junto se estiver fora.
-#[utoipa::path(get, path = "/mania/ranking/{beatmap_id}", params(("beatmap_id" = u64, Path)), responses((status = 200, body = RespostaDoRankingDoMania)))]
+#[utoipa::path(get, path = "/mania/ranking/{beatmap_id}", params(("beatmap_id" = u64, Path), FiltroDoRankingDoMania), responses((status = 200, body = RespostaDoRankingDoMania)))]
 pub async fn ranking(
     State(estado): State<EstadoDoApp>,
     TokenOpcional(token): TokenOpcional,
     Path(beatmap_id): Path<u64>,
+    Query(filtro): Query<FiltroDoRankingDoMania>,
 ) -> Result<Json<RespostaDoRankingDoMania>, ErroDaApi> {
-    let linhas = estado.mania.ranking(beatmap_id, token.as_deref()).await?;
+    let linhas = estado.mania.ranking(beatmap_id, filtro.todas, token.as_deref()).await?;
     Ok(Json(RespostaDoRankingDoMania {
         linhas: linhas.into_iter().map(Into::into).collect(),
     }))
