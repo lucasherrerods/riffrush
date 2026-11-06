@@ -1,27 +1,46 @@
-import { CACAPA_PADRAO, CACAPAS_PRONTAS, FORMATOS_DA_CACAPA, cacapaPorId } from "./cacapas";
+import { ESQUEMA_PADRAO, ESQUEMAS_DE_CORES, FORMATOS_DA_CACAPA, esquemaPorId, estiloDaCacapa } from "./cacapas";
 
-describe("caçapas prontas", () => {
-  it("tem ids únicos e pelo menos uma de cada formato", () => {
-    expect(new Set(CACAPAS_PRONTAS.map((c) => c.id)).size).toBe(CACAPAS_PRONTAS.length);
-    for (const formato of FORMATOS_DA_CACAPA) expect(CACAPAS_PRONTAS.some((c) => c.formato === formato)).toBe(true);
-  });
-
-  it("cada uma tem uma cor para cada traste e para a aberta", () => {
-    for (const cacapa of CACAPAS_PRONTAS) {
-      expect(cacapa.cores.trastes).toHaveLength(5);
-      expect(cacapa.cores.aberta).toMatch(/^#/);
-    }
-  });
-
-  it("a padrão é a primeira, redonda", () => {
-    expect(CACAPAS_PRONTAS[0]).toBe(CACAPA_PADRAO);
-    expect(CACAPA_PADRAO.formato).toBe("redonda");
+describe("formatos", () => {
+  it("redonda, retangular e hexagonal, com nome para a tela", () => {
+    expect(FORMATOS_DA_CACAPA.map((f) => f.id)).toEqual(["redonda", "retangular", "hexagonal"]);
+    for (const f of FORMATOS_DA_CACAPA) expect(f.nome).toBeTruthy();
   });
 });
 
-describe("cacapaPorId", () => {
-  it("acha uma pronta e volta para a padrão quando não existe", () => {
-    expect(cacapaPorId(CACAPAS_PRONTAS[1].id)).toBe(CACAPAS_PRONTAS[1]);
-    expect(cacapaPorId("sumiu")).toBe(CACAPA_PADRAO);
+describe("esquemas de cores", () => {
+  it("tem ids únicos, 5 trastes e a aberta em cada um", () => {
+    expect(new Set(ESQUEMAS_DE_CORES.map((e) => e.id)).size).toBe(ESQUEMAS_DE_CORES.length);
+    for (const e of ESQUEMAS_DE_CORES) {
+      expect(e.cores.trastes).toHaveLength(5);
+      expect(e.cores.aberta).toMatch(/^#/);
+    }
+  });
+
+  it("tem esquemas pensados para daltonismo", () => {
+    expect(ESQUEMAS_DE_CORES.filter((e) => e.acessivel).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("nos esquemas acessíveis, os cinco trastes têm cores diferentes", () => {
+    for (const e of ESQUEMAS_DE_CORES.filter((e) => e.acessivel)) expect(new Set(e.cores.trastes).size).toBe(5);
+  });
+
+  it("volta para a clássica quando o id não existe", () => {
+    expect(esquemaPorId("sumiu")).toBe(ESQUEMA_PADRAO);
+    expect(ESQUEMA_PADRAO.id).toBe("classica");
+  });
+});
+
+describe("estiloDaCacapa", () => {
+  it("combina qualquer formato com qualquer esquema", () => {
+    expect(estiloDaCacapa("hexagonal", "daltonismo", 0.5, true)).toMatchObject({ formato: "hexagonal", cores: esquemaPorId("daltonismo").cores, brilho: 0.5, contornoForte: true });
+  });
+
+  it("o brilho fica entre 0 e 1", () => {
+    expect(estiloDaCacapa("redonda", "classica", 3, false).brilho).toBe(1);
+    expect(estiloDaCacapa("redonda", "classica", -1, false).brilho).toBe(0);
+  });
+
+  it("as mesmas escolhas devolvem o mesmo objeto, para a partida não reiniciar", () => {
+    expect(estiloDaCacapa("retangular", "neon", 0.7, false)).toBe(estiloDaCacapa("retangular", "neon", 0.7, false));
   });
 });

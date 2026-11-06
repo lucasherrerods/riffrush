@@ -33,8 +33,8 @@ export function criarSprites(): Sprites {
   const camadas = new Map<string, { canvas: HTMLCanvasElement; versao: number; largura: number; altura: number; escala: number }>();
 
   return {
-    nota: (cor, estrela, brilho, tipo, forma = "redonda") =>
-      lembrar(`nota:${cor}:${estrela}:${brilho}:${tipo ?? "comum"}:${forma}`, () =>
+    nota: (cor, estrela, brilho, tipo, forma = "redonda", intensidade = 1, contornoForte = false) =>
+      lembrar(`nota:${cor}:${estrela}:${brilho}:${tipo ?? "comum"}:${forma}:${intensidade}:${contornoForte}`, () =>
         comCanvas(SPRITE_DA_NOTA.largura, SPRITE_DA_NOTA.altura, (c) => {
           // Uma pastilha vista de cima e de lado: parede escura, tampa colorida e a cúpula branca no meio.
           const x = SPRITE_DA_NOTA.largura / 2;
@@ -82,12 +82,13 @@ export function criarSprites(): Sprites {
           c.fillStyle = tampa;
           if (brilho) {
             c.shadowColor = estrela ? COR_DA_ESTRELA : cor;
-            c.shadowBlur = estrela ? 22 : 10;
+            c.shadowBlur = (estrela ? 22 : 10) * intensidade;
           }
           c.fill();
           c.shadowBlur = 0;
-          c.lineWidth = 3;
-          c.strokeStyle = estrela ? COR_DA_ESTRELA : CONTORNO;
+          // O contorno forte é claro e grosso, para a nota aparecer sobre qualquer highway.
+          c.lineWidth = contornoForte ? 6 : 3;
+          c.strokeStyle = estrela ? COR_DA_ESTRELA : contornoForte ? cores.texto : CONTORNO;
           c.stroke();
 
           // A borda da tampa escurece, para a cor parecer pintura sobre metal e não plástico.
@@ -115,7 +116,7 @@ export function criarSprites(): Sprites {
           c.fillStyle = cupula;
           if (hopo && brilho) {
             c.shadowColor = cores.texto;
-            c.shadowBlur = 14;
+            c.shadowBlur = 14 * intensidade;
           }
           c.fill();
           c.shadowBlur = 0;

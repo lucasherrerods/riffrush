@@ -1,19 +1,22 @@
-import { ArrowLeft, CircleDot, Route } from "lucide-react";
+import { ArrowLeft, Hexagon, Palette, Route } from "lucide-react";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
-import { EscolhaDeCacapa } from "./EscolhaDeCacapa";
+import { EscolhaDasCores, EscolhaDoFormato, type EscolhasDaCacapa } from "./EscolhaDaCacapa";
 import { PersonalizacaoDaPista } from "./PersonalizacaoDaPista";
 
-interface Props {
+export interface EscolhasDeCustomizacao extends EscolhasDaCacapa {
   skinDaPista: string;
-  skinDaCacapa: string;
-  aoMudar: (parcial: { skinDaPista?: string; skinDaCacapa?: string }) => void;
+}
+
+interface Props {
+  valores: EscolhasDeCustomizacao;
+  aoMudar: (parcial: Partial<EscolhasDeCustomizacao>) => void;
   aoVoltar: () => void;
 }
 
-/** O visual do jogo: a pista e as caçapas, cada uma com a sua escolha. */
-export function TelaDeCustomizacao({ skinDaPista, skinDaCacapa, aoMudar, aoVoltar }: Props) {
+/** O visual do jogo. A pista, o formato e as cores das caçapas são escolhas separadas, que se combinam. */
+export function TelaDeCustomizacao({ valores, aoMudar, aoVoltar }: Props) {
   useTeclado((evento) => {
     if (evento.key === "Escape") aoVoltar();
   });
@@ -30,16 +33,22 @@ export function TelaDeCustomizacao({ skinDaPista, skinDaCacapa, aoMudar, aoVolta
           <TabsTrigger value="pista">
             <Route className="opacity-70" /> Pista
           </TabsTrigger>
-          <TabsTrigger value="cacapas">
-            <CircleDot className="opacity-70" /> Caçapas
+          <TabsTrigger value="formato">
+            <Hexagon className="opacity-70" /> Formato
+          </TabsTrigger>
+          <TabsTrigger value="cores">
+            <Palette className="opacity-70" /> Cores
           </TabsTrigger>
         </TabsList>
         <div className="rolagem-de-toque mt-2 min-h-0 flex-1 placa p-2 max-md:mt-1 max-md:p-1.5">
           <TabsContent value="pista">
-            <PersonalizacaoDaPista escolhida={skinDaPista} aoEscolher={(id) => aoMudar({ skinDaPista: id })} />
+            <PersonalizacaoDaPista escolhida={valores.skinDaPista} aoEscolher={(id) => aoMudar({ skinDaPista: id })} />
           </TabsContent>
-          <TabsContent value="cacapas">
-            <EscolhaDeCacapa escolhida={skinDaCacapa} aoEscolher={(id) => aoMudar({ skinDaCacapa: id })} />
+          <TabsContent value="formato">
+            <EscolhaDoFormato {...valores} aoMudar={aoMudar} />
+          </TabsContent>
+          <TabsContent value="cores">
+            <EscolhaDasCores {...valores} aoMudar={aoMudar} />
           </TabsContent>
         </div>
       </Tabs>

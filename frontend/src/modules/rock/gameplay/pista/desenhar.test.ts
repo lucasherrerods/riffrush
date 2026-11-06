@@ -5,7 +5,8 @@ import { CORES_DAS_PISTAS, COR_DA_ABERTA, COR_DA_ESTRELA } from "../cores";
 import { desenharPista, type Cena, type Sprites } from "./desenhar";
 
 const sprites: Sprites = {
-  nota: (cor, estrela, _brilho, tipoDaNota, formato) => ({ tipo: "nota", cor, estrela, ...(tipoDaNota && { tipoDaNota }), ...(formato && formato !== "redonda" && { formato }) }) as unknown as CanvasImageSource,
+  nota: (cor, estrela, _brilho, tipoDaNota, formato, intensidade, contornoForte) =>
+    ({ tipo: "nota", cor, estrela, ...(tipoDaNota && { tipoDaNota }), ...(formato && formato !== "redonda" && { formato }), ...(intensidade !== undefined && intensidade !== 1 && { intensidade }), ...(contornoForte && { contornoForte }) }) as unknown as CanvasImageSource,
   aberta: (cor, estrela, _brilho, tipoDaNota) => ({ tipo: "aberta", cor, estrela, ...(tipoDaNota && { tipoDaNota }) }) as unknown as CanvasImageSource,
   brilho: (cor) => ({ tipo: "brilho", cor }) as unknown as CanvasImageSource,
   textura: () => ({ tipo: "textura" }) as unknown as CanvasImageSource,
@@ -281,6 +282,18 @@ describe("desenharPista", () => {
     it("as notas têm o formato das caçapas", () => {
       const desenhos = desenhar(cena([nota(0.5, 1)], { skin: { ...skin, formato: "hexagonal" } })).desenhos();
       expect(desenhos).toEqual(expect.arrayContaining([expect.objectContaining({ tipo: "nota", formato: "hexagonal" })]));
+    });
+
+    it("as notas levam a força do brilho e o contorno forte", () => {
+      const desenhos = desenhar(cena([nota(0.5, 1)], { skin: { ...skin, brilho: 0.3, contornoForte: true } })).desenhos();
+      expect(desenhos).toEqual(expect.arrayContaining([expect.objectContaining({ tipo: "nota", intensidade: 0.3, contornoForte: true })]));
+    });
+
+    it("sem brilho, a caçapa apertada não acende o halo", () => {
+      const apertados = [true, false, false, false, false, false];
+      const halos = (brilho: number) => desenhar(cena([], { apertados, skin: { ...skin, brilho } })).desenhos().filter((d) => (d as unknown as { tipo: string }).tipo === "brilho").length;
+      expect(halos(1)).toBe(1);
+      expect(halos(0)).toBe(0);
     });
 
     it("as caçapas são desenhadas no formato escolhido", () => {

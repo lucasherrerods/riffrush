@@ -8,9 +8,9 @@ describe("opcoesDaPartida", () => {
   });
 
   it("leva a caçapa escolhida, independente da pista", () => {
-    const opcoes = opcoesDaPartida({ ...CONFIGURACOES_PADRAO, skinDaPista: "neon", skinDaCacapa: "colmeia" });
+    const opcoes = opcoesDaPartida({ ...CONFIGURACOES_PADRAO, skinDaPista: "neon", formatoDaCacapa: "hexagonal", coresDaCacapa: "pastel", brilhoDaCacapa: 0.5, contornoForte: true });
     expect(opcoes.skin.id).toBe("neon");
-    expect(opcoes.cacapa).toMatchObject({ id: "colmeia", formato: "hexagonal" });
+    expect(opcoes.cacapa).toMatchObject({ formato: "hexagonal", brilho: 0.5, contornoForte: true });
   });
 
   it("a mesma skin não faz as opções mudarem", () => {

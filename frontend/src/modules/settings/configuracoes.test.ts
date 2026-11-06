@@ -145,8 +145,8 @@ it("a skin da pista começa na clássica e fica salva", () => {
   expect(carregarConfiguracoes(false).skinDaPista).toBe("neon");
 });
 
-it("a caçapa é salva separada da pista", () => {
-  expect(carregarConfiguracoes(false).skinDaCacapa).toBe("classica");
-  salvarConfiguracoes({ ...carregarConfiguracoes(false), skinDaPista: "brasa", skinDaCacapa: "colmeia" });
-  expect(carregarConfiguracoes(false)).toMatchObject({ skinDaPista: "brasa", skinDaCacapa: "colmeia" });
+it("o formato, as cores, o brilho e o contorno das caçapas são salvos separados", () => {
+  expect(carregarConfiguracoes(false)).toMatchObject({ formatoDaCacapa: "redonda", coresDaCacapa: "classica", brilhoDaCacapa: 1, contornoForte: false });
+  salvarConfiguracoes({ ...carregarConfiguracoes(false), formatoDaCacapa: "hexagonal", coresDaCacapa: "daltonismo", brilhoDaCacapa: 0.4, contornoForte: true });
+  expect(carregarConfiguracoes(false)).toMatchObject({ formatoDaCacapa: "hexagonal", coresDaCacapa: "daltonismo", brilhoDaCacapa: 0.4, contornoForte: true });
 });

@@ -61,6 +61,9 @@ export interface SkinNaPista {
   braco: string;
   /** Formato das caçapas e das notas. */
   formato?: FormatoDaCacapa;
+  /** Força do brilho das notas e das caçapas acesas, de 0 a 1. */
+  brilho?: number;
+  contornoForte?: boolean;
   highway?: CanvasImageSource & { height: number; width: number };
 }
 
@@ -72,7 +75,7 @@ const FAIXAS_DA_HIGHWAY = 120;
 export interface Sprites {
   /** Sem tipo é a nota comum; HOPO e tap têm o visual do Clone Hero. */
   /** O formato segue o das caçapas; sem ele, redonda. */
-  nota(cor: string, estrela: boolean, brilho: boolean, tipo?: TipoDaNota, formato?: FormatoDaCacapa): CanvasImageSource;
+  nota(cor: string, estrela: boolean, brilho: boolean, tipo?: TipoDaNota, formato?: FormatoDaCacapa, intensidade?: number, contornoForte?: boolean): CanvasImageSource;
   /** A nota aberta: uma barra deitada que atravessa os cinco trastes. */
   aberta(cor: string, estrela: boolean, brilho: boolean, tipo?: TipoDaNota): CanvasImageSource;
   brilho(cor: string): CanvasImageSource;
@@ -156,6 +159,7 @@ export function desenharPista(
   const { centro, linhaDeBatida, larguraDoTraste } = layout;
   const skin = cena.skin ?? SKIN_DO_TEMA;
   const formato = skin.formato ?? "redonda";
+  const intensidade = skin.brilho ?? 1;
   const corDe = (pista: number) => (pista === PISTA_ABERTA ? skin.aberta : skin.trastes[pista]);
 
   // Na abertura, a pista inteira sobe de baixo da tela.
@@ -296,9 +300,9 @@ export function desenharPista(
     const raio = larguraDoTraste * 0.34;
     const cor = skin.trastes[pista];
     const apertado = cena.apertados[pista] && !saltando?.[pista];
-    if (apertado && enfeites) {
+    if (apertado && enfeites && intensidade > 0) {
       const tamanho = larguraDoTraste * 1.3;
-      c.globalAlpha = 0.55;
+      c.globalAlpha = 0.55 * intensidade;
       c.drawImage(sprites.brilho(cor), x - tamanho / 2, linhaDeBatida - tamanho / 2, tamanho, tamanho);
       c.globalAlpha = 1;
     }
@@ -383,7 +387,7 @@ export function desenharPista(
       c.drawImage(sprites.aberta(cor, estrela, enfeites, nota.tipo), layout.centro - largura / 2, p.y - alturaDoSprite / 2, largura, alturaDoSprite);
       continue;
     }
-    const sprite = sprites.nota(cor, estrela, enfeites, nota.tipo, formato);
+    const sprite = sprites.nota(cor, estrela, enfeites && intensidade > 0, nota.tipo, formato, intensidade, skin.contornoForte);
     const escala = (larguraDoTraste * 0.36 * p.escala) / SPRITE_DA_NOTA.raio;
     const largura = SPRITE_DA_NOTA.largura * escala;
     const alturaDoSprite = SPRITE_DA_NOTA.altura * escala;

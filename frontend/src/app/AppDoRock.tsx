@@ -678,8 +678,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
             )}
             {tela === "customizacao" && (
               <TelaDeCustomizacao
-                skinDaPista={configuracoes.skinDaPista}
-                skinDaCacapa={configuracoes.skinDaCacapa}
+                valores={configuracoes}
                 aoMudar={(parcial) => mudarConfiguracoes({ ...configuracoes, ...parcial })}
                 aoVoltar={() => setTela("menu")}
               />
