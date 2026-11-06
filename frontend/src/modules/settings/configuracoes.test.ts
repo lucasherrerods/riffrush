@@ -144,3 +144,9 @@ it("a skin da pista começa na clássica e fica salva", () => {
   salvarConfiguracoes({ ...carregarConfiguracoes(false), skinDaPista: "neon" });
   expect(carregarConfiguracoes(false).skinDaPista).toBe("neon");
 });
+
+it("o formato, as cores, o brilho e o contorno das caçapas são salvos separados", () => {
+  expect(carregarConfiguracoes(false)).toMatchObject({ formatoDaCacapa: "redonda", coresDaCacapa: "classica", brilhoDaCacapa: 1, contornoForte: false });
+  salvarConfiguracoes({ ...carregarConfiguracoes(false), formatoDaCacapa: "hexagonal", coresDaCacapa: "daltonismo", brilhoDaCacapa: 0.4, contornoForte: true });
+  expect(carregarConfiguracoes(false)).toMatchObject({ formatoDaCacapa: "hexagonal", coresDaCacapa: "daltonismo", brilhoDaCacapa: 0.4, contornoForte: true });
+});

@@ -7,3 +7,4 @@ export { suportaWebGL } from "./render3d/webgl";
 /** O 3D (three.js) é pesado: só baixa quando um palco aparece. */
 export const carregarAtor = () => import("./render3d/ator").then((m) => m.criarAtor);
 export { novaReacao, reacaoDoFimDaPartida, type Reacao, type TipoDeReacao } from "./reacao";
+export { PERSONAGENS, cardDoPersonagem } from "./catalogo";

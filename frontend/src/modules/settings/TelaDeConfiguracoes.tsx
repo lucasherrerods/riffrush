@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Gamepad2, Keyboard, Monitor, Palette, RotateCcw, Volume2 } from "lucide-react";
+import { ArrowLeft, Gamepad2, Keyboard, Monitor, RotateCcw, Volume2 } from "lucide-react";
 import { capturarBotao, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
 import { CORES_DAS_PISTAS, COR_DA_ABERTA, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "@/modules/rock/gameplay";
-import { PersonalizacaoDaPista } from "@/modules/rock/skins";
 import { PISTA_ABERTA } from "@/modules/rock/songs";
 import { MODOS_DE_JANELA, definirTelaCheia, ehJanelaNativa, estaEmTelaCheia, monitorAtual, resolucoesDisponiveis } from "@/modules/platform";
 import { ESCALA_MINIMA_DE_RENDERIZACAO, QUALIDADES_DO_PALCO } from "@/modules/rock/stage";
@@ -131,9 +130,6 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
           </TabsTrigger>
           <TabsTrigger value="video">
             <Monitor className="opacity-70" /> Vídeo
-          </TabsTrigger>
-          <TabsTrigger value="pista">
-            <Palette className="opacity-70" /> Pista
           </TabsTrigger>
         </TabsList>
 
@@ -300,10 +296,6 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
               formatar={porcentagem}
               aoMudar={(escalaDeRenderizacao) => mudar({ escalaDeRenderizacao })}
             />
-          </TabsContent>
-
-          <TabsContent value="pista">
-            <PersonalizacaoDaPista escolhida={configuracoes.skinDaPista} aoEscolher={(skinDaPista) => mudar({ skinDaPista })} />
           </TabsContent>
         </div>
       </Tabs>

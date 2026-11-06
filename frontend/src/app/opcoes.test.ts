@@ -7,6 +7,12 @@ describe("opcoesDaPartida", () => {
     expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, skinDaPista: "highway:apagada" }).skin.id).toBe("classica");
   });
 
+  it("leva a caçapa escolhida, independente da pista", () => {
+    const opcoes = opcoesDaPartida({ ...CONFIGURACOES_PADRAO, skinDaPista: "neon", formatoDaCacapa: "hexagonal", coresDaCacapa: "pastel", brilhoDaCacapa: 0.5, contornoForte: true });
+    expect(opcoes.skin.id).toBe("neon");
+    expect(opcoes.cacapa).toMatchObject({ formato: "hexagonal", brilho: 0.5, contornoForte: true });
+  });
+
   it("a mesma skin não faz as opções mudarem", () => {
     expect(mesmasOpcoes(opcoesDaPartida(CONFIGURACOES_PADRAO), opcoesDaPartida(CONFIGURACOES_PADRAO))).toBe(true);
   });
