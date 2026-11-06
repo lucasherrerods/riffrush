@@ -51,6 +51,8 @@ export interface Configuracoes {
   bloquearAtalhos: boolean;
   /** Id da skin da pista do Rock: uma pronta ou uma highway importada. */
   skinDaPista: string;
+  /** Id da caçapa do Rock: o formato e as cores das caçapas e das notas. */
+  skinDaCacapa: string;
 }
 
 export const CONFIGURACOES_PADRAO: Configuracoes = {
@@ -82,6 +84,7 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   chatGlobal: null,
   bloquearAtalhos: true,
   skinDaPista: "classica",
+  skinDaCacapa: "classica",
 };
 
 /** No celular a tela é pequena demais para o palco: lá o modo competitivo começa ligado. */

@@ -5,7 +5,9 @@ import { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ABERTA, COR_DA_ESTRELA
 import { descidaDaPista, teclaDaAbertura } from "../abertura";
 import type { NotaEmJogo } from "../partida";
 import { DURACAO_DA_CHAMA, DURACAO_DO_ARO, elevacaoDoAro, forcaDaChama, linguasDeFogo, pontosDoRaio, pulo, tremor } from "./efeitos";
+import { tracarForma } from "./formas";
 import { faixasDaHighway } from "./highway";
+import type { FormatoDaCacapa } from "@/modules/rock/skins";
 import { cordasDaPista, layoutDaPista, projetar, xDaPista, type LayoutDaPista } from "./geometria";
 
 const LADOS = [-1, 1] as const;
@@ -57,6 +59,8 @@ export interface SkinNaPista {
   trastes: string[];
   aberta: string;
   braco: string;
+  /** Formato das caçapas e das notas. */
+  formato?: FormatoDaCacapa;
   highway?: CanvasImageSource & { height: number; width: number };
 }
 
@@ -67,7 +71,8 @@ const FAIXAS_DA_HIGHWAY = 120;
 /** Imagens pré-desenhadas das notas e dos brilhos (ver sprites.ts). */
 export interface Sprites {
   /** Sem tipo é a nota comum; HOPO e tap têm o visual do Clone Hero. */
-  nota(cor: string, estrela: boolean, brilho: boolean, tipo?: TipoDaNota): CanvasImageSource;
+  /** O formato segue o das caçapas; sem ele, redonda. */
+  nota(cor: string, estrela: boolean, brilho: boolean, tipo?: TipoDaNota, formato?: FormatoDaCacapa): CanvasImageSource;
   /** A nota aberta: uma barra deitada que atravessa os cinco trastes. */
   aberta(cor: string, estrela: boolean, brilho: boolean, tipo?: TipoDaNota): CanvasImageSource;
   brilho(cor: string): CanvasImageSource;
@@ -150,6 +155,7 @@ export function desenharPista(
   const layout = layoutDaPista(largura, altura);
   const { centro, linhaDeBatida, larguraDoTraste } = layout;
   const skin = cena.skin ?? SKIN_DO_TEMA;
+  const formato = skin.formato ?? "redonda";
   const corDe = (pista: number) => (pista === PISTA_ABERTA ? skin.aberta : skin.trastes[pista]);
 
   // Na abertura, a pista inteira sobe de baixo da tela.
@@ -306,7 +312,7 @@ export function desenharPista(
       gradiente.addColorStop(1, cores.fundo);
       return gradiente;
     });
-    desenharAro(c, x, linhaDeBatida, raio, cromo, cor, apertado ? comAlfa(cores.texto, 0.85) : comAlfa(cores.fundo, 0.9));
+    desenharAro(c, x, linhaDeBatida, raio, cromo, cor, apertado ? comAlfa(cores.texto, 0.85) : comAlfa(cores.fundo, 0.9), formato);
   }
 
   // A tecla da aberta acende a linha de batida inteira, de ponta a ponta.
@@ -377,7 +383,7 @@ export function desenharPista(
       c.drawImage(sprites.aberta(cor, estrela, enfeites, nota.tipo), layout.centro - largura / 2, p.y - alturaDoSprite / 2, largura, alturaDoSprite);
       continue;
     }
-    const sprite = sprites.nota(cor, estrela, enfeites, nota.tipo);
+    const sprite = sprites.nota(cor, estrela, enfeites, nota.tipo, formato);
     const escala = (larguraDoTraste * 0.36 * p.escala) / SPRITE_DA_NOTA.raio;
     const largura = SPRITE_DA_NOTA.largura * escala;
     const alturaDoSprite = SPRITE_DA_NOTA.altura * escala;
@@ -418,7 +424,7 @@ export function desenharPista(
   for (const explosao of soLeves ? [] : cena.explosoes) {
     const idade = tempo - explosao.tempo;
     if (idade < 0 || idade > Math.max(DURACAO_DO_ARO, DURACAO_DA_CHAMA, DURACAO_DA_EXPLOSAO)) continue;
-    desenharAroLevantado(c, layout, explosao.pista, cena.estrelaAtiva, elevacaoDoAro(idade), Math.round(explosao.tempo * 1000), tempo, forcaDaChama(idade), corDe);
+    desenharAroLevantado(c, layout, explosao.pista, cena.estrelaAtiva, elevacaoDoAro(idade), Math.round(explosao.tempo * 1000), tempo, forcaDaChama(idade), corDe, formato);
     if (idade > DURACAO_DA_EXPLOSAO) continue;
     const k = idade / DURACAO_DA_EXPLOSAO;
     // A explosão da aberta sai do meio do braço e é bem maior, porque a nota cobre os cinco trastes.
@@ -441,7 +447,7 @@ export function desenharPista(
     for (let i = cena.primeira; i < ultima; i++) {
       const nota = cena.notas[i];
       if (!nota.segurando) continue;
-      desenharAroLevantado(c, layout, nota.pista, cena.estrelaAtiva, 1, nota.pista + 1, tempo, FORCA_DA_CHAMA_DO_SUSTAIN, corDe);
+      desenharAroLevantado(c, layout, nota.pista, cena.estrelaAtiva, 1, nota.pista + 1, tempo, FORCA_DA_CHAMA_DO_SUSTAIN, corDe, formato);
     }
   }
 
@@ -453,7 +459,7 @@ export function desenharPista(
   if (abertura !== null && !soLeves) {
     for (let traste = 0; traste < 5; traste++) {
       const { elevacao, chama } = teclaDaAbertura(abertura, traste);
-      if (elevacao > 0) desenharAroLevantado(c, layout, traste, cena.estrelaAtiva, elevacao, traste + 1, tempo, chama, corDe);
+      if (elevacao > 0) desenharAroLevantado(c, layout, traste, cena.estrelaAtiva, elevacao, traste + 1, tempo, chama, corDe, formato);
     }
   }
   if (tremendo) c.restore();
@@ -478,10 +484,9 @@ function trastesSaltando(cena: Cena, tempo: number) {
 }
 
 /** Um aro de traste: borda de metal, anel na cor do traste e o miolo. */
-function desenharAro(c: CanvasRenderingContext2D, x: number, y: number, raio: number, metal: string | CanvasGradient, cor: string, miolo: string) {
+function desenharAro(c: CanvasRenderingContext2D, x: number, y: number, raio: number, metal: string | CanvasGradient, cor: string, miolo: string, formato: FormatoDaCacapa = "redonda") {
   const elipse = (cy: number, largura: number, altura: number, preenchimento: string | CanvasGradient) => {
-    c.beginPath();
-    c.ellipse(x, cy, raio * largura, raio * altura, 0, 0, Math.PI * 2);
+    tracarForma(c, formato, x, cy, raio * largura, raio * altura);
     c.fillStyle = preenchimento;
     c.fill();
   };
@@ -491,7 +496,7 @@ function desenharAro(c: CanvasRenderingContext2D, x: number, y: number, raio: nu
 }
 
 /** O aro sobe da base e o fogo sai de dentro dele; a nota aberta levanta os cinco trastes. */
-function desenharAroLevantado(c: CanvasRenderingContext2D, layout: LayoutDaPista, pista: number, estrela: boolean, elevacao: number, semente: number, tempo: number, forca: number, corDe: (pista: number) => string) {
+function desenharAroLevantado(c: CanvasRenderingContext2D, layout: LayoutDaPista, pista: number, estrela: boolean, elevacao: number, semente: number, tempo: number, forca: number, corDe: (pista: number) => string, formato: FormatoDaCacapa) {
   const { larguraDoTraste, linhaDeBatida } = layout;
   const aberta = pista === PISTA_ABERTA;
   const raio = larguraDoTraste * 0.34;
@@ -503,7 +508,7 @@ function desenharAroLevantado(c: CanvasRenderingContext2D, layout: LayoutDaPista
       // A coluna escura entre a base e o aro mostra que ele saiu do lugar.
       c.fillStyle = cores.fundo;
       c.fillRect(x - raio * 0.68, y, raio * 1.36, linhaDeBatida - y);
-      desenharAro(c, x, y, raio, cores.textoSuave, cor, cores.fundo);
+      desenharAro(c, x, y, raio, cores.textoSuave, cor, cores.fundo, formato);
     }
     if (forca > 0) desenharChama(c, x, y, larguraDoTraste, cor, semente + traste * 31, tempo, forca);
   }

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Trash2, Upload } from "lucide-react";
-import { cn } from "@/shared/lib/utils";
+import { Upload } from "lucide-react";
+import { CartaoDeSkin, GRADE_DE_SKINS } from "./CartaoDeSkin";
 import { carregarHighways, salvarHighways } from "./armazenamento";
 import { adicionarHighway, lerHighway, removerHighway } from "./importacao";
 import { SKIN_PADRAO, SKINS_PRONTAS, type SkinDaPista } from "./skins";
@@ -12,18 +12,14 @@ interface Props {
   ler?: (arquivo: File) => Promise<SkinDaPista>;
 }
 
-/** Miniatura da pista: o braço (ou a imagem da highway) com as cinco caçapas na base. */
+/** Miniatura da pista: o braço ou a imagem da highway. */
 function Amostra({ skin }: { skin: SkinDaPista }) {
   return (
     <div
       aria-hidden
-      className="flex h-24 w-full items-end justify-center gap-1.5 rounded-md bg-cover bg-center pb-2"
+      className="h-24 w-full rounded-md border border-borda bg-cover bg-center"
       style={{ backgroundColor: skin.cores.braco, backgroundImage: skin.highway ? `url(${skin.highway})` : undefined }}
-    >
-      {skin.cores.trastes.map((cor, i) => (
-        <span key={i} className="size-4 rounded-full border-2 border-texto-suave" style={{ backgroundColor: cor }} />
-      ))}
-    </div>
+    />
   );
 }
 
@@ -53,36 +49,20 @@ export function PersonalizacaoDaPista({ escolhida, aoEscolher, ler = lerHighway 
     if (id === escolhida) aoEscolher(SKIN_PADRAO.id);
   };
 
-  const cartao = (skin: SkinDaPista) => {
-    const marcada = skin.id === escolhida;
-    return (
-      <div key={skin.id} className="relative">
-        <button
-          role="radio"
-          aria-checked={marcada}
-          aria-label={skin.nome}
-          onClick={() => aoEscolher(skin.id)}
-          className={cn("flex w-full flex-col gap-2 rounded-lg border-2 bg-superficie p-2 text-left transition-colors hover:bg-superficie-hover", marcada ? "border-primaria" : "border-borda")}
-        >
-          <Amostra skin={skin} />
-          <span className={cn("truncate text-sm font-semibold", marcada ? "text-texto" : "text-texto-suave")}>{skin.nome}</span>
-        </button>
-        {skin.highway && (
-          <button
-            aria-label={`Apagar ${skin.nome}`}
-            onClick={() => apagar(skin.id)}
-            className="absolute top-3 right-3 rounded-md bg-fundo/80 p-1 text-texto-suave hover:text-perigo"
-          >
-            <Trash2 className="size-4" />
-          </button>
-        )}
-      </div>
-    );
-  };
+  const cartao = (skin: SkinDaPista) => (
+    <CartaoDeSkin
+      key={skin.id}
+      nome={skin.nome}
+      marcada={skin.id === escolhida}
+      aoEscolher={() => aoEscolher(skin.id)}
+      amostra={<Amostra skin={skin} />}
+      aoApagar={skin.highway ? () => apagar(skin.id) : undefined}
+    />
+  );
 
   return (
     <div className="flex flex-col gap-4 p-2">
-      <div role="radiogroup" aria-label="Skin da pista" className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+      <div role="radiogroup" aria-label="Skin da pista" className={GRADE_DE_SKINS}>
         {SKINS_PRONTAS.map(cartao)}
         {importadas.map(cartao)}
       </div>

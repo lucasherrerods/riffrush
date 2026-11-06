@@ -9,11 +9,10 @@ describe("skins prontas", () => {
     expect(new Set(SKINS_PRONTAS.map((s) => s.id)).size).toBe(SKINS_PRONTAS.length);
   });
 
-  it("cada uma tem uma cor para cada um dos 5 trastes, a aberta e o braço", () => {
+  it("cada uma tem o tom do braço; as cores das notas ficam nas caçapas", () => {
     for (const skin of SKINS_PRONTAS) {
-      expect(skin.cores.trastes).toHaveLength(5);
-      expect(skin.cores.aberta).toMatch(/^#/);
       expect(skin.cores.braco).toMatch(/^#/);
+      expect(skin.cores).not.toHaveProperty("trastes");
     }
   });
 

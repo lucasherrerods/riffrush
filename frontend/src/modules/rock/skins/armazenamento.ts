@@ -4,7 +4,7 @@ const CHAVE = "riffrush.highways";
 let guardada: { texto: string; lista: SkinDaPista[] } | null = null;
 
 const ehSkin = (s: Partial<SkinDaPista>): s is SkinDaPista =>
-  typeof s?.id === "string" && typeof s.nome === "string" && typeof s.highway === "string" && Array.isArray(s.cores?.trastes);
+  typeof s?.id === "string" && typeof s.nome === "string" && typeof s.highway === "string" && typeof s.cores?.braco === "string";
 
 /** As highways importadas pelo jogador. A mesma lista volta enquanto nada muda, para as opções da partida não mudarem à toa. */
 export function carregarHighways(): SkinDaPista[] {

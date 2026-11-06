@@ -5,7 +5,7 @@ import { CORES_DAS_PISTAS, COR_DA_ABERTA, COR_DA_ESTRELA } from "../cores";
 import { desenharPista, type Cena, type Sprites } from "./desenhar";
 
 const sprites: Sprites = {
-  nota: (cor, estrela, _brilho, tipoDaNota) => ({ tipo: "nota", cor, estrela, ...(tipoDaNota && { tipoDaNota }) }) as unknown as CanvasImageSource,
+  nota: (cor, estrela, _brilho, tipoDaNota, formato) => ({ tipo: "nota", cor, estrela, ...(tipoDaNota && { tipoDaNota }), ...(formato && formato !== "redonda" && { formato }) }) as unknown as CanvasImageSource,
   aberta: (cor, estrela, _brilho, tipoDaNota) => ({ tipo: "aberta", cor, estrela, ...(tipoDaNota && { tipoDaNota }) }) as unknown as CanvasImageSource,
   brilho: (cor) => ({ tipo: "brilho", cor }) as unknown as CanvasImageSource,
   textura: () => ({ tipo: "textura" }) as unknown as CanvasImageSource,
@@ -276,6 +276,17 @@ describe("desenharPista", () => {
     it("as notas saem nas cores da skin", () => {
       const desenhos = desenhar(cena([nota(0.5, 1), nota(1, PISTA_ABERTA)], { skin })).desenhos();
       expect(desenhos).toEqual(expect.arrayContaining([expect.objectContaining({ tipo: "nota", cor: "#222222" }), expect.objectContaining({ tipo: "aberta", cor: "#666666" })]));
+    });
+
+    it("as notas têm o formato das caçapas", () => {
+      const desenhos = desenhar(cena([nota(0.5, 1)], { skin: { ...skin, formato: "hexagonal" } })).desenhos();
+      expect(desenhos).toEqual(expect.arrayContaining([expect.objectContaining({ tipo: "nota", formato: "hexagonal" })]));
+    });
+
+    it("as caçapas são desenhadas no formato escolhido", () => {
+      const metodos = (formato: "redonda" | "retangular") => desenhar(cena([], { skin: { ...skin, formato } })).chamadas.filter((c) => c.metodo === "roundRect").length;
+      expect(metodos("retangular")).toBeGreaterThanOrEqual(15);
+      expect(metodos("redonda")).toBe(0);
     });
 
     it("a imagem da highway é desenhada em faixas sobre o braço", () => {

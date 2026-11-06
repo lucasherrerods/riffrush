@@ -1,6 +1,6 @@
 import type { OpcoesDaPartida } from "@/modules/rock/gameplay";
 import { VELOCIDADE_DAS_NOTAS, antecedenciaDasNotas, nomeDaTecla, type Configuracoes } from "@/modules/settings";
-import { carregarHighways, skinPorId } from "@/modules/rock/skins";
+import { cacapaPorId, carregarHighways, skinPorId } from "@/modules/rock/skins";
 import { ehTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 
 /** A partida não conhece as configurações: o App traduz o que ela precisa. No celular não há palheta: é sempre tapping. */
@@ -27,6 +27,7 @@ export function opcoesDaPartida(c: Configuracoes, celular = ehTelaEstreita()): O
     modoCompetitivo: c.modoCompetitivo,
     bloquearAtalhos: c.bloquearAtalhos,
     skin: skinPorId(c.skinDaPista, carregarHighways()),
+    cacapa: cacapaPorId(c.skinDaCacapa),
   };
 }
 

@@ -2,6 +2,7 @@ import { geradorAleatorio } from "@/shared/lib/aleatorio";
 import { cores } from "@/modules/rock/tema";
 import { comAlfa } from "@/shared/styles/tokens";
 import { COR_DA_ESTRELA, COR_DA_NOTA_DE_ESTRELA } from "../cores";
+import { tracarForma } from "./formas";
 import { SPRITE_DA_ABERTA, SPRITE_DA_NOTA, type Sprites } from "./desenhar";
 
 const CONTORNO = comAlfa(cores.fundo, 0.9);
@@ -32,8 +33,8 @@ export function criarSprites(): Sprites {
   const camadas = new Map<string, { canvas: HTMLCanvasElement; versao: number; largura: number; altura: number; escala: number }>();
 
   return {
-    nota: (cor, estrela, brilho, tipo) =>
-      lembrar(`nota:${cor}:${estrela}:${brilho}:${tipo ?? "comum"}`, () =>
+    nota: (cor, estrela, brilho, tipo, forma = "redonda") =>
+      lembrar(`nota:${cor}:${estrela}:${brilho}:${tipo ?? "comum"}:${forma}`, () =>
         comCanvas(SPRITE_DA_NOTA.largura, SPRITE_DA_NOTA.altura, (c) => {
           // Uma pastilha vista de cima e de lado: parede escura, tampa colorida e a cúpula branca no meio.
           const x = SPRITE_DA_NOTA.largura / 2;
@@ -44,17 +45,22 @@ export function criarSprites(): Sprites {
           const altura = ry * (tipo === "hopo" ? 0.3 : 0.55);
           const corDaTampa = estrela ? COR_DA_NOTA_DE_ESTRELA : cor;
 
-          c.beginPath();
-          c.ellipse(x, y + altura + ry * 0.3, rx * 1.02, ry, 0, 0, Math.PI * 2);
+          tracarForma(c, forma, x, y + altura + ry * 0.3, rx * 1.02, ry);
           c.fillStyle = comAlfa(cores.fundo, 0.6);
           c.fill();
 
           // Parede: o retângulo entre a base e a tampa, fechado pelas meias-elipses.
-          c.beginPath();
-          c.ellipse(x, y + altura, rx, ry, 0, 0, Math.PI);
-          c.lineTo(x - rx, y);
-          c.ellipse(x, y, rx, ry, 0, Math.PI, 0, true);
-          c.closePath();
+          if (forma === "redonda") {
+            c.beginPath();
+            c.ellipse(x, y + altura, rx, ry, 0, 0, Math.PI);
+            c.lineTo(x - rx, y);
+            c.ellipse(x, y, rx, ry, 0, Math.PI, 0, true);
+            c.closePath();
+          } else {
+            // Nos outros formatos a parede é a base do mesmo formato mais a faixa entre ela e a tampa.
+            tracarForma(c, forma, x, y + altura, rx, ry);
+            c.rect(x - rx, y, rx * 2, altura);
+          }
           const metal = c.createLinearGradient(x - rx, 0, x + rx, 0);
           metal.addColorStop(0, cores.fundo);
           metal.addColorStop(0.3, cores.borda);
@@ -72,8 +78,7 @@ export function criarSprites(): Sprites {
           tampa.addColorStop(0, comAlfa(cores.texto, tipo === "tap" ? 0.15 : 0.55));
           tampa.addColorStop(0.35, tipo === "tap" ? comAlfa(cores.fundo, 0.9) : corDaTampa);
           tampa.addColorStop(1, corDaTampa);
-          c.beginPath();
-          c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+          tracarForma(c, forma, x, y, rx, ry);
           c.fillStyle = tampa;
           if (brilho) {
             c.shadowColor = estrela ? COR_DA_ESTRELA : cor;
@@ -89,14 +94,12 @@ export function criarSprites(): Sprites {
           const sombra = c.createRadialGradient(x, y, rx * 0.5, x, y, rx);
           sombra.addColorStop(0, comAlfa(cores.fundo, 0));
           sombra.addColorStop(1, comAlfa(cores.fundo, 0.55));
-          c.beginPath();
-          c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+          tracarForma(c, forma, x, y, rx, ry);
           c.fillStyle = sombra;
           c.fill();
 
           if (tipo === "tap") {
-            c.beginPath();
-            c.ellipse(x, y - ry * 0.05, rx * 0.62, ry * 0.52, 0, 0, Math.PI * 2);
+            tracarForma(c, forma, x, y - ry * 0.05, rx * 0.62, ry * 0.52);
             c.lineWidth = 7;
             c.strokeStyle = corDaTampa;
             c.stroke();
@@ -108,8 +111,7 @@ export function criarSprites(): Sprites {
           const cupula = c.createLinearGradient(0, y - ry * 0.55, 0, y + ry * 0.2);
           cupula.addColorStop(0, cores.texto);
           cupula.addColorStop(1, hopo ? cores.texto : comAlfa(cores.textoSuave, 0.95));
-          c.beginPath();
-          c.ellipse(x, y - ry * 0.12, rx * (hopo ? 0.66 : 0.5), ry * (hopo ? 0.56 : 0.42), 0, 0, Math.PI * 2);
+          tracarForma(c, forma, x, y - ry * 0.12, rx * (hopo ? 0.66 : 0.5), ry * (hopo ? 0.56 : 0.42));
           c.fillStyle = cupula;
           if (hopo && brilho) {
             c.shadowColor = cores.texto;
@@ -120,8 +122,7 @@ export function criarSprites(): Sprites {
           c.lineWidth = 2;
           c.strokeStyle = comAlfa(cores.fundo, 0.5);
           c.stroke();
-          c.beginPath();
-          c.ellipse(x - rx * 0.15, y - ry * 0.32, rx * 0.18, ry * 0.12, 0, 0, Math.PI * 2);
+          tracarForma(c, forma, x - rx * 0.15, y - ry * 0.32, rx * 0.18, ry * 0.12);
           c.fillStyle = comAlfa(cores.texto, 0.9);
           c.fill();
         }),

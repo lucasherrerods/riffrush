@@ -17,6 +17,7 @@ import { ChatGlobal, TelaDeEspectador, TelaOnline, presenca, presencaDisponivel,
 import { JanelaDoChart, TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, sortearChartOficial, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/rock/search";
 import { TelaDeResultado, anotarRecorde, definirRecordes, recordeDe, useRecordes } from "@/modules/rock/results";
 import { EscolhaDeDispositivos, ResultadoDaTelaDividida, eventoDoJogador, opcoesDoJogador, type DispositivoDoJogador, type ResultadoDoJogador } from "@/modules/rock/splitscreen";
+import { TelaDeCustomizacao } from "@/modules/rock/skins";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { PlacarAoVivo, RankingDaSelecao, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
@@ -28,7 +29,7 @@ import { TelaCarregando } from "@/shared/ui/TelaCarregando";
 import { cn } from "@/shared/lib/utils";
 import { mesmasOpcoes, opcoesDaPartida } from "./opcoes";
 
-type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "espectador" | "telaDividida" | "resultadoDividido";
+type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "customizacao" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "espectador" | "telaDividida" | "resultadoDividido";
 
 interface PartidaEmRede {
   musica: Musica;
@@ -516,6 +517,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                   setVoltarDoPersonagemPara("menu");
                   setTela("personagem");
                 }}
+                aoCustomizar={() => setTela("customizacao")}
                 aoLeaderboard={contasLigadas ? () => setTela("leaderboard") : undefined}
                 aoOnline={presencaDisponivel && contasLigadas ? () => setTela("online") : undefined}
                 chat={
@@ -673,6 +675,14 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
             )}
             {tela === "configuracoes" && (
               <TelaDeConfiguracoes configuracoes={configuracoes} aoMudar={mudarConfiguracoes} aoVoltar={() => setTela(voltarDasConfiguracoesPara)} />
+            )}
+            {tela === "customizacao" && (
+              <TelaDeCustomizacao
+                skinDaPista={configuracoes.skinDaPista}
+                skinDaCacapa={configuracoes.skinDaCacapa}
+                aoMudar={(parcial) => mudarConfiguracoes({ ...configuracoes, ...parcial })}
+                aoVoltar={() => setTela("menu")}
+              />
             )}
             {tela === "personagem" && (
               <TelaDePersonagem

@@ -129,18 +129,31 @@ export const TEMAS = {
 /** O tema da abertura e o da landing. O tema da interface muda com o modo de jogo (tema.ts). */
 export const TEMA_PADRAO: Tema = TEMAS.riffRush;
 
-/** Cores de uma skin pronta da pista do Rock: os 5 trastes, a nota aberta e o tom do braço. */
+/** Tom do braço de uma skin pronta da pista do Rock. */
 export interface CoresDaSkinDaPista {
-  trastes: string[];
-  aberta: string;
   braco: string;
 }
 
-/** Skins prontas da pista do Rock, originais do Riff Rush. A ordem dos trastes é sempre verde, vermelho, amarelo, azul e laranja. */
+/** Skins prontas da pista do Rock, originais do Riff Rush. */
 export const SKINS_DA_PISTA = {
-  classica: { trastes: TEMAS.riffRush.pista.trastes, aberta: TEMAS.riffRush.pista.aberta, braco: TEMAS.riffRush.cores.superficie },
-  neon: { trastes: ["#4ade80", "#fb3f6c", "#fde047", "#38bdf8", "#fb923c"], aberta: "#c084fc", braco: "#15131f" },
-  brasa: { trastes: ["#65a30d", "#dc2626", "#f59e0b", "#2563eb", "#ea580c"], aberta: "#9333ea", braco: "#2a1a12" },
-  gelo: { trastes: ["#86efac", "#fca5a5", "#fef08a", "#93c5fd", "#fdba74"], aberta: "#d8b4fe", braco: "#16202a" },
-  contraste: { trastes: ["#00d26a", "#ff2d2d", "#ffe600", "#2f7bff", "#ff8c00"], aberta: "#b44dff", braco: "#121212" },
+  classica: { braco: TEMAS.riffRush.cores.superficie },
+  neon: { braco: "#15131f" },
+  brasa: { braco: "#2a1a12" },
+  gelo: { braco: "#16202a" },
+  contraste: { braco: "#121212" },
 } satisfies Record<string, CoresDaSkinDaPista>;
+
+/** Cores das caçapas e das notas: os 5 trastes (verde, vermelho, amarelo, azul e laranja) e a nota aberta. */
+export interface CoresDaCacapa {
+  trastes: string[];
+  aberta: string;
+}
+
+/** Caçapas prontas do Rock, originais do Riff Rush. */
+export const CORES_DAS_CACAPAS = {
+  classica: { trastes: TEMAS.riffRush.pista.trastes, aberta: TEMAS.riffRush.pista.aberta },
+  neon: { trastes: ["#4ade80", "#fb3f6c", "#fde047", "#38bdf8", "#fb923c"], aberta: "#c084fc" },
+  colmeia: { trastes: ["#16a34a", "#dc2626", "#eab308", "#2563eb", "#f97316"], aberta: "#9333ea" },
+  cromada: { trastes: ["#86efac", "#fca5a5", "#fef08a", "#93c5fd", "#fdba74"], aberta: "#d8b4fe" },
+  contraste: { trastes: ["#00d26a", "#ff2d2d", "#ffe600", "#2f7bff", "#ff8c00"], aberta: "#b44dff" },
+} satisfies Record<string, CoresDaCacapa>;

@@ -144,3 +144,9 @@ it("a skin da pista começa na clássica e fica salva", () => {
   salvarConfiguracoes({ ...carregarConfiguracoes(false), skinDaPista: "neon" });
   expect(carregarConfiguracoes(false).skinDaPista).toBe("neon");
 });
+
+it("a caçapa é salva separada da pista", () => {
+  expect(carregarConfiguracoes(false).skinDaCacapa).toBe("classica");
+  salvarConfiguracoes({ ...carregarConfiguracoes(false), skinDaPista: "brasa", skinDaCacapa: "colmeia" });
+  expect(carregarConfiguracoes(false)).toMatchObject({ skinDaPista: "brasa", skinDaCacapa: "colmeia" });
+});
