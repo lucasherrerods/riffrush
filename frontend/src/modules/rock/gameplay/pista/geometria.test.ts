@@ -1,4 +1,4 @@
-import { cordasDaPista, layoutDaPista, projetar, xDaPista } from "./geometria";
+import { INCLINACAO_PADRAO, cordasDaPista, layoutDaPista, projetar, xDaPista } from "./geometria";
 
 describe("layoutDaPista", () => {
   it("no celular a pista ocupa quase a largura toda", () => {
@@ -97,4 +97,9 @@ describe("cordasDaPista", () => {
   it("todas as cordas são enroladas, com o mesmo acabamento", () => {
     expect(cordasDaPista(layout, 0).every((c) => c.enrolada)).toBe(true);
   });
+});
+
+it("a pista padrão é mais deitada que a antiga (inclinação 6), com o fim do braço mais baixo", () => {
+  expect(INCLINACAO_PADRAO).toBe(7);
+  expect(layoutDaPista(1600, 900).horizonte).toBeGreaterThan(layoutDaPista(1600, 900, 6).horizonte);
 });

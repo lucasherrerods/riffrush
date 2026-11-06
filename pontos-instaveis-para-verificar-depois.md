@@ -54,3 +54,9 @@ Problemas encontrados de passagem, fora do escopo da mudança que estava sendo f
 - O que se viu: falhou uma vez na suíte inteira; rodando o arquivo sozinho passa, com e sem a mudança.
 - Suspeita: tempo de espera curto para montar o modo com a máquina carregada (carregamento preguiçoso do modo).
 - Próximo passo: rodar a suíte algumas vezes e, se repetir, aumentar o tempo do `findBy` ou esperar o carregamento do modo.
+
+## `App.modo.test.tsx` estoura o tempo com a suíte inteira rodando
+- Onde: `frontend/src/app/App.modo.test.tsx`, "monta o jogo do modo ativo".
+- O que se viu: falhou uma vez na suíte inteira (não achou o título "Riff Rush Mania" em 5 s) e passou sozinho logo depois. Os testes embutidos de `rock/songs/carregamento.test.ts` falharam na mesma rodada e também passaram sozinhos.
+- Suspeita: o carregamento preguiçoso do modo demora mais que o `timeout` quando a máquina está carregada.
+- Próximo passo: medir o tempo do import do Mania no teste e subir o limite ou carregar o módulo antes.

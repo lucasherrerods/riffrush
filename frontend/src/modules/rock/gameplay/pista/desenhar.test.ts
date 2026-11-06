@@ -269,4 +269,43 @@ describe("desenharPista", () => {
     expect(tracos(comExplosao, true)).toBe(tracos(cena([]), true));
     expect(tracos(comExplosao, false)).toBeGreaterThan(tracos(cena([]), false));
   });
+
+  describe("com skin", () => {
+    const skin = { trastes: ["#111111", "#222222", "#333333", "#444444", "#555555"], aberta: "#666666", braco: "#777777" };
+
+    it("as notas saem nas cores da skin", () => {
+      const desenhos = desenhar(cena([nota(0.5, 1), nota(1, PISTA_ABERTA)], { skin })).desenhos();
+      expect(desenhos).toEqual(expect.arrayContaining([expect.objectContaining({ tipo: "nota", cor: "#222222" }), expect.objectContaining({ tipo: "aberta", cor: "#666666" })]));
+    });
+
+    it("a imagem da highway é desenhada em faixas sobre o braço", () => {
+      const highway = { width: 512, height: 1024, tipo: "highway" } as unknown as CanvasImageSource & { width: number; height: number };
+      const faixas = desenhar(cena([], { skin: { ...skin, highway } })).desenhos().filter((d) => d === highway);
+      expect(faixas.length).toBeGreaterThan(10);
+    });
+
+    // Bug: a imagem passava da borda da pista. Ela é recortada no contorno do braço antes das faixas.
+    it("recorta a highway no contorno do braço", () => {
+      const highway = { width: 512, height: 1024, tipo: "highway" } as unknown as CanvasImageSource & { width: number; height: number };
+      const { chamadas } = desenhar(cena([], { skin: { ...skin, highway } }));
+      const primeiraFaixa = chamadas.findIndex((c) => c.metodo === "drawImage" && c.args[0] === highway);
+      const recorte = chamadas.slice(0, primeiraFaixa).map((c) => c.metodo).lastIndexOf("clip");
+      const restauracao = chamadas.slice(0, primeiraFaixa).map((c) => c.metodo).lastIndexOf("restore");
+      expect(recorte).toBeGreaterThan(restauracao);
+    });
+
+    // Bug: a imagem cobria os trilhos e a borda da pista não ficava reta.
+    it("os trilhos da borda ficam por cima da highway", () => {
+      const highway = { width: 512, height: 1024, tipo: "highway" } as unknown as CanvasImageSource & { width: number; height: number };
+      const { chamadas } = desenhar(cena([], { skin: { ...skin, highway } }));
+      const ultimaFaixa = chamadas.map((c) => c.metodo === "drawImage" && c.args[0] === highway).lastIndexOf(true);
+      const tracos = chamadas.slice(ultimaFaixa).filter((c) => c.metodo === "stroke").length;
+      expect(tracos).toBeGreaterThanOrEqual(3);
+    });
+
+    it("sem highway, nada de imagem extra", () => {
+      const desenhos = desenhar(cena([], { skin })).desenhos();
+      expect(desenhos.some((d) => (d as unknown as { tipo?: string }).tipo === "highway")).toBe(false);
+    });
+  });
 });

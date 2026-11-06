@@ -1,4 +1,4 @@
-import { CONFIGURACOES_PADRAO, INDICE_DA_PALHETA, configuracoesPadrao, antecedenciaDasNotas, carregarConfiguracoes, nomeDaTecla, salvarConfiguracoes, trocarBotao, trocarTecla } from "./configuracoes";
+import { CONFIGURACOES_PADRAO, INDICE_DA_PALHETA, configuracoesPadrao, antecedenciaDasNotas, VELOCIDADE_DAS_NOTAS, carregarConfiguracoes, nomeDaTecla, salvarConfiguracoes, trocarBotao, trocarTecla } from "./configuracoes";
 
 beforeEach(() => localStorage.clear());
 
@@ -133,4 +133,14 @@ describe("personagem e FPS", () => {
     localStorage.setItem("riffrush.configuracoes", JSON.stringify({ modoCompetitivo: true }));
     expect(carregarConfiguracoes(false).modoCompetitivo).toBe(true);
   });
+});
+
+it("as notas ficam um pouco mais juntas que antes (0,89 s na tela), sem mudar a janela de acerto", () => {
+  expect(antecedenciaDasNotas(VELOCIDADE_DAS_NOTAS)).toBeCloseTo(0.985, 3);
+});
+
+it("a skin da pista começa na clássica e fica salva", () => {
+  expect(carregarConfiguracoes(false).skinDaPista).toBe("classica");
+  salvarConfiguracoes({ ...carregarConfiguracoes(false), skinDaPista: "neon" });
+  expect(carregarConfiguracoes(false).skinDaPista).toBe("neon");
 });
