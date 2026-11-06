@@ -1,4 +1,4 @@
-import { estiloDoJulgamento, trovaoDoEvento, pontosDoRaio, progressoDoMultiplicador, tremor, pulo, forcaDaChama, elevacaoDoAro, linguasDeFogo, DURACAO_DA_CHAMA, DURACAO_DO_ARO } from "./efeitos";
+import { ALTURA_DO_ARO, estiloDoJulgamento, trovaoDoEvento, pontosDoRaio, progressoDoMultiplicador, tremor, pulo, forcaDaChama, elevacaoDoAro, linguasDeFogo, DURACAO_DA_CHAMA, DURACAO_DO_ARO } from "./efeitos";
 
 describe("trovaoDoEvento", () => {
   it("troveja forte quando o star power fica pronto para usar", () => {
@@ -88,8 +88,15 @@ describe("chamas do acerto", () => {
     expect(elevacaoDoAro(-0.01)).toBe(0);
     expect(elevacaoDoAro(0.025)).toBeCloseTo(0.5);
     expect(elevacaoDoAro(0.1)).toBe(1);
-    expect(elevacaoDoAro(DURACAO_DO_ARO - 0.05)).toBeCloseTo(0.5);
+    expect(elevacaoDoAro(DURACAO_DO_ARO - 0.03)).toBeCloseTo(0.5);
     expect(elevacaoDoAro(DURACAO_DO_ARO)).toBe(0);
+  });
+
+  it("o aro desce rápido, em 60 ms, e pula um pouco mais baixo que antes", () => {
+    expect(elevacaoDoAro(DURACAO_DO_ARO - 0.06)).toBe(1);
+    expect(elevacaoDoAro(DURACAO_DO_ARO - 0.059)).toBeLessThan(1);
+    expect(ALTURA_DO_ARO).toBeLessThan(0.33);
+    expect(ALTURA_DO_ARO).toBeGreaterThanOrEqual(0.25);
   });
 
   it("as línguas de fogo têm o mesmo desenho no mesmo instante e tremem com o tempo", () => {

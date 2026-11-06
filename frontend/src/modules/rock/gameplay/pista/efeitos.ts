@@ -87,9 +87,12 @@ export function forcaDaChama(idade: number) {
   return (1 - (idade - ACENDER_DA_CHAMA) / (DURACAO_DA_CHAMA - ACENDER_DA_CHAMA)) ** 1.5;
 }
 
-export const DURACAO_DO_ARO = 0.3;
+export const DURACAO_DO_ARO = 0.26;
 const SUBIDA_DO_ARO = 0.05;
-const DESCIDA_DO_ARO = 0.1;
+/** A descida é curta: o aro volta para a base logo depois do acerto. */
+const DESCIDA_DO_ARO = 0.06;
+/** Quanto o aro sobe no alto do pulo, em larguras de traste. */
+export const ALTURA_DO_ARO = 0.27;
 
 /** Quanto o aro do traste está levantado no acerto (0 a 1): sobe rápido, fica no alto e desce. */
 export function elevacaoDoAro(idade: number) {

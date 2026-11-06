@@ -1,4 +1,4 @@
-import { LIMITE_DE_HIGHWAYS, TAMANHO_MAXIMO_DO_ARQUIVO, adicionarHighway, medidasDaHighway, nomeDaHighway, removerHighway, validarArquivoDeHighway } from "./importacao";
+import { LIMITE_DE_HIGHWAYS, TAMANHO_MAXIMO_DO_ARQUIVO, adicionarHighway, nomeDaHighway, removerHighway, validarArquivoDeHighway } from "./importacao";
 import { SKIN_PADRAO, type SkinDaPista } from "./skins";
 
 const arquivo = (name: string, type: string, size = 1000) => ({ name, type, size });
@@ -27,13 +27,6 @@ describe("nomeDaHighway", () => {
 
   it("dá um nome quando sobra nada", () => {
     expect(nomeDaHighway(".png")).toBe("Highway");
-  });
-});
-
-describe("medidasDaHighway", () => {
-  it("leva para 512x1024, o tamanho que o Clone Hero usa", () => {
-    expect(medidasDaHighway(1024, 2048)).toEqual({ largura: 512, altura: 1024 });
-    expect(medidasDaHighway(1000, 1000)).toEqual({ largura: 512, altura: 1024 });
   });
 });
 

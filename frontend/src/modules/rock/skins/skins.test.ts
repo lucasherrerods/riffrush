@@ -9,17 +9,31 @@ describe("skins prontas", () => {
     expect(new Set(SKINS_PRONTAS.map((s) => s.id)).size).toBe(SKINS_PRONTAS.length);
   });
 
-  it("cada uma tem uma cor para cada um dos 5 trastes, a aberta e o braço", () => {
+  it("cada uma tem o tom do braço; as cores das notas ficam nas caçapas", () => {
     for (const skin of SKINS_PRONTAS) {
-      expect(skin.cores.trastes).toHaveLength(5);
-      expect(skin.cores.aberta).toMatch(/^#/);
       expect(skin.cores.braco).toMatch(/^#/);
+      expect(skin.cores).not.toHaveProperty("trastes");
     }
   });
 
   it("a padrão é a primeira e não tem imagem", () => {
     expect(SKINS_PRONTAS[0]).toBe(SKIN_PADRAO);
     expect(SKIN_PADRAO.highway).toBeUndefined();
+  });
+});
+
+describe("pistas dos personagens", () => {
+  it("cada personagem com card vira uma pista pronta, com a arte dele recortada", () => {
+    const dosPersonagens = SKINS_PRONTAS.filter((s) => s.id.startsWith("personagem:"));
+    expect(dosPersonagens.length).toBeGreaterThanOrEqual(2);
+    for (const skin of dosPersonagens) {
+      expect(skin.highway).toMatch(/card\.webp$/);
+      expect(skin.recortar).toBe(true);
+    }
+  });
+
+  it("as importadas não são recortadas de novo: já foram salvas em 512x1024", () => {
+    expect(importada.recortar).toBeUndefined();
   });
 });
 

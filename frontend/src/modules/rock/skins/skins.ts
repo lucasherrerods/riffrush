@@ -1,3 +1,4 @@
+import { PERSONAGENS, cardDoPersonagem } from "@/modules/rock/character";
 import { SKINS_DA_PISTA, type CoresDaSkinDaPista } from "@/shared/styles/tokens";
 
 /**
@@ -10,6 +11,8 @@ export interface SkinDaPista {
   cores: CoresDaSkinDaPista;
   /** Data URL da imagem importada. Sem ela, o braço é o desenho do próprio jogo. */
   highway?: string;
+  /** A imagem não está em 1:2: ao carregar, a pista usa o maior pedaço do meio dela. */
+  recortar?: boolean;
 }
 
 const pronta = (id: keyof typeof SKINS_DA_PISTA, nome: string): SkinDaPista => ({ id, nome, cores: SKINS_DA_PISTA[id] });
@@ -20,6 +23,11 @@ export const SKINS_PRONTAS: SkinDaPista[] = [
   pronta("brasa", "Brasa"),
   pronta("gelo", "Gelo"),
   pronta("contraste", "Alto contraste"),
+  // A arte de cada personagem, a mesma da escolha de personagem, vira uma pista pronta.
+  ...PERSONAGENS.flatMap((personagem) => {
+    const card = cardDoPersonagem(personagem);
+    return card ? [{ id: `personagem:${personagem.id}`, nome: personagem.rotulo, cores: SKINS_DA_PISTA.classica, highway: card, recortar: true }] : [];
+  }),
 ];
 
 export const SKIN_PADRAO = SKINS_PRONTAS[0];
