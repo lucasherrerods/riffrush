@@ -22,6 +22,21 @@ describe("skins prontas", () => {
   });
 });
 
+describe("pistas dos personagens", () => {
+  it("cada personagem com card vira uma pista pronta, com a arte dele recortada", () => {
+    const dosPersonagens = SKINS_PRONTAS.filter((s) => s.id.startsWith("personagem:"));
+    expect(dosPersonagens.length).toBeGreaterThanOrEqual(2);
+    for (const skin of dosPersonagens) {
+      expect(skin.highway).toMatch(/card\.webp$/);
+      expect(skin.recortar).toBe(true);
+    }
+  });
+
+  it("as importadas não são recortadas de novo: já foram salvas em 512x1024", () => {
+    expect(importada.recortar).toBeUndefined();
+  });
+});
+
 describe("skinPorId", () => {
   it("acha uma skin pronta", () => {
     expect(skinPorId(SKINS_PRONTAS[1].id, [])).toBe(SKINS_PRONTAS[1]);

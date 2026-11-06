@@ -4,7 +4,7 @@ import { comAlfa } from "@/shared/styles/tokens";
 import { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ABERTA, COR_DA_ESTRELA, COR_DA_NOTA_PERDIDA, TRILHO_DA_ESTRELA } from "../cores";
 import { descidaDaPista, teclaDaAbertura } from "../abertura";
 import type { NotaEmJogo } from "../partida";
-import { DURACAO_DA_CHAMA, DURACAO_DO_ARO, elevacaoDoAro, forcaDaChama, linguasDeFogo, pontosDoRaio, pulo, tremor } from "./efeitos";
+import { ALTURA_DO_ARO, DURACAO_DA_CHAMA, DURACAO_DO_ARO, elevacaoDoAro, forcaDaChama, linguasDeFogo, pontosDoRaio, pulo, tremor } from "./efeitos";
 import { tracarForma } from "./formas";
 import { faixasDaHighway } from "./highway";
 import type { FormatoDaCacapa } from "@/modules/rock/skins";
@@ -99,7 +99,6 @@ const FORCA_DA_CHAMA_DO_SUSTAIN = 0.75;
 /** Tamanho da chama em larguras de traste. */
 const CHAMA = { altura: 1.25, largura: 0.28 };
 /** Quanto o aro do traste levanta da base, em larguras de traste. */
-const ALTURA_DO_ARO = 0.33;
 /** O miolo do traste, onde o fogo acende, em larguras de traste. */
 const MIOLO = { largura: 0.23, altura: 0.12 };
 const DURACAO_DO_ERRO = 0.5;
