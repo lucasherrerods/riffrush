@@ -1,30 +1,21 @@
 import { act, renderHook } from "@testing-library/react";
-import { CHAVE_DO_MODO, carregarModo, modosDisponiveis, trocarModo, useModo } from "./modo";
+import { CHAVE_DO_MODO, carregarModo, trocarModo, useModo } from "./modo";
 
 beforeEach(() => localStorage.clear());
 
-describe("modosDisponiveis", () => {
-  it("só o Rock enquanto o Mania está desligado", () => {
-    expect(modosDisponiveis(false)).toEqual(["rock"]);
-    expect(modosDisponiveis(true)).toEqual(["rock", "mania"]);
-  });
-});
-
 describe("carregarModo", () => {
   it("começa no Rock na primeira abertura", () => {
-    expect(carregarModo(true)).toBe("rock");
+    expect(carregarModo()).toBe("rock");
   });
 
   it("lembra o modo salvo", () => {
     localStorage.setItem(CHAVE_DO_MODO, "mania");
-    expect(carregarModo(true)).toBe("mania");
+    expect(carregarModo()).toBe("mania");
   });
 
-  it("volta para o Rock se o modo salvo não está disponível ou é desconhecido", () => {
-    localStorage.setItem(CHAVE_DO_MODO, "mania");
-    expect(carregarModo(false)).toBe("rock");
+  it("volta para o Rock se o modo salvo é desconhecido", () => {
     localStorage.setItem(CHAVE_DO_MODO, "taiko");
-    expect(carregarModo(true)).toBe("rock");
+    expect(carregarModo()).toBe("rock");
   });
 });
 
