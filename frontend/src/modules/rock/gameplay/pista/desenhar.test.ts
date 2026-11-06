@@ -130,6 +130,28 @@ describe("desenharPista", () => {
     expect(desenhar(apertado, 0, false).desenhos()).toHaveLength(0);
   });
 
+  // Bug: no acerto a caçapa saltava e, ao mesmo tempo, a base acendia como num aperto em vazio.
+  it("no acerto a base não acende como num aperto em vazio", () => {
+    const brilhos = (apertados: boolean[]) =>
+      desenhar(cena([], { apertados, explosoes: [{ pista: 0, tempo: 1 }] }), 1.06)
+        .desenhos()
+        .filter((d) => (d as unknown as { tipo: string }).tipo === "brilho").length;
+    expect(brilhos([true, false, false, false, false, false])).toBe(brilhos([false, false, false, false, false, false]));
+  });
+
+  it("depois que o salto acaba, o traste apertado volta a acender a base", () => {
+    const desenhos = desenhar(cena([], { apertados: [true, false, false, false, false, false], explosoes: [{ pista: 0, tempo: 1 }] }), 5).desenhos();
+    expect(desenhos).toEqual([{ tipo: "brilho", cor: CORES_DAS_PISTAS[0] }]);
+  });
+
+  it("no acerto da aberta a linha de batida não acende como em vazio", () => {
+    const brilhos = (aberta: boolean) =>
+      desenhar(cena([], { apertados: [false, false, false, false, false, aberta], explosoes: [{ pista: PISTA_ABERTA, tempo: 1 }] }), 1.06)
+        .desenhos()
+        .filter((d) => (d as unknown as { cor: string }).cor === COR_DA_ABERTA).length;
+    expect(brilhos(true)).toBe(brilhos(false));
+  });
+
   it("no acerto o aro levanta sem desenhar outra nota, e a chama soma luz", () => {
     const canvas = desenhar(cena([], { explosoes: [{ pista: 2, tempo: 1 }] }), 1.06);
     expect(canvas.desenhos()).not.toContainEqual(expect.objectContaining({ tipo: "nota" }));
