@@ -11,6 +11,8 @@ export interface PosicaoNoRankingDoMania {
   maior_combo: number;
   mods: number;
   jogada_em: string;
+  /** Falso nas partidas que só vêm com `todas` (Random, derrota, mapa fora do ranked); elas não têm replay. */
+  vale_ranking: boolean;
 }
 
 /** Uma dificuldade no leaderboard dos mapas mais jogados. */
@@ -44,9 +46,9 @@ export interface EstatisticasDoMania {
 export function criarApiDoRanking(base = URL_DA_API, buscar?: typeof fetch) {
   const chamar = criarCliente(base, buscar);
   return {
-    /** O top 10 da dificuldade, um lugar por jogador. */
-    ranking: (beatmapId: number, sinal?: AbortSignal) =>
-      chamar<{ linhas: PosicaoNoRankingDoMania[] }>("GET", `/mania/ranking/${beatmapId}`, { sinal }).then((r) => r.linhas),
+    /** O top 10 da dificuldade, um lugar por jogador. Com `todas`, entram também as partidas que não valem ranking. */
+    ranking: (beatmapId: number, todas = false, sinal?: AbortSignal) =>
+      chamar<{ linhas: PosicaoNoRankingDoMania[] }>("GET", `/mania/ranking/${beatmapId}${todas ? "?todas=true" : ""}`, { sinal }).then((r) => r.linhas),
     /** O replay de uma partida do top 10; quem caiu do top não tem mais o dele. */
     replay: (partidaId: string) => chamar<Uint8Array>("GET", `/mania/partidas/${encodeURIComponent(partidaId)}/replay`, { bytes: true }),
     mapasMaisJogados: (sinal?: AbortSignal) => chamar<MapaMaisJogado[]>("GET", "/mania/mapas-mais-jogados", { sinal }),

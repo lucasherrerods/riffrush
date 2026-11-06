@@ -82,6 +82,8 @@ pub struct LinhaDoRanking {
     pub maior_combo: u32,
     pub mods: u32,
     pub jogada_em: DateTime<Utc>,
+    /// Falso nas partidas que só aparecem com `todas`; elas não guardam replay.
+    pub vale_ranking: bool,
 }
 
 #[async_trait]
@@ -102,8 +104,8 @@ pub trait RepositorioDoMania: Send + Sync {
     async fn partidas_no_mapa(&self, conta_id: Uuid, beatmap_id: u64, desde: DateTime<Utc>, exceto: Uuid) -> Result<u32, FalhaExterna>;
     async fn situacao(&self, conta_id: Uuid, id: Uuid) -> Result<Option<PartidaGuardada>, FalhaExterna>;
     /// O melhor de cada jogador no mapa, pela pontuação (empate: quem fez primeiro). A linha da `conta`, se ela
-    /// está fora das primeiras, vem no fim com a posição dela.
-    async fn ranking(&self, beatmap_id: u64, limite: u32, conta: Option<Uuid>) -> Result<Vec<LinhaDoRanking>, FalhaExterna>;
+    /// está fora das primeiras, vem no fim com a posição dela. Com `todas`, contam também as que não valem ranking.
+    async fn ranking(&self, beatmap_id: u64, limite: u32, todas: bool, conta: Option<Uuid>) -> Result<Vec<LinhaDoRanking>, FalhaExterna>;
     /// O replay de uma partida do ranking.
     async fn replay(&self, partida_id: Uuid) -> Result<Option<Vec<u8>>, FalhaExterna>;
     /// As dificuldades com mais partidas no ranking, com o `.osu` guardado quando o servidor já o baixou.

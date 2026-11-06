@@ -23,6 +23,10 @@ export interface ConjuntoSalvo extends Conjunto {
 const STATUS_QUE_VALEM = ["ranked", "approved", "loved"];
 export const valeXpNoMania = (conjunto: ConjuntoSalvo) => conjunto.origem === "osu" && STATUS_QUE_VALEM.includes(conjunto.status ?? "");
 
+/** O id com que a partida vai para a API. Todo mapa baixado do osu! vai, mesmo fora do ranked, para aparecer no ranking
+ * com "todas as partidas"; o importado não, porque a API não tem como conferir o arquivo. */
+export const beatmapIdParaAApi = (conjunto: ConjuntoSalvo, beatmapId?: number) => (conjunto.origem === "osu" && beatmapId ? beatmapId : undefined);
+
 /** Os conjuntos ficam salvos com o .osz inteiro: o áudio e os .osu saem dele na hora de jogar. */
 export interface BibliotecaDoMania {
   /** Do usado por último para o mais antigo. */
