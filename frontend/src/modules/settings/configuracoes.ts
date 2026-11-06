@@ -49,6 +49,8 @@ export interface Configuracoes {
   chatGlobal: boolean | null;
   /** No desktop, durante a partida, segura a tecla Windows, o Alt, o Alt+Tab e os atalhos do navegador. */
   bloquearAtalhos: boolean;
+  /** Id da skin da pista do Rock: uma pronta ou uma highway importada. */
+  skinDaPista: string;
 }
 
 export const CONFIGURACOES_PADRAO: Configuracoes = {
@@ -79,6 +81,7 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   permitirEspectadores: true,
   chatGlobal: null,
   bloquearAtalhos: true,
+  skinDaPista: "classica",
 };
 
 /** No celular a tela é pequena demais para o palco: lá o modo competitivo começa ligado. */
@@ -157,4 +160,5 @@ export function antecedenciaDasNotas(velocidade: number) {
 }
 
 /** A velocidade é igual para todos, para ninguém levar vantagem na mesma dificuldade. */
-export const VELOCIDADE_DAS_NOTAS = 9;
+/** Só muda o desenho: a nota anda menos na tela por segundo. A janela de acerto é do motor. */
+export const VELOCIDADE_DAS_NOTAS = 8.5;

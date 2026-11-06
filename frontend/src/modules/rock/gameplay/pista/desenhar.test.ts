@@ -247,4 +247,24 @@ describe("desenharPista", () => {
     expect(tracos(comExplosao, true)).toBe(tracos(cena([]), true));
     expect(tracos(comExplosao, false)).toBeGreaterThan(tracos(cena([]), false));
   });
+
+  describe("com skin", () => {
+    const skin = { trastes: ["#111111", "#222222", "#333333", "#444444", "#555555"], aberta: "#666666", braco: "#777777" };
+
+    it("as notas saem nas cores da skin", () => {
+      const desenhos = desenhar(cena([nota(0.5, 1), nota(1, PISTA_ABERTA)], { skin })).desenhos();
+      expect(desenhos).toEqual(expect.arrayContaining([expect.objectContaining({ tipo: "nota", cor: "#222222" }), expect.objectContaining({ tipo: "aberta", cor: "#666666" })]));
+    });
+
+    it("a imagem da highway é desenhada em faixas sobre o braço", () => {
+      const highway = { width: 512, height: 1024, tipo: "highway" } as unknown as CanvasImageSource & { width: number; height: number };
+      const faixas = desenhar(cena([], { skin: { ...skin, highway } })).desenhos().filter((d) => d === highway);
+      expect(faixas.length).toBeGreaterThan(10);
+    });
+
+    it("sem highway, nada de imagem extra", () => {
+      const desenhos = desenhar(cena([], { skin })).desenhos();
+      expect(desenhos.some((d) => (d as unknown as { tipo?: string }).tipo === "highway")).toBe(false);
+    });
+  });
 });
