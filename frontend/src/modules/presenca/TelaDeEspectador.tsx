@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { ArrowLeft, Download, Eye, Loader2, Search } from "lucide-react";
 import type { Personagem } from "@/modules/rock/character";
 import { TelaDeJogo, type OpcoesDaPartida, type Replay } from "@/modules/rock/gameplay";
 import { URL_DO_RELAY } from "@/modules/multiplayer";
 import { linkDoChartConfere } from "@/modules/rock/search";
-import { idDoRanking, type Musica } from "@/modules/rock/songs";
+import { idDoRanking, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
-import { ATRASO_AO_VIVO, assistirTransmissao, inicioParaAssistir, precisaSincronizar } from "./espectador";
-import { entradasDoLote, type PartidaTransmitida, type PessoaOnline } from "./protocolo";
+import type { assistirTransmissao } from "./espectador";
+import { entradasDoLote, type PessoaOnline } from "./protocolo";
+import { useAoVivo, type FaseAoVivo } from "./useAoVivo";
 
 interface Props {
   pessoa: PessoaOnline;
@@ -23,116 +24,41 @@ interface Props {
   criarSocket?: Parameters<typeof assistirTransmissao>[3];
 }
 
-type Fase = "conectando" | "semPartida" | "semMusica" | "esperando" | "assistindo" | "pausado" | "fim";
-
-/** A transmissão recebida até agora. As entradas chegam mesmo sem a música, para quem baixa no meio entrar já sincronizado. */
-interface Transmissao {
-  partida: PartidaTransmitida;
-  replay: Replay;
-}
-
-interface Assistindo extends Transmissao {
-  musica: Musica;
-  /** performance.now em que a música começa para quem assiste. */
-  inicio: number;
-  /** Muda a cada sincronização: a partida de quem assiste recomeça no ponto certo. */
-  chave: number;
-}
-
 /** A partida de outra pessoa ao vivo, montada a partir das entradas dela, `ATRASO_AO_VIVO` segundos atrás. */
 export function TelaDeEspectador({ pessoa, musicas, opcoes, personagem, aoSair, aoBuscarMusicas, aoBaixar, urlDoRelay = URL_DO_RELAY, criarSocket }: Props) {
-  const [fase, setFase] = useState<Fase>("conectando");
-  const [assistindo, setAssistindo] = useState<Assistindo | null>(null);
-  const [transmissao, setTransmissao] = useState<Transmissao | null>(null);
   const [baixando, setBaixando] = useState(false);
   const [erroAoBaixar, setErroAoBaixar] = useState<string | null>(null);
-  // Lidos pelo socket, que vive o tempo todo da tela.
-  const musicaDaPartida = useRef<Musica | null>(null);
-  const precisaRecomecar = useRef(true);
-  const chave = useRef(0);
-
-  const acharMusica = (partida: PartidaTransmitida) => musicas.find((m) => idDoRanking(m) === partida.musica) ?? null;
-  const acharMusicaAtual = useRef(acharMusica);
-  acharMusicaAtual.current = acharMusica;
-
-  useEffect(() => {
-    let atual: Transmissao | null = null;
-    let inicioAtual = 0;
-    let fimAgendado: ReturnType<typeof setTimeout> | undefined;
-
-    const comecar = (ate: number) => {
-      if (!atual || !musicaDaPartida.current) return;
-      precisaRecomecar.current = false;
-      inicioAtual = inicioParaAssistir(performance.now(), ate);
-      setAssistindo({ ...atual, musica: musicaDaPartida.current, inicio: inicioAtual, chave: ++chave.current });
-      setFase("assistindo");
-    };
-
-    const fechar = assistirTransmissao(
-      urlDoRelay,
-      pessoa.id,
-      (mensagem) => {
-        if (mensagem.tipo === "semPartida") return setFase("semPartida");
-        if (mensagem.tipo === "inicio") {
-          clearTimeout(fimAgendado);
-          const replay: Replay = { semFalha: mensagem.partida.semFalha, velocidade: mensagem.partida.velocidade ?? 1, fantasma: false, semAberta: mensagem.partida.semAberta ?? false, jeito: mensagem.partida.jeito ?? "gamepad", hashDoChart: mensagem.partida.hashDoChart, entradas: [], ateAgora: 0 };
-          atual = { partida: mensagem.partida, replay };
-          setTransmissao(atual);
-          musicaDaPartida.current = acharMusicaAtual.current(mensagem.partida);
-          precisaRecomecar.current = true;
-          return setFase(musicaDaPartida.current ? "esperando" : "semMusica");
-        }
-        if (!atual) return;
-        if (mensagem.tipo === "lote") {
-          // A mesma lista que a partida lê a cada quadro: as entradas novas valem sem remontar nada.
-          atual.replay.entradas.push(...entradasDoLote(mensagem.entradas));
-          atual.replay.ateAgora = mensagem.ate;
-          if (!musicaDaPartida.current) return;
-          if (precisaRecomecar.current || precisaSincronizar(performance.now(), inicioAtual, mensagem.ate)) comecar(mensagem.ate);
-        } else if (mensagem.tipo === "pausa") {
-          if (!mensagem.pausado || !musicaDaPartida.current) return;
-          precisaRecomecar.current = true;
-          setFase("pausado");
-        } else if (mensagem.tipo === "fim") {
-          // Quem assiste está atrás: ainda falta ver o finalzinho.
-          fimAgendado = setTimeout(() => setFase("fim"), (ATRASO_AO_VIVO + 0.5) * 1000);
-        }
-      },
-      criarSocket,
-    );
-    return () => {
-      clearTimeout(fimAgendado);
-      fechar();
-    };
-  }, [pessoa.id, urlDoRelay, criarSocket]);
-
-  // A música baixada entrou na biblioteca: a partida começa no próximo lote, já no ponto certo.
-  useEffect(() => {
-    if (fase !== "semMusica" || !transmissao) return;
-    const musica = acharMusica(transmissao.partida);
-    if (!musica) return;
-    musicaDaPartida.current = musica;
-    precisaRecomecar.current = true;
-    setFase("esperando");
-  }, [musicas, fase, transmissao]);
+  const { fase, partida, assistindo, terminar } = useAoVivo<Musica, Replay>({
+    contaId: pessoa.id,
+    urlDoRelay,
+    criarSocket,
+    biblioteca: musicas,
+    // Uma partida do Mania não tem música do Rock para montar.
+    achar: (p) => (p.modo === "mania" ? null : (musicas.find((m) => idDoRanking(m) === p.musica) ?? null)),
+    montar: (p) => ({ semFalha: p.semFalha, velocidade: p.velocidade ?? 1, fantasma: false, semAberta: p.semAberta ?? false, jeito: p.jeito ?? "gamepad", hashDoChart: p.hashDoChart, entradas: [], ateAgora: 0 }),
+    acumular: (replay, lote, ate) => {
+      replay.entradas.push(...entradasDoLote(lote));
+      replay.ateAgora = ate;
+    },
+  });
 
   useTeclado((evento) => fase !== "assistindo" && evento.code === "Escape" && aoSair());
 
-  if (fase === "assistindo" && assistindo) {
+  if (assistindo) {
     return (
       <div className="relative h-full">
         <TelaDeJogo
           key={assistindo.chave}
-          musica={assistindo.musica}
-          dificuldade={assistindo.partida.dificuldade}
-          instrumento={assistindo.partida.instrumento}
+          musica={assistindo.conteudo}
+          dificuldade={assistindo.partida.dificuldade as Dificuldade}
+          instrumento={assistindo.partida.instrumento as Instrumento}
           opcoes={{ ...opcoes, bot: false, semFalha: assistindo.partida.semFalha }}
           personagem={personagem}
           // Como numa sala: a música segue o relógio de quem joga, e a pausa só abre o menu.
           rede={{ inicio: assistindo.inicio, aoAtualizar: () => {} }}
-          replay={assistindo.replay}
+          replay={assistindo.acumulado}
           aoSair={aoSair}
-          aoTerminar={() => setFase("fim")}
+          aoTerminar={terminar}
         />
         <p className="pointer-events-none absolute top-20 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-superficie px-4 py-1 text-base font-bold">
           <Eye className="size-4 opacity-70" aria-hidden /> Assistindo {pessoa.nome}
@@ -142,21 +68,21 @@ export function TelaDeEspectador({ pessoa, musicas, opcoes, personagem, aoSair, 
   }
 
   // O app confere o link de novo, sem confiar só no relay: tem que ser um chart do Encore e desta música.
-  const link = fase === "semMusica" && transmissao && linkDoChartConfere(transmissao.partida.urlDoEncore, transmissao.partida.musica) ? transmissao.partida.urlDoEncore : null;
-  const doEncore = fase === "semMusica" && !!transmissao?.partida.musica.startsWith("encore:");
+  const link = fase === "semConteudo" && partida && linkDoChartConfere(partida.urlDoEncore, partida.musica) ? partida.urlDoEncore : null;
+  const doEncore = fase === "semConteudo" && !!partida?.musica.startsWith("encore:");
   const baixar = (url: string) => {
     setBaixando(true);
     setErroAoBaixar(null);
-    aoBaixar(url, transmissao!.partida.musica.slice("encore:".length))
+    aoBaixar(url, partida!.musica.slice("encore:".length))
       .catch((erro) => setErroAoBaixar(erro instanceof Error ? erro.message : String(erro)))
       .finally(() => setBaixando(false));
   };
 
-  const mensagens: Record<Exclude<Fase, "assistindo">, string> = {
+  const mensagens: Record<Exclude<FaseAoVivo, "assistindo">, string> = {
     conectando: `Conectando à partida de ${pessoa.nome}...`,
     esperando: `Conectando à partida de ${pessoa.nome}...`,
     semPartida: `${pessoa.nome} não está transmitindo uma partida agora.`,
-    semMusica: `Para assistir, você precisa ter a música que ${pessoa.nome} está tocando.`,
+    semConteudo: `Para assistir, você precisa ter a música que ${pessoa.nome} está tocando.`,
     pausado: `${pessoa.nome} pausou a partida.`,
     fim: `A partida de ${pessoa.nome} terminou.`,
   };

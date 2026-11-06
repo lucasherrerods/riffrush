@@ -12,7 +12,8 @@ export type EstadoOnline = (
   | { tipo: "menu" }
   | { tipo: "selecao" }
   | { tipo: "multiplayer"; sala?: SalaNoEstado }
-  | { tipo: "tocando"; musica: string; titulo: string; artista: string; dificuldade: Dificuldade; instrumento: Instrumento; transmitindo: boolean }
+  // No Mania, a dificuldade é o nome dela no .osu e o instrumento é o número de teclas ("7K").
+  | { tipo: "tocando"; musica: string; titulo: string; artista: string; dificuldade: Dificuldade | (string & {}); instrumento: Instrumento | (string & {}); transmitindo: boolean }
 ) & {
   /** O modo de jogo aberto. Versões antigas do app não mandam. */
   modo?: Modo;
@@ -52,8 +53,9 @@ export function lerConvite(bruta: string): ConviteParaSala | null {
 /** A partida que quem assiste precisa montar igual. */
 export interface PartidaTransmitida {
   musica: string;
-  dificuldade: Dificuldade;
-  instrumento: Instrumento;
+  /** No Mania, o nome da dificuldade no .osu e o número de teclas ("7K"). */
+  dificuldade: Dificuldade | (string & {});
+  instrumento: Instrumento | (string & {});
   hashDoChart: string;
   semFalha: boolean;
   /** Quem joga desligou a nota aberta. Relay antigo não manda: aí é com ela. */
@@ -64,6 +66,11 @@ export interface PartidaTransmitida {
   jeito?: JeitoDeJogar;
   /** O .sng no Encore, para quem assiste baixar com um clique. Só confiável depois de `linkDoChartConfere`. */
   urlDoEncore?: string;
+  /** O modo da partida. Sem ele, é o Rock. */
+  modo?: Modo;
+  /** Só no Mania: os bits dos mods e a semente do Random. */
+  mods?: number;
+  semente?: number;
 }
 
 export type MensagemDaTransmissao =

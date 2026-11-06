@@ -1,8 +1,22 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { PARTE_DA_TELA_DO_MODO, type PalcoCompartilhado } from "@/modules/menu";
 import { CartaoDaConta, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
-import { BotaoDeAmigos, PainelDeAmigos } from "@/modules/amigos";
-import { ChatGlobal, presenca, presencaDisponivel, useSouDaModeracao } from "@/modules/presenca";
+import { BotaoDeAmigos, PainelDeAmigos, useIdsDosAmigos } from "@/modules/amigos";
+import {
+  ChatGlobal,
+  TelaOnline,
+  abrirCanalDeTransmissao,
+  assistirNoModoCerto,
+  presenca,
+  presencaDisponivel,
+  tirarPedidoDeAssistir,
+  usePresenca,
+  useSouDaModeracao,
+  type PessoaOnline,
+  type PreferenciasOnline,
+} from "@/modules/presenca";
+import { entradasParaOLoteDoMania, estadoTocandoNoMania, partidaParaTransmitirNoMania, type MapaAoVivo } from "./aoVivo/protocolo";
+import { TelaDeEspectadorMania } from "./aoVivo/TelaDeEspectadorMania";
 import { TelaDeLeaderboard } from "@/modules/ranking";
 import { carregarConfiguracoes, salvarConfiguracoes } from "@/modules/settings";
 import { AnimatePresence, motion } from "framer-motion";
@@ -16,7 +30,7 @@ import { empacotarReplayDoMania, lerReplayDoMania, type ReplayDoMania } from "./
 import { apiDoRanking, type PosicaoNoRankingDoMania } from "./ranking/api";
 import { useBibliotecaDoMania } from "./beatmaps/useBibliotecaDoMania";
 import { ResultadoDoMania } from "./gameplay/ResultadoDoMania";
-import { TelaDeJogoMania, type MapaParaJogar, type OpcoesDoMania, type ResultadoDoMania as Resultado } from "./gameplay/TelaDeJogoMania";
+import { TelaDeJogoMania, type EventoDoManiaAoVivo, type MapaParaJogar, type OpcoesDoMania, type ResultadoDoMania as Resultado } from "./gameplay/TelaDeJogoMania";
 import { TelaDeSelecaoMania } from "./selecao/TelaDeSelecaoMania";
 import { carregarConfiguracoesDoMania, salvarConfiguracoesDoMania } from "./settings/configuracoesMania";
 import { JanelaDeConfiguracoesMania } from "./settings/JanelaDeConfiguracoesMania";
@@ -29,7 +43,7 @@ import { criarPlayerDoMania, faixasDaBiblioteca, playerDoMania } from "./player/
 import { FundoDoMania } from "./menu/FundoDoMania";
 import { MenuDoMania } from "./menu/MenuDoMania";
 
-type Tela = { nome: "menu" } | { nome: "selecao" } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil" } | { nome: "jogo"; mapa: MapaParaJogar; treino?: boolean; replay?: ReplayAssistido } | { nome: "resultado"; mapa: MapaParaJogar; resultado: Resultado; replay?: ReplayAssistido };
+type Tela = { nome: "menu" } | { nome: "selecao" } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil" } | { nome: "online" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido };
 
 /** Um replay do ranking aberto para assistir: as entradas, os mods e a semente da partida, e de quem ela é. */
 type ReplayAssistido = ReplayDoMania & { nome: string };
@@ -112,9 +126,58 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   useEffect(() => {
     if (online) presenca.ligar();
   }, [online]);
-  useEffect(() => presenca.definirEstado(tela.nome === "selecao" ? { tipo: "selecao" } : { tipo: "menu" }), [tela.nome]);
+  // A partida vai ao ar como no Rock: com a conta online e a escolha de deixar assistir. Replay e treino não vão.
+  const jogando = tela.nome === "jogo" && !tela.replay && !tela.treino ? tela : null;
+  const transmitindo = online && preferencias.permitirEspectadores && !!jogando;
+  useEffect(
+    () => presenca.definirEstado(jogando ? estadoTocandoNoMania(jogando.aoVivo, transmitindo) : tela.nome === "selecao" ? { tipo: "selecao" } : { tipo: "menu" }),
+    [tela.nome, jogando, transmitindo],
+  );
+  const mudarPreferencias = (mudadas: Partial<PreferenciasOnline>) => {
+    const novas = { ...carregarConfiguracoes(), ...mudadas };
+    salvarConfiguracoes(novas);
+    setPreferencias(novas);
+  };
+  // Veio do Rock para assistir alguém que está no Mania.
+  useEffect(() => {
+    const pessoa = tirarPedidoDeAssistir();
+    if (pessoa) setTela({ nome: "espectador", pessoa });
+  }, []);
+  const idsDosAmigos = useIdsDosAmigos(contasLigadas && !!conta && tela.nome === "online");
+  const estadoDaPresenca = usePresenca();
+  const assistir = (pessoa: PessoaOnline) => {
+    setAmigosAbertos(false);
+    assistirNoModoCerto(pessoa, "mania", (p) => setTela({ nome: "espectador", pessoa: p }));
+  };
   // A semente do Random muda a cada partida; o replay a guarda.
   const [semente, setSemente] = useState(() => (Math.random() * 2 ** 32) >>> 0);
+  // Uma transmissão por partida: jogar de novo é outra tela de jogo e ganha outra.
+  const canal = useMemo(() => (transmitindo && conta ? abrirCanalDeTransmissao(conta.id) : undefined), [transmitindo, conta?.id, jogando]); // eslint-disable-line react-hooks/exhaustive-deps
+  const transmitir = (evento: EventoDoManiaAoVivo) => {
+    if (!canal || !jogando) return;
+    if (evento.tipo === "inicio") canal.comecar(partidaParaTransmitirNoMania(jogando.aoVivo, mods, semente));
+    else if (evento.tipo === "lote") canal.mandar({ tipo: "lote", ate: evento.ate, entradas: entradasParaOLoteDoMania(evento.entradas) });
+    else canal.encerrar();
+  };
+  /** Abre o pacote de uma dificuldade da biblioteca, pronto para jogar. */
+  const carregarMapa = useCallback(
+    async (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva): Promise<MapaParaJogar | null> => {
+      const pacote = await abrirPacote(conjunto.id);
+      const lido = pacote?.mapas.find((m) => m.hash === dificuldade.hash);
+      const audio = lido && pacote?.arquivos.get(lido.arquivoDeAudio);
+      if (!lido || !audio) return null;
+      return {
+        titulo: conjunto.tituloUnicode || conjunto.titulo,
+        dificuldade: lido.dificuldade,
+        beatmapId: beatmapIdParaAApi(conjunto, lido.beatmapId),
+        valeXp: valeXpNoMania(conjunto) && !!lido.beatmapId,
+        texto: lido.texto,
+        hash: lido.hash,
+        audio,
+      };
+    },
+    [abrirPacote],
+  );
 
   const aoImportar = async (arquivos: File[]) => {
     const { importados, erros } = await importar(arquivos);
@@ -134,25 +197,17 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   const baixados = new Set((conjuntos ?? []).flatMap((c) => (c.origem === "osu" && c.beatmapsetId ? [c.beatmapsetId] : [])));
 
   const aoJogar = async (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva, treino = false, replay?: ReplayAssistido) => {
-    const pacote = await abrirPacote(conjunto.id);
-    const lido = pacote?.mapas.find((m) => m.hash === dificuldade.hash);
-    const audio = lido && pacote?.arquivos.get(lido.arquivoDeAudio);
-    if (!lido || !audio) return avisar.error("Não foi possível abrir este mapa.");
+    const mapa = await carregarMapa(conjunto, dificuldade);
+    if (!mapa) return avisar.error("Não foi possível abrir este mapa.");
     void usar(conjunto.id);
     setSemente((Math.random() * 2 ** 32) >>> 0);
+    const teclas = conjunto.mapas.find((m) => m.hash === dificuldade.hash)?.teclas ?? dificuldade.teclas;
     setTela({
       nome: "jogo",
       treino,
       replay,
-      mapa: {
-        titulo: conjunto.tituloUnicode || conjunto.titulo,
-        dificuldade: lido.dificuldade,
-        beatmapId: beatmapIdParaAApi(conjunto, lido.beatmapId),
-        valeXp: valeXpNoMania(conjunto) && !!lido.beatmapId,
-        texto: lido.texto,
-        hash: lido.hash,
-        audio,
-      },
+      mapa,
+      aoVivo: { titulo: mapa.titulo, artista: conjunto.artistaUnicode || conjunto.artista, dificuldade: mapa.dificuldade, teclas, hash: mapa.hash },
     });
   };
 
@@ -169,8 +224,8 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
 
   /** Com a conta conectada, o replay vai para a API, que confere a partida e devolve o XP. Fora do ranked ela vai também,
    * sem XP, para aparecer no ranking com todas as partidas. Replay assistido não vale nada. */
-  const aoTerminar = (mapa: MapaParaJogar, resultado: Resultado, replay?: ReplayAssistido) => {
-    setTela({ nome: "resultado", mapa, resultado, replay });
+  const aoTerminar = (mapa: MapaParaJogar, aoVivo: MapaAoVivo, resultado: Resultado, replay?: ReplayAssistido) => {
+    setTela({ nome: "resultado", mapa, aoVivo, resultado, replay });
     setXp(undefined);
     if (!conta || replay) return;
     if (!mapa.beatmapId || resultado.mods & MODS.AT) return setXp({ recusada: true });
@@ -195,7 +250,8 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         replay={tela.replay?.entradas}
         rotuloDoReplay={tela.replay && `REPLAY · ${tela.replay.nome}`}
         aoSair={() => setTela({ nome: "selecao" })}
-        aoTerminar={(resultado) => aoTerminar(tela.mapa, resultado, tela.replay)}
+        aoTransmitir={canal && transmitir}
+        aoTerminar={(resultado) => aoTerminar(tela.mapa, tela.aoVivo, resultado, tela.replay)}
       />
     );
 
@@ -207,7 +263,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         resultado={tela.resultado}
         xp={xp}
         valeXp={tela.mapa.valeXp && !tela.replay}
-        aoJogarDeNovo={() => setTela({ nome: "jogo", mapa: tela.mapa, replay: tela.replay })}
+        aoJogarDeNovo={() => setTela({ nome: "jogo", mapa: tela.mapa, aoVivo: tela.aoVivo, replay: tela.replay })}
         aoVoltar={() => setTela({ nome: "selecao" })}
       />
     );
@@ -227,6 +283,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
             aoBuscar={() => setTela({ nome: "busca" })}
             aoConfigurar={() => setConfigurando(true)}
             aoLeaderboard={contasLigadas ? () => setTela({ nome: "leaderboard" }) : undefined}
+            aoOnline={presencaDisponivel && contasLigadas ? () => setTela({ nome: "online" }) : undefined}
             chat={
               presencaDisponivel && contasLigadas && preferencias.chatGlobal !== false ? (
                 <ChatGlobal className="w-full" aceito={preferencias.chatGlobal} aoResponder={responderAoChat} />
@@ -248,13 +305,41 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     return undefined;
   };
 
-  if (tela.nome === "leaderboard" || tela.nome === "perfil")
+  if (tela.nome === "espectador")
+    return (
+      <main className="relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
+        <TelaDeEspectadorMania
+          pessoa={tela.pessoa}
+          conjuntos={conjuntos ?? []}
+          carregarMapa={carregarMapa}
+          opcoes={opcoes}
+          decodificar={decodificar}
+          aoSair={() => setTela({ nome: "online" })}
+          aoBuscarMapas={() => setTela({ nome: "busca" })}
+        />
+        <Avisos />
+      </main>
+    );
+
+  if (tela.nome === "leaderboard" || tela.nome === "perfil" || tela.nome === "online")
     return (
       <main className="relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
         <FundoDoMania />
         {cabecalho}
         <div className="relative min-h-0 flex-1">
-          {tela.nome === "leaderboard" ? (
+          {tela.nome === "online" ? (
+            <TelaOnline
+              logado={!!conta}
+              euId={conta?.id ?? null}
+              amigos={idsDosAmigos}
+              presenca={estadoDaPresenca}
+              mostrarOnline={preferencias.mostrarOnline}
+              permitirEspectadores={preferencias.permitirEspectadores}
+              aoMudar={mudarPreferencias}
+              aoAssistir={assistir}
+              aoVoltar={() => setTela({ nome: "menu" })}
+            />
+          ) : tela.nome === "leaderboard" ? (
             <TelaDeLeaderboard
               aoVoltar={() => setTela({ nome: "menu" })}
               tituloDaMusica={() => undefined}

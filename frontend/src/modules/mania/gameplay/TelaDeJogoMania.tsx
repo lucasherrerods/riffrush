@@ -48,6 +48,12 @@ export interface ResultadoDoMania {
   entradas: EntradaDoMania[];
 }
 
+/** O que a partida manda para quem assiste ao vivo: as entradas novas a cada segundo, com até onde a música chegou. */
+export type EventoDoManiaAoVivo = { tipo: "inicio" } | { tipo: "lote"; entradas: EntradaDoMania[]; ate: number } | { tipo: "fim" };
+
+/** De quanto em quanto tempo as entradas vão para quem assiste. */
+const LOTE_MS = 1000;
+
 export interface MapaParaJogar {
   titulo: string;
   dificuldade: string;
@@ -76,6 +82,10 @@ interface Props {
   replay?: EntradaDoMania[];
   /** O selo no alto da tela durante o replay, como "REPLAY · Ana". */
   rotuloDoReplay?: string;
+  /** Transmitir a partida para quem assiste ao vivo. No treino não transmite. */
+  aoTransmitir?: (evento: EventoDoManiaAoVivo) => void;
+  /** Assistindo ao vivo: o performance.now em que a música começou para quem assiste, que entra no meio dela. */
+  aoVivo?: { inicio: number };
 }
 
 const decodificarPadrao = (contexto: AudioContext, bytes: Uint8Array) => contexto.decodeAudioData(bytes.slice().buffer);
@@ -83,7 +93,7 @@ const decodificarPadrao = (contexto: AudioContext, bytes: Uint8Array) => context
 /** No treino ninguém falha, e os mods que derrubam a partida no primeiro erro não fazem sentido. */
 const modsDoTreino = (mods: number) => (mods & ~(MODS.SD | MODS.PF)) | MODS.NF;
 
-export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_PADRAO_DO_MANIA, aoTerminar, aoSair, treino = false, decodificar = decodificarPadrao, replay, rotuloDoReplay }: Props) {
+export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_PADRAO_DO_MANIA, aoTerminar, aoSair, treino = false, decodificar = decodificarPadrao, replay, rotuloDoReplay, aoTransmitir, aoVivo }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [pronta, setPronta] = useState(false);
@@ -93,8 +103,10 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
   const [voltas, setVoltas] = useState<Voltas>(VOLTAS_INICIAIS);
   /** Segundos que faltam para a música voltar, na contagem do treino. */
   const [falta, setFalta] = useState(0);
-  const retornos = useRef({ aoTerminar, aoSair });
-  retornos.current = { aoTerminar, aoSair };
+  const retornos = useRef({ aoTerminar, aoSair, aoTransmitir });
+  retornos.current = { aoTerminar, aoSair, aoTransmitir };
+  // Lido só ao montar: quem assiste remonta a tela (pela key) a cada sincronização.
+  const inicioAoVivo = useRef(aoVivo?.inicio);
   // Trocar de trecho não decodifica o áudio de novo.
   const decodificado = useRef<{ mapa: MapaParaJogar; buffer: AudioBuffer } | null>(null);
 
@@ -143,7 +155,29 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
         inicio = quando - desde;
       };
       const desdeNoTreino = volta ? Math.max(0, volta.inicio) : 0;
-      tocar(ENTRADA_S, desdeNoTreino);
+      if (inicioAoVivo.current !== undefined) {
+        // Ao vivo, a música entra já no ponto em que a partida de quem joga está, ou espera ela começar.
+        const desde = (performance.now() - inicioAoVivo.current) / 1000;
+        if (desde >= 0) tocar(RECOMECO_S, desde + RECOMECO_S);
+        else tocar(-desde, 0);
+      } else tocar(ENTRADA_S, desdeNoTreino);
+
+      const transmitindo = !treino;
+      const transmitir = (evento: EventoDoManiaAoVivo) => transmitindo && retornos.current.aoTransmitir?.(evento);
+      let enviadas = 0;
+      let ultimoLoteMs = -Infinity;
+      const mandarLote = (agoraMs: number) => {
+        ultimoLoteMs = agoraMs;
+        transmitir({ tipo: "lote", entradas: entradas.slice(enviadas), ate: agoraMs / 1000 });
+        enviadas = entradas.length;
+      };
+      let transmissaoEncerrada = false;
+      const encerrarTransmissao = () => {
+        if (transmissaoEncerrada) return;
+        transmissaoEncerrada = true;
+        transmitir({ tipo: "fim" });
+      };
+      transmitir({ tipo: "inicio" });
 
       const emMs = (tempoDoAudio: number) => Math.round((tempoDoAudio - inicio) * 1000 - opcoes.atrasoMs);
       const quadro: QuadroDaPista = { agoraMs: emMs(agoraNoAudio(contexto)), rolagemMs: opcoes.rolagemMs, notas, estados, apertadas, combo: 0, vida: 1 };
@@ -188,6 +222,7 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
           hash: mapa.hash,
           entradas,
         };
+        if (enviadas < entradas.length) mandarLote(quadro.agoraMs);
         pararTudo();
         retornos.current.aoTerminar(resultado);
       };
@@ -260,6 +295,8 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
         const agora = agoraNoAudio(contexto);
         quadro.agoraMs = emMs(agora);
         tocarReplayAte(quadro.agoraMs);
+        if (ultimoLoteMs === -Infinity) ultimoLoteMs = quadro.agoraMs;
+        else if (quadro.agoraMs - ultimoLoteMs >= LOTE_MS) mandarLote(quadro.agoraMs);
         motor.avancar(quadro.agoraMs);
         lerEventos();
         quadro.combo = motor.combo;
@@ -282,6 +319,7 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
       pedido = requestAnimationFrame(desenhar);
 
       pararTudo = () => {
+        encerrarTransmissao();
         cancelAnimationFrame(pedido);
         observador?.disconnect();
         window.removeEventListener("keydown", aoApertar);
