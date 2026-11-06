@@ -4,7 +4,7 @@ import { URL_DO_RELAY } from "@/modules/multiplayer";
 import { apiDaPresenca } from "./api";
 import { ConexaoDoChatGlobal } from "./conexaoDoChat";
 import { ConexaoDePresenca } from "./conexao";
-import { criarTransmissao, type PartidaParaTransmitir } from "./transmissao";
+import { criarCanalDaTransmissao, criarTransmissao, type PartidaParaTransmitir } from "./transmissao";
 
 const pedirFicha = () => {
   const token = sessaoDaConta.token();
@@ -27,6 +27,10 @@ export function usePresenca() {
 /** Uma transmissão nova para a partida que vai começar. */
 export const transmitirPartida = (partida: PartidaParaTransmitir, aoContarEspectadores?: (quantos: number) => void) =>
   criarTransmissao(partida, { urlDoRelay: URL_DO_RELAY, pedirFicha, aoContarEspectadores });
+
+/** Um canal de transmissão cru, para o modo que monta as próprias mensagens (o Mania). */
+export const abrirCanalDeTransmissao = (contaId: string, aoContarEspectadores?: (quantos: number) => void) =>
+  criarCanalDaTransmissao(contaId, { urlDoRelay: URL_DO_RELAY, pedirFicha, aoContarEspectadores });
 
 /** O último status de moderação visto de cada conta: o chat só fica conectado no menu. */
 const moderacaoConhecida = new Map<string, boolean>();

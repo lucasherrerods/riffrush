@@ -89,6 +89,37 @@ describe("TelaDeJogoMania", () => {
     expect(aoTerminar.mock.calls[0][0]).toMatchObject({ pontuacao: 1_000_000, contagem: [3, 0, 0, 0, 0, 0] });
   });
 
+  it("transmitindo, manda o início, as entradas em lotes e o fim", async () => {
+    const aoTransmitir = vi.fn();
+    const aoTerminar = vi.fn();
+    render(<TelaDeJogoMania mapa={mapa} aoTerminar={aoTerminar} aoSair={vi.fn()} decodificar={decodificar} aoTransmitir={aoTransmitir} />);
+    await pronta();
+    expect(aoTransmitir).toHaveBeenCalledWith({ tipo: "inicio" });
+    await irPara(1000);
+    fireEvent.keyDown(window, { code: "KeyD" });
+    fireEvent.keyUp(window, { code: "KeyD" });
+    await irPara(2100);
+    const lotes = aoTransmitir.mock.calls.map(([e]) => e).filter((e) => e.tipo === "lote");
+    expect(lotes.flatMap((l) => l.entradas)).toEqual([
+      [1000, 0, 1],
+      [1000, 0, 0],
+    ]);
+    expect(lotes.at(-1).ate).toBeGreaterThanOrEqual(2);
+    await irPara(3300);
+    await waitFor(() => expect(aoTerminar).toHaveBeenCalled());
+    expect(aoTransmitir).toHaveBeenLastCalledWith({ tipo: "fim" });
+  });
+
+  it("ao vivo, a música começa no ponto em que a partida de quem joga está", async () => {
+    vi.spyOn(performance, "now").mockReturnValue(10_000);
+    render(<TelaDeJogoMania mapa={mapa} aoTerminar={vi.fn()} aoSair={vi.fn()} decodificar={decodificar} replay={[]} aoVivo={{ inicio: 7_000 }} />);
+    await pronta();
+    const fonte = audio().fontes.at(-1)!;
+    expect(fonte.deslocamento).toBeCloseTo(3, 0);
+    expect(fonte.inicio).toBeLessThan(ENTRADA);
+    vi.restoreAllMocks();
+  });
+
   it("segurar a tecla não toca de novo", async () => {
     const { aoTerminar } = abrir();
     await pronta();

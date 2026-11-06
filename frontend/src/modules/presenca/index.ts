@@ -1,6 +1,8 @@
 import { adiar } from "@/shared/lib/adiar";
-export { chatGlobal, presenca, presencaDisponivel, transmitirPartida, usePresenca, useSouDaModeracao } from "./presenca";
-export type { ConviteParaSala, EstadoOnline, PessoaOnline } from "./protocolo";
+export { abrirCanalDeTransmissao, chatGlobal, presenca, presencaDisponivel, transmitirPartida, usePresenca, useSouDaModeracao } from "./presenca";
+export type { ConviteParaSala, EstadoOnline, PartidaTransmitida, PessoaOnline } from "./protocolo";
+export { assistirNoModoCerto, modoDaPessoa, tirarPedidoDeAssistir } from "./assistirEmOutroModo";
+export { useAoVivo, type AssistindoAoVivo, type FaseAoVivo } from "./useAoVivo";
 export { descreverEstado } from "./descrever";
 export { podeAssistir } from "./lobby";
 export const TelaDeEspectador = adiar(() => import("./TelaDeEspectador").then((m) => m.TelaDeEspectador));

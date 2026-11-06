@@ -29,6 +29,15 @@ function abrir(extra: Partial<Parameters<typeof TelaOnline>[0]> = {}) {
 }
 
 describe("TelaOnline", () => {
+  it("quem joga Mania aparece com a etiqueta do modo, o mapa e as teclas, e dá para assistir", async () => {
+    const duda: PessoaOnline = { id: "d", nome: "Duda", avatar: null, estado: { tipo: "tocando", musica: "osu:x", titulo: "Mapa", artista: "Banda", dificuldade: "Insano", instrumento: "7K", transmitindo: true, modo: "mania" } };
+    const { aoAssistir, usuario } = abrir({ presenca: { conectada: true, pessoas: [duda] } });
+    expect(screen.getByText("Tocando Mapa – Banda · Insano · 7K")).toBeInTheDocument();
+    expect(screen.getByText("Mania")).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Assistir Duda" }));
+    expect(aoAssistir).toHaveBeenCalledWith(duda);
+  });
+
   it("lista quem está online com o que cada um está fazendo", () => {
     abrir();
     expect(screen.getByText("Tocando Paint It Black – The Rolling Stones · Expert · Baixo")).toBeInTheDocument();
