@@ -52,9 +52,8 @@ async function abrir() {
 }
 
 describe("TelaDoMania", () => {
-  it("mostra o nome do Riff Rush Mania e a biblioteca vazia", async () => {
+  it("mostra a biblioteca vazia", async () => {
     await abrir();
-    expect(screen.getByRole("heading", { name: "Riff Rush Mania" })).toBeInTheDocument();
     expect(await screen.findByText(/Nenhum mapa ainda/)).toBeInTheDocument();
   });
 
@@ -124,7 +123,8 @@ describe("TelaDoMania", () => {
     expect(await screen.findByText("Baixado")).toBeInTheDocument();
     const [salvo] = await biblioteca.listar();
     expect(salvo).toMatchObject({ id: "osu:7", origem: "osu", status: "ranked" });
-    await usuario.click(screen.getByRole("button", { name: "Seleção" }));
+    await usuario.click(screen.getByRole("button", { name: "Voltar" }));
+    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     expect(await screen.findByRole("heading", { name: "Música" })).toBeInTheDocument();
     expect(screen.queryByText("Importado · sem XP nem ranking")).not.toBeInTheDocument();
   });
@@ -139,7 +139,8 @@ describe("TelaDoMania", () => {
       await usuario.click(screen.getByRole("button", { name: "Buscar mapas" }));
       await usuario.click(await screen.findByRole("button", { name: "Baixar Musica" }));
       await screen.findByText("Baixado");
-      await usuario.click(screen.getByRole("button", { name: "Seleção" }));
+      await usuario.click(screen.getByRole("button", { name: "Voltar" }));
+    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
       await screen.findByRole("heading", { name: "Música" });
       expect(screen.getByRole("radio", { name: /4K.*Hard/ })).toBeChecked();
       const fontesAntes = audio().fontes.length;
@@ -165,13 +166,16 @@ describe("TelaDoMania", () => {
     expect(screen.getByRole("button", { name: "alavanca" })).toBeInTheDocument();
     await usuario.click(screen.getByRole("button", { name: "Buscar mapas" }));
     expect(await screen.findByRole("region", { name: "Busca de mapas" })).toBeInTheDocument();
-    await usuario.click(screen.getByRole("button", { name: "Voltar ao menu" }));
+    await usuario.click(screen.getByRole("button", { name: "Voltar" }));
     expect(screen.getByRole("navigation", { name: "Menu do Mania" })).toBeInTheDocument();
   });
 
-  it("a alavanca fica no cabeçalho das telas, junto da logo do Mania", async () => {
-    await abrir();
-    expect(screen.getByRole("heading", { name: "Riff Rush Mania" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "alavanca" })).toBeInTheDocument();
+  it("a seleção não tem a barra do Mania, e abre a busca, que volta para ela", async () => {
+    const { usuario } = await abrir();
+    expect(screen.queryByRole("navigation", { name: "Telas do Mania" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "alavanca" })).not.toBeInTheDocument();
+    await usuario.click(await screen.findByRole("button", { name: "Buscar mapas" }));
+    await usuario.click(await screen.findByRole("button", { name: "Voltar" }));
+    expect(await screen.findByRole("region", { name: "Seleção de mapas" })).toBeInTheDocument();
   });
 });

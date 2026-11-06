@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, Download } from "lucide-react";
+import { ArrowLeft, Check, Download } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
 import { Button } from "@/shared/ui/button";
@@ -18,6 +18,7 @@ const TECLAS = [4, 5, 6, 7, 8, 9, 10];
 const ESPERA_DA_DIGITACAO_MS = 300;
 
 interface Props {
+  aoVoltar?: () => void;
   /** Os conjuntos que já estão na biblioteca, pelo beatmapset_id. */
   baixados: Set<number>;
   aoBaixar: (osz: Blob, mapa: MapaDaBusca) => Promise<void>;
@@ -26,7 +27,7 @@ interface Props {
   baixar?: typeof baixarOsz;
 }
 
-export function TelaDeBuscaMania({ baixados, aoBaixar, buscar = buscarMapas, baixar = baixarOsz }: Props) {
+export function TelaDeBuscaMania({ aoVoltar, baixados, aoBaixar, buscar = buscarMapas, baixar = baixarOsz }: Props) {
   const [texto, setTexto] = useState("");
   const [status, setStatus] = useState<StatusDaBusca>("ranked");
   const [teclas, setTeclas] = useState<number[]>([]);
@@ -65,7 +66,14 @@ export function TelaDeBuscaMania({ baixados, aoBaixar, buscar = buscarMapas, bai
 
   return (
     <section aria-label="Busca de mapas" className="respiro-de-tela flex h-full flex-col">
-      <Input type="search" placeholder="Música, artista ou mapper" aria-label="Buscar mapas" value={texto} onChange={(e) => setTexto(e.target.value)} />
+      <div className="flex items-center gap-2">
+        {aoVoltar && (
+          <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
+            <ArrowLeft aria-hidden />
+          </Button>
+        )}
+        <Input type="search" placeholder="Música, artista ou mapper" aria-label="Buscar mapas" value={texto} onChange={(e) => setTexto(e.target.value)} />
+      </div>
       <div className="flex flex-wrap gap-6">
         <div role="radiogroup" aria-label="Status" className="flex flex-wrap gap-2">
           {STATUS.map((s) => (
