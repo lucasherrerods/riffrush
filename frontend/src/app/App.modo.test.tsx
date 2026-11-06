@@ -30,8 +30,8 @@ it("troca o tema e o nome da janela junto com o modo", () => {
   expect(document.documentElement.style.getPropertyValue("--cor-fundo")).toBe(TEMAS.mania.cores.fundo);
 });
 
-it("com o Mania ligado, girar a alavanca gira o disco do cenário, troca o jogo inteiro e girar de novo volta", async () => {
-  const { container } = render(<App maniaLigado />);
+it("girar a alavanca gira o disco do cenário, troca o jogo inteiro e girar de novo volta", async () => {
+  const { container } = render(<App />);
   await userEvent.click(screen.getByRole("switch", { name: "Modo de jogo: Rock" }));
   // O modo troca logo no clique: a tela nova já fica por baixo, usável, e a capa com o Rock sai girando por cima.
   expect(await screen.findByRole("heading", { name: "Riff Rush Mania" }, { timeout: 5000 })).toBeInTheDocument();
@@ -41,9 +41,4 @@ it("com o Mania ligado, girar a alavanca gira o disco do cenário, troca o jogo 
   await userEvent.click(screen.getByRole("switch", { name: "Modo de jogo: Mania" }));
   expect(await screen.findByText("jogo do rock", {}, { timeout: 3000 })).toBeInTheDocument();
   expect(lerTema()).toBe(TEMAS.riffRush);
-});
-
-it("sem o Mania ligado, não há alavanca", () => {
-  render(<App maniaLigado={false} />);
-  expect(screen.queryByRole("switch")).not.toBeInTheDocument();
 });

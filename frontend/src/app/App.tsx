@@ -9,7 +9,7 @@ import { TEMAS } from "@/shared/styles/tokens";
 import { TelaCarregando } from "@/shared/ui/TelaCarregando";
 import { CapaDaVolvelle, Volvelle, type FotoDaTela, type LadoDaVolvelle } from "@/shared/ui/volvelle/Volvelle";
 import { AppDoRock } from "./AppDoRock";
-import { MANIA_LIGADO, trocarModo, useModo, type Modo } from "./modo";
+import { trocarModo, useModo, type Modo } from "./modo";
 import { useTrocaDeModo } from "./useTrocaDeModo";
 
 const IDENTIDADES = { rock: IDENTIDADE_DO_ROCK, mania: IDENTIDADE_DO_MANIA };
@@ -42,7 +42,7 @@ function fotografarTela(): FotoDaTela | undefined {
 }
 
 /** Cada modo é um jogo à parte: o App só escolhe qual montar e veste a interface com o tema dele. */
-export function App({ maniaLigado = MANIA_LIGADO }: { maniaLigado?: boolean } = {}) {
+export function App() {
   const modo = useModo();
   const identidade = IDENTIDADES[modo];
   useEffect(() => {
@@ -67,7 +67,7 @@ export function App({ maniaLigado = MANIA_LIGADO }: { maniaLigado?: boolean } = 
     },
     [pedir],
   );
-  const alavanca = maniaLigado ? <AlavancaDeModo modo={modo} aoTrocar={pedirTroca} /> : undefined;
+  const alavanca = <AlavancaDeModo modo={modo} aoTrocar={pedirTroca} />;
   // O disco fica atrás da tela inicial dos dois modos; nas outras telas cada modo tem o próprio fundo.
   const [naTelaInicial, setNaTelaInicial] = useState(true);
   const troca = giro ? { fase: giro.fase, sentido: giro.sentido } : undefined;

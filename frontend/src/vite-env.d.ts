@@ -11,5 +11,4 @@ interface ImportMetaEnv {
   /** Client ID do tipo "App para computador", usado pelo app desktop. */
   readonly VITE_GOOGLE_CLIENT_ID_DESKTOP?: string;
   /** Com 1, o modo Mania aparece no app (enquanto ele está em desenvolvimento). */
-  readonly VITE_MODO_MANIA?: string;
 }
