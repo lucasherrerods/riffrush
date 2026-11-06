@@ -264,12 +264,14 @@ export function desenharPista(
   if (sprites.camada) c.drawImage(sprites.camada("cordas", 0, largura, altura, escala, (camada) => desenharCordas(camada, layout)), 0, 0, largura, altura);
   else desenharCordas(c, layout);
 
+  // No acerto quem anima é o aro que salta; a base só acende no aperto em vazio.
+  const saltando = enfeites ? trastesSaltando(cena, tempo) : null;
   // Botões da linha de batida
   for (let pista = 0; pista < 5; pista++) {
     const x = xDaPista(layout, pista, 1);
     const raio = larguraDoTraste * 0.34;
     const cor = CORES_DAS_PISTAS[pista];
-    const apertado = cena.apertados[pista];
+    const apertado = cena.apertados[pista] && !saltando?.[pista];
     if (apertado && enfeites) {
       const tamanho = larguraDoTraste * 1.3;
       c.globalAlpha = 0.55;
@@ -290,7 +292,7 @@ export function desenharPista(
   }
 
   // A tecla da aberta acende a linha de batida inteira, de ponta a ponta.
-  if (cena.apertados[PISTA_ABERTA] && enfeites) {
+  if (cena.apertados[PISTA_ABERTA] && enfeites && !saltando?.[PISTA_ABERTA]) {
     const largura = larguraDoTraste * 5.4;
     const altura = larguraDoTraste * 0.9;
     c.globalAlpha = 0.6;
@@ -438,6 +440,23 @@ export function desenharPista(
   }
   if (tremendo) c.restore();
   if (abertura !== null) c.restore();
+}
+
+/** Trastes (e a aberta, no índice dela) com o aro levantado agora: num acerto recente ou segurando um sustain. */
+function trastesSaltando(cena: Cena, tempo: number) {
+  const saltando = [false, false, false, false, false, false];
+  const marcar = (pista: number) => {
+    if (pista === PISTA_ABERTA) saltando.fill(true);
+    else saltando[pista] = true;
+  };
+  for (const explosao of cena.explosoes) {
+    const idade = tempo - explosao.tempo;
+    if (idade >= 0 && idade <= DURACAO_DO_ARO) marcar(explosao.pista);
+  }
+  for (let i = cena.primeira; i < cena.notas.length && cena.notas[i].tempo <= tempo; i++) {
+    if (cena.notas[i].segurando) marcar(cena.notas[i].pista);
+  }
+  return saltando;
 }
 
 /** Um aro de traste: borda de metal, anel na cor do traste e o miolo. */
