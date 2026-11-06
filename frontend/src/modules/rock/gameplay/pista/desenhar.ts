@@ -1,10 +1,13 @@
 import { PISTA_ABERTA, type Batida, type TipoDaNota } from "@/modules/rock/songs";
 import { cores } from "@/modules/rock/tema";
 import { comAlfa } from "@/shared/styles/tokens";
-import { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ABERTA, COR_DA_ESTRELA, COR_DA_NOTA_PERDIDA, TRILHO_DA_ESTRELA, corDaPista } from "../cores";
+import { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ABERTA, COR_DA_ESTRELA, COR_DA_NOTA_PERDIDA, TRILHO_DA_ESTRELA } from "../cores";
 import { descidaDaPista, teclaDaAbertura } from "../abertura";
 import type { NotaEmJogo } from "../partida";
-import { DURACAO_DA_CHAMA, DURACAO_DO_ARO, elevacaoDoAro, forcaDaChama, linguasDeFogo, pontosDoRaio, pulo, tremor } from "./efeitos";
+import { ALTURA_DO_ARO, DURACAO_DA_CHAMA, DURACAO_DO_ARO, elevacaoDoAro, forcaDaChama, linguasDeFogo, pontosDoRaio, pulo, tremor } from "./efeitos";
+import { tracarForma } from "./formas";
+import { faixasDaHighway } from "./highway";
+import type { FormatoDaCacapa } from "@/modules/rock/skins";
 import { cordasDaPista, layoutDaPista, projetar, xDaPista, type LayoutDaPista } from "./geometria";
 
 const LADOS = [-1, 1] as const;
@@ -47,12 +50,32 @@ export interface Cena {
   estrelaDesde: number | null;
   /** Segundos desde o começo da contagem, enquanto a abertura da partida roda. */
   abertura?: number | null;
+  /** O visual escolhido pelo jogador. Sem ela, as cores do tema. */
+  skin?: SkinNaPista;
 }
+
+/** A parte da skin que a pista desenha: cores das notas e caçapas, o tom do braço e a imagem da highway já carregada. */
+export interface SkinNaPista {
+  trastes: string[];
+  aberta: string;
+  braco: string;
+  /** Formato das caçapas e das notas. */
+  formato?: FormatoDaCacapa;
+  /** Força do brilho das notas e das caçapas acesas, de 0 a 1. */
+  brilho?: number;
+  contornoForte?: boolean;
+  highway?: CanvasImageSource & { height: number; width: number };
+}
+
+const SKIN_DO_TEMA: SkinNaPista = { trastes: CORES_DAS_PISTAS, aberta: COR_DA_ABERTA, braco: cores.superficie };
+/** Faixas em que a imagem da highway é cortada para parecer em perspectiva. */
+const FAIXAS_DA_HIGHWAY = 120;
 
 /** Imagens pré-desenhadas das notas e dos brilhos (ver sprites.ts). */
 export interface Sprites {
   /** Sem tipo é a nota comum; HOPO e tap têm o visual do Clone Hero. */
-  nota(cor: string, estrela: boolean, brilho: boolean, tipo?: TipoDaNota): CanvasImageSource;
+  /** O formato segue o das caçapas; sem ele, redonda. */
+  nota(cor: string, estrela: boolean, brilho: boolean, tipo?: TipoDaNota, formato?: FormatoDaCacapa, intensidade?: number, contornoForte?: boolean): CanvasImageSource;
   /** A nota aberta: uma barra deitada que atravessa os cinco trastes. */
   aberta(cor: string, estrela: boolean, brilho: boolean, tipo?: TipoDaNota): CanvasImageSource;
   brilho(cor: string): CanvasImageSource;
@@ -76,7 +99,6 @@ const FORCA_DA_CHAMA_DO_SUSTAIN = 0.75;
 /** Tamanho da chama em larguras de traste. */
 const CHAMA = { altura: 1.25, largura: 0.28 };
 /** Quanto o aro do traste levanta da base, em larguras de traste. */
-const ALTURA_DO_ARO = 0.33;
 /** O miolo do traste, onde o fogo acende, em larguras de traste. */
 const MIOLO = { largura: 0.23, altura: 0.12 };
 const DURACAO_DO_ERRO = 0.5;
@@ -134,6 +156,10 @@ export function desenharPista(
   c.clearRect(0, 0, largura, altura);
   const layout = layoutDaPista(largura, altura);
   const { centro, linhaDeBatida, larguraDoTraste } = layout;
+  const skin = cena.skin ?? SKIN_DO_TEMA;
+  const formato = skin.formato ?? "redonda";
+  const intensidade = skin.brilho ?? 1;
+  const corDe = (pista: number) => (pista === PISTA_ABERTA ? skin.aberta : skin.trastes[pista]);
 
   // Na abertura, a pista inteira sobe de baixo da tela.
   const abertura = efeitos ? (cena.abertura ?? null) : null;
@@ -157,23 +183,42 @@ export function desenharPista(
   const longe = projetar(layout, 1);
 
   const { tamanho, comEstrela } = chavesDoTamanho(largura, altura, cena.estrelaAtiva);
+  const desenharTrilhos = (c: CanvasRenderingContext2D) => {
+    // Trilhos na cor do multiplicador. O brilho é uma linha larga e translúcida, mais leve que shadowBlur.
+    const corDoTrilho = cena.estrelaAtiva ? COR_DA_ESTRELA : CORES_DO_MULTIPLICADOR[Math.min(3, cena.multiplicador - 1)];
+    const trilhos = (espessura: number, opacidade: number) => {
+      c.globalAlpha = opacidade;
+      c.lineWidth = espessura;
+      c.beginPath();
+      for (const lado of LADOS) {
+        c.moveTo(centro + lado * metade * longe.escala, longe.y);
+        c.lineTo(centro + lado * metade * perto.escala, perto.y);
+      }
+      c.stroke();
+    };
+    // Trilho de cromo com bisel; a cor do multiplicador fica num filete por cima.
+    if (enfeites) {
+      c.strokeStyle = corDoTrilho;
+      trilhos(16, 0.1);
+    }
+    c.strokeStyle = cores.fundo;
+    trilhos(10, 0.9);
+    c.strokeStyle = cores.textoSuave;
+    trilhos(6, 1);
+    c.strokeStyle = corDoTrilho;
+    trilhos(2.5, 1);
+    c.globalAlpha = 1;
+  };
   // O braço (fundo, textura, luz e trilhos) só muda com o tamanho, o star power e o multiplicador.
   const desenharBraco = (c: CanvasRenderingContext2D) => {
-    const fundoDaPista = gradienteGuardado(c, `pista:${comEstrela}`, () => {
+    const fundoDaPista = gradienteGuardado(c, `pista:${comEstrela}:${skin.braco}`, () => {
       const gradiente = c.createLinearGradient(0, longe.y, 0, perto.y);
       gradiente.addColorStop(0, comAlfa(cena.estrelaAtiva ? TRILHO_DA_ESTRELA[0] : cores.fundo, 0));
-      gradiente.addColorStop(0.25, cena.estrelaAtiva ? comAlfa(TRILHO_DA_ESTRELA[1], 0.9) : comAlfa(cores.superficie, 0.95));
+      gradiente.addColorStop(0.25, cena.estrelaAtiva ? comAlfa(TRILHO_DA_ESTRELA[1], 0.9) : comAlfa(skin.braco, 0.95));
       gradiente.addColorStop(1, comAlfa(cena.estrelaAtiva ? TRILHO_DA_ESTRELA[2] : cores.fundo, 0.98));
       return gradiente;
     });
-    const contornoDoBraco = () => {
-      c.beginPath();
-      c.moveTo(centro - metade * longe.escala, longe.y);
-      c.lineTo(centro + metade * longe.escala, longe.y);
-      c.lineTo(centro + metade * perto.escala, perto.y);
-      c.lineTo(centro - metade * perto.escala, perto.y);
-      c.closePath();
-    };
+    const contornoDoBraco = () => tracarContornoDoBraco(c, layout);
     c.fillStyle = fundoDaPista;
     contornoDoBraco();
     c.fill();
@@ -201,30 +246,8 @@ export function desenharPista(
     c.fillRect(centro - metade * perto.escala, longe.y, metade * perto.escala * 2, perto.y - longe.y);
     c.restore();
 
-    // Trilhos na cor do multiplicador. O brilho é uma linha larga e translúcida, mais leve que shadowBlur.
-    const corDoTrilho = cena.estrelaAtiva ? COR_DA_ESTRELA : CORES_DO_MULTIPLICADOR[Math.min(3, cena.multiplicador - 1)];
-    const trilhos = (espessura: number, opacidade: number) => {
-      c.globalAlpha = opacidade;
-      c.lineWidth = espessura;
-      c.beginPath();
-      for (const lado of LADOS) {
-        c.moveTo(centro + lado * metade * longe.escala, longe.y);
-        c.lineTo(centro + lado * metade * perto.escala, perto.y);
-      }
-      c.stroke();
-    };
-    // Trilho de cromo com bisel; a cor do multiplicador fica num filete por cima.
-    if (enfeites) {
-      c.strokeStyle = corDoTrilho;
-      trilhos(16, 0.1);
-    }
-    c.strokeStyle = cores.fundo;
-    trilhos(10, 0.9);
-    c.strokeStyle = cores.textoSuave;
-    trilhos(6, 1);
-    c.strokeStyle = corDoTrilho;
-    trilhos(2.5, 1);
-    c.globalAlpha = 1;
+    // Com highway, os trilhos vêm depois dela, por cima da imagem.
+    if (!skin.highway) desenharTrilhos(c);
 
   };
   const corDoMultiplicador = Math.min(3, cena.multiplicador - 1);
@@ -232,6 +255,10 @@ export function desenharPista(
   const escala = c.getTransform?.()?.a ?? 1;
   if (sprites.camada) c.drawImage(sprites.camada("braco", versaoDoBraco, largura, altura, escala, desenharBraco), 0, 0, largura, altura);
   else desenharBraco(c);
+  if (skin.highway) {
+    desenharHighway(c, layout, skin.highway, tempo, antecedencia);
+    desenharTrilhos(c);
+  }
 
   // Trastes: cada batida é uma barra de metal, com a sombra embaixo e o brilho em cima.
   for (let b = primeiroAPartirDe(cena.batidas, tempo + antecedencia * ATRAS_DA_LINHA); b < cena.batidas.length; b++) {
@@ -264,15 +291,17 @@ export function desenharPista(
   if (sprites.camada) c.drawImage(sprites.camada("cordas", 0, largura, altura, escala, (camada) => desenharCordas(camada, layout)), 0, 0, largura, altura);
   else desenharCordas(c, layout);
 
+  // No acerto quem anima é o aro que salta; a base só acende no aperto em vazio.
+  const saltando = enfeites ? trastesSaltando(cena, tempo) : null;
   // Botões da linha de batida
   for (let pista = 0; pista < 5; pista++) {
     const x = xDaPista(layout, pista, 1);
     const raio = larguraDoTraste * 0.34;
-    const cor = CORES_DAS_PISTAS[pista];
-    const apertado = cena.apertados[pista];
-    if (apertado && enfeites) {
+    const cor = skin.trastes[pista];
+    const apertado = cena.apertados[pista] && !saltando?.[pista];
+    if (apertado && enfeites && intensidade > 0) {
       const tamanho = larguraDoTraste * 1.3;
-      c.globalAlpha = 0.55;
+      c.globalAlpha = 0.55 * intensidade;
       c.drawImage(sprites.brilho(cor), x - tamanho / 2, linhaDeBatida - tamanho / 2, tamanho, tamanho);
       c.globalAlpha = 1;
     }
@@ -286,15 +315,15 @@ export function desenharPista(
       gradiente.addColorStop(1, cores.fundo);
       return gradiente;
     });
-    desenharAro(c, x, linhaDeBatida, raio, cromo, cor, apertado ? comAlfa(cores.texto, 0.85) : comAlfa(cores.fundo, 0.9));
+    desenharAro(c, x, linhaDeBatida, raio, cromo, cor, apertado ? comAlfa(cores.texto, 0.85) : comAlfa(cores.fundo, 0.9), formato);
   }
 
   // A tecla da aberta acende a linha de batida inteira, de ponta a ponta.
-  if (cena.apertados[PISTA_ABERTA] && enfeites) {
+  if (cena.apertados[PISTA_ABERTA] && enfeites && !saltando?.[PISTA_ABERTA]) {
     const largura = larguraDoTraste * 5.4;
     const altura = larguraDoTraste * 0.9;
     c.globalAlpha = 0.6;
-    c.drawImage(sprites.brilho(COR_DA_ABERTA), layout.centro - largura / 2, linhaDeBatida - altura / 2, largura, altura);
+    c.drawImage(sprites.brilho(skin.aberta), layout.centro - largura / 2, linhaDeBatida - altura / 2, largura, altura);
     c.globalAlpha = 1;
   }
 
@@ -331,7 +360,7 @@ export function desenharPista(
       c.fill();
     };
     c.globalAlpha = morto ? 0.3 : 1;
-    c.fillStyle = morto ? COR_DA_NOTA_PERDIDA : cena.estrelaAtiva ? COR_DA_ESTRELA : corDaPista(nota.pista);
+    c.fillStyle = morto ? COR_DA_NOTA_PERDIDA : cena.estrelaAtiva ? COR_DA_ESTRELA : corDe(nota.pista);
     faixa(1);
     if (nota.segurando) {
       c.fillStyle = comAlfa(cores.texto, 0.55);
@@ -348,7 +377,7 @@ export function desenharPista(
     if (distancia < ATRAS_DA_LINHA) continue;
     const p = projetar(layout, distancia);
     const estrela = nota.frase >= 0 && !cena.frasesFalhas.has(nota.frase);
-    const cor = cena.estrelaAtiva ? COR_DA_ESTRELA : corDaPista(nota.pista);
+    const cor = cena.estrelaAtiva ? COR_DA_ESTRELA : corDe(nota.pista);
     c.globalAlpha = nota.perdida ? 0.35 : 1;
     if (nota.pista === PISTA_ABERTA) {
       const escala = (larguraDoTraste * 5 * p.escala) / SPRITE_DA_ABERTA.barra;
@@ -357,7 +386,7 @@ export function desenharPista(
       c.drawImage(sprites.aberta(cor, estrela, enfeites, nota.tipo), layout.centro - largura / 2, p.y - alturaDoSprite / 2, largura, alturaDoSprite);
       continue;
     }
-    const sprite = sprites.nota(cor, estrela, enfeites, nota.tipo);
+    const sprite = sprites.nota(cor, estrela, enfeites && intensidade > 0, nota.tipo, formato, intensidade, skin.contornoForte);
     const escala = (larguraDoTraste * 0.36 * p.escala) / SPRITE_DA_NOTA.raio;
     const largura = SPRITE_DA_NOTA.largura * escala;
     const alturaDoSprite = SPRITE_DA_NOTA.altura * escala;
@@ -398,13 +427,13 @@ export function desenharPista(
   for (const explosao of soLeves ? [] : cena.explosoes) {
     const idade = tempo - explosao.tempo;
     if (idade < 0 || idade > Math.max(DURACAO_DO_ARO, DURACAO_DA_CHAMA, DURACAO_DA_EXPLOSAO)) continue;
-    desenharAroLevantado(c, layout, explosao.pista, cena.estrelaAtiva, elevacaoDoAro(idade), Math.round(explosao.tempo * 1000), tempo, forcaDaChama(idade));
+    desenharAroLevantado(c, layout, explosao.pista, cena.estrelaAtiva, elevacaoDoAro(idade), Math.round(explosao.tempo * 1000), tempo, forcaDaChama(idade), corDe, formato);
     if (idade > DURACAO_DA_EXPLOSAO) continue;
     const k = idade / DURACAO_DA_EXPLOSAO;
     // A explosão da aberta sai do meio do braço e é bem maior, porque a nota cobre os cinco trastes.
     const aberta = explosao.pista === PISTA_ABERTA;
     const x = aberta ? layout.centro : xDaPista(layout, explosao.pista, 1);
-    const cor = cena.estrelaAtiva ? COR_DA_ESTRELA : corDaPista(explosao.pista);
+    const cor = cena.estrelaAtiva ? COR_DA_ESTRELA : corDe(explosao.pista);
     const tamanho = larguraDoTraste * (aberta ? 5 : 2) * (0.4 + k);
     c.globalAlpha = 1 - k;
     c.drawImage(sprites.brilho(cor), x - tamanho / 2, linhaDeBatida - tamanho / 2, tamanho, tamanho);
@@ -421,7 +450,7 @@ export function desenharPista(
     for (let i = cena.primeira; i < ultima; i++) {
       const nota = cena.notas[i];
       if (!nota.segurando) continue;
-      desenharAroLevantado(c, layout, nota.pista, cena.estrelaAtiva, 1, nota.pista + 1, tempo, FORCA_DA_CHAMA_DO_SUSTAIN);
+      desenharAroLevantado(c, layout, nota.pista, cena.estrelaAtiva, 1, nota.pista + 1, tempo, FORCA_DA_CHAMA_DO_SUSTAIN, corDe, formato);
     }
   }
 
@@ -433,18 +462,34 @@ export function desenharPista(
   if (abertura !== null && !soLeves) {
     for (let traste = 0; traste < 5; traste++) {
       const { elevacao, chama } = teclaDaAbertura(abertura, traste);
-      if (elevacao > 0) desenharAroLevantado(c, layout, traste, cena.estrelaAtiva, elevacao, traste + 1, tempo, chama);
+      if (elevacao > 0) desenharAroLevantado(c, layout, traste, cena.estrelaAtiva, elevacao, traste + 1, tempo, chama, corDe, formato);
     }
   }
   if (tremendo) c.restore();
   if (abertura !== null) c.restore();
 }
 
+/** Trastes (e a aberta, no índice dela) com o aro levantado agora: num acerto recente ou segurando um sustain. */
+function trastesSaltando(cena: Cena, tempo: number) {
+  const saltando = [false, false, false, false, false, false];
+  const marcar = (pista: number) => {
+    if (pista === PISTA_ABERTA) saltando.fill(true);
+    else saltando[pista] = true;
+  };
+  for (const explosao of cena.explosoes) {
+    const idade = tempo - explosao.tempo;
+    if (idade >= 0 && idade <= DURACAO_DO_ARO) marcar(explosao.pista);
+  }
+  for (let i = cena.primeira; i < cena.notas.length && cena.notas[i].tempo <= tempo; i++) {
+    if (cena.notas[i].segurando) marcar(cena.notas[i].pista);
+  }
+  return saltando;
+}
+
 /** Um aro de traste: borda de metal, anel na cor do traste e o miolo. */
-function desenharAro(c: CanvasRenderingContext2D, x: number, y: number, raio: number, metal: string | CanvasGradient, cor: string, miolo: string) {
+function desenharAro(c: CanvasRenderingContext2D, x: number, y: number, raio: number, metal: string | CanvasGradient, cor: string, miolo: string, formato: FormatoDaCacapa = "redonda") {
   const elipse = (cy: number, largura: number, altura: number, preenchimento: string | CanvasGradient) => {
-    c.beginPath();
-    c.ellipse(x, cy, raio * largura, raio * altura, 0, 0, Math.PI * 2);
+    tracarForma(c, formato, x, cy, raio * largura, raio * altura);
     c.fillStyle = preenchimento;
     c.fill();
   };
@@ -454,19 +499,19 @@ function desenharAro(c: CanvasRenderingContext2D, x: number, y: number, raio: nu
 }
 
 /** O aro sobe da base e o fogo sai de dentro dele; a nota aberta levanta os cinco trastes. */
-function desenharAroLevantado(c: CanvasRenderingContext2D, layout: LayoutDaPista, pista: number, estrela: boolean, elevacao: number, semente: number, tempo: number, forca: number) {
+function desenharAroLevantado(c: CanvasRenderingContext2D, layout: LayoutDaPista, pista: number, estrela: boolean, elevacao: number, semente: number, tempo: number, forca: number, corDe: (pista: number) => string, formato: FormatoDaCacapa) {
   const { larguraDoTraste, linhaDeBatida } = layout;
   const aberta = pista === PISTA_ABERTA;
   const raio = larguraDoTraste * 0.34;
   const y = linhaDeBatida - elevacao * larguraDoTraste * ALTURA_DO_ARO;
   for (let traste = aberta ? 0 : pista; traste <= (aberta ? 4 : pista); traste++) {
     const x = xDaPista(layout, traste, 1);
-    const cor = estrela ? COR_DA_ESTRELA : aberta ? COR_DA_ABERTA : corDaPista(traste);
+    const cor = estrela ? COR_DA_ESTRELA : aberta ? corDe(PISTA_ABERTA) : corDe(traste);
     if (elevacao > 0) {
       // A coluna escura entre a base e o aro mostra que ele saiu do lugar.
       c.fillStyle = cores.fundo;
       c.fillRect(x - raio * 0.68, y, raio * 1.36, linhaDeBatida - y);
-      desenharAro(c, x, y, raio, cores.textoSuave, cor, cores.fundo);
+      desenharAro(c, x, y, raio, cores.textoSuave, cor, cores.fundo, formato);
     }
     if (forca > 0) desenharChama(c, x, y, larguraDoTraste, cor, semente + traste * 31, tempo, forca);
   }
@@ -598,4 +643,32 @@ function desenharTrovao(
     raio(5, cores.texto, 1);
   }
   c.globalAlpha = 1;
+}
+
+/** A imagem da highway por cima do braço, em faixas, correndo com as notas. */
+function desenharHighway(c: CanvasRenderingContext2D, layout: LayoutDaPista, imagem: CanvasImageSource & { height: number; width: number }, tempo: number, antecedencia: number) {
+  if (!imagem.width || !imagem.height) return;
+  // Recorta no contorno do braço: as faixas são retângulos e, sem isso, passam da borda inclinada.
+  c.save();
+  tracarContornoDoBraco(c, layout);
+  c.clip();
+  for (const faixa of faixasDaHighway(layout, tempo, antecedencia, imagem.height, ATRAS_DA_LINHA, FAIXAS_DA_HIGHWAY)) {
+    if (faixa.alturaDaOrigem <= 0) continue;
+    // Meio pixel a mais em cada faixa esconde as emendas.
+    c.drawImage(imagem, 0, faixa.origem, imagem.width, faixa.alturaDaOrigem, faixa.x, faixa.y - 0.5, faixa.largura, faixa.altura + 1);
+  }
+  c.restore();
+}
+
+/** O trapézio do braço, da linha de batida (um pouco antes) até o horizonte. */
+function tracarContornoDoBraco(c: CanvasRenderingContext2D, layout: LayoutDaPista) {
+  const metade = layout.largura / 2;
+  const perto = projetar(layout, ATRAS_DA_LINHA);
+  const longe = projetar(layout, 1);
+  c.beginPath();
+  c.moveTo(layout.centro - metade * longe.escala, longe.y);
+  c.lineTo(layout.centro + metade * longe.escala, longe.y);
+  c.lineTo(layout.centro + metade * perto.escala, perto.y);
+  c.lineTo(layout.centro - metade * perto.escala, perto.y);
+  c.closePath();
 }

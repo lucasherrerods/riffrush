@@ -1,3 +1,4 @@
+import { ESTILO_PADRAO, SKIN_PADRAO, type EstiloDaCacapa, type SkinDaPista } from "@/modules/rock/skins";
 import type { QualidadeDoPalco } from "@/modules/rock/stage";
 import type { JeitoDeJogar } from "./partida";
 
@@ -35,6 +36,10 @@ export interface OpcoesDaPartida {
   soEfeitosLeves?: boolean;
   /** No desktop, segura as teclas Windows, Alt e Alt+Tab e os atalhos do navegador enquanto se joga. */
   bloquearAtalhos: boolean;
+  /** O visual da pista e das notas. */
+  skin: SkinDaPista;
+  /** O formato e as cores das caçapas e das notas. */
+  cacapa: EstiloDaCacapa;
 }
 
 export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
@@ -58,6 +63,8 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   escalaDeRenderizacao: 1,
   modoCompetitivo: false,
   bloquearAtalhos: true,
+  skin: SKIN_PADRAO,
+  cacapa: ESTILO_PADRAO,
 };
 
 /** Um jogador da tela dividida: as teclas dele e como reconhecer o que é dele. */

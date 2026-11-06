@@ -13,6 +13,7 @@ function abrir({ noCelular = false, comLeaderboard = true, chat }: { noCelular?:
     aoMultijogador: vi.fn(),
     aoPersonagem: vi.fn(),
     aoBuscarMusicas: vi.fn(),
+    aoCustomizar: vi.fn(),
     aoLeaderboard: comLeaderboard ? vi.fn() : undefined,
     aoAbrirDocumento: vi.fn(),
   };
@@ -26,7 +27,13 @@ describe("MenuPrincipal", () => {
   it("mostra o nome do jogo e as opções", () => {
     abrir();
     expect(screen.getByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Multiplayer", "Buscar músicas", "Leaderboard", "Personagem"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Jogar", "Multiplayer", "Buscar músicas", "Leaderboard", "Personagem", "Customizar", "Tutoriais"]);
+  });
+
+  it("Customizar abre a escolha da pista e das caçapas", async () => {
+    const { aoCustomizar, usuario } = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Customizar" }));
+    expect(aoCustomizar).toHaveBeenCalled();
   });
 
   it("sem conta, Configurações fica no menu, porque não há o menu da conta", () => {
@@ -41,9 +48,16 @@ describe("MenuPrincipal", () => {
   });
 
   it("as setas trocam a opção selecionada, dando a volta", async () => {
-    const { aoPersonagem, usuario } = abrir();
-    await usuario.keyboard("{ArrowUp}{Enter}");
-    expect(aoPersonagem).toHaveBeenCalled();
+    const { aoCustomizar, usuario } = abrir();
+    await usuario.keyboard("{ArrowUp}{ArrowUp}{Enter}");
+    expect(aoCustomizar).toHaveBeenCalled();
+  });
+
+  it("Tutoriais abre os tutoriais dos modos e das mecânicas", async () => {
+    const { usuario } = abrir();
+    await usuario.click(screen.getByRole("button", { name: "Tutoriais" }));
+    expect(await screen.findByRole("dialog", { name: "Tutoriais" }, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Mecânicas" })).toBeInTheDocument();
   });
 
   it("marca a opção selecionada para leitores de tela", async () => {
@@ -138,7 +152,7 @@ describe("MenuPrincipal rodapé", () => {
 describe("MenuPrincipal no celular que entrou pelo QR code", () => {
   it("começa por entrar na sala", () => {
     abrir({ noCelular: true });
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Entrar na sala", "Jogar sozinho", "Buscar músicas", "Leaderboard", "Personagem"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Entrar na sala", "Jogar sozinho", "Buscar músicas", "Leaderboard", "Personagem", "Customizar", "Tutoriais"]);
   });
 
   it("Enter já leva para a sala", async () => {

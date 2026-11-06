@@ -24,6 +24,7 @@ import { ABERTURA, aberturaPodeComecar, ritmoDaAbertura } from "./abertura";
 import { desenharPista, type Cena } from "./pista/desenhar";
 import { trovaoDoEvento } from "./pista/efeitos";
 import type { layoutDaPista } from "./pista/geometria";
+import { imagemDaHighway } from "@/modules/rock/skins";
 import { criarSprites } from "./pista/sprites";
 import type { EstadoDoJogador } from "./rede";
 import { aplicarEntradas, criarGravador, empacotarReplay, hashDoChart, partidaNoInstante, type EventoDaTransmissao, type Replay } from "./replay";
@@ -188,6 +189,10 @@ export function PistaDoJogador(props: Props) {
       });
     }
     const sprites = criarSprites();
+    // A imagem da highway carrega em paralelo; até lá a pista mostra o braço do jogo.
+    const { cores: coresDaSkin } = opcoes.skin;
+    const { cores: coresDaCacapa, formato, brilho, contornoForte } = opcoes.cacapa;
+    const skin = { ...coresDaSkin, ...coresDaCacapa, formato, brilho, contornoForte, highway: imagemDaHighway(opcoes.skin) };
     const contexto2d = canvas.current?.getContext("2d") ?? null;
     // O tamanho vem do ResizeObserver: ler clientWidth no loop, logo depois de mudar a opacidade, força um layout por quadro.
     const medida = { largura: canvas.current?.clientWidth ?? 0, altura: canvas.current?.clientHeight ?? 0 };
@@ -469,6 +474,7 @@ export function PistaDoJogador(props: Props) {
             trovoes,
             estrelaDesde,
             abertura: desdeAAbertura,
+            skin,
           },
           opcoes.efeitos,
           sprites,

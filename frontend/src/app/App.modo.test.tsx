@@ -17,7 +17,8 @@ it("monta o jogo do modo ativo", async () => {
   expect(await screen.findByRole("heading", { name: "Riff Rush Mania" }, { timeout: 5000 })).toBeInTheDocument();
   act(() => trocarModo("rock"));
   expect(screen.getByText("jogo do rock")).toBeInTheDocument();
-});
+  // O teste espera o pacote do Mania baixar: o prazo dele tem que passar o da espera, senão vence antes.
+}, 15_000);
 
 it("troca o tema e o nome da janela junto com o modo", () => {
   render(<App />);

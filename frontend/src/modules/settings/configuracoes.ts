@@ -1,6 +1,7 @@
 import { BOTAO_DA_ESTRELA_PADRAO, BOTOES_DOS_TRASTES_PADRAO } from "@/modules/gamepad";
 import type { JeitoDeJogar } from "@/modules/rock/gameplay";
 import type { ModoDeJanela } from "@/modules/platform";
+import type { FormatoDaCacapa } from "@/modules/rock/skins";
 import type { QualidadeDoPalco } from "@/modules/rock/stage";
 import { ehTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 
@@ -49,6 +50,16 @@ export interface Configuracoes {
   chatGlobal: boolean | null;
   /** No desktop, durante a partida, segura a tecla Windows, o Alt, o Alt+Tab e os atalhos do navegador. */
   bloquearAtalhos: boolean;
+  /** Id da skin da pista do Rock: uma pronta ou uma highway importada. */
+  skinDaPista: string;
+  /** Formato das caçapas e das notas do Rock. */
+  formatoDaCacapa: FormatoDaCacapa;
+  /** Id do esquema de cores das caçapas e das notas. */
+  coresDaCacapa: string;
+  /** Força do brilho das notas e das caçapas, de 0 a 1. */
+  brilhoDaCacapa: number;
+  /** Contorno claro e grosso nas notas (acessibilidade). */
+  contornoForte: boolean;
 }
 
 export const CONFIGURACOES_PADRAO: Configuracoes = {
@@ -79,6 +90,11 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   permitirEspectadores: true,
   chatGlobal: null,
   bloquearAtalhos: true,
+  skinDaPista: "classica",
+  formatoDaCacapa: "redonda",
+  coresDaCacapa: "classica",
+  brilhoDaCacapa: 1,
+  contornoForte: false,
 };
 
 /** No celular a tela é pequena demais para o palco: lá o modo competitivo começa ligado. */
@@ -157,4 +173,5 @@ export function antecedenciaDasNotas(velocidade: number) {
 }
 
 /** A velocidade é igual para todos, para ninguém levar vantagem na mesma dificuldade. */
-export const VELOCIDADE_DAS_NOTAS = 9;
+/** Só muda o desenho: a nota anda menos na tela por segundo. A janela de acerto é do motor. */
+export const VELOCIDADE_DAS_NOTAS = 8.5;

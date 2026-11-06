@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from "react";
-import { Play, Radio, Search, Settings2, Shirt, Trophy, Users } from "lucide-react";
+import { Suspense, useState, type ReactNode } from "react";
+import { GraduationCap, Palette, Play, Radio, Search, Settings2, Shirt, Trophy, Users } from "lucide-react";
+import { ModalDeTutoriais } from "@/modules/rock/tutoriais";
 import { tocarEfeito } from "@/modules/audio";
 import type { Documento } from "@/modules/legal";
 import { abrirLink } from "@/modules/platform";
@@ -18,6 +19,8 @@ interface Props {
   /** Só no computador: vários jogadores na mesma tela. Com ele, o Multiplayer pergunta antes se é local ou online. */
   aoMultiplayerLocal?: () => void;
   aoPersonagem: () => void;
+  /** O visual da pista e das caçapas. */
+  aoCustomizar?: () => void;
   /** Só sem conta: com ela, as configurações ficam no menu da conta. */
   aoConfigurar?: () => void;
   aoBuscarMusicas: () => void;
@@ -40,13 +43,16 @@ type Item = OpcaoDaTelaInicial;
 const URL_DO_PROJETO = "https://github.com/lucasherrerods/riffrush";
 const URL_DA_LANDING = "https://playriffrush.vercel.app";
 
-export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoMultiplayerLocal, aoPersonagem, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca, troca, estatica }: Props) {
+export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoMultiplayerLocal, aoPersonagem, aoCustomizar, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca, troca, estatica }: Props) {
   const [escolhendoMultiplayer, setEscolhendoMultiplayer] = useState(false);
+  const [vendoTutoriais, setVendoTutoriais] = useState(false);
   const buscar: Item = { rotulo: "Buscar músicas", icone: Search, acao: aoBuscarMusicas };
   const comuns: Item[] = [
     ...(aoLeaderboard ? [{ rotulo: "Leaderboard", icone: Trophy, acao: aoLeaderboard }] : []),
     ...(aoOnline ? [{ rotulo: "Online", icone: Radio, acao: aoOnline }] : []),
     { rotulo: "Personagem", icone: Shirt, acao: aoPersonagem },
+    ...(aoCustomizar ? [{ rotulo: "Customizar", icone: Palette, acao: aoCustomizar }] : []),
+    { rotulo: "Tutoriais", icone: GraduationCap, acao: () => setVendoTutoriais(true) },
     ...(aoConfigurar ? [{ rotulo: "Configurações", icone: Settings2, acao: aoConfigurar }] : []),
   ];
   const itens: Item[] = noCelular
@@ -66,11 +72,16 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
       troca={troca}
       estatica={estatica}
       opcoes={itens}
-      pausada={escolhendoMultiplayer}
+      pausada={escolhendoMultiplayer || vendoTutoriais}
       aoMover={() => tocarEfeito("mover", volumeDosEfeitos)}
       aoEscolher={() => tocarEfeito("selecionar", volumeDosEfeitos)}
       chat={chat}
     >
+      {vendoTutoriais && (
+        <Suspense fallback={null}>
+          <ModalDeTutoriais aberto aoFechar={() => setVendoTutoriais(false)} />
+        </Suspense>
+      )}
       {aoMultiplayerLocal && (
         <EscolhaDoMultiplayer
           aberta={escolhendoMultiplayer}

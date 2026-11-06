@@ -1,6 +1,6 @@
 import { TEMA_PADRAO, type Tema } from "./temas";
 
-export { TEMAS, TEMA_PADRAO, type Tema } from "./temas";
+export { CORES_DAS_CACAPAS, SKINS_DA_PISTA, TEMAS, TEMA_PADRAO, type CoresDaCacapa, type CoresDaSkinDaPista, type Tema } from "./temas";
 
 const canais = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
 

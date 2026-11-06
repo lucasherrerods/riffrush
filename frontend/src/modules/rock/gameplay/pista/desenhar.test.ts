@@ -5,7 +5,8 @@ import { CORES_DAS_PISTAS, COR_DA_ABERTA, COR_DA_ESTRELA } from "../cores";
 import { desenharPista, type Cena, type Sprites } from "./desenhar";
 
 const sprites: Sprites = {
-  nota: (cor, estrela, _brilho, tipoDaNota) => ({ tipo: "nota", cor, estrela, ...(tipoDaNota && { tipoDaNota }) }) as unknown as CanvasImageSource,
+  nota: (cor, estrela, _brilho, tipoDaNota, formato, intensidade, contornoForte) =>
+    ({ tipo: "nota", cor, estrela, ...(tipoDaNota && { tipoDaNota }), ...(formato && formato !== "redonda" && { formato }), ...(intensidade !== undefined && intensidade !== 1 && { intensidade }), ...(contornoForte && { contornoForte }) }) as unknown as CanvasImageSource,
   aberta: (cor, estrela, _brilho, tipoDaNota) => ({ tipo: "aberta", cor, estrela, ...(tipoDaNota && { tipoDaNota }) }) as unknown as CanvasImageSource,
   brilho: (cor) => ({ tipo: "brilho", cor }) as unknown as CanvasImageSource,
   textura: () => ({ tipo: "textura" }) as unknown as CanvasImageSource,
@@ -130,6 +131,28 @@ describe("desenharPista", () => {
     expect(desenhar(apertado, 0, false).desenhos()).toHaveLength(0);
   });
 
+  // Bug: no acerto a caçapa saltava e, ao mesmo tempo, a base acendia como num aperto em vazio.
+  it("no acerto a base não acende como num aperto em vazio", () => {
+    const brilhos = (apertados: boolean[]) =>
+      desenhar(cena([], { apertados, explosoes: [{ pista: 0, tempo: 1 }] }), 1.06)
+        .desenhos()
+        .filter((d) => (d as unknown as { tipo: string }).tipo === "brilho").length;
+    expect(brilhos([true, false, false, false, false, false])).toBe(brilhos([false, false, false, false, false, false]));
+  });
+
+  it("depois que o salto acaba, o traste apertado volta a acender a base", () => {
+    const desenhos = desenhar(cena([], { apertados: [true, false, false, false, false, false], explosoes: [{ pista: 0, tempo: 1 }] }), 5).desenhos();
+    expect(desenhos).toEqual([{ tipo: "brilho", cor: CORES_DAS_PISTAS[0] }]);
+  });
+
+  it("no acerto da aberta a linha de batida não acende como em vazio", () => {
+    const brilhos = (aberta: boolean) =>
+      desenhar(cena([], { apertados: [false, false, false, false, false, aberta], explosoes: [{ pista: PISTA_ABERTA, tempo: 1 }] }), 1.06)
+        .desenhos()
+        .filter((d) => (d as unknown as { cor: string }).cor === COR_DA_ABERTA).length;
+    expect(brilhos(true)).toBe(brilhos(false));
+  });
+
   it("no acerto o aro levanta sem desenhar outra nota, e a chama soma luz", () => {
     const canvas = desenhar(cena([], { explosoes: [{ pista: 2, tempo: 1 }] }), 1.06);
     expect(canvas.desenhos()).not.toContainEqual(expect.objectContaining({ tipo: "nota" }));
@@ -246,5 +269,67 @@ describe("desenharPista", () => {
     const comExplosao = cena([], { explosoes: [{ pista: 0, tempo: 1 }] });
     expect(tracos(comExplosao, true)).toBe(tracos(cena([]), true));
     expect(tracos(comExplosao, false)).toBeGreaterThan(tracos(cena([]), false));
+  });
+
+  describe("com skin", () => {
+    const skin = { trastes: ["#111111", "#222222", "#333333", "#444444", "#555555"], aberta: "#666666", braco: "#777777" };
+
+    it("as notas saem nas cores da skin", () => {
+      const desenhos = desenhar(cena([nota(0.5, 1), nota(1, PISTA_ABERTA)], { skin })).desenhos();
+      expect(desenhos).toEqual(expect.arrayContaining([expect.objectContaining({ tipo: "nota", cor: "#222222" }), expect.objectContaining({ tipo: "aberta", cor: "#666666" })]));
+    });
+
+    it("as notas têm o formato das caçapas", () => {
+      const desenhos = desenhar(cena([nota(0.5, 1)], { skin: { ...skin, formato: "hexagonal" } })).desenhos();
+      expect(desenhos).toEqual(expect.arrayContaining([expect.objectContaining({ tipo: "nota", formato: "hexagonal" })]));
+    });
+
+    it("as notas levam a força do brilho e o contorno forte", () => {
+      const desenhos = desenhar(cena([nota(0.5, 1)], { skin: { ...skin, brilho: 0.3, contornoForte: true } })).desenhos();
+      expect(desenhos).toEqual(expect.arrayContaining([expect.objectContaining({ tipo: "nota", intensidade: 0.3, contornoForte: true })]));
+    });
+
+    it("sem brilho, a caçapa apertada não acende o halo", () => {
+      const apertados = [true, false, false, false, false, false];
+      const halos = (brilho: number) => desenhar(cena([], { apertados, skin: { ...skin, brilho } })).desenhos().filter((d) => (d as unknown as { tipo: string }).tipo === "brilho").length;
+      expect(halos(1)).toBe(1);
+      expect(halos(0)).toBe(0);
+    });
+
+    it("as caçapas são desenhadas no formato escolhido", () => {
+      const metodos = (formato: "redonda" | "retangular") => desenhar(cena([], { skin: { ...skin, formato } })).chamadas.filter((c) => c.metodo === "roundRect").length;
+      expect(metodos("retangular")).toBeGreaterThanOrEqual(15);
+      expect(metodos("redonda")).toBe(0);
+    });
+
+    it("a imagem da highway é desenhada em faixas sobre o braço", () => {
+      const highway = { width: 512, height: 1024, tipo: "highway" } as unknown as CanvasImageSource & { width: number; height: number };
+      const faixas = desenhar(cena([], { skin: { ...skin, highway } })).desenhos().filter((d) => d === highway);
+      expect(faixas.length).toBeGreaterThan(10);
+    });
+
+    // Bug: a imagem passava da borda da pista. Ela é recortada no contorno do braço antes das faixas.
+    it("recorta a highway no contorno do braço", () => {
+      const highway = { width: 512, height: 1024, tipo: "highway" } as unknown as CanvasImageSource & { width: number; height: number };
+      const { chamadas } = desenhar(cena([], { skin: { ...skin, highway } }));
+      const primeiraFaixa = chamadas.findIndex((c) => c.metodo === "drawImage" && c.args[0] === highway);
+      const recorte = chamadas.slice(0, primeiraFaixa).map((c) => c.metodo).lastIndexOf("clip");
+      const restauracao = chamadas.slice(0, primeiraFaixa).map((c) => c.metodo).lastIndexOf("restore");
+      expect(recorte).toBeGreaterThan(restauracao);
+    });
+
+    // Bug: a imagem cobria os trilhos e a borda da pista não ficava reta.
+    it("os trilhos da borda ficam por cima da highway", () => {
+      const highway = { width: 512, height: 1024, tipo: "highway" } as unknown as CanvasImageSource & { width: number; height: number };
+      const { chamadas } = desenhar(cena([], { skin: { ...skin, highway } }));
+      const ultimaFaixa = chamadas.map((c) => c.metodo === "drawImage" && c.args[0] === highway).lastIndexOf(true);
+      const tracos = chamadas.slice(ultimaFaixa).filter((c) => c.metodo === "stroke").length;
+      expect(tracos).toBeGreaterThanOrEqual(3);
+    });
+
+    it("sem highway, nada de imagem extra", () => {
+      const desenhos = desenhar(cena([], { skin })).desenhos();
+      expect(desenhos.some((d) => (d as unknown as { tipo?: string }).tipo === "highway")).toBe(false);
+    });
   });
 });

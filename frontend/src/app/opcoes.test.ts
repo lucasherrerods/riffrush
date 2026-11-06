@@ -2,6 +2,21 @@ import { CONFIGURACOES_PADRAO } from "@/modules/settings";
 import { mesmasOpcoes, opcoesDaPartida } from "./opcoes";
 
 describe("opcoesDaPartida", () => {
+  it("leva a skin escolhida, e a clássica se ela não existe mais", () => {
+    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, skinDaPista: "neon" }).skin.id).toBe("neon");
+    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, skinDaPista: "highway:apagada" }).skin.id).toBe("classica");
+  });
+
+  it("leva a caçapa escolhida, independente da pista", () => {
+    const opcoes = opcoesDaPartida({ ...CONFIGURACOES_PADRAO, skinDaPista: "neon", formatoDaCacapa: "hexagonal", coresDaCacapa: "pastel", brilhoDaCacapa: 0.5, contornoForte: true });
+    expect(opcoes.skin.id).toBe("neon");
+    expect(opcoes.cacapa).toMatchObject({ formato: "hexagonal", brilho: 0.5, contornoForte: true });
+  });
+
+  it("a mesma skin não faz as opções mudarem", () => {
+    expect(mesmasOpcoes(opcoesDaPartida(CONFIGURACOES_PADRAO), opcoesDaPartida(CONFIGURACOES_PADRAO))).toBe(true);
+  });
+
   it("traduz as configurações do jogador para a partida", () => {
     const opcoes = opcoesDaPartida({ ...CONFIGURACOES_PADRAO, teclaDaEstrela: "KeyE", bot: true });
     expect(opcoes).toMatchObject({
@@ -10,8 +25,8 @@ describe("opcoesDaPartida", () => {
       rotuloDaTeclaDaEstrela: "E",
       bot: true,
     });
-    // A velocidade é a mesma para todos: a 9, com as notas a menos de 1 s da linha.
-    expect(opcoes.antecedencia).toBeCloseTo(0.89);
+    // A velocidade é a mesma para todos: a 8,5, com as notas a menos de um segundo na tela.
+    expect(opcoes.antecedencia).toBeCloseTo(0.985);
   });
 
   it("leva para a partida se o personagem aparece e se o FPS é mostrado", () => {

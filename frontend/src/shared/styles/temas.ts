@@ -128,3 +128,36 @@ export const TEMAS = {
 
 /** O tema da abertura e o da landing. O tema da interface muda com o modo de jogo (tema.ts). */
 export const TEMA_PADRAO: Tema = TEMAS.riffRush;
+
+/** Tom do braço de uma skin pronta da pista do Rock. */
+export interface CoresDaSkinDaPista {
+  braco: string;
+}
+
+/** Skins prontas da pista do Rock, originais do Riff Rush. */
+export const SKINS_DA_PISTA = {
+  classica: { braco: TEMAS.riffRush.cores.superficie },
+  neon: { braco: "#15131f" },
+  brasa: { braco: "#2a1a12" },
+  gelo: { braco: "#16202a" },
+  contraste: { braco: "#121212" },
+} satisfies Record<string, CoresDaSkinDaPista>;
+
+/** Cores das caçapas e das notas: os 5 trastes (verde, vermelho, amarelo, azul e laranja) e a nota aberta. */
+export interface CoresDaCacapa {
+  trastes: string[];
+  aberta: string;
+}
+
+/** Esquemas de cores das caçapas e das notas do Rock, originais do Riff Rush. */
+export const CORES_DAS_CACAPAS = {
+  classica: { trastes: TEMAS.riffRush.pista.trastes, aberta: TEMAS.riffRush.pista.aberta },
+  neon: { trastes: ["#4ade80", "#fb3f6c", "#fde047", "#38bdf8", "#fb923c"], aberta: "#c084fc" },
+  intensa: { trastes: ["#16a34a", "#dc2626", "#eab308", "#2563eb", "#f97316"], aberta: "#9333ea" },
+  pastel: { trastes: ["#86efac", "#fca5a5", "#fef08a", "#93c5fd", "#fdba74"], aberta: "#d8b4fe" },
+  contraste: { trastes: ["#00d26a", "#ff2d2d", "#ffe600", "#2f7bff", "#ff8c00"], aberta: "#b44dff" },
+  /** Para protanopia e deuteranopia: o verde e o vermelho viram tons que não se confundem. */
+  daltonismo: { trastes: ["#009e73", "#d55e00", "#f0e442", "#0072b2", "#e8a0c8"], aberta: "#a78bfa" },
+  /** Para tritanopia: o amarelo e o azul viram tons que não se confundem. */
+  tritanopia: { trastes: ["#22c55e", "#dc2626", "#f9a8d4", "#06b6d4", "#f5f5f4"], aberta: "#a855f7" },
+} satisfies Record<string, CoresDaCacapa>;

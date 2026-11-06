@@ -1,7 +1,7 @@
 import { ehTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 
 /** A inclinação é igual para todos: deitada, como no Guitar Hero. */
-export const INCLINACAO_PADRAO = 6;
+export const INCLINACAO_PADRAO = 7;
 const INCLINACAO_MAXIMA = 10;
 const LARGURA_MAXIMA = 620;
 
