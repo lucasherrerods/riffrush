@@ -298,14 +298,14 @@ describe("precisao", () => {
     expect(partida.julgamentos).toEqual({ perfeito: 1, otimo: 1, bom: 1 });
   });
 
-  it("é de notas acertadas sobre as que já passaram, como a porcentagem do Clone Hero", () => {
+  it("pesa cada acerto pelo julgamento, sobre as notas que já passaram", () => {
     const partida = criarPartida([nota(1), nota(2), nota(3), nota(4)]);
     tocar(partida, 0, 1);
     tocar(partida, 0, 2.05);
     tocar(partida, 0, 3.06);
     avancar(partida, 5);
     expect(partida.erros).toBe(1);
-    expect(precisao(partida)).toBeCloseTo(3 / 4);
+    expect(precisao(partida)).toBeCloseTo(700 / 1200);
   });
 
   it("avisa o julgamento junto do acerto", () => {
