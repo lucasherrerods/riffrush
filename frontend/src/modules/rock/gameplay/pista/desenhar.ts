@@ -62,7 +62,7 @@ export interface SkinNaPista {
 
 const SKIN_DO_TEMA: SkinNaPista = { trastes: CORES_DAS_PISTAS, aberta: COR_DA_ABERTA, braco: cores.superficie };
 /** Faixas em que a imagem da highway é cortada para parecer em perspectiva. */
-const FAIXAS_DA_HIGHWAY = 48;
+const FAIXAS_DA_HIGHWAY = 120;
 
 /** Imagens pré-desenhadas das notas e dos brilhos (ver sprites.ts). */
 export interface Sprites {
@@ -183,14 +183,7 @@ export function desenharPista(
       gradiente.addColorStop(1, comAlfa(cena.estrelaAtiva ? TRILHO_DA_ESTRELA[2] : cores.fundo, 0.98));
       return gradiente;
     });
-    const contornoDoBraco = () => {
-      c.beginPath();
-      c.moveTo(centro - metade * longe.escala, longe.y);
-      c.lineTo(centro + metade * longe.escala, longe.y);
-      c.lineTo(centro + metade * perto.escala, perto.y);
-      c.lineTo(centro - metade * perto.escala, perto.y);
-      c.closePath();
-    };
+    const contornoDoBraco = () => tracarContornoDoBraco(c, layout);
     c.fillStyle = fundoDaPista;
     contornoDoBraco();
     c.fill();
@@ -621,9 +614,27 @@ function desenharTrovao(
 /** A imagem da highway por cima do braço, em faixas, correndo com as notas. */
 function desenharHighway(c: CanvasRenderingContext2D, layout: LayoutDaPista, imagem: CanvasImageSource & { height: number; width: number }, tempo: number, antecedencia: number) {
   if (!imagem.width || !imagem.height) return;
+  // Recorta no contorno do braço: as faixas são retângulos e, sem isso, passam da borda inclinada.
+  c.save();
+  tracarContornoDoBraco(c, layout);
+  c.clip();
   for (const faixa of faixasDaHighway(layout, tempo, antecedencia, imagem.height, ATRAS_DA_LINHA, FAIXAS_DA_HIGHWAY)) {
     if (faixa.alturaDaOrigem <= 0) continue;
     // Meio pixel a mais em cada faixa esconde as emendas.
     c.drawImage(imagem, 0, faixa.origem, imagem.width, faixa.alturaDaOrigem, faixa.x, faixa.y - 0.5, faixa.largura, faixa.altura + 1);
   }
+  c.restore();
+}
+
+/** O trapézio do braço, da linha de batida (um pouco antes) até o horizonte. */
+function tracarContornoDoBraco(c: CanvasRenderingContext2D, layout: LayoutDaPista) {
+  const metade = layout.largura / 2;
+  const perto = projetar(layout, ATRAS_DA_LINHA);
+  const longe = projetar(layout, 1);
+  c.beginPath();
+  c.moveTo(layout.centro - metade * longe.escala, longe.y);
+  c.lineTo(layout.centro + metade * longe.escala, longe.y);
+  c.lineTo(layout.centro + metade * perto.escala, perto.y);
+  c.lineTo(layout.centro - metade * perto.escala, perto.y);
+  c.closePath();
 }

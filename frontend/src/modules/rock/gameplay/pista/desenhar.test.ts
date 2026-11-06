@@ -262,6 +262,16 @@ describe("desenharPista", () => {
       expect(faixas.length).toBeGreaterThan(10);
     });
 
+    // Bug: a imagem passava da borda da pista. Ela é recortada no contorno do braço antes das faixas.
+    it("recorta a highway no contorno do braço", () => {
+      const highway = { width: 512, height: 1024, tipo: "highway" } as unknown as CanvasImageSource & { width: number; height: number };
+      const { chamadas } = desenhar(cena([], { skin: { ...skin, highway } }));
+      const primeiraFaixa = chamadas.findIndex((c) => c.metodo === "drawImage" && c.args[0] === highway);
+      const recorte = chamadas.slice(0, primeiraFaixa).map((c) => c.metodo).lastIndexOf("clip");
+      const restauracao = chamadas.slice(0, primeiraFaixa).map((c) => c.metodo).lastIndexOf("restore");
+      expect(recorte).toBeGreaterThan(restauracao);
+    });
+
     it("sem highway, nada de imagem extra", () => {
       const desenhos = desenhar(cena([], { skin })).desenhos();
       expect(desenhos.some((d) => (d as unknown as { tipo?: string }).tipo === "highway")).toBe(false);

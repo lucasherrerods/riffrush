@@ -30,7 +30,8 @@ export function faixasDaHighway(layout: LayoutDaPista, tempo: number, antecedenc
     // Na emenda da repetição a faixa termina no fim da imagem, em vez de pegar a imagem inteira de trás para frente.
     const fim = naImagem(d1);
     const v1 = fim < v0 ? 1 : fim;
-    const largura = layout.largura * perto.escala;
+    // A largura do meio da faixa: a perspectiva estreita o braço dentro dela, e o recorte acerta as bordas.
+    const largura = (layout.largura * (perto.escala + longe.escala)) / 2;
     faixas.push({
       x: layout.centro - largura / 2,
       y: longe.y,
