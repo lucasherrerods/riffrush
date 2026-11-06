@@ -79,10 +79,10 @@ export const TUTORIAIS: Tutorial[] = [
     id: "tapping",
     grupo: "modos",
     titulo: "Jeito de jogar: Tapping",
-    resumo: "Cada aperto vale uma nota, e só uma. Soltar só toca o pull-off do HOPO.",
+    resumo: "Cada aperto vale uma nota, e só uma. Soltar não toca nada.",
     texto: [
       "Para quem prefere um toque por nota, como num piano. Bom no celular, onde cada dedo toca uma pista na tela.",
-      "A exceção é o pull-off: no HOPO e no tap, segurando um traste de baixo, soltar o de cima toca a nota do de baixo.",
+      "Aqui não há pull-off: mesmo com um traste de baixo segurado, a nota dele precisa de um aperto novo.",
     ],
     demo: {
       duracao: 5,
@@ -240,7 +240,7 @@ export const TUTORIAIS: Tutorial[] = [
     titulo: "HOPO (hammer-on e pull-off)",
     resumo: "As notas com contorno claro: com a sequência ativa, saem só no traste, sem palheta.",
     texto: [
-      "Uma nota simples logo depois de outra, numa pista diferente, costuma virar HOPO. Na palhetada, basta apertar (hammer-on) ou soltar (pull-off) o traste: a nota sai sem palhetar. No gamepad e no tapping, o pull-off também vale: soltar o traste de cima toca o HOPO do traste segurado embaixo.",
+      "Uma nota simples logo depois de outra, numa pista diferente, costuma virar HOPO. Na palhetada, basta apertar (hammer-on) ou soltar (pull-off) o traste: a nota sai sem palhetar. No gamepad, o pull-off também vale: soltar o traste de cima toca o HOPO do traste segurado embaixo. No tapping, não.",
       "Só vale com a sequência ativa. Depois de um erro, o próximo HOPO precisa da palheta. Palhetar logo depois de um HOPO não é punido.",
     ],
     dicas: ["Apertar um traste errado acima do HOPO que está chegando faz ele pedir a palheta (anti-ghosting)."],
@@ -305,7 +305,7 @@ export const TUTORIAIS: Tutorial[] = [
     texto: [
       "Na nota simples, o jogo confere só o traste mais alto apertado. Os trastes abaixo dele podem ficar segurados sem errar.",
       "É assim que se toca o começo de Through the Fire and Flames, que alterna o verde com as outras notas em HOPO. O verde fica segurado o tempo todo: apertar o vermelho é um hammer-on, e soltar o vermelho é um pull-off que já toca o verde, sem apertar o verde de novo.",
-      "Vale em todos os jeitos de jogar: no gamepad e no tapping, soltar o traste de cima também toca o HOPO do de baixo. Como no Clone Hero, o acorde HOPO ou tap também aceita âncora: trastes extras abaixo do mais baixo do acorde. No acorde palhetado, não.",
+      "Vale na palhetada e no gamepad, que no Clone Hero é a guitarra com a palhetada automática. No tapping, cada nota pede o próprio aperto. Como no Clone Hero, o acorde HOPO ou tap também aceita âncora: trastes extras abaixo do mais baixo do acorde. No acorde palhetado, não.",
     ],
     dicas: [
       "A âncora só vale para baixo: um traste acima da nota apertado é erro.",

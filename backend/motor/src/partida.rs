@@ -168,7 +168,7 @@ pub struct NotaEmJogo {
 /// Como as teclas viram notas.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum JeitoDeJogar {
-    /// Cada aperto acerta uma nota, e só uma. Soltar só toca o pull-off para o traste segurado.
+    /// Cada aperto acerta uma nota, e só uma. Soltar não toca nada.
     Tapping,
     /// Soltar a tecla depois de um acerto também acerta a próxima nota da pista, e o pull-off para o traste segurado.
     #[default]
@@ -791,13 +791,13 @@ pub fn soltar(partida: &mut Partida, pista: u8, tempo: f64) {
     }
     if partida.jeito == JeitoDeJogar::Palhetada {
         mudou_os_trastes(partida, tempo, None);
-    } else if !(partida.jeito == JeitoDeJogar::Gamepad && armada && !largou_cedo && acertar_mais_proxima(partida, pista, tempo)) {
+    } else if partida.jeito == JeitoDeJogar::Gamepad && !(armada && !largou_cedo && acertar_mais_proxima(partida, pista, tempo)) {
         pull_off_no_traste_segurado(partida, tempo);
     }
 }
 
-/// Sem palheta (gamepad e tapping): soltar o traste de cima toca o HOPO ou tap do traste que ficou segurado embaixo,
-/// como o pull-off da palhetada. A nota aberta tem tecla própria nesses jeitos e fica de fora.
+/// No gamepad, que no Clone Hero é a guitarra com a palhetada automática: soltar o traste de cima toca o HOPO ou tap do traste que ficou segurado embaixo,
+/// como o pull-off da palhetada. A nota aberta tem tecla própria no gamepad e fica de fora.
 fn pull_off_no_traste_segurado(partida: &mut Partida, tempo: f64) {
     if partida.apertados.is_empty() {
         return;
@@ -874,6 +874,10 @@ enum Acontecimento {
 /// depois), desde que a troca de trastes tenha sido no máximo `FRENTE_DA_TROCA` antes da nota. É o que deixa soltar
 /// o traste de cima antes da hora no começo de Through the Fire and Flames e ainda pegar o verde segurado.
 fn hopo_nos_trastes(partida: &Partida) -> Option<(f64, Acontecimento)> {
+    // No tapping cada aperto vale uma nota, e só uma: nada sai sozinho.
+    if partida.jeito == JeitoDeJogar::Tapping {
+        return None;
+    }
     let trocou = partida.troca_pendente?;
     let inicio = (partida.primeira..partida.notas.len()).find(|&i| !partida.notas[i].acertada && !partida.notas[i].perdida)?;
     let batida = partida.notas[inicio].tempo;
@@ -1158,11 +1162,19 @@ mod tests {
     }
 
     #[test]
-    fn o_pull_off_para_o_traste_segurado_vale_em_todos_os_jeitos() {
-        for jeito in [JeitoDeJogar::Palhetada, JeitoDeJogar::Gamepad, JeitoDeJogar::Tapping] {
+    fn o_pull_off_para_o_traste_segurado_vale_na_palhetada_e_no_gamepad() {
+        for jeito in [JeitoDeJogar::Palhetada, JeitoDeJogar::Gamepad] {
             let partida = verde_segurado(jeito);
             assert_eq!((partida.acertos, partida.sequencia, partida.toques_em_vazio), (5, 5, 0), "{jeito:?}");
         }
+    }
+
+    #[test]
+    fn no_tapping_soltar_nao_toca_o_traste_segurado() {
+        // Um aperto, uma nota: os dois verdes depois do primeiro passam.
+        let mut partida = verde_segurado(JeitoDeJogar::Tapping);
+        avancar(&mut partida, 2.0);
+        assert_eq!((partida.acertos, partida.erros), (3, 2));
     }
 
     #[test]
@@ -1176,8 +1188,8 @@ mod tests {
         }
     }
 
-    /// O começo de Through the Fire and Flames tocado rápido: cada traste de cima é apertado 40 ms antes e solto
-    /// 20 ms depois, antes de a janela do verde abrir.
+    /// O começo de Through the Fire and Flames tocado rápido: cada traste de cima é apertado 30 ms antes e solto no
+    /// tempo da própria nota, 75 ms antes do verde e antes de a janela dele abrir.
     fn verde_com_toques_rapidos(jeito: JeitoDeJogar) -> Partida {
         let passo = 0.075;
         let pistas = [0, 1, 0, 2, 0, 3, 0, 2, 0];
@@ -1199,8 +1211,8 @@ mod tests {
         }
         for (i, &p) in pistas.iter().enumerate().skip(1).step_by(2) {
             let tempo = 1.0 + i as f64 * passo;
-            tocar(&mut partida, p, tempo - 0.04);
-            soltar(&mut partida, p, tempo - 0.02);
+            tocar(&mut partida, p, tempo - 0.03);
+            soltar(&mut partida, p, tempo);
         }
         avancar(&mut partida, 2.0);
         partida
@@ -1208,10 +1220,16 @@ mod tests {
 
     #[test]
     fn soltar_antes_da_janela_ainda_pega_o_hopo_do_traste_segurado() {
-        for jeito in [JeitoDeJogar::Palhetada, JeitoDeJogar::Gamepad, JeitoDeJogar::Tapping] {
+        for jeito in [JeitoDeJogar::Palhetada, JeitoDeJogar::Gamepad] {
             let partida = verde_com_toques_rapidos(jeito);
             assert_eq!((partida.acertos, partida.erros, partida.toques_em_vazio), (9, 0, 0), "{jeito:?}");
         }
+    }
+
+    #[test]
+    fn no_tapping_o_hopo_nao_sai_sozinho_nos_trastes_segurados() {
+        let partida = verde_com_toques_rapidos(JeitoDeJogar::Tapping);
+        assert_eq!((partida.acertos, partida.erros), (5, 4));
     }
 
     #[test]
