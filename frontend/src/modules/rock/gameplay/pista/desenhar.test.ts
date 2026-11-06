@@ -272,6 +272,15 @@ describe("desenharPista", () => {
       expect(recorte).toBeGreaterThan(restauracao);
     });
 
+    // Bug: a imagem cobria os trilhos e a borda da pista não ficava reta.
+    it("os trilhos da borda ficam por cima da highway", () => {
+      const highway = { width: 512, height: 1024, tipo: "highway" } as unknown as CanvasImageSource & { width: number; height: number };
+      const { chamadas } = desenhar(cena([], { skin: { ...skin, highway } }));
+      const ultimaFaixa = chamadas.map((c) => c.metodo === "drawImage" && c.args[0] === highway).lastIndexOf(true);
+      const tracos = chamadas.slice(ultimaFaixa).filter((c) => c.metodo === "stroke").length;
+      expect(tracos).toBeGreaterThanOrEqual(3);
+    });
+
     it("sem highway, nada de imagem extra", () => {
       const desenhos = desenhar(cena([], { skin })).desenhos();
       expect(desenhos.some((d) => (d as unknown as { tipo?: string }).tipo === "highway")).toBe(false);

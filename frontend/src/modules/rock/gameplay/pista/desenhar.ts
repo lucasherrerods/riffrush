@@ -174,6 +174,32 @@ export function desenharPista(
   const longe = projetar(layout, 1);
 
   const { tamanho, comEstrela } = chavesDoTamanho(largura, altura, cena.estrelaAtiva);
+  const desenharTrilhos = (c: CanvasRenderingContext2D) => {
+    // Trilhos na cor do multiplicador. O brilho é uma linha larga e translúcida, mais leve que shadowBlur.
+    const corDoTrilho = cena.estrelaAtiva ? COR_DA_ESTRELA : CORES_DO_MULTIPLICADOR[Math.min(3, cena.multiplicador - 1)];
+    const trilhos = (espessura: number, opacidade: number) => {
+      c.globalAlpha = opacidade;
+      c.lineWidth = espessura;
+      c.beginPath();
+      for (const lado of LADOS) {
+        c.moveTo(centro + lado * metade * longe.escala, longe.y);
+        c.lineTo(centro + lado * metade * perto.escala, perto.y);
+      }
+      c.stroke();
+    };
+    // Trilho de cromo com bisel; a cor do multiplicador fica num filete por cima.
+    if (enfeites) {
+      c.strokeStyle = corDoTrilho;
+      trilhos(16, 0.1);
+    }
+    c.strokeStyle = cores.fundo;
+    trilhos(10, 0.9);
+    c.strokeStyle = cores.textoSuave;
+    trilhos(6, 1);
+    c.strokeStyle = corDoTrilho;
+    trilhos(2.5, 1);
+    c.globalAlpha = 1;
+  };
   // O braço (fundo, textura, luz e trilhos) só muda com o tamanho, o star power e o multiplicador.
   const desenharBraco = (c: CanvasRenderingContext2D) => {
     const fundoDaPista = gradienteGuardado(c, `pista:${comEstrela}:${skin.braco}`, () => {
@@ -211,30 +237,8 @@ export function desenharPista(
     c.fillRect(centro - metade * perto.escala, longe.y, metade * perto.escala * 2, perto.y - longe.y);
     c.restore();
 
-    // Trilhos na cor do multiplicador. O brilho é uma linha larga e translúcida, mais leve que shadowBlur.
-    const corDoTrilho = cena.estrelaAtiva ? COR_DA_ESTRELA : CORES_DO_MULTIPLICADOR[Math.min(3, cena.multiplicador - 1)];
-    const trilhos = (espessura: number, opacidade: number) => {
-      c.globalAlpha = opacidade;
-      c.lineWidth = espessura;
-      c.beginPath();
-      for (const lado of LADOS) {
-        c.moveTo(centro + lado * metade * longe.escala, longe.y);
-        c.lineTo(centro + lado * metade * perto.escala, perto.y);
-      }
-      c.stroke();
-    };
-    // Trilho de cromo com bisel; a cor do multiplicador fica num filete por cima.
-    if (enfeites) {
-      c.strokeStyle = corDoTrilho;
-      trilhos(16, 0.1);
-    }
-    c.strokeStyle = cores.fundo;
-    trilhos(10, 0.9);
-    c.strokeStyle = cores.textoSuave;
-    trilhos(6, 1);
-    c.strokeStyle = corDoTrilho;
-    trilhos(2.5, 1);
-    c.globalAlpha = 1;
+    // Com highway, os trilhos vêm depois dela, por cima da imagem.
+    if (!skin.highway) desenharTrilhos(c);
 
   };
   const corDoMultiplicador = Math.min(3, cena.multiplicador - 1);
@@ -242,7 +246,10 @@ export function desenharPista(
   const escala = c.getTransform?.()?.a ?? 1;
   if (sprites.camada) c.drawImage(sprites.camada("braco", versaoDoBraco, largura, altura, escala, desenharBraco), 0, 0, largura, altura);
   else desenharBraco(c);
-  if (skin.highway) desenharHighway(c, layout, skin.highway, tempo, antecedencia);
+  if (skin.highway) {
+    desenharHighway(c, layout, skin.highway, tempo, antecedencia);
+    desenharTrilhos(c);
+  }
 
   // Trastes: cada batida é uma barra de metal, com a sombra embaixo e o brilho em cima.
   for (let b = primeiroAPartirDe(cena.batidas, tempo + antecedencia * ATRAS_DA_LINHA); b < cena.batidas.length; b++) {
