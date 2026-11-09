@@ -1,7 +1,7 @@
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
+import { CampoDeBusca } from "@/shared/ui/CampoDeBusca";
 
 export type EstadoDaBusca = { tipo: "carregando" } | { tipo: "erro"; mensagem: string } | { tipo: "pronto"; vazio: boolean };
 
@@ -44,10 +44,7 @@ export function TelaDeBusca(props: Props) {
             <ArrowLeft aria-hidden />
           </Button>
         )}
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 opacity-70" aria-hidden />
-          <Input type="search" aria-label={props.rotuloDoCampo} placeholder={props.placeholder} value={props.texto} onChange={(e) => props.aoMudarTexto(e.target.value)} className="pl-9" autoFocus />
-        </div>
+        <CampoDeBusca aria-label={props.rotuloDoCampo} placeholder={props.placeholder} value={props.texto} onChange={(e) => props.aoMudarTexto(e.target.value)} autoFocus />
       </div>
       {props.filtros && <div className="flex flex-wrap items-end gap-6 max-md:gap-3">{props.filtros}</div>}
       {props.aviso && <p className="text-sm text-texto-suave">{props.aviso}</p>}

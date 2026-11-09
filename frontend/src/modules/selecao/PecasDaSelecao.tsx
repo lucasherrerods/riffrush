@@ -2,7 +2,7 @@ import { Dices, Dumbbell, Heart, Play } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { CampoDeSelecao } from "@/shared/ui/CampoDeSelecao";
-import { Input } from "@/shared/ui/input";
+import { CampoDeBusca } from "@/shared/ui/CampoDeBusca";
 
 export interface ModDoChip {
   id: string;
@@ -109,7 +109,7 @@ export function FiltrosDaBiblioteca<O extends string>(props: PropsDosFiltros<O>)
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-end gap-4 max-md:gap-2">
-        <Input type="search" placeholder={props.placeholder} aria-label={props.rotuloDoCampo} value={props.texto} onChange={(e) => props.aoMudarTexto(e.target.value)} className="min-w-48 flex-1" />
+        <CampoDeBusca placeholder={props.placeholder} aria-label={props.rotuloDoCampo} value={props.texto} onChange={(e) => props.aoMudarTexto(e.target.value)} />
         {props.children}
         <CampoDeSelecao titulo="Ordem" opcoes={props.ordens} valor={props.ordem} aoEscolher={props.aoMudarOrdem} />
         <Button variant="outline" aria-pressed={props.soFavoritas} onClick={props.aoAlternarFavoritas} className={cn(props.soFavoritas && "border-primaria text-primaria")}>
