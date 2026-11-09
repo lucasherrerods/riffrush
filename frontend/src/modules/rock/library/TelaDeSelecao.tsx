@@ -17,6 +17,7 @@ import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/shared/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import {
+  AvisoDaLista,
   BarraDaSelecao,
   BotaoDaSelecao,
   BotaoDeAleatoria,
@@ -318,9 +319,9 @@ export function TelaDeSelecao(props: Props) {
       }
     />
   ) : (
-    <p className="placa p-4 text-base text-texto-suave">
+    <AvisoDaLista>
       {soFavoritas && !texto ? `Nenhuma música favorita ainda. ${estreita ? "Favorite com o botão Favoritar." : "Favorite com o coração ou a tecla F."}` : "Nenhuma música com esse filtro."}
-    </p>
+    </AvisoDaLista>
   );
 
   const modais = (

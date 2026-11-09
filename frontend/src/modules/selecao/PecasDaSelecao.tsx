@@ -131,3 +131,8 @@ export function FiltrosDaBiblioteca<O extends string>(props: PropsDosFiltros<O>)
     </div>
   );
 }
+
+/** O aviso no lugar da roda quando não há nada para mostrar (biblioteca vazia, filtro sem resultado). */
+export function AvisoDaLista({ children }: { children: React.ReactNode }) {
+  return <p className="chapa m-auto max-w-md bg-superficie-elevada/90 px-6 py-4 text-center text-texto-suave">{children}</p>;
+}

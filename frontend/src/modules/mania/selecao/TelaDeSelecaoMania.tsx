@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { Info, ListOrdered, Search, Upload } from "lucide-react";
 import {
+  AvisoDaLista,
   BarraDaSelecao,
   BotaoDaSelecao,
   BotaoDeAleatoria,
@@ -292,9 +293,9 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
 
         {conjuntos === null && <p className="text-texto-suave">Abrindo a biblioteca…</p>}
         {conjuntos?.length === 0 && (
-          <p className="chapa m-auto max-w-md bg-superficie-elevada/90 px-6 py-4 text-center text-texto-suave">Nenhum mapa ainda. Arraste um .osz para cá ou use o botão de importar.</p>
+          <AvisoDaLista>Nenhum mapa ainda. Arraste um .osz para cá ou use o botão de importar.</AvisoDaLista>
         )}
-        {!!todos.length && !lista.length && <p className="chapa m-auto max-w-md bg-superficie-elevada/90 px-6 py-4 text-center text-texto-suave">Nenhum mapa com esse filtro.</p>}
+        {!!todos.length && !lista.length && <AvisoDaLista>Nenhum mapa com esse filtro.</AvisoDaLista>}
         {!!lista.length && (
           <Carrossel
             className="flex-1"
