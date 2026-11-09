@@ -18,7 +18,7 @@ import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/shared/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
-import { Carrossel, indiceDandoAVolta } from "@/modules/selecao";
+import { BotaoDaSelecao, Carrossel, indiceDandoAVolta } from "@/modules/selecao";
 import { AvatarPalhetando } from "./componentes/AvatarPalhetando";
 import { Capa } from "./componentes/Capa";
 import { alternarFavorita, carregarFavoritas, indicesVisiveis, salvarFavoritas, selecaoNoFiltro } from "./favoritas";
@@ -349,7 +349,7 @@ export function TelaDeSelecao(props: Props) {
       </Button>
       <h1 className="titulo-de-tela min-w-0 truncate text-destaque max-md:text-lg">Selecione a música</h1>
       <div className="flex-1" />
-      <Button variant="outline" asChild>
+      <BotaoDaSelecao asChild>
         <label className="">
           <FileAudio className="opacity-70" />
           <span className="max-md:sr-only">Importar música</span>
@@ -361,18 +361,18 @@ export function TelaDeSelecao(props: Props) {
             onChange={(e) => importarEscolhidos(e.target)}
           />
         </label>
-      </Button>
+      </BotaoDaSelecao>
       {props.sortearOficial && (
-        <Button variant="outline" disabled={sorteandoOficial} onClick={() => void sortearOficial()} aria-label="Aleatória">
+        <BotaoDaSelecao disabled={sorteandoOficial} onClick={() => void sortearOficial()} aria-label="Aleatória">
           {sorteandoOficial ? <LoaderCircle className="animate-spin opacity-70" /> : <Dices className="opacity-70" />}
           <span className="max-md:sr-only">Aleatória</span>
-        </Button>
+        </BotaoDaSelecao>
       )}
       {props.aoBuscarMusicas && (
-        <Button variant="outline" onClick={props.aoBuscarMusicas}>
+        <BotaoDaSelecao onClick={props.aoBuscarMusicas}>
           <Search className="opacity-70" />
           <span className="max-md:sr-only">Buscar músicas</span>
-        </Button>
+        </BotaoDaSelecao>
       )}
     </header>
   );

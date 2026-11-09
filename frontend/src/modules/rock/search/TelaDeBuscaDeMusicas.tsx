@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, LoaderCircle, Search } from "lucide-react";
-import { useTeclado } from "@/shared/hooks/useTeclado";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Chip, GrupoDeChips, TelaDeBusca } from "@/modules/busca";
 import { useValorAtrasado } from "@/shared/hooks/useValorAtrasado";
 import { Button } from "@/shared/ui/button";
 import { CampoDeSelecao } from "@/shared/ui/CampoDeSelecao";
-import { Input } from "@/shared/ui/input";
-import { Switch } from "@/shared/ui/switch";
 import { ConfirmacaoDeTamanho } from "./componentes/ConfirmacaoDeTamanho";
-import { AcaoDoResultado, ItemDoResultado } from "./componentes/ResultadoDoEncore";
+import { ResultadoDoEncore } from "./componentes/ResultadoDoEncore";
 import { buscarMd5sMaisJogados } from "@/modules/ranking";
 import { useBaixarDoEncore, type AoBaixar } from "./useBaixarDoEncore";
 import {
@@ -82,15 +80,6 @@ const OPCOES_DE_ORDEM: { id: Ordem; rotulo: string }[] = [
   { id: "mais-longas", rotulo: "Mais longas" },
 ];
 
-function Chave({ rotulo, ligada, aoMudar }: { rotulo: string; ligada: boolean; aoMudar: (ligada: boolean) => void }) {
-  return (
-    <label className="flex items-center gap-2 self-end py-2 text-base text-texto-suave max-md:col-span-2 max-md:py-0 max-md:text-sm">
-      <Switch aria-label={rotulo} checked={ligada} onCheckedChange={aoMudar} />
-      {rotulo}
-    </label>
-  );
-}
-
 /** "Mais jogadas" não é ordem do Encore: a lista vem do nosso ranking e o Encore só completa os dados. */
 const buscarPadrao: NonNullable<Props["buscar"]> = async (filtros, pagina, { sinal }) =>
   filtros.ordem === "mais-jogadas" ? buscarEntreOsCharts(await buscarMd5sMaisJogados({ sinal }), filtros, pagina, { sinal }) : buscarNoEncore(filtros, pagina, { sinal });
@@ -126,48 +115,35 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarPadrao, atrasoMs
     return () => controle.abort();
   }, [buscar, filtros, textoAtrasado, pagina]);
 
-  useTeclado((evento) => {
-    // Com o modal aberto, o Esc é dele: cancela o download sem sair da tela.
-    if (evento.code === "Escape" && !pergunta) aoVoltar();
-  });
-
   const totalDePaginas = estado.tipo === "pronto" ? Math.max(1, Math.ceil(estado.resposta.total / TAMANHO_DA_PAGINA)) : 1;
 
   return (
-    <div className="relative flex h-full flex-col">
-      <header className="flex items-center gap-4 bg-superficie px-8 py-4 max-md:px-4 max-md:py-2">
-        <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
-          <ArrowLeft />
-        </Button>
-        <h1 className="titulo-de-tela text-destaque">Buscar músicas</h1>
-      </header>
-
-      <div className="respiro-de-tela flex min-h-0 flex-1 flex-col">
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 opacity-70" aria-hidden />
-          <Input
-            type="search"
-            aria-label="Buscar músicas"
-            placeholder={!usaBuscaAvancada({ texto, ...filtros }) ? "Nome da música, artista, álbum ou charter" : "Nome da música"}
-            value={texto}
-            onChange={(evento) => setTexto(evento.target.value)}
-            className="h-12 pl-12 text-base md:text-base max-md:h-10"
-            autoFocus
-          />
-        </div>
-        <div className="flex flex-wrap gap-8 max-md:grid max-md:grid-cols-2 max-md:gap-2">
-          <CampoDeSelecao titulo="Instrumento" opcoes={OPCOES_DE_INSTRUMENTO} valor={filtros.instrumento} aoEscolher={(instrumento) => mudarFiltros({ instrumento })} />
-          <CampoDeSelecao titulo="Dificuldade" opcoes={OPCOES_DE_DIFICULDADE} valor={filtros.dificuldade} aoEscolher={(dificuldade) => mudarFiltros({ dificuldade })} />
-          <CampoDeSelecao titulo="Gênero" opcoes={OPCOES_DE_GENERO} valor={filtros.genero} aoEscolher={(genero) => mudarFiltros({ genero })} />
-          <CampoDeSelecao titulo="Ordem" opcoes={OPCOES_DE_ORDEM} valor={filtros.ordem} aoEscolher={(ordem) => mudarFiltros({ ordem })} />
-          <Chave rotulo="Só com vídeo" ligada={filtros.soComVideo} aoMudar={(soComVideo) => mudarFiltros({ soComVideo })} />
-          <Chave rotulo="Oficiais" ligada={filtros.soOficiais} aoMudar={(soOficiais) => mudarFiltros({ soOficiais })} />
-          {aoBaixar && <Chave rotulo="Baixar com vídeo de fundo" ligada={comVideo} aoMudar={setComVideo} />}
-        </div>
-
-        <nav aria-label="Paginação" className="chapa flex items-center justify-between gap-2 bg-superficie px-3 py-1 text-base text-texto-suave max-md:text-sm">
-          <span className="truncate"><span className="md:hidden">Resultados</span><span className="max-md:hidden">Resultados do Chorus Encore (enchor.us).</span></span>
-          <div className="flex shrink-0 items-center gap-1">
+    <>
+      <TelaDeBusca
+        titulo="Buscar músicas"
+        rotuloDoCampo="Buscar músicas"
+        placeholder={!usaBuscaAvancada({ texto, ...filtros }) ? "Nome da música, artista, álbum ou charter" : "Nome da música"}
+        texto={texto}
+        aoMudarTexto={setTexto}
+        aoVoltar={aoVoltar}
+        escBloqueado={!!pergunta}
+        filtros={
+          <>
+            <GrupoDeChips rotulo="Instrumento" opcoes={OPCOES_DE_INSTRUMENTO} valor={filtros.instrumento} aoMudar={(instrumento) => mudarFiltros({ instrumento })} />
+            <GrupoDeChips rotulo="Dificuldade" opcoes={OPCOES_DE_DIFICULDADE} valor={filtros.dificuldade} aoMudar={(dificuldade) => mudarFiltros({ dificuldade })} />
+            <div className="flex flex-wrap items-end gap-6 max-md:grid max-md:w-full max-md:grid-cols-2 max-md:gap-2">
+              <CampoDeSelecao titulo="Gênero" opcoes={OPCOES_DE_GENERO} valor={filtros.genero} aoEscolher={(genero) => mudarFiltros({ genero })} />
+              <CampoDeSelecao titulo="Ordem" opcoes={OPCOES_DE_ORDEM} valor={filtros.ordem} aoEscolher={(ordem) => mudarFiltros({ ordem })} />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Chip rotulo="Só com vídeo" ligado={filtros.soComVideo} aoMudar={(soComVideo) => mudarFiltros({ soComVideo })} />
+              <Chip rotulo="Oficiais" ligado={filtros.soOficiais} aoMudar={(soOficiais) => mudarFiltros({ soOficiais })} />
+              {aoBaixar && <Chip rotulo="Baixar com vídeo de fundo" ligado={comVideo} aoMudar={setComVideo} />}
+            </div>
+          </>
+        }
+        barra={
+          <nav aria-label="Paginação" className="flex items-center justify-end gap-1 text-texto-suave max-md:text-sm">
             <Button variant="ghost" size="icon" aria-label="Página anterior" disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)}>
               <ChevronLeft />
             </Button>
@@ -177,46 +153,26 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarPadrao, atrasoMs
             <Button variant="ghost" size="icon" aria-label="Próxima página" disabled={pagina >= totalDePaginas} onClick={() => setPagina((p) => p + 1)}>
               <ChevronRight />
             </Button>
-          </div>
-        </nav>
-
-        <section aria-label="Resultados" aria-busy={estado.tipo === "carregando"} className="rolagem-de-toque min-h-0 flex-1">
-          {estado.tipo === "carregando" && (
-            <p className="flex items-center gap-2 py-8 text-base text-texto-suave">
-              <LoaderCircle className="size-4 animate-spin opacity-70" aria-hidden />
-              Buscando...
-            </p>
-          )}
-          {estado.tipo === "erro" && (
-            <p role="alert" className="py-8 text-base text-texto-suave">
-              {estado.mensagem}
-            </p>
-          )}
-          {estado.tipo === "pronto" && estado.resposta.resultados.length === 0 && (
-            <p className="py-8 text-base text-texto-suave">Nenhuma música encontrada. Tente outro nome ou tire algum filtro.</p>
-          )}
-          {estado.tipo === "pronto" && (
-            <ul className="flex flex-col gap-2">
-              {estado.resposta.resultados.map((r) => (
-                <ItemDoResultado key={r.md5} resultado={r}>
-                  {aoBaixar && (
-                    <AcaoDoResultado
-                      resultado={r}
-                      baixada={baixadas.has(r.md5)}
-                      baixando={baixando?.md5 === r.md5 ? baixando.fracao : undefined}
-                      ocupado={!!baixando}
-                      aoBaixar={() => void baixar(r)}
-                      aoJogar={() => aoJogar?.(r.md5)}
-                    />
-                  )}
-                </ItemDoResultado>
-              ))}
-            </ul>
-          )}
-        </section>
-
-      </div>
+          </nav>
+        }
+        estado={estado.tipo === "pronto" ? { tipo: "pronto", vazio: estado.resposta.resultados.length === 0 } : estado}
+        mensagemDeVazio="Nenhuma música encontrada. Tente outro nome ou tire algum filtro."
+        fonte="Charts da comunidade, servidos pelo Chorus Encore (enchor.us)."
+      >
+        {estado.tipo === "pronto" &&
+          estado.resposta.resultados.map((r) => (
+            <ResultadoDoEncore
+              key={r.md5}
+              resultado={r}
+              baixada={baixadas.has(r.md5)}
+              baixando={baixando?.md5 === r.md5 ? baixando.fracao : undefined}
+              ocupado={!!baixando}
+              aoBaixar={aoBaixar && (() => void baixar(r))}
+              aoJogar={() => aoJogar?.(r.md5)}
+            />
+          ))}
+      </TelaDeBusca>
       {pergunta && <ConfirmacaoDeTamanho titulo={pergunta.titulo} bytes={pergunta.bytes} aoResponder={responder} />}
-    </div>
+    </>
   );
 }

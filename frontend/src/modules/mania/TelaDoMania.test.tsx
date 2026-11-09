@@ -162,7 +162,7 @@ describe("TelaDoMania", () => {
     expect(screen.getByRole("navigation", { name: "Menu do Mania" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "alavanca" })).toBeInTheDocument();
     await usuario.click(screen.getByRole("button", { name: "Buscar mapas" }));
-    expect(await screen.findByRole("region", { name: "Busca de mapas" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Buscar mapas" })).toBeInTheDocument();
     await usuario.click(screen.getByRole("button", { name: "Voltar" }));
     expect(screen.getByRole("navigation", { name: "Menu do Mania" })).toBeInTheDocument();
   });

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type DragEvent } from "react";
 import { ArrowLeft, Dices, Info, ListOrdered, Search, Upload } from "lucide-react";
-import { Carrossel, indiceDandoAVolta, passosSemDarAVolta, type DificuldadeDoCarrossel, type ItemDoCarrossel } from "@/modules/selecao";
+import { BotaoDaSelecao, Carrossel, indiceDandoAVolta, passosSemDarAVolta, type DificuldadeDoCarrossel, type ItemDoCarrossel } from "@/modules/selecao";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -188,15 +188,15 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {aoBuscarMapas && (
-              <Button variant="secondary" className="chapa h-10 rounded-none border-borda bg-superficie-elevada" onClick={aoBuscarMapas}>
+              <BotaoDaSelecao onClick={aoBuscarMapas}>
                 <Search aria-hidden className="text-primaria" />
                 Buscar mapas
-              </Button>
+              </BotaoDaSelecao>
             )}
-            <Button variant="secondary" className="chapa h-10 rounded-none border-borda bg-superficie-elevada" onClick={() => seletor.current?.click()}>
+            <BotaoDaSelecao onClick={() => seletor.current?.click()}>
               <Upload aria-hidden className="text-primaria" />
               Importar .osz
-            </Button>
+            </BotaoDaSelecao>
           </div>
           <input ref={seletor} type="file" accept=".osz" multiple aria-label="Arquivos .osz" className="sr-only" onChange={(e) => receber(e.target.files)} />
         </div>
