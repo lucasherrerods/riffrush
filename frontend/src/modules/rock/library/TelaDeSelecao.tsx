@@ -1,27 +1,43 @@
 import { useRef, useState, type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Dices, Dumbbell, Ellipsis, Gauge, FileAudio, Flame, Heart, Info, ListOrdered, LoaderCircle, Play, RotateCcw, Search, Trash2, Trophy } from "lucide-react";
+import { Ellipsis, FileAudio, Flame, Info, ListOrdered, RotateCcw, Search, Trash2, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/rock/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
-import { rotuloDaVelocidade } from "@/modules/rock/gameplay";
-import { ModalDeModificadores } from "@/modules/modifiers";
+import { rotuloDaVelocidade, velocidadesDaMusica } from "@/modules/rock/gameplay";
 import { recordeDe, useRecordes } from "@/modules/rock/results";
 import { DIFICULDADES, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, instrumentosDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { cn } from "@/shared/lib/utils";
-import { avisar } from "@/shared/ui/avisos";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu";
 import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/shared/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
-import { Carrossel, indiceDandoAVolta } from "@/modules/selecao";
+import {
+  AvisoDaLista,
+  BarraDaSelecao,
+  BotaoDaSelecao,
+  BotaoDeAleatoria,
+  BotaoDeFavoritar,
+  BotaoDeTocar,
+  Carrossel,
+  ChipsDeMods,
+  FiltrosDaBiblioteca,
+  FundoDaSelecao,
+  RodapeDeComandos,
+  TituloDaSelecao,
+  alternarFavorita,
+  carregarFavoritas,
+  indiceDandoAVolta,
+  salvarFavoritas,
+  selecaoNoFiltro,
+} from "@/modules/selecao";
 import { AvatarPalhetando } from "./componentes/AvatarPalhetando";
 import { Capa } from "./componentes/Capa";
-import { alternarFavorita, carregarFavoritas, indicesVisiveis, salvarFavoritas, selecaoNoFiltro } from "./favoritas";
+import { CHAVE_DAS_FAVORITAS } from "./favoritas";
+import { filtrarMusicas, type OrdemDaSelecao } from "./filtroDaSelecao";
 import { ehImportada, semAudio } from "./storage/historico";
 
 interface Props {
@@ -52,9 +68,11 @@ interface Props {
   aoVelocidadeDaMusica: (velocidade: number) => void;
 }
 
-/** Os botões acima da lista têm o recorte do botão principal: vermelhos ligados, da cor do header desligados. */
-const estiloDoFiltro = (ligado: boolean) =>
-  ligado ? { variant: "default" as const } : { variant: "ghost" as const, className: "corte gasto bg-superficie hover:bg-superficie-hover" };
+const ORDENS: { id: OrdemDaSelecao; rotulo: string }[] = [
+  { id: "biblioteca", rotulo: "Biblioteca" },
+  { id: "titulo", rotulo: "Título" },
+  { id: "artista", rotulo: "Artista" },
+];
 
 /** Cada dificuldade tem a sua cor na faixa lateral, do verde ao vermelho. */
 const COR_DA_DIFICULDADE: Record<Dificuldade, string> = {
@@ -79,41 +97,36 @@ export function TelaDeSelecao(props: Props) {
   const efeito = (nome: "mover" | "selecionar" | "voltar") => tocarEfeito(nome, volumeDosEfeitos);
   const dispositivo = useDispositivo();
 
-  const [favoritas, setFavoritas] = useState(carregarFavoritas);
+  const [favoritas, setFavoritas] = useState(() => carregarFavoritas(CHAVE_DAS_FAVORITAS));
   const [soFavoritas, setSoFavoritas] = useState(false);
+  const [texto, setTexto] = useState("");
+  const [ordem, setOrdem] = useState<OrdemDaSelecao>("biblioteca");
+  const filtrar = (mudancas: { favoritas?: Set<string>; soFavoritas?: boolean }) =>
+    filtrarMusicas(musicas, { texto, ordem, favoritas: mudancas.favoritas ?? favoritas, soFavoritas: mudancas.soFavoritas ?? soFavoritas });
   const favorita = favoritas.has(musica.id);
   const alternarFavoritaAtual = () => {
     efeito("mover");
     const novas = alternarFavorita(favoritas, musica.id);
     setFavoritas(novas);
-    salvarFavoritas(novas);
+    salvarFavoritas(CHAVE_DAS_FAVORITAS, novas);
     if (!soFavoritas || novas.has(musica.id)) return;
     // Desfavoritada com o filtro ligado, ela some da lista: a seleção vai para a próxima favorita.
-    const proxima = selecaoNoFiltro(indicesVisiveis(musicas, novas, true), indice);
+    const proxima = selecaoNoFiltro(filtrar({ favoritas: novas }), indice);
     if (proxima !== undefined) aoSelecionar(proxima);
   };
-  const visiveis = indicesVisiveis(musicas, favoritas, soFavoritas);
+  const visiveis = filtrar({});
+  // Com o filtro vazio não há música escolhida: os detalhes somem e o TOCAR desliga, como no Mania.
+  const vazia = !visiveis.length;
   const alternarFiltro = () => {
     efeito("mover");
     const ligado = !soFavoritas;
     setSoFavoritas(ligado);
     // A selecionada que some do filtro dá lugar à próxima favorita.
-    const proxima = selecaoNoFiltro(indicesVisiveis(musicas, favoritas, ligado), indice);
+    const proxima = selecaoNoFiltro(filtrar({ soFavoritas: ligado }), indice);
     if (proxima !== undefined && proxima !== indice) aoSelecionar(proxima);
   };
 
-  const [sorteandoOficial, setSorteandoOficial] = useState(false);
-  const sortearOficial = async () => {
-    if (!props.sortearOficial) return;
-    setSorteandoOficial(true);
-    try {
-      await props.sortearOficial(dificuldade, props.instrumento);
-    } catch (erro) {
-      avisar.error(erro instanceof Error ? erro.message : String(erro));
-    } finally {
-      setSorteandoOficial(false);
-    }
-  };
+
 
   /** Anda pelas músicas visíveis dando a volta no fim da lista. */
   const andar = (passos: number) => {
@@ -144,7 +157,6 @@ export function TelaDeSelecao(props: Props) {
 
   const [removendo, setRemovendo] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
-  const [modificadoresAbertos, setModificadoresAbertos] = useState(false);
   const podeRemover = ehImportada(musica);
   const confirmarRemocao = () => {
     setRemovendo(false);
@@ -157,8 +169,11 @@ export function TelaDeSelecao(props: Props) {
 
   useTeclado((evento) => {
     // Com o modal ou o menu de opções aberto, as teclas são dele: Esc o fecha, sem voltar ao menu.
-    if (removendo || menuAberto || modificadoresAbertos || janela) return;
+    if (removendo || menuAberto || janela) return;
+    // Com o foco na busca, as letras são dela.
+    if (evento.target instanceof HTMLInputElement && evento.code !== "ArrowDown" && evento.code !== "ArrowUp" && evento.code !== "Enter" && evento.code !== "Escape") return;
     if (evento.code === "Delete" && podeRemover) return setRemovendo(true);
+    if (vazia && (evento.code === "KeyF" || evento.code === "Enter")) return;
     if (evento.code === "KeyF") return alternarFavoritaAtual();
     // Shift+Tab é do modo competitivo; o Tab sozinho troca o instrumento.
     if (evento.code === "Tab" && !evento.shiftKey && instrumentos.length > 1) {
@@ -213,18 +228,7 @@ export function TelaDeSelecao(props: Props) {
     </div>
   );
 
-  const favoritar = (
-    <Button
-      variant="ghost"
-      size="sm"
-      aria-pressed={favorita}
-      title="Favoritar (F)"
-      onClick={alternarFavoritaAtual}
-      className={cn("rounded-md", favorita ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-superficie")}
-    >
-      {favorita ? "Tirar dos favoritos" : "Favoritar"}
-    </Button>
-  );
+  const favoritar = <BotaoDeFavoritar favorita={favorita} aoAlternar={alternarFavoritaAtual} />;
 
   const tocar = precisaReimportar ? (
     <div className="flex flex-col gap-2">
@@ -237,36 +241,41 @@ export function TelaDeSelecao(props: Props) {
       </Button>
     </div>
   ) : (
-    <div className="flex gap-2">
-      <Button size="lg" className="h-11 flex-1 font-titulo text-xl tracking-widest max-md:h-10 max-md:text-lg" onClick={jogar}>
-        <Play className="fill-current opacity-70" /> TOCAR
-      </Button>
-      {props.aoTreinar && (
-        <Button
-          size="lg"
-          variant="outline"
-          className="h-11 max-md:h-10"
-          onClick={() => {
-            efeito("selecionar");
-            props.aoTreinar?.();
-          }}
-        >
-          <Dumbbell className="opacity-70" /> Treinar
-        </Button>
-      )}
-    </div>
+    <BotaoDeTocar
+      desabilitado={vazia}
+      aoTocar={jogar}
+      aoTreinar={
+        props.aoTreinar &&
+        (() => {
+          efeito("selecionar");
+          props.aoTreinar?.();
+        })
+      }
+    />
+  );
+
+  const mods = (
+    <ChipsDeMods
+      mods={velocidadesDaMusica()
+        .filter((v) => v !== 1)
+        .map((v) => ({ id: String(v), sigla: rotuloDaVelocidade(v), nome: `Velocidade ${rotuloDaVelocidade(v)}`, ligado: v === velocidadeDaMusica }))}
+      aoAlternar={(id) => aoVelocidadeDaMusica(Number(id) === velocidadeDaMusica ? 1 : Number(id))}
+    />
   );
 
   const filtros = (
-    <>
-    <Button {...estiloDoFiltro(velocidadeDaMusica !== 1)} onClick={() => setModificadoresAbertos(true)}>
-      <Gauge className="opacity-70" /> Modificadores
-      {velocidadeDaMusica !== 1 && <span className="font-mono">{rotuloDaVelocidade(velocidadeDaMusica)}</span>}
-    </Button>
-    <Button {...estiloDoFiltro(soFavoritas)} aria-pressed={soFavoritas} onClick={alternarFiltro}>
-      <Heart className={cn(soFavoritas ? "fill-current" : "opacity-70")} /> Favoritos
-    </Button>
-    </>
+    <FiltrosDaBiblioteca
+      texto={texto}
+      aoMudarTexto={setTexto}
+      placeholder="Buscar na biblioteca"
+      rotuloDoCampo="Filtrar músicas"
+      ordens={ORDENS}
+      ordem={ordem}
+      aoMudarOrdem={setOrdem}
+      soFavoritas={soFavoritas}
+      aoAlternarFavoritas={alternarFiltro}
+      contagem={visiveis.length ? `${Math.max(visiveis.indexOf(indice), 0) + 1} de ${visiveis.length} ${visiveis.length === 1 ? "música" : "músicas"}${visiveis.length < musicas.length ? ` · ${musicas.length} na biblioteca` : ""}` : ""}
+    />
   );
 
   const lista = visiveis.length ? (
@@ -314,17 +323,13 @@ export function TelaDeSelecao(props: Props) {
       }
     />
   ) : (
-    <p className="placa p-4 text-base text-texto-suave">Nenhuma música favorita ainda. {estreita ? "Favorite com o botão Favoritar." : "Favorite com o coração ou a tecla F."}</p>
+    <AvisoDaLista>
+      {soFavoritas && !texto ? `Nenhuma música favorita ainda. ${estreita ? "Favorite com o botão Favoritar." : "Favorite com o coração ou a tecla F."}` : "Nenhuma música com esse filtro."}
+    </AvisoDaLista>
   );
 
   const modais = (
     <>
-      <ModalDeModificadores
-        aberto={modificadoresAbertos}
-        aoMudarAberto={setModificadoresAbertos}
-        velocidadeDaMusica={velocidadeDaMusica}
-        aoMudarVelocidade={aoVelocidadeDaMusica}
-      />
       <Dialog open={removendo} onOpenChange={setRemovendo}>
         <DialogContent>
           <DialogTitle>Remover {musica.titulo}?</DialogTitle>
@@ -343,13 +348,8 @@ export function TelaDeSelecao(props: Props) {
   );
 
   const cabecalho = (
-    <header className="flex items-center gap-4 bg-superficie px-8 py-2 max-md:gap-2 max-md:px-2">
-      <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
-        <ArrowLeft />
-      </Button>
-      <h1 className="titulo-de-tela min-w-0 truncate text-destaque max-md:text-lg">Selecione a música</h1>
-      <div className="flex-1" />
-      <Button variant="outline" asChild>
+    <BarraDaSelecao titulo="Selecione a música" aoVoltar={aoVoltar} abaixo={mods}>
+      <BotaoDaSelecao asChild>
         <label className="">
           <FileAudio className="opacity-70" />
           <span className="max-md:sr-only">Importar música</span>
@@ -361,37 +361,26 @@ export function TelaDeSelecao(props: Props) {
             onChange={(e) => importarEscolhidos(e.target)}
           />
         </label>
-      </Button>
-      {props.sortearOficial && (
-        <Button variant="outline" disabled={sorteandoOficial} onClick={() => void sortearOficial()} aria-label="Aleatória">
-          {sorteandoOficial ? <LoaderCircle className="animate-spin opacity-70" /> : <Dices className="opacity-70" />}
-          <span className="max-md:sr-only">Aleatória</span>
-        </Button>
-      )}
+      </BotaoDaSelecao>
+      {props.sortearOficial && <BotaoDeAleatoria aoSortear={() => props.sortearOficial!(dificuldade, props.instrumento)} />}
       {props.aoBuscarMusicas && (
-        <Button variant="outline" onClick={props.aoBuscarMusicas}>
+        <BotaoDaSelecao onClick={props.aoBuscarMusicas}>
           <Search className="opacity-70" />
           <span className="max-md:sr-only">Buscar músicas</span>
-        </Button>
+        </BotaoDaSelecao>
       )}
-    </header>
+    </BarraDaSelecao>
   );
 
   if (estreita) {
     return (
       <div className="relative isolate flex h-full flex-col">
-        {cabecalho}
         <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
+          {cabecalho}
           <section aria-label="Informações da música" className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <h2 className="truncate text-2xl leading-[1.1]">{musica.titulo}</h2>
-                <p className="truncate text-base text-texto-suave">{musica.artista}</p>
-              </div>
-              {favoritar}
-            </div>
+            {!vazia && <TituloDaSelecao titulo={musica.titulo} subtitulo={musica.artista} acao={favoritar} />}
             <div className="flex flex-wrap gap-2 [&_button]:h-9 [&_button]:gap-1.5 [&_button]:px-3 [&_button]:text-xs">
-              <Button variant="outline" size="sm" onClick={() => setJanela("detalhes")}>
+              <Button variant="outline" size="sm" disabled={vazia} onClick={() => setJanela("detalhes")}>
                 <Info className="opacity-70" /> Detalhes
               </Button>
               {ranking && (
@@ -428,89 +417,82 @@ export function TelaDeSelecao(props: Props) {
   return (
     <div className="relative isolate flex h-full flex-col">
       {/* A capa da música, borrada, pinta o fundo da tela e troca junto com a seleção. */}
-      <AnimatePresence initial={false}>
-        <motion.div
-          key={musica.id}
-          aria-hidden
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.2 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
-          className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
-        >
-          <Capa musica={musica} decorativa className="size-full scale-110 blur-3xl" />
-        </motion.div>
-      </AnimatePresence>
+      <FundoDaSelecao chave={vazia ? undefined : musica.id}>
+        <Capa musica={musica} decorativa className="size-full scale-110 blur-3xl" />
+      </FundoDaSelecao>
 
-      {cabecalho}
-
-      <div className="grid min-h-0 flex-1 grid-cols-12 gap-8 p-8 max-md:grid-cols-1 max-md:gap-4 max-md:p-4">
+      <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:gap-4 max-md:p-4">
         <section aria-label="Informações da música" className="col-span-5 flex min-h-0 min-w-0 flex-col gap-4 max-md:col-span-1">
-          {/* Tudo cabe sem rolagem: capa pequena ao lado do título e os dados numa linha só. */}
-          <div className="flex items-center gap-4">
-            <Capa musica={musica} girando className="size-28 rounded-md border border-borda max-md:hidden" />
-            <div className="min-w-0 flex-1">
-              <h2 className="truncate text-4xl leading-[1.1] max-md:text-2xl">{musica.titulo}</h2>
-              <p className="truncate text-lg text-texto-suave">{musica.artista}</p>
-            </div>
-            {favoritar}
-          </div>
-
-          {instrumentos.length > 1 && (
-            <GrupoDeOpcoes
-              titulo="Instrumento"
-              opcoes={instrumentos.map((i) => ({ id: i.id, rotulo: i.rotulo }))}
-              valor={instrumento}
-              aoEscolher={escolherInstrumento}
-            />
-          )}
-
-          {ranking ? (
-            // Como no osu!: o ranking da música ao lado da roda, e os detalhes numa aba vizinha.
-            <Tabs defaultValue="ranking" className="min-h-0 flex-1">
-              <TabsList className="w-full">
-                <TabsTrigger value="detalhes">
-                  <Info className="opacity-70" /> Detalhes
-                </TabsTrigger>
-                <TabsTrigger value="ranking">
-                  <ListOrdered className="opacity-70" /> Ranking
-                </TabsTrigger>
-              </TabsList>
-              {/* Os dados da música ficam nesta aba para sobrar altura para o ranking. */}
-              <TabsContent value="detalhes" className="flex flex-col gap-4">
-                {dados}
-                {detalhes}
-              </TabsContent>
-              <TabsContent value="ranking" className="flex min-h-0 flex-col">
-                {ranking}
-              </TabsContent>
-            </Tabs>
+          {cabecalho}
+          {vazia ? (
+            <div className="flex-1" />
           ) : (
             <>
-              {dados}
-              {detalhes}
-              <div className="flex-1" />
+            {/* Tudo cabe sem rolagem: capa pequena ao lado do título e os dados numa linha só. */}
+            <TituloDaSelecao
+              titulo={musica.titulo}
+              subtitulo={musica.artista}
+              capa={<Capa musica={musica} girando className="size-16 shrink-0 rounded-md border border-borda max-md:hidden" />}
+              acao={favoritar}
+            />
+
+            {instrumentos.length > 1 && (
+              <GrupoDeOpcoes
+                titulo="Instrumento"
+                opcoes={instrumentos.map((i) => ({ id: i.id, rotulo: i.rotulo }))}
+                valor={instrumento}
+                aoEscolher={escolherInstrumento}
+              />
+            )}
+
+            {ranking ? (
+              // Como no osu!: o ranking da música ao lado da roda, e os detalhes numa aba vizinha.
+              <Tabs defaultValue="ranking" className="min-h-0 flex-1">
+                <TabsList className="w-full">
+                  <TabsTrigger value="detalhes">
+                    <Info className="opacity-70" /> Detalhes
+                  </TabsTrigger>
+                  <TabsTrigger value="ranking">
+                    <ListOrdered className="opacity-70" /> Ranking
+                  </TabsTrigger>
+                </TabsList>
+                {/* Os dados da música ficam nesta aba para sobrar altura para o ranking. */}
+                <TabsContent value="detalhes" className="flex flex-col gap-4">
+                  {dados}
+                  {detalhes}
+                </TabsContent>
+                <TabsContent value="ranking" className="flex min-h-0 flex-col">
+                  {ranking}
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <>
+                {dados}
+                {detalhes}
+                <div className="flex-1" />
+              </>
+            )}
             </>
           )}
           {tocar}
         </section>
 
         <div className="col-span-7 flex min-h-0 min-w-0 flex-col gap-4 max-md:col-span-1">
-          <div className="flex justify-end gap-2">
-            {filtros}
-          </div>
+          {filtros}
           {lista}
         </div>
       </div>
 
-      <footer className="flex items-center gap-8 bg-superficie px-8 py-2 max-md:hidden">
-        <Comando teclas={rotuloDoComando("horizontal", dispositivo)}>Dificuldade</Comando>
-        <Comando teclas={rotuloDoComando("vertical", dispositivo)}>Música</Comando>
-        {instrumentos.length > 1 && <Comando teclas={rotuloDoComando("instrumento", dispositivo)}>Instrumento</Comando>}
-        <Comando teclas={rotuloDoComando("confirmar", dispositivo)}>Confirmar</Comando>
-        {dispositivo === "teclado" && <Comando teclas="F">Favoritar</Comando>}
-        <Comando teclas={rotuloDoComando("voltar", dispositivo)}>Voltar</Comando>
-      </footer>
+      <RodapeDeComandos
+        comandos={[
+          { teclas: rotuloDoComando("horizontal", dispositivo), rotulo: "Dificuldade" },
+          { teclas: rotuloDoComando("vertical", dispositivo), rotulo: "Música" },
+          ...(instrumentos.length > 1 ? [{ teclas: rotuloDoComando("instrumento", dispositivo), rotulo: "Instrumento" }] : []),
+          { teclas: rotuloDoComando("confirmar", dispositivo), rotulo: "Confirmar" },
+          ...(dispositivo === "teclado" ? [{ teclas: "F", rotulo: "Favoritar" }] : []),
+          { teclas: rotuloDoComando("voltar", dispositivo), rotulo: "Voltar" },
+        ]}
+      />
       {modais}
     </div>
   );
@@ -522,14 +504,5 @@ function Dado({ rotulo, className, children }: { rotulo: string; className?: str
       <span className="block font-titulo text-lg tracking-wide text-destaque uppercase">{rotulo}</span>
       <span className="block truncate text-xl font-semibold">{children}</span>
     </div>
-  );
-}
-
-function Comando({ teclas, children }: { teclas: string; children: ReactNode }) {
-  return (
-    <span className="flex items-center gap-2 text-base">
-      <kbd className="rounded-sm bg-superficie-elevada px-2 font-mono text-texto-suave">{teclas}</kbd>
-      <span className="font-titulo text-xl tracking-wide uppercase">{children}</span>
-    </span>
   );
 }

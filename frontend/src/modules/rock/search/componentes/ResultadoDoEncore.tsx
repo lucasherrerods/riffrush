@@ -1,71 +1,45 @@
-import { Clapperboard, Disc3, Download, LoaderCircle, Play } from "lucide-react";
-import { Button } from "@/shared/ui/button";
+import { Clapperboard } from "lucide-react";
+import { AcaoDaBusca, ItemDaBusca } from "@/modules/busca";
 import { formatarDuracao, type ResultadoDaBusca } from "../encore";
 
-export function ItemDoResultado({ resultado, children }: { resultado: ResultadoDaBusca; children?: React.ReactNode }) {
-  const detalhes = [resultado.album, resultado.ano, resultado.genero].filter(Boolean).join(" · ");
-  return (
-    <li className="chapa flex items-center gap-4 border-borda bg-superficie p-2 pr-4 max-md:gap-2 max-md:pr-2">
-      <div className="flex size-16 shrink-0 max-md:size-12 items-center justify-center overflow-hidden rounded-sm bg-superficie-elevada">
-        {resultado.capa ? (
-          <img src={resultado.capa} alt={`Capa de ${resultado.titulo}`} loading="lazy" className="size-full object-cover" />
-        ) : (
-          <Disc3 className="size-8 opacity-70" aria-hidden />
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2">
-          <h2 className="truncate text-lg font-semibold max-md:text-base">{resultado.titulo}</h2>
-          {resultado.temVideo && (
-            <span className="flex shrink-0 items-center gap-1 rounded-sm border border-borda px-1.5 text-sm text-texto-suave">
-              <Clapperboard className="size-3.5 opacity-70" aria-hidden />
-              Vídeo
-            </span>
-          )}
-        </div>
-        <p className="truncate text-base text-texto-suave max-md:text-sm">
-          {resultado.artista}
-          {detalhes && ` · ${detalhes}`}
-        </p>
-        {resultado.charter && <p className="truncate text-base text-texto-suave max-md:hidden">Chart por {resultado.charter}</p>}
-      </div>
-      <span className="font-titulo text-xl text-texto-suave max-md:text-base">{formatarDuracao(resultado.duracaoMs)}</span>
-      {children}
-    </li>
-  );
-}
-
-interface PropsDaAcao {
+interface Props {
   resultado: ResultadoDaBusca;
   baixada: boolean;
   /** Fração já baixada, quando este é o download em andamento. */
   baixando?: number;
+  /** Outro download em andamento. */
   ocupado: boolean;
-  aoBaixar: () => void;
-  aoJogar: () => void;
+  /** Sem ela, o item só mostra o chart. */
+  aoBaixar?: () => void;
+  aoJogar?: () => void;
 }
 
-export function AcaoDoResultado({ resultado, baixada, baixando, ocupado, aoBaixar, aoJogar }: PropsDaAcao) {
-  if (baixando !== undefined) {
-    return (
-      <Button variant="outline" disabled className="w-36 max-md:w-auto">
-        <LoaderCircle className="animate-spin opacity-70" aria-hidden />
-        Baixando {Math.round(baixando * 100)}%
-      </Button>
-    );
-  }
-  if (baixada) {
-    return (
-      <Button aria-label={`Jogar ${resultado.titulo}`} onClick={aoJogar} className="w-36 max-md:w-auto">
-        <Play className="opacity-70" aria-hidden />
-        <span className="max-md:sr-only">Jogar</span>
-      </Button>
-    );
-  }
+/** Um chart do Encore no item de busca comum aos dois modos. */
+export function ResultadoDoEncore({ resultado, baixada, baixando, ocupado, aoBaixar, aoJogar }: Props) {
+  const detalhes = [resultado.album, resultado.ano, resultado.genero].filter(Boolean).join(" · ");
   return (
-    <Button variant="outline" aria-label={`Baixar ${resultado.titulo}`} disabled={ocupado} onClick={aoBaixar} className="w-36 max-md:w-auto">
-      <Download className="opacity-70" aria-hidden />
-      <span className="max-md:sr-only">Baixar</span>
-    </Button>
+    <ItemDaBusca
+      titulo={resultado.titulo}
+      capa={resultado.capa}
+      linhas={[`${resultado.artista}${detalhes ? ` · ${detalhes}` : ""}`, ...(resultado.charter ? [`Chart por ${resultado.charter}`] : [])]}
+      selos={
+        resultado.temVideo && (
+          <span className="flex shrink-0 items-center gap-1 rounded-sm border border-borda px-1.5 text-sm text-texto-suave">
+            <Clapperboard className="size-3.5 opacity-70" aria-hidden />
+            Vídeo
+          </span>
+        )
+      }
+      lateral={<span className="font-titulo text-xl text-texto-suave max-md:text-base">{formatarDuracao(resultado.duracaoMs)}</span>}
+      progresso={baixando}
+      acao={
+        aoBaixar && (
+          <AcaoDaBusca
+            nome={resultado.titulo}
+            estado={baixada ? { tipo: "baixado", aoJogar } : baixando !== undefined ? { tipo: "baixando" } : { tipo: "baixavel", aoBaixar, ocupado }}
+          />
+        )
+      }
+    />
   );
 }

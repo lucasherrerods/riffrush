@@ -253,7 +253,7 @@ describe("TelaDeSelecao na tela estreita", () => {
 describe("TelaDeSelecao com estética arcade", () => {
   it("tem um header com o título da tela", () => {
     abrir();
-    expect(within(screen.getByRole("banner")).getByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
   });
 
   it("o painel mostra BPM, gênero e intensidade em cards", () => {
@@ -422,6 +422,16 @@ describe("TelaDeSelecao removendo músicas", () => {
       expect(screen.getByText(/Nenhuma música favorita/)).toBeInTheDocument();
     });
 
+    it("sem música na lista, os detalhes da música somem e o TOCAR fica desligado, como no Mania", async () => {
+      const { aoJogar, usuario } = abrir();
+      await usuario.click(screen.getByRole("button", { name: "Favoritos" }));
+      expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Favoritar" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /TOCAR/ })).toBeDisabled();
+      await usuario.keyboard("{Enter}");
+      expect(aoJogar).not.toHaveBeenCalled();
+    });
+
     it("desfavoritar a selecionada com o filtro ligado seleciona a próxima favorita", async () => {
       localStorage.setItem("riffrush:favoritas", JSON.stringify(["neon-highway", "overdrive"]));
       const { aoSelecionar, usuario } = abrir({ indice: 3 });
@@ -431,14 +441,18 @@ describe("TelaDeSelecao removendo músicas", () => {
     });
   });
 
-  it("o botão Modificadores abre a modal, que muda a velocidade sem mexer na seleção", async () => {
+  it("as velocidades ficam em chips no topo: ligar uma muda a velocidade, clicar de novo volta ao normal", async () => {
     const { aoVelocidadeDaMusica, aoSelecionar, usuario } = abrir();
-    await usuario.click(screen.getByRole("button", { name: /Modificadores/ }));
-    const modal = screen.getByRole("dialog", { name: "Modificadores" });
-    await usuario.click(within(modal).getByRole("button", { name: /Velocidade/ }));
+    const mods = screen.getByRole("group", { name: "Mods" });
+    await usuario.click(within(mods).getByRole("button", { name: "1,25x" }));
     expect(aoVelocidadeDaMusica).toHaveBeenCalledWith(1.25);
-    await usuario.keyboard("{ArrowDown}");
     expect(aoSelecionar).not.toHaveBeenCalled();
+  });
+
+  it("a busca na biblioteca filtra a roda", async () => {
+    const { usuario } = abrir();
+    await usuario.type(screen.getByRole("searchbox", { name: "Filtrar músicas" }), "zzzz-nada");
+    expect(screen.getByText("Nenhuma música com esse filtro.")).toBeInTheDocument();
   });
 });
 

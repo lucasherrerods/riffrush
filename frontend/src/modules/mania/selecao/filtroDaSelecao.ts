@@ -1,3 +1,4 @@
+import { semAcento as normalizar } from "@/shared/lib/busca";
 import type { ConjuntoSalvo } from "../beatmaps/biblioteca";
 
 export type OrdemDaSelecao = "recentes" | "titulo" | "artista" | "estrelas";
@@ -7,14 +8,9 @@ export interface FiltroDaSelecao {
   /** Só as dificuldades com essas teclas, ou todas. */
   teclas: number | "todas";
   ordem: OrdemDaSelecao;
+  favoritas?: Set<string>;
+  soFavoritas?: boolean;
 }
-
-const normalizar = (texto: string) =>
-  texto
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .trim();
 
 const titulo = (c: ConjuntoSalvo) => c.tituloUnicode || c.titulo;
 const artista = (c: ConjuntoSalvo) => c.artistaUnicode || c.artista;
@@ -38,11 +34,12 @@ const comparar = (ordem: OrdemDaSelecao) => (a: ConjuntoSalvo, b: ConjuntoSalvo)
 };
 
 /** Os conjuntos que aparecem na roda: busca por texto, filtro de teclas (que também esconde as outras dificuldades) e ordem. */
-export function filtrarConjuntos(conjuntos: ConjuntoSalvo[], { texto, teclas, ordem }: FiltroDaSelecao): ConjuntoSalvo[] {
+export function filtrarConjuntos(conjuntos: ConjuntoSalvo[], { texto, teclas, ordem, favoritas, soFavoritas }: FiltroDaSelecao): ConjuntoSalvo[] {
   const busca = normalizar(texto);
   return conjuntos
     .map((c) => (teclas === "todas" ? c : { ...c, mapas: c.mapas.filter((m) => m.teclas === teclas) }))
     .filter((c) => c.mapas.length)
+    .filter((c) => !soFavoritas || favoritas?.has(c.id))
     .filter((c) => !busca || normalizar([c.titulo, c.tituloUnicode, c.artista, c.artistaUnicode, c.mapper, ...c.mapas.map((m) => m.dificuldade)].join(" ")).includes(busca))
     .sort(comparar(ordem));
 }

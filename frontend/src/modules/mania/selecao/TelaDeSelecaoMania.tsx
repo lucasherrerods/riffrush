@@ -1,12 +1,28 @@
-import { useMemo, useRef, useState, type DragEvent } from "react";
-import { ArrowLeft, Dices, Info, ListOrdered, Search, Upload } from "lucide-react";
-import { Carrossel, indiceDandoAVolta, passosSemDarAVolta, type DificuldadeDoCarrossel, type ItemDoCarrossel } from "@/modules/selecao";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { Info, ListOrdered, Search, Upload } from "lucide-react";
+import {
+  AvisoDaLista,
+  BarraDaSelecao,
+  BotaoDaSelecao,
+  BotaoDeAleatoria,
+  BotaoDeFavoritar,
+  BotaoDeTocar,
+  Carrossel,
+  FiltrosDaBiblioteca,
+  FundoDaSelecao,
+  RodapeDeComandos,
+  TituloDaSelecao,
+  alternarFavorita,
+  carregarFavoritas,
+  indiceDandoAVolta,
+  passosSemDarAVolta,
+  salvarFavoritas,
+  type DificuldadeDoCarrossel,
+  type ItemDoCarrossel,
+} from "@/modules/selecao";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
-import { Button } from "@/shared/ui/button";
-import { CampoDeSelecao } from "@/shared/ui/CampoDeSelecao";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
-import { Input } from "@/shared/ui/input";
 import { NumeroDestacado } from "@/shared/ui/NumeroDestacado";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import type { ConjuntoSalvo, DificuldadeSalva } from "../beatmaps/biblioteca";
@@ -29,9 +45,21 @@ interface Props {
   aoJogar: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void;
   /** Abre o mapa no treino; sem ele o botão não aparece. */
   aoTreinar?: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void;
+  /** Baixa um mapa ranked sorteado, com as teclas do filtro, e o abre selecionado; sem ele o botão não aparece. */
+  sortearMapa?: (teclas: number | "todas") => Promise<unknown>;
   /** Assistir ao replay de uma partida do ranking da dificuldade escolhida. */
   aoAssistir?: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva, linha: PosicaoNoRankingDoMania) => void;
 }
+
+const CHAVE_DAS_FAVORITAS = "riffrush:mania:favoritas";
+
+const COMANDOS = [
+  { teclas: "← →", rotulo: "Dificuldade" },
+  { teclas: "↑ ↓", rotulo: "Mapa" },
+  { teclas: "Enter", rotulo: "Confirmar" },
+  { teclas: "F", rotulo: "Favoritar" },
+  { teclas: "Esc", rotulo: "Voltar" },
+];
 
 const ehOsz = (arquivo: File) => arquivo.name.toLowerCase().endsWith(".osz");
 
@@ -73,18 +101,24 @@ function rotuloDaDificuldade(conjunto: ConjuntoSalvo, dificuldade: DificuldadeSa
 }
 
 /** A seleção do Mania: os conjuntos na mesma roda da seleção do Rock, com busca, filtro de teclas, ordem e as abas de detalhes e ranking. */
-export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conjuntos, mods, aoMudarMods, aoImportar, aoJogar, aoTreinar, aoAssistir }: Props) {
+export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conjuntos, mods, aoMudarMods, aoImportar, aoJogar, aoTreinar, aoAssistir, sortearMapa }: Props) {
   // A seleção segue o id do conjunto: muda a ordem ou o filtro e ela continua no mesmo mapa, se ele ainda aparecer.
   const [id, setId] = useState<string | null>(selecionado ?? null);
+  // O mapa sorteado chega depois de a tela abrir: a seleção vai para ele.
+  useEffect(() => {
+    if (selecionado) setId(selecionado);
+  }, [selecionado]);
   const [hash, setHash] = useState<string | null>(null);
   const [texto, setTexto] = useState("");
   const [teclas, setTeclas] = useState<number | "todas">("todas");
   const [ordem, setOrdem] = useState<OrdemDaSelecao>("recentes");
   const [arrastando, setArrastando] = useState(false);
+  const [favoritas, setFavoritas] = useState(() => carregarFavoritas(CHAVE_DAS_FAVORITAS));
+  const [soFavoritas, setSoFavoritas] = useState(false);
   const seletor = useRef<HTMLInputElement>(null);
 
   const todos = conjuntos ?? [];
-  const lista = useMemo(() => filtrarConjuntos(conjuntos ?? [], { texto, teclas, ordem }), [conjuntos, texto, teclas, ordem]);
+  const lista = useMemo(() => filtrarConjuntos(conjuntos ?? [], { texto, teclas, ordem, favoritas, soFavoritas }), [conjuntos, texto, teclas, ordem, favoritas, soFavoritas]);
   const opcoesDeTeclas = teclasDaBiblioteca(todos);
   const indice = Math.max(
     lista.findIndex((c) => c.id === id),
@@ -101,8 +135,14 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
   };
   const andar = (passos: number) => escolher(indiceDandoAVolta(indice, passos, lista.length));
   const pular = (passos: number) => escolher(indice + passosSemDarAVolta(indice, passos, lista.length));
-  const sortear = () => lista.length > 1 && escolher(indiceDandoAVolta(indice, 1 + Math.floor(Math.random() * (lista.length - 1)), lista.length));
   const jogar = () => conjunto && dificuldade && aoJogar(conjunto, dificuldade);
+  const favorita = !!conjunto && favoritas.has(conjunto.id);
+  const alternarFavoritaAtual = () => {
+    if (!conjunto) return;
+    const novas = alternarFavorita(favoritas, conjunto.id);
+    setFavoritas(novas);
+    salvarFavoritas(CHAVE_DAS_FAVORITAS, novas);
+  };
 
   useTeclado((evento) => {
     // Com o foco num campo (a busca), as teclas são dele, menos as que andam pela roda.
@@ -117,6 +157,7 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
     }
     if (evento.code === "Enter" && !(evento.target instanceof HTMLButtonElement)) return jogar();
     if (digitando) return;
+    if (evento.code === "KeyF") return alternarFavoritaAtual();
     if (evento.code === "Home") return escolher(0);
     if (evento.code === "End") return escolher(lista.length - 1);
     if ((evento.code === "ArrowLeft" || evento.code === "ArrowRight") && conjunto && dificuldade) {
@@ -136,7 +177,7 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
     receber(evento.dataTransfer.files);
   };
 
-  const itens: ItemDoCarrossel[] = lista.map((c) => ({ id: c.id, titulo: c.tituloUnicode || c.titulo, artista: c.artistaUnicode || c.artista, capa: <CapaDoConjunto conjunto={c} /> }));
+  const itens: ItemDoCarrossel[] = lista.map((c) => ({ id: c.id, titulo: c.tituloUnicode || c.titulo, artista: c.artistaUnicode || c.artista, capa: <CapaDoConjunto conjunto={c} />, favorita: favoritas.has(c.id) }));
   const dificuldades: DificuldadeDoCarrossel[] = (conjunto?.mapas ?? []).map((m) => {
     const estrelas = conjunto?.estrelas?.[m.hash];
     return { id: m.hash, rotulo: rotuloDaDificuldade(conjunto!, m), cor: estrelas === undefined ? "bg-borda" : COR_DA_FAIXA[faixaDasEstrelas(estrelas)] };
@@ -168,47 +209,34 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
       }}
       onDragLeave={() => setArrastando(false)}
       onDrop={aoSoltar}
-      className={cn("relative isolate grid h-full grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:p-4", arrastando && "outline-2 outline-dashed outline-primaria -outline-offset-8")}
+      className={cn("relative isolate flex h-full flex-col", arrastando && "outline-2 outline-dashed outline-primaria -outline-offset-8")}
     >
       {/* Como no Rock: a capa do mapa, borrada, pinta o fundo e troca junto com a seleção. */}
-      {conjunto && (
-        <div key={conjunto.id} aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden opacity-20">
-          <CapaDoConjunto conjunto={conjunto} className="scale-110 blur-3xl" />
-        </div>
-      )}
+      <FundoDaSelecao chave={conjunto?.id}>{conjunto && <CapaDoConjunto conjunto={conjunto} className="scale-105 blur-md" />}</FundoDaSelecao>
+      <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:p-4">
       <aside className="col-span-5 flex min-h-0 flex-col gap-4 max-md:col-span-1">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            {aoVoltar && (
-              <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
-                <ArrowLeft aria-hidden />
-              </Button>
-            )}
-            <SeletorDeMods mods={mods} aoMudar={aoMudarMods} />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {aoBuscarMapas && (
-              <Button variant="secondary" className="chapa h-10 rounded-none border-borda bg-superficie-elevada" onClick={aoBuscarMapas}>
-                <Search aria-hidden className="text-primaria" />
-                Buscar mapas
-              </Button>
-            )}
-            <Button variant="secondary" className="chapa h-10 rounded-none border-borda bg-superficie-elevada" onClick={() => seletor.current?.click()}>
-              <Upload aria-hidden className="text-primaria" />
-              Importar .osz
-            </Button>
-          </div>
-          <input ref={seletor} type="file" accept=".osz" multiple aria-label="Arquivos .osz" className="sr-only" onChange={(e) => receber(e.target.files)} />
-        </div>
+        <BarraDaSelecao aoVoltar={aoVoltar} abaixo={<SeletorDeMods mods={mods} aoMudar={aoMudarMods} />}>
+          <BotaoDaSelecao onClick={() => seletor.current?.click()}>
+            <Upload aria-hidden />
+            <span className="max-md:sr-only">Importar .osz</span>
+          </BotaoDaSelecao>
+          {sortearMapa && <BotaoDeAleatoria aoSortear={() => sortearMapa(teclas)} />}
+          {aoBuscarMapas && (
+            <BotaoDaSelecao onClick={aoBuscarMapas}>
+              <Search aria-hidden />
+              <span className="max-md:sr-only">Buscar mapas</span>
+            </BotaoDaSelecao>
+          )}
+        </BarraDaSelecao>
+        <input ref={seletor} type="file" accept=".osz" multiple aria-label="Arquivos .osz" className="sr-only" onChange={(e) => receber(e.target.files)} />
 
         {conjunto && (
-          <div className="chapa bg-superficie-elevada/95 px-4 py-3">
-            <h2 className="truncate font-titulo text-3xl tracking-wide uppercase">{conjunto.tituloUnicode || conjunto.titulo}</h2>
-            <p className="truncate text-texto-suave">
-              {conjunto.artistaUnicode || conjunto.artista} · mapa de {conjunto.mapper}
-            </p>
-            {conjunto.origem === "importado" && <p className="text-sm text-texto-suave">Importado · sem XP nem ranking</p>}
-          </div>
+          <TituloDaSelecao
+            titulo={conjunto.tituloUnicode || conjunto.titulo}
+            subtitulo={`${conjunto.artistaUnicode || conjunto.artista} · mapa de ${conjunto.mapper}`}
+            aviso={conjunto.origem === "importado" && "Importado · sem XP nem ranking"}
+            acao={<BotaoDeFavoritar favorita={favorita} aoAlternar={alternarFavoritaAtual} />}
+          />
         )}
 
         {conjunto && (
@@ -232,27 +260,23 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
         )}
         {!conjunto && <div className="flex-1" />}
 
-        <div className="flex justify-end gap-2">
-          {aoTreinar && (
-            <Button
-              variant="outline"
-              className="h-10 border-primaria bg-superficie-elevada px-6 font-titulo text-lg tracking-wide text-primaria uppercase"
-              disabled={!dificuldade}
-              onClick={() => conjunto && dificuldade && aoTreinar(conjunto, dificuldade)}
-            >
-              Treinar
-            </Button>
-          )}
-          <Button className="h-10 px-8 font-titulo text-lg tracking-wide text-texto uppercase" disabled={!dificuldade} onClick={jogar}>
-            Jogar
-          </Button>
-        </div>
+        <BotaoDeTocar aoTocar={jogar} aoTreinar={aoTreinar && (() => conjunto && dificuldade && aoTreinar(conjunto, dificuldade))} desabilitado={!dificuldade} />
       </aside>
 
       <div className="col-span-7 flex min-h-0 flex-col gap-4 max-md:col-span-1">
         {!!todos.length && (
-          <div className="flex flex-wrap items-end gap-4">
-            <Input type="search" placeholder="Buscar na biblioteca" aria-label="Filtrar mapas" value={texto} onChange={(e) => setTexto(e.target.value)} className="min-w-48 flex-1" />
+          <FiltrosDaBiblioteca
+            texto={texto}
+            aoMudarTexto={setTexto}
+            placeholder="Buscar na biblioteca"
+            rotuloDoCampo="Filtrar mapas"
+            ordens={ORDENS}
+            ordem={ordem}
+            aoMudarOrdem={setOrdem}
+            soFavoritas={soFavoritas}
+            aoAlternarFavoritas={() => setSoFavoritas((ligado) => !ligado)}
+            contagem={`${lista.length ? `${indice + 1} de ${lista.length} ${lista.length === 1 ? "mapa" : "mapas"}` : ""}${lista.length < todos.length && lista.length ? ` · ${todos.length} na biblioteca` : ""}`}
+          >
             {opcoesDeTeclas.length > 1 && (
               <GrupoDeOpcoes
                 titulo="Teclas"
@@ -261,25 +285,14 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
                 aoEscolher={(valor) => setTeclas(valor === "todas" ? "todas" : Number(valor))}
               />
             )}
-            <CampoDeSelecao titulo="Ordem" opcoes={ORDENS} valor={ordem} aoEscolher={setOrdem} />
-            <Button variant="outline" disabled={lista.length < 2} onClick={sortear} aria-label="Aleatório">
-              <Dices className="opacity-70" />
-              <span className="max-md:sr-only">Aleatório</span>
-            </Button>
-          </div>
-        )}
-        {!!todos.length && (
-          <p className="text-sm text-texto-suave" aria-live="polite">
-            {lista.length ? `${indice + 1} de ${lista.length} ${lista.length === 1 ? "mapa" : "mapas"}` : ""}
-            {lista.length < todos.length && lista.length ? ` · ${todos.length} na biblioteca` : ""}
-          </p>
+          </FiltrosDaBiblioteca>
         )}
 
         {conjuntos === null && <p className="text-texto-suave">Abrindo a biblioteca…</p>}
         {conjuntos?.length === 0 && (
-          <p className="chapa m-auto max-w-md bg-superficie-elevada/90 px-6 py-4 text-center text-texto-suave">Nenhum mapa ainda. Arraste um .osz para cá ou use o botão de importar.</p>
+          <AvisoDaLista>Nenhum mapa ainda. Arraste um .osz para cá ou use o botão de importar.</AvisoDaLista>
         )}
-        {!!todos.length && !lista.length && <p className="chapa m-auto max-w-md bg-superficie-elevada/90 px-6 py-4 text-center text-texto-suave">Nenhum mapa com esse filtro.</p>}
+        {!!todos.length && !lista.length && <AvisoDaLista>Nenhum mapa com esse filtro.</AvisoDaLista>}
         {!!lista.length && (
           <Carrossel
             className="flex-1"
@@ -295,6 +308,8 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
           />
         )}
       </div>
+      </div>
+      <RodapeDeComandos comandos={COMANDOS} />
     </section>
   );
 }

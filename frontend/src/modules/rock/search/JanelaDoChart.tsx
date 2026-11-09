@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/ui/dialog";
 import { ConfirmacaoDeTamanho } from "./componentes/ConfirmacaoDeTamanho";
-import { AcaoDoResultado, ItemDoResultado } from "./componentes/ResultadoDoEncore";
+import { ResultadoDoEncore } from "./componentes/ResultadoDoEncore";
 import { buscarChartPeloMd5, type ResultadoDaBusca } from "./encore";
 import { useBaixarDoEncore, type AoBaixar } from "./useBaixarDoEncore";
 
@@ -52,16 +52,14 @@ export function JanelaDoChart({ md5, aoFechar, aoBaixar, baixadas, aoJogar, busc
           )}
           {estado.tipo === "pronto" && (
             <ul>
-              <ItemDoResultado resultado={estado.chart}>
-                <AcaoDoResultado
-                  resultado={estado.chart}
-                  baixada={baixadas.has(estado.chart.md5)}
-                  baixando={baixando?.fracao}
-                  ocupado={!!baixando}
-                  aoBaixar={() => void baixar(estado.chart)}
-                  aoJogar={() => aoJogar(estado.chart.md5)}
-                />
-              </ItemDoResultado>
+              <ResultadoDoEncore
+                resultado={estado.chart}
+                baixada={baixadas.has(estado.chart.md5)}
+                baixando={baixando?.fracao}
+                ocupado={!!baixando}
+                aoBaixar={() => void baixar(estado.chart)}
+                aoJogar={() => aoJogar(estado.chart.md5)}
+              />
             </ul>
           )}
         </DialogContent>
