@@ -3,12 +3,12 @@ import { Users } from "lucide-react";
 import { useConta } from "@/modules/conta";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
-import { listaDeAmigos } from "./loja";
+import { conversas, listaDeAmigos } from "./loja";
 import { Contador, useAmigos } from "./PainelDeAmigos";
 import { useConversas } from "./ConversaComAmigo";
 import { totalDeNaoLidas } from "./conversas";
 
-/** De quanto em quanto tempo as listas são buscadas de novo, para os pedidos novos aparecerem. */
+/** De quanto em quanto tempo as listas e as não lidas são buscadas de novo, para o que chegou aparecer. */
 const INTERVALO_DAS_LISTAS_MS = 60_000;
 
 /** No cabeçalho: abre a lista de amigos e mostra quantos pedidos e mensagens esperam resposta. */
@@ -20,7 +20,11 @@ export function BotaoDeAmigos({ aberto, aoAlternar }: { aberto: boolean; aoAlter
   useEffect(() => {
     void listaDeAmigos.recarregar();
     if (!conta) return;
-    const intervalo = setInterval(() => void listaDeAmigos.recarregar(), INTERVALO_DAS_LISTAS_MS);
+    void conversas.carregarNaoLidas();
+    const intervalo = setInterval(() => {
+      void listaDeAmigos.recarregar();
+      void conversas.carregarNaoLidas();
+    }, INTERVALO_DAS_LISTAS_MS);
     return () => clearInterval(intervalo);
   }, [conta]);
   if (!conta) return null;

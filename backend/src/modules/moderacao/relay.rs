@@ -10,7 +10,7 @@ use crate::modules::conta::{FalhaExterna, Relogio};
 pub const CABECALHO_DA_HORA: &str = "x-riffrush-hora";
 pub const CABECALHO_DA_ASSINATURA: &str = "x-riffrush-assinatura";
 
-/// Avisa o relay pela rota `/chat/moderacao`, com o pedido assinado pelo segredo em comum.
+/// Fala com o relay por HTTP, com o pedido assinado pelo segredo em comum.
 pub struct RelayHttp {
     pub http: reqwest::Client,
     /// O mesmo endereço do app (`wss://...`); sem ele, o aviso não sai e o banimento vale na próxima conexão.
@@ -31,21 +31,17 @@ pub fn endereco_http(url_do_relay: &str) -> String {
     }
 }
 
-#[async_trait]
-impl AvisoAoRelay for RelayHttp {
-    async fn avisar(&self, aviso: AvisoDeModeracao) -> Result<(), FalhaExterna> {
+impl RelayHttp {
+    /// Manda `corpo` para `caminho` no relay, assinado com o segredo em comum.
+    /// Sem endereço ou segredo configurados, não manda nada.
+    pub async fn postar(&self, caminho: &str, corpo: String) -> Result<(), FalhaExterna> {
         let (Some(url), Some(segredo)) = (&self.url, &self.segredo) else {
             return Ok(());
         };
-        let corpo = match aviso {
-            AvisoDeModeracao::Banir(id) => json!({ "tipo": "banir", "id": id }),
-            AvisoDeModeracao::Desbanir(id) => json!({ "tipo": "desbanir", "id": id }),
-        }
-        .to_string();
         let hora = self.relogio.agora().timestamp();
         let resposta = self
             .http
-            .post(format!("{}/chat/moderacao", endereco_http(url)))
+            .post(format!("{}{caminho}", endereco_http(url)))
             .header(CABECALHO_DA_HORA, hora.to_string())
             .header(CABECALHO_DA_ASSINATURA, assinar_pedido(segredo, hora, corpo.as_bytes()))
             .header(reqwest::header::CONTENT_TYPE, "application/json")
@@ -57,6 +53,17 @@ impl AvisoAoRelay for RelayHttp {
             return Err(FalhaExterna(format!("o relay respondeu {}", resposta.status())));
         }
         Ok(())
+    }
+}
+
+#[async_trait]
+impl AvisoAoRelay for RelayHttp {
+    async fn avisar(&self, aviso: AvisoDeModeracao) -> Result<(), FalhaExterna> {
+        let corpo = match aviso {
+            AvisoDeModeracao::Banir(id) => json!({ "tipo": "banir", "id": id }),
+            AvisoDeModeracao::Desbanir(id) => json!({ "tipo": "desbanir", "id": id }),
+        };
+        self.postar("/chat/moderacao", corpo.to_string()).await
     }
 }
 

@@ -29,7 +29,8 @@ const conversasFalsas = vi.hoisted(() => {
   return {
     inscrever: (o: () => void) => (ouvintes.add(o), () => void ouvintes.delete(o)),
     estado: () => atual,
-    enviar: vi.fn(() => true),
+    enviar: vi.fn(async () => undefined),
+    carregar: vi.fn(async () => undefined),
     marcarComoLida: vi.fn(),
     definir(novas: import("./conversas").Conversas) {
       atual = novas;
@@ -80,13 +81,13 @@ describe("PainelDeAmigos", () => {
   });
 
   it("conversa com o amigo: mostra o que chegou, marca como lido e manda mensagem", async () => {
-    const ana = { id: "a", nome: "AnaRock", avatar: null };
-    conversasFalsas.definir({ a: { mensagens: [{ de: ana, para: "eu", texto: "bora jogar?", em: 1, minha: false }], naoLidas: 1 } });
+    conversasFalsas.definir({ a: { mensagens: [{ id: 1, de: "a", texto: "bora jogar?", em: 1 }], naoLidas: 1, carregada: true } });
     const { usuario } = abrir();
     const botao = await screen.findByRole("button", { name: "Conversar com AnaRock" });
     expect(within(botao).getByLabelText("1 pendentes")).toBeInTheDocument();
     await usuario.click(botao);
     expect(screen.getByText("bora jogar?")).toBeInTheDocument();
+    expect(conversasFalsas.carregar).toHaveBeenCalledWith("a");
     expect(conversasFalsas.marcarComoLida).toHaveBeenCalledWith("a");
     await usuario.type(screen.getByRole("textbox", { name: "Mensagem" }), "agora!{Enter}");
     expect(conversasFalsas.enviar).toHaveBeenCalledWith("a", "agora!");
@@ -94,11 +95,11 @@ describe("PainelDeAmigos", () => {
     expect(screen.getByText("Online (1)")).toBeInTheDocument();
   });
 
-  it("com o amigo offline, dá para ler a conversa mas não escrever", async () => {
+  it("com o amigo offline, a mensagem sai e fica guardada para ele", async () => {
     const { usuario } = abrir();
     await usuario.click(await screen.findByRole("button", { name: "Conversar com RafaBass" }));
-    expect(screen.getByText(/RafaBass está offline/)).toBeInTheDocument();
-    expect(screen.queryByRole("textbox", { name: "Mensagem" })).not.toBeInTheDocument();
+    await usuario.type(screen.getByRole("textbox", { name: "Mensagem" }), "joga depois?{Enter}");
+    expect(conversasFalsas.enviar).toHaveBeenCalledWith("r", "joga depois?");
   });
 
   it("a busca filtra pelo nome", async () => {

@@ -58,19 +58,13 @@ export class ConexaoDePresenca {
     };
   };
 
+  /** As mensagens entre amigos saem pela API; por aqui só chegam as entregues na hora. */
   ouvirPrivadas = (ouvinte: (mensagem: MensagemPrivada) => void) => {
     this.ouvintesDePrivadas.add(ouvinte);
     return () => {
       this.ouvintesDePrivadas.delete(ouvinte);
     };
   };
-
-  /** Manda uma mensagem só para essa conta. Sem conexão, devolve false e nada sai. */
-  enviarPrivada(para: string, texto: string): boolean {
-    if (!this.estadoAtual.conectada) return false;
-    this.socket.enviar(JSON.stringify({ tipo: "privada", para, texto }));
-    return true;
-  }
 
   /** Chama a conta para a sala online. Sem conexão, o convite não sai. */
   convidar(para: string, codigo: string) {

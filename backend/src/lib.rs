@@ -18,7 +18,7 @@ use shared::estado::EstadoDoApp;
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida, modules::conta::situacao_da_partida, modules::ranking::ranking, modules::ranking::geral, modules::ranking::musicas, modules::ranking::partida, modules::ranking::replay, modules::perfil::perfil, modules::perfil::recordes, modules::presenca::ficha, modules::moderacao::denunciar, modules::moderacao::denuncias, modules::moderacao::resolver, modules::moderacao::banidos, modules::moderacao::banir, modules::moderacao::desbanir, modules::mania::enviar_partida, modules::mania::situacao_da_partida, modules::mania::ranking, modules::mania::replay, modules::mania::mapas_mais_jogados, modules::mania::estatisticas, modules::amizade::amigos, modules::amizade::sugestoes, modules::amizade::pedir, modules::amizade::aceitar, modules::amizade::desfazer, modules::amizade::bloquear, modules::amizade::desbloquear),
+    paths(modules::saude::saude, modules::conta::entrar, modules::conta::sair, modules::conta::eu, modules::conta::excluir, modules::conta::registrar_partida, modules::conta::situacao_da_partida, modules::ranking::ranking, modules::ranking::geral, modules::ranking::musicas, modules::ranking::partida, modules::ranking::replay, modules::perfil::perfil, modules::perfil::recordes, modules::presenca::ficha, modules::moderacao::denunciar, modules::moderacao::denuncias, modules::moderacao::resolver, modules::moderacao::banidos, modules::moderacao::banir, modules::moderacao::desbanir, modules::mania::enviar_partida, modules::mania::situacao_da_partida, modules::mania::ranking, modules::mania::replay, modules::mania::mapas_mais_jogados, modules::mania::estatisticas, modules::amizade::amigos, modules::amizade::sugestoes, modules::amizade::pedir, modules::amizade::aceitar, modules::amizade::desfazer, modules::amizade::bloquear, modules::amizade::desbloquear, modules::conversa::enviar, modules::conversa::historico, modules::conversa::marcar_lidas, modules::conversa::nao_lidas),
     components(schemas(
         modules::saude::RespostaDeSaude,
         modules::conta::CorpoDoLogin,
@@ -56,7 +56,10 @@ use shared::estado::EstadoDoApp;
         modules::amizade::PessoaDaAmizade,
         modules::amizade::SugestaoDeAmizade,
         modules::amizade::CorpoDoPedido,
-        modules::amizade::RespostaDoPedido
+        modules::amizade::RespostaDoPedido,
+        modules::conversa::MensagemDaConversa,
+        modules::conversa::CorpoDaMensagem,
+        modules::conversa::NaoLidasDoAmigo
     )),
     modifiers(&Token)
 )]
@@ -94,6 +97,7 @@ pub fn app(estado: EstadoDoApp, origens_permitidas: &[String]) -> Router {
         .merge(modules::moderacao::rotas())
         .merge(modules::mania::rotas())
         .merge(modules::amizade::rotas())
+        .merge(modules::conversa::rotas())
         .route("/openapi.json", get(|| async { Json(Documentacao::openapi()) }))
         .with_state(estado)
         .layer(map_response(shared::erro::padronizar_rejeicoes))

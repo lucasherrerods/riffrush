@@ -89,12 +89,13 @@ describe("lerMensagemPrivada", () => {
   const de = { id: "a", nome: "Ana", avatar: null };
 
   it("lê a mensagem privada que o relay entrega", () => {
-    expect(lerMensagemPrivada(JSON.stringify({ tipo: "privada", de, para: "b", texto: "oi", em: 10 }))).toEqual({ de, para: "b", texto: "oi", em: 10 });
+    expect(lerMensagemPrivada(JSON.stringify({ tipo: "privada", id: 3, de, para: "b", texto: "oi", em: 10 }))).toEqual({ id: 3, de, para: "b", texto: "oi", em: 10 });
   });
 
   it("ignora o que não é mensagem privada ou veio incompleto", () => {
     expect(lerMensagemPrivada(JSON.stringify({ tipo: "convite", de, codigo: "ABCDE" }))).toBeNull();
-    expect(lerMensagemPrivada(JSON.stringify({ tipo: "privada", de, para: "b", em: 10 }))).toBeNull();
+    expect(lerMensagemPrivada(JSON.stringify({ tipo: "privada", id: 3, de, para: "b", em: 10 }))).toBeNull();
+    expect(lerMensagemPrivada(JSON.stringify({ tipo: "privada", de, para: "b", texto: "oi", em: 10 }))).toBeNull();
     expect(lerMensagemPrivada("{quebrado")).toBeNull();
   });
 });

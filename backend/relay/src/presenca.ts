@@ -1,6 +1,6 @@
 // Partes puras da lista de quem está online e da transmissão ao vivo das partidas.
 
-import { ID_DA_CONTA, limparTexto } from "./chat";
+import { ID_DA_CONTA } from "./chat";
 import { TAMANHO_MAXIMO_DA_MENSAGEM, codigoValido, lerModo, type Modo } from "./regras";
 
 export interface Pessoa {
@@ -60,14 +60,38 @@ export type MensagemDaPresenca =
   | { tipo: "pessoa"; pessoa: PessoaOnline }
   | { tipo: "saiu"; id: string }
   | { tipo: "convite"; de: Pessoa; codigo: string }
-  /** Vai para quem recebe e volta para quem mandou, com a hora do relay. */
-  | { tipo: "privada"; de: Pessoa; para: string; texto: string; em: number };
+  | ({ tipo: "privada" } & PrivadaDaApi);
+
+/**
+ * Uma mensagem entre amigos que a API já guardou. Quem confere a amizade e limpa o texto é a API;
+ * o relay só entrega a quem mandou e a quem recebe, se estiverem conectados.
+ */
+export interface PrivadaDaApi {
+  id: number;
+  de: Pessoa;
+  para: string;
+  texto: string;
+  /** Hora em que a API guardou, em ms. */
+  em: number;
+}
+
+export function lerPrivadaDaApi(corpo: string): PrivadaDaApi | null {
+  let dados: Record<string, unknown>;
+  try {
+    dados = JSON.parse(corpo);
+  } catch {
+    return null;
+  }
+  const { id, para, texto, em } = dados ?? {};
+  const de = dados?.de as Record<string, unknown> | undefined;
+  if (!Number.isInteger(id) || typeof para !== "string" || !ID_DA_CONTA.test(para) || typeof texto !== "string" || typeof em !== "number") return null;
+  if (typeof de?.id !== "string" || !ID_DA_CONTA.test(de.id) || typeof de.nome !== "string") return null;
+  const avatar = typeof de.avatar === "string" ? de.avatar : null;
+  return { id: id as number, de: { id: de.id, nome: de.nome, avatar }, para, texto, em };
+}
 
 /** O que o app manda pela presença: o estado novo ou um convite para a sala em que está. */
-export type ComandoDaPresenca =
-  | { tipo: "estado"; estado: EstadoOnline }
-  | { tipo: "convite"; para: string; codigo: string }
-  | { tipo: "privada"; para: string; texto: string };
+export type ComandoDaPresenca = { tipo: "estado"; estado: EstadoOnline } | { tipo: "convite"; para: string; codigo: string };
 
 const TAMANHO_MAXIMO_DO_TEXTO = 80;
 const ID_DA_MUSICA_MAXIMO = 200;
@@ -134,7 +158,7 @@ function lerEstadoSemModo(valor: unknown): EstadoOnline | null {
 }
 
 /**
- * O relay não sabe quem é amigo de quem: o convite e a mensagem privada chegam a qualquer conta online,
+ * O relay não sabe quem é amigo de quem: o convite chega a qualquer conta online,
  * e o app de quem recebe mostra só os que vêm de amigos.
  */
 export function lerComandoDaPresenca(texto: string): ComandoDaPresenca | null {
@@ -148,12 +172,6 @@ export function lerComandoDaPresenca(texto: string): ComandoDaPresenca | null {
     const { para, codigo } = dados;
     if (typeof para !== "string" || !ID_DA_CONTA.test(para) || typeof codigo !== "string" || !codigoValido(codigo)) return null;
     return { tipo: "convite", para, codigo };
-  }
-  if (dados?.tipo === "privada") {
-    const { para } = dados;
-    const texto = limparTexto(dados.texto);
-    if (typeof para !== "string" || !ID_DA_CONTA.test(para) || !texto) return null;
-    return { tipo: "privada", para, texto };
   }
   // Sem `tipo`, é o estado, como mandam as versões antigas do app.
   const estado = lerEstado(dados?.estado);

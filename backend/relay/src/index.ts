@@ -40,10 +40,12 @@ import {
   fichaDoPedido,
   lerComandoDaPresenca,
   lerMensagemDaTransmissao,
+  lerPrivadaDaApi,
   verificarFicha,
   type MensagemDaPresenca,
   type PessoaDaFicha,
   type PessoaOnline,
+  type PrivadaDaApi,
 } from "./presenca";
 
 interface Env {
@@ -260,8 +262,6 @@ function fechar(socket: WebSocket, motivo: string) {
  */
 export class Presenca extends DurableObject<Env> {
   private janelas = new Map<WebSocket, Janela>();
-  /** O mesmo limite do chat global para as mensagens privadas. */
-  private baldes = new Map<WebSocket, Balde>();
 
   async fetch(pedido: Request): Promise<Response> {
     if (pedido.headers.get("Upgrade") !== "websocket") return new Response("Esperava um WebSocket.", { status: 426 });
@@ -296,18 +296,6 @@ export class Presenca extends DurableObject<Env> {
       }
       return;
     }
-    if (comando.tipo === "privada") {
-      const gasto = gastarDoBalde(this.baldes.get(socket) ?? BALDE_CHEIO, Date.now());
-      this.baldes.set(socket, gasto.balde);
-      if (!gasto.passa) return;
-      const { id, nome, avatar } = atual;
-      const privada = JSON.stringify({ tipo: "privada", de: { id, nome, avatar }, para: comando.para, texto: comando.texto, em: Date.now() } satisfies MensagemDaPresenca);
-      for (const destino of this.ctx.getWebSockets(PESSOA)) {
-        const dono = (destino.deserializeAttachment() as PessoaOnline).id;
-        if (dono === comando.para || destino === socket) enviar(destino, privada);
-      }
-      return;
-    }
     const pessoa: PessoaOnline = { ...atual, estado: comando.estado };
     socket.serializeAttachment(pessoa);
     this.paraTodos({ tipo: "pessoa", pessoa });
@@ -323,12 +311,20 @@ export class Presenca extends DurableObject<Env> {
 
   private saiu(socket: WebSocket) {
     this.janelas.delete(socket);
-    this.baldes.delete(socket);
     const { id } = socket.deserializeAttachment() as PessoaOnline;
     fechar(socket, "saiu");
     // Se a mesma conta já abriu outra conexão, ela continua na lista.
     const continua = this.ctx.getWebSockets(PESSOA).some((s) => s !== socket && (s.deserializeAttachment() as PessoaOnline).id === id);
     if (!continua) this.paraTodos({ tipo: "saiu", id }, socket);
+  }
+
+  /** Quem mandou recebe a cópia também, para os outros aparelhos dele mostrarem a conversa igual. */
+  async entregarPrivada(privada: PrivadaDaApi) {
+    const texto = JSON.stringify({ tipo: "privada", ...privada } satisfies MensagemDaPresenca);
+    for (const socket of this.ctx.getWebSockets(PESSOA)) {
+      const { id } = socket.deserializeAttachment() as PessoaOnline;
+      if (id === privada.para || id === privada.de.id) enviar(socket, texto);
+    }
   }
 
   private pessoas() {
@@ -583,16 +579,32 @@ async function enviarDenuncia(env: Env, mensagem: MensagemDoChat, denunciante: s
   }
 }
 
-/** A rota que a API chama para avisar banimentos, com o pedido assinado pelo segredo em comum. */
-async function avisoDeModeracao(pedido: Request, env: Env) {
+/** O corpo de um pedido da API, assinado pelo segredo em comum, ou a resposta de recusa. */
+async function corpoDaApi(pedido: Request, env: Env): Promise<string | Response> {
   if (pedido.method !== "POST") return new Response("Esperava POST.", { status: 405 });
   const corpo = await pedido.text();
   const hora = Number(pedido.headers.get(CABECALHO_DA_HORA));
   const confere = await conferirPedido(env.SEGREDO_DA_PRESENCA ?? "", hora, Math.floor(Date.now() / 1000), corpo, pedido.headers.get(CABECALHO_DA_ASSINATURA) ?? "");
-  if (!confere) return new Response("Assinatura inválida.", { status: 401 });
+  return confere ? corpo : new Response("Assinatura inválida.", { status: 401 });
+}
+
+/** A rota que a API chama para avisar banimentos. */
+async function avisoDeModeracao(pedido: Request, env: Env) {
+  const corpo = await corpoDaApi(pedido, env);
+  if (corpo instanceof Response) return corpo;
   const aviso = lerAvisoDaApi(corpo);
   if (!aviso) return new Response("Aviso inválido.", { status: 400 });
   await env.CHAT.get(env.CHAT.idFromName("chat")).moderar(aviso);
+  return new Response(null, { status: 204 });
+}
+
+/** A rota que a API chama depois de guardar uma mensagem entre amigos. */
+async function entregaDePrivada(pedido: Request, env: Env) {
+  const corpo = await corpoDaApi(pedido, env);
+  if (corpo instanceof Response) return corpo;
+  const privada = lerPrivadaDaApi(corpo);
+  if (!privada) return new Response("Mensagem inválida.", { status: 400 });
+  await env.PRESENCA.get(env.PRESENCA.idFromName("presenca")).entregarPrivada(privada);
   return new Response(null, { status: 204 });
 }
 
@@ -650,6 +662,7 @@ export default {
     }
 
     if (pathname === "/chat/moderacao") return avisoDeModeracao(pedido, env);
+    if (pathname === "/privada") return entregaDePrivada(pedido, env);
 
     if (pathname === "/chat") {
       const autenticado = await comPessoa(pedido, env);

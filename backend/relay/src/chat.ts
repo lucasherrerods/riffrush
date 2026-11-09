@@ -93,7 +93,7 @@ export function lerComando(bruta: string): Comando | null {
   return null;
 }
 
-export function limparTexto(texto: unknown): string | null {
+function limparTexto(texto: unknown): string | null {
   if (typeof texto !== "string") return null;
   const limpo = texto
     .replace(/[\t\n\r]/g, " ")

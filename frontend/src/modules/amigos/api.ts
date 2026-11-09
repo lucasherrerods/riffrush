@@ -31,6 +31,20 @@ export interface SugestaoDeAmizade {
   amigos_em_comum: number;
 }
 
+/** Uma mensagem entre amigos, como a API guardou. */
+export interface MensagemDaApi {
+  id: number;
+  de: string;
+  para: string;
+  texto: string;
+  enviada_em: string;
+}
+
+export interface NaoLidasDaApi {
+  conta_id: string;
+  quantas: number;
+}
+
 /** Para quem vai o pedido: pelo código de amigo ou pela conta. */
 export type AlvoDoPedido = { codigo: string } | { conta_id: string };
 
@@ -47,6 +61,12 @@ export function criarApiDosAmigos(base: string, buscar?: typeof fetch) {
     desfazer: (token: string, contaId: string) => chamar<void>("DELETE", daConta(contaId), { token }),
     bloquear: (token: string, contaId: string) => chamar<void>("POST", `${daConta(contaId)}/bloqueio`, { token }),
     desbloquear: (token: string, contaId: string) => chamar<void>("DELETE", `${daConta(contaId)}/bloqueio`, { token }),
+    /** As mais novas primeiro, 50 por vez; com `antes`, as anteriores a essa mensagem. */
+    mensagens: (token: string, contaId: string, antes?: number) =>
+      chamar<MensagemDaApi[]>("GET", `${daConta(contaId)}/mensagens${antes ? `?antes=${antes}` : ""}`, { token }),
+    enviarMensagem: (token: string, contaId: string, texto: string) => chamar<MensagemDaApi>("POST", `${daConta(contaId)}/mensagens`, { token, corpo: { texto } }),
+    marcarLidas: (token: string, contaId: string) => chamar<void>("POST", `${daConta(contaId)}/mensagens/lidas`, { token }),
+    naoLidas: (token: string) => chamar<NaoLidasDaApi[]>("GET", "/conversas/nao-lidas", { token }),
   };
 }
 

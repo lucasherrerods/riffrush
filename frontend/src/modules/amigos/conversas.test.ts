@@ -1,46 +1,57 @@
 import { describe, expect, it } from "vitest";
-import { lerConversa, marcarComoLida, receberPrivada, totalDeNaoLidas, type Conversas } from "./conversas";
+import { definirNaoLidas, juntarHistorico, lerConversa, marcarComoLida, receberPrivada, totalDeNaoLidas, type Conversas } from "./conversas";
 
 const ana = { id: "ana", nome: "Ana", avatar: null };
 const eu = { id: "eu", nome: "Eu", avatar: null };
-const amigos = new Set(["ana"]);
 
 describe("receberPrivada", () => {
   it("guarda a mensagem do amigo na conversa com ele e conta como não lida", () => {
-    const conversas = receberPrivada({}, { de: ana, para: "eu", texto: "oi", em: 1 }, amigos);
-    expect(lerConversa(conversas, "ana").mensagens).toEqual([{ de: ana, para: "eu", texto: "oi", em: 1, minha: false }]);
+    const conversas = receberPrivada({}, { id: 1, de: ana, para: "eu", texto: "oi", em: 10 }, "eu");
+    expect(lerConversa(conversas, "ana").mensagens).toEqual([{ id: 1, de: "ana", texto: "oi", em: 10 }]);
     expect(lerConversa(conversas, "ana").naoLidas).toBe(1);
   });
 
-  it("a minha mensagem, que volta do relay, entra na conversa com quem recebeu sem contar como não lida", () => {
-    const conversas = receberPrivada({}, { de: eu, para: "ana", texto: "bora", em: 2 }, amigos);
-    expect(lerConversa(conversas, "ana").mensagens[0].minha).toBe(true);
+  it("a minha, que volta do relay, entra na conversa com quem recebeu sem contar como não lida", () => {
+    const conversas = receberPrivada({}, { id: 2, de: eu, para: "ana", texto: "bora", em: 20 }, "eu");
+    expect(lerConversa(conversas, "ana").mensagens).toHaveLength(1);
     expect(lerConversa(conversas, "ana").naoLidas).toBe(0);
   });
 
-  it("descarta mensagem de quem não é amigo", () => {
-    expect(receberPrivada({}, { de: { id: "estranho", nome: "X", avatar: null }, para: "eu", texto: "oi", em: 1 }, amigos)).toEqual({});
-  });
-
-  it("guarda só as últimas 50 mensagens de cada conversa", () => {
-    let conversas: Conversas = {};
-    for (let i = 0; i < 60; i++) conversas = receberPrivada(conversas, { de: ana, para: "eu", texto: `m${i}`, em: i }, amigos);
-    expect(lerConversa(conversas, "ana").mensagens).toHaveLength(50);
-    expect(lerConversa(conversas, "ana").mensagens[0].texto).toBe("m10");
+  it("a mesma mensagem duas vezes (resposta da API e cópia do relay) entra uma vez só", () => {
+    let conversas = receberPrivada({}, { id: 3, de: ana, para: "eu", texto: "oi", em: 10 }, "eu");
+    conversas = receberPrivada(conversas, { id: 3, de: ana, para: "eu", texto: "oi", em: 10 }, "eu");
+    expect(lerConversa(conversas, "ana").mensagens).toHaveLength(1);
+    expect(lerConversa(conversas, "ana").naoLidas).toBe(1);
   });
 });
 
-describe("marcarComoLida e totalDeNaoLidas", () => {
-  it("zera as não lidas de uma conversa e soma as de todas", () => {
-    let conversas = receberPrivada({}, { de: ana, para: "eu", texto: "oi", em: 1 }, new Set(["ana", "bia"]));
-    conversas = receberPrivada(conversas, { de: { id: "bia", nome: "Bia", avatar: null }, para: "eu", texto: "oi", em: 2 }, new Set(["ana", "bia"]));
-    expect(totalDeNaoLidas(conversas)).toBe(2);
+describe("juntarHistorico", () => {
+  it("junta o histórico da API com o que já chegou, em ordem e sem repetir", () => {
+    let conversas = receberPrivada({}, { id: 5, de: ana, para: "eu", texto: "novo", em: 50 }, "eu");
+    conversas = juntarHistorico(conversas, "ana", [
+      { id: 5, de: "ana", para: "eu", texto: "novo", enviada_em: "2026-11-09T12:00:00Z" },
+      { id: 2, de: "eu", para: "ana", texto: "velho", enviada_em: "2026-11-09T11:00:00Z" },
+    ]);
+    const { mensagens } = lerConversa(conversas, "ana");
+    expect(mensagens.map((m) => m.texto)).toEqual(["velho", "novo"]);
+    expect(mensagens[0].em).toBe(Date.parse("2026-11-09T11:00:00Z"));
+    expect(lerConversa(conversas, "ana").carregada).toBe(true);
+  });
+});
+
+describe("não lidas", () => {
+  it("a contagem vem da API, zera ao ler e soma as de todos", () => {
+    let conversas: Conversas = definirNaoLidas({}, [
+      { conta_id: "ana", quantas: 2 },
+      { conta_id: "bia", quantas: 1 },
+    ]);
+    expect(totalDeNaoLidas(conversas)).toBe(3);
     conversas = marcarComoLida(conversas, "ana");
     expect(lerConversa(conversas, "ana").naoLidas).toBe(0);
     expect(totalDeNaoLidas(conversas)).toBe(1);
   });
 
-  it("conversa que não existe aparece vazia", () => {
-    expect(lerConversa({}, "ninguem")).toEqual({ mensagens: [], naoLidas: 0 });
+  it("conversa que não existe aparece vazia e sem carregar", () => {
+    expect(lerConversa({}, "ninguem")).toEqual({ mensagens: [], naoLidas: 0, carregada: false });
   });
 });

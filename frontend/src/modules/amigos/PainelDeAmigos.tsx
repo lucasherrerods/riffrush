@@ -122,10 +122,7 @@ function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar, aoAssistir }: { ami
   if (!amigos.length) return <Vazio>Nenhum amigo ainda. Passe o seu código ou adicione o de alguém.</Vazio>;
   const { online, offline } = separarPorPresenca(filtrarPorNome(amigos, busca), presenca.pessoas);
   const conversando = amigos.find((a) => a.conta_id === conversandoCom);
-  if (conversando) {
-    const estaOnline = presenca.pessoas.some((p) => p.id === conversando.conta_id);
-    return <ConversaComAmigo amigo={conversando} online={estaOnline} conectada={presenca.conectada} aoVoltar={() => setConversandoCom(null)} />;
-  }
+  if (conversando) return <ConversaComAmigo amigo={conversando} conectada={presenca.conectada} aoVoltar={() => setConversandoCom(null)} />;
   const conversar = (amigo: { conta_id: string; nome: string }) => (
     <BotaoDeConversar nome={amigo.nome} naoLidas={lerConversa(todas, amigo.conta_id).naoLidas} aoClicar={() => setConversandoCom(amigo.conta_id)} />
   );
