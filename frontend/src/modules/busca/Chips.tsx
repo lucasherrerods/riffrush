@@ -2,7 +2,7 @@ import { cn } from "@/shared/lib/utils";
 
 const classeDoChip = (ligado: boolean) =>
   cn(
-    "rounded-full border-2 px-4 py-1 font-titulo text-base tracking-wide uppercase transition-colors max-md:px-3 max-md:text-sm",
+    "rounded-full border-2 px-4 py-1 font-titulo text-base tracking-wide uppercase max-md:px-3 max-md:text-sm",
     ligado ? "border-texto bg-primaria text-texto ring-2 ring-primaria" : "border-borda bg-superficie-elevada text-texto-suave hover:text-texto",
   );
 
