@@ -116,7 +116,7 @@ describe("TelaDoMania", () => {
       status: "ranked",
       dificuldades: [{ beatmapId: 11, nome: "Hard", teclas: 4, estrelas: 3.2, hash: "h", duracaoS: 1 }],
     };
-    render(<TelaDoMania abrirBiblioteca={async () => biblioteca} buscar={async () => [mapa]} baixar={async () => arquivoOsz()} />);
+    render(<TelaDoMania abrirBiblioteca={async () => biblioteca} buscar={async () => ({ mapas: [mapa], temMais: false })} baixar={async () => arquivoOsz()} />);
     const usuario = userEvent.setup();
     await usuario.click(screen.getByRole("button", { name: "Buscar mapas" }));
     await usuario.click(await screen.findByRole("button", { name: "Baixar Musica" }));
@@ -133,7 +133,7 @@ describe("TelaDoMania", () => {
     try {
       const biblioteca = bibliotecaNaMemoria();
       const mapa = { beatmapsetId: 7, titulo: "Musica", tituloUnicode: "Música", artista: "Banda", artistaUnicode: "Banda", mapper: "Mapper", status: "ranked", dificuldades: [] };
-      render(<TelaDoMania abrirBiblioteca={async () => biblioteca} buscar={async () => [mapa]} baixar={async () => arquivoOsz()} decodificar={async () => ({ duration: 10 }) as AudioBuffer} />);
+      render(<TelaDoMania abrirBiblioteca={async () => biblioteca} buscar={async () => ({ mapas: [mapa], temMais: false })} baixar={async () => arquivoOsz()} decodificar={async () => ({ duration: 10 }) as AudioBuffer} />);
       const usuario = userEvent.setup();
       await usuario.click(screen.getByRole("button", { name: "Buscar mapas" }));
       await usuario.click(await screen.findByRole("button", { name: "Baixar Musica" }));

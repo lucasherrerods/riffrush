@@ -34,7 +34,7 @@ import { TelaDeJogoMania, type EventoDoManiaAoVivo, type MapaParaJogar, type Opc
 import { TelaDeSelecaoMania } from "./selecao/TelaDeSelecaoMania";
 import { carregarConfiguracoesDoMania, salvarConfiguracoesDoMania } from "./settings/configuracoesMania";
 import { JanelaDeConfiguracoesMania } from "./settings/JanelaDeConfiguracoesMania";
-import type { FiltrosDaBusca, MapaDaBusca, baixarOsz } from "./busca/api";
+import type { FiltrosDaBusca, MapaDaBusca, PaginaDaBusca, baixarOsz } from "./busca/api";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 import { definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
@@ -56,7 +56,7 @@ interface Props {
   /** Para os testes. */
   abrirBiblioteca?: () => Promise<BibliotecaDoMania>;
   decodificar?: (contexto: AudioContext, bytes: Uint8Array) => Promise<AudioBuffer>;
-  buscar?: (filtros: FiltrosDaBusca) => Promise<MapaDaBusca[]>;
+  buscar?: (filtros: FiltrosDaBusca) => Promise<PaginaDaBusca>;
   baixar?: typeof baixarOsz;
 }
 
