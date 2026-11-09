@@ -73,3 +73,21 @@ it("abre já no conjunto pedido, como quando vem da busca", () => {
   render(<TelaDeSelecaoMania conjuntos={conjuntos} selecionado="c" mods={0} aoMudarMods={vi.fn()} aoImportar={vi.fn()} aoJogar={vi.fn()} />);
   expect(titulo()).toBe("Gama");
 });
+
+it("favorita com o botão ou a tecla F, e o filtro de favoritos deixa só elas na roda", async () => {
+  localStorage.clear();
+  montar();
+  await userEvent.click(screen.getByRole("button", { name: "Favoritar" }));
+  expect(screen.getByRole("button", { name: "Tirar dos favoritos" })).toHaveAttribute("aria-pressed", "true");
+  expect(JSON.parse(localStorage.getItem("riffrush:mania:favoritas") ?? "[]")).toEqual(["a"]);
+  await userEvent.click(screen.getByRole("button", { name: "Favoritos" }));
+  expect(screen.getByText("1 de 1 mapa · 3 na biblioteca")).toBeInTheDocument();
+  fireEvent.keyDown(window, { code: "KeyF" });
+  expect(screen.getByText("Nenhum mapa com esse filtro.")).toBeInTheDocument();
+});
+
+it("tem o botão de tocar e o rodapé com os atalhos, como no Rock", () => {
+  montar();
+  expect(screen.getByRole("button", { name: /TOCAR/ })).toBeInTheDocument();
+  expect(screen.getByText("Confirmar")).toBeInTheDocument();
+});

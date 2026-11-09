@@ -12,12 +12,12 @@ describe("favoritas", () => {
   });
 
   it("guarda e lê de volta, e ignora o que não for lista de ids", () => {
-    salvarFavoritas(new Set(["a", "b"]));
-    expect([...carregarFavoritas()]).toEqual(["a", "b"]);
+    salvarFavoritas("riffrush:favoritas", new Set(["a", "b"]));
+    expect([...carregarFavoritas("riffrush:favoritas")]).toEqual(["a", "b"]);
     localStorage.setItem("riffrush:favoritas", '{"quebrado":');
-    expect(carregarFavoritas().size).toBe(0);
+    expect(carregarFavoritas("riffrush:favoritas").size).toBe(0);
     localStorage.setItem("riffrush:favoritas", '["a", 3]');
-    expect([...carregarFavoritas()]).toEqual(["a"]);
+    expect([...carregarFavoritas("riffrush:favoritas")]).toEqual(["a"]);
   });
 
   it("o filtro desligado mostra todas; ligado, só as favoritas, na ordem da lista", () => {

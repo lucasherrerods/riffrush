@@ -1,12 +1,25 @@
 import { useMemo, useRef, useState, type DragEvent } from "react";
-import { Dices, Info, ListOrdered, Search, Upload } from "lucide-react";
-import { BarraDaSelecao, BotaoDaSelecao, Carrossel, TituloDaSelecao, indiceDandoAVolta, passosSemDarAVolta, type DificuldadeDoCarrossel, type ItemDoCarrossel } from "@/modules/selecao";
+import { Info, ListOrdered, Search, Upload } from "lucide-react";
+import {
+  BarraDaSelecao,
+  BotaoDaSelecao,
+  BotaoDeFavoritar,
+  BotaoDeTocar,
+  Carrossel,
+  FiltrosDaBiblioteca,
+  RodapeDeComandos,
+  TituloDaSelecao,
+  alternarFavorita,
+  carregarFavoritas,
+  indiceDandoAVolta,
+  passosSemDarAVolta,
+  salvarFavoritas,
+  type DificuldadeDoCarrossel,
+  type ItemDoCarrossel,
+} from "@/modules/selecao";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
-import { Button } from "@/shared/ui/button";
-import { CampoDeSelecao } from "@/shared/ui/CampoDeSelecao";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
-import { Input } from "@/shared/ui/input";
 import { NumeroDestacado } from "@/shared/ui/NumeroDestacado";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import type { ConjuntoSalvo, DificuldadeSalva } from "../beatmaps/biblioteca";
@@ -32,6 +45,16 @@ interface Props {
   /** Assistir ao replay de uma partida do ranking da dificuldade escolhida. */
   aoAssistir?: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva, linha: PosicaoNoRankingDoMania) => void;
 }
+
+const CHAVE_DAS_FAVORITAS = "riffrush:mania:favoritas";
+
+const COMANDOS = [
+  { teclas: "← →", rotulo: "Dificuldade" },
+  { teclas: "↑ ↓", rotulo: "Mapa" },
+  { teclas: "Enter", rotulo: "Confirmar" },
+  { teclas: "F", rotulo: "Favoritar" },
+  { teclas: "Esc", rotulo: "Voltar" },
+];
 
 const ehOsz = (arquivo: File) => arquivo.name.toLowerCase().endsWith(".osz");
 
@@ -81,10 +104,12 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
   const [teclas, setTeclas] = useState<number | "todas">("todas");
   const [ordem, setOrdem] = useState<OrdemDaSelecao>("recentes");
   const [arrastando, setArrastando] = useState(false);
+  const [favoritas, setFavoritas] = useState(() => carregarFavoritas(CHAVE_DAS_FAVORITAS));
+  const [soFavoritas, setSoFavoritas] = useState(false);
   const seletor = useRef<HTMLInputElement>(null);
 
   const todos = conjuntos ?? [];
-  const lista = useMemo(() => filtrarConjuntos(conjuntos ?? [], { texto, teclas, ordem }), [conjuntos, texto, teclas, ordem]);
+  const lista = useMemo(() => filtrarConjuntos(conjuntos ?? [], { texto, teclas, ordem, favoritas, soFavoritas }), [conjuntos, texto, teclas, ordem, favoritas, soFavoritas]);
   const opcoesDeTeclas = teclasDaBiblioteca(todos);
   const indice = Math.max(
     lista.findIndex((c) => c.id === id),
@@ -103,6 +128,13 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
   const pular = (passos: number) => escolher(indice + passosSemDarAVolta(indice, passos, lista.length));
   const sortear = () => lista.length > 1 && escolher(indiceDandoAVolta(indice, 1 + Math.floor(Math.random() * (lista.length - 1)), lista.length));
   const jogar = () => conjunto && dificuldade && aoJogar(conjunto, dificuldade);
+  const favorita = !!conjunto && favoritas.has(conjunto.id);
+  const alternarFavoritaAtual = () => {
+    if (!conjunto) return;
+    const novas = alternarFavorita(favoritas, conjunto.id);
+    setFavoritas(novas);
+    salvarFavoritas(CHAVE_DAS_FAVORITAS, novas);
+  };
 
   useTeclado((evento) => {
     // Com o foco num campo (a busca), as teclas são dele, menos as que andam pela roda.
@@ -117,6 +149,7 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
     }
     if (evento.code === "Enter" && !(evento.target instanceof HTMLButtonElement)) return jogar();
     if (digitando) return;
+    if (evento.code === "KeyF") return alternarFavoritaAtual();
     if (evento.code === "Home") return escolher(0);
     if (evento.code === "End") return escolher(lista.length - 1);
     if ((evento.code === "ArrowLeft" || evento.code === "ArrowRight") && conjunto && dificuldade) {
@@ -136,7 +169,7 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
     receber(evento.dataTransfer.files);
   };
 
-  const itens: ItemDoCarrossel[] = lista.map((c) => ({ id: c.id, titulo: c.tituloUnicode || c.titulo, artista: c.artistaUnicode || c.artista, capa: <CapaDoConjunto conjunto={c} /> }));
+  const itens: ItemDoCarrossel[] = lista.map((c) => ({ id: c.id, titulo: c.tituloUnicode || c.titulo, artista: c.artistaUnicode || c.artista, capa: <CapaDoConjunto conjunto={c} />, favorita: favoritas.has(c.id) }));
   const dificuldades: DificuldadeDoCarrossel[] = (conjunto?.mapas ?? []).map((m) => {
     const estrelas = conjunto?.estrelas?.[m.hash];
     return { id: m.hash, rotulo: rotuloDaDificuldade(conjunto!, m), cor: estrelas === undefined ? "bg-borda" : COR_DA_FAIXA[faixaDasEstrelas(estrelas)] };
@@ -168,7 +201,7 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
       }}
       onDragLeave={() => setArrastando(false)}
       onDrop={aoSoltar}
-      className={cn("relative isolate grid h-full grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:p-4", arrastando && "outline-2 outline-dashed outline-primaria -outline-offset-8")}
+      className={cn("relative isolate flex h-full flex-col", arrastando && "outline-2 outline-dashed outline-primaria -outline-offset-8")}
     >
       {/* Como no Rock: a capa do mapa, borrada, pinta o fundo e troca junto com a seleção. */}
       {conjunto && (
@@ -176,6 +209,7 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
           <CapaDoConjunto conjunto={conjunto} className="scale-110 blur-3xl" />
         </div>
       )}
+      <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:p-4">
       <aside className="col-span-5 flex min-h-0 flex-col gap-4 max-md:col-span-1">
         <BarraDaSelecao aoVoltar={aoVoltar} esquerda={<SeletorDeMods mods={mods} aoMudar={aoMudarMods} />}>
           {aoBuscarMapas && (
@@ -196,6 +230,7 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
             titulo={conjunto.tituloUnicode || conjunto.titulo}
             subtitulo={`${conjunto.artistaUnicode || conjunto.artista} · mapa de ${conjunto.mapper}`}
             aviso={conjunto.origem === "importado" && "Importado · sem XP nem ranking"}
+            acao={<BotaoDeFavoritar favorita={favorita} aoAlternar={alternarFavoritaAtual} />}
           />
         )}
 
@@ -220,27 +255,25 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
         )}
         {!conjunto && <div className="flex-1" />}
 
-        <div className="flex justify-end gap-2">
-          {aoTreinar && (
-            <Button
-              variant="outline"
-              className="h-10 border-primaria bg-superficie-elevada px-6 font-titulo text-lg tracking-wide text-primaria uppercase"
-              disabled={!dificuldade}
-              onClick={() => conjunto && dificuldade && aoTreinar(conjunto, dificuldade)}
-            >
-              Treinar
-            </Button>
-          )}
-          <Button className="h-10 px-8 font-titulo text-lg tracking-wide text-texto uppercase" disabled={!dificuldade} onClick={jogar}>
-            Jogar
-          </Button>
-        </div>
+        <BotaoDeTocar aoTocar={jogar} aoTreinar={aoTreinar && (() => conjunto && dificuldade && aoTreinar(conjunto, dificuldade))} desabilitado={!dificuldade} />
       </aside>
 
       <div className="col-span-7 flex min-h-0 flex-col gap-4 max-md:col-span-1">
         {!!todos.length && (
-          <div className="flex flex-wrap items-end gap-4">
-            <Input type="search" placeholder="Buscar na biblioteca" aria-label="Filtrar mapas" value={texto} onChange={(e) => setTexto(e.target.value)} className="min-w-48 flex-1" />
+          <FiltrosDaBiblioteca
+            texto={texto}
+            aoMudarTexto={setTexto}
+            placeholder="Buscar na biblioteca"
+            rotuloDoCampo="Filtrar mapas"
+            ordens={ORDENS}
+            ordem={ordem}
+            aoMudarOrdem={setOrdem}
+            soFavoritas={soFavoritas}
+            aoAlternarFavoritas={() => setSoFavoritas((ligado) => !ligado)}
+            aoSortear={sortear}
+            podeSortear={lista.length > 1}
+            contagem={`${lista.length ? `${indice + 1} de ${lista.length} ${lista.length === 1 ? "mapa" : "mapas"}` : ""}${lista.length < todos.length && lista.length ? ` · ${todos.length} na biblioteca` : ""}`}
+          >
             {opcoesDeTeclas.length > 1 && (
               <GrupoDeOpcoes
                 titulo="Teclas"
@@ -249,18 +282,7 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
                 aoEscolher={(valor) => setTeclas(valor === "todas" ? "todas" : Number(valor))}
               />
             )}
-            <CampoDeSelecao titulo="Ordem" opcoes={ORDENS} valor={ordem} aoEscolher={setOrdem} />
-            <Button variant="outline" disabled={lista.length < 2} onClick={sortear} aria-label="Aleatório">
-              <Dices className="opacity-70" />
-              <span className="max-md:sr-only">Aleatório</span>
-            </Button>
-          </div>
-        )}
-        {!!todos.length && (
-          <p className="text-sm text-texto-suave" aria-live="polite">
-            {lista.length ? `${indice + 1} de ${lista.length} ${lista.length === 1 ? "mapa" : "mapas"}` : ""}
-            {lista.length < todos.length && lista.length ? ` · ${todos.length} na biblioteca` : ""}
-          </p>
+          </FiltrosDaBiblioteca>
         )}
 
         {conjuntos === null && <p className="text-texto-suave">Abrindo a biblioteca…</p>}
@@ -283,6 +305,8 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
           />
         )}
       </div>
+      </div>
+      <RodapeDeComandos comandos={COMANDOS} />
     </section>
   );
 }

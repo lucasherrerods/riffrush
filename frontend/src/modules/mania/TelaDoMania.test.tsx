@@ -79,7 +79,7 @@ describe("TelaDoMania", () => {
     await screen.findByRole("heading", { name: "Música" });
     expect(screen.getByRole("radio", { name: /4K.*Hard/ })).toBeChecked();
     const fontesAntes = audio().fontes.length;
-    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    await usuario.click(screen.getByRole("button", { name: /TOCAR/ }));
     expect(await screen.findByLabelText("Pista do Mania")).toBeInTheDocument();
     await waitFor(() => expect(audio().fontes.length).toBeGreaterThan(fontesAntes));
     // Ninguém toca: as notas viram Miss e o resultado chega.
@@ -141,7 +141,7 @@ describe("TelaDoMania", () => {
       await screen.findByRole("heading", { name: "Música" });
       expect(screen.getByRole("radio", { name: /4K.*Hard/ })).toBeChecked();
       const fontesAntes = audio().fontes.length;
-      await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+      await usuario.click(screen.getByRole("button", { name: /TOCAR/ }));
       await waitFor(() => expect(audio().fontes.length).toBeGreaterThan(fontesAntes));
       await act(async () => {
         audio().currentTime += 10;
