@@ -68,3 +68,8 @@ it("a aba de detalhes mostra os números da dificuldade", async () => {
   expect(screen.getByText("2:05")).toBeInTheDocument();
   expect(screen.getByText("300")).toBeInTheDocument();
 });
+
+it("abre já no conjunto pedido, como quando vem da busca", () => {
+  render(<TelaDeSelecaoMania conjuntos={conjuntos} selecionado="c" mods={0} aoMudarMods={vi.fn()} aoImportar={vi.fn()} aoJogar={vi.fn()} />);
+  expect(titulo()).toBe("Gama");
+});

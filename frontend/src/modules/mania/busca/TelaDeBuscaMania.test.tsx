@@ -47,3 +47,10 @@ it("avisa quando os espelhos não respondem", async () => {
   render(<TelaDeBuscaMania baixados={new Set()} aoBaixar={vi.fn()} buscar={async () => Promise.reject(new Error("Os espelhos do osu! não responderam."))} />);
   expect(await screen.findByRole("alert")).toHaveTextContent("não responderam");
 });
+
+it("um mapa já baixado pode ser jogado dali mesmo", async () => {
+  const aoJogar = vi.fn();
+  render(<TelaDeBuscaMania baixados={new Set([7])} aoBaixar={vi.fn()} aoJogar={aoJogar} buscar={async () => [mapa]} />);
+  await userEvent.click(await screen.findByRole("button", { name: "Jogar Musica" }));
+  expect(aoJogar).toHaveBeenCalledWith(7);
+});

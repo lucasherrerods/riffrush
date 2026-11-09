@@ -120,11 +120,10 @@ describe("TelaDoMania", () => {
     const usuario = userEvent.setup();
     await usuario.click(screen.getByRole("button", { name: "Buscar mapas" }));
     await usuario.click(await screen.findByRole("button", { name: "Baixar Musica" }));
-    expect(await screen.findByText("Baixado")).toBeInTheDocument();
     const [salvo] = await biblioteca.listar();
     expect(salvo).toMatchObject({ id: "osu:7", origem: "osu", status: "ranked" });
-    await usuario.click(screen.getByRole("button", { name: "Voltar" }));
-    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    // Baixado, o mapa abre na seleção direto da busca.
+    await usuario.click(await screen.findByRole("button", { name: "Jogar Musica" }));
     expect(await screen.findByRole("heading", { name: "Música" })).toBeInTheDocument();
     expect(screen.queryByText("Importado · sem XP nem ranking")).not.toBeInTheDocument();
   });
@@ -138,9 +137,7 @@ describe("TelaDoMania", () => {
       const usuario = userEvent.setup();
       await usuario.click(screen.getByRole("button", { name: "Buscar mapas" }));
       await usuario.click(await screen.findByRole("button", { name: "Baixar Musica" }));
-      await screen.findByText("Baixado");
-      await usuario.click(screen.getByRole("button", { name: "Voltar" }));
-    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+      await usuario.click(await screen.findByRole("button", { name: "Jogar Musica" }));
       await screen.findByRole("heading", { name: "Música" });
       expect(screen.getByRole("radio", { name: /4K.*Hard/ })).toBeChecked();
       const fontesAntes = audio().fontes.length;
