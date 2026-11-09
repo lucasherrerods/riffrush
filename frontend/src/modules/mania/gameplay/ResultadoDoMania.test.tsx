@@ -36,3 +36,13 @@ it("avisa quando a música foi perdida", () => {
   render(<ResultadoDoMania titulo="Musica" dificuldade="Hard" resultado={{ ...resultado, derrota: true }} aoJogarDeNovo={vi.fn()} aoVoltar={vi.fn()} />);
   expect(screen.getByText("Você perdeu a música.")).toBeInTheDocument();
 });
+
+it("Enter volta e R joga de novo, como no Rock", async () => {
+  const aoVoltar = vi.fn();
+  const aoJogarDeNovo = vi.fn();
+  render(<ResultadoDoMania titulo="Música" dificuldade="Hard" resultado={resultado} aoJogarDeNovo={aoJogarDeNovo} aoVoltar={aoVoltar} />);
+  await userEvent.keyboard("{Enter}");
+  expect(aoVoltar).toHaveBeenCalled();
+  await userEvent.keyboard("r");
+  expect(aoJogarDeNovo).toHaveBeenCalled();
+});

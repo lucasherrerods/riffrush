@@ -1,4 +1,4 @@
-import { cn } from "@/shared/lib/utils";
+import { ChipsDeMods } from "@/modules/selecao";
 import { problemaDosMods } from "../gameplay/motor";
 import { MODS, type SiglaDoMod } from "../gameplay/mods";
 
@@ -33,25 +33,9 @@ export function alternarMod(mods: number, sigla: SiglaDoMod): number {
 
 export function SeletorDeMods({ mods, aoMudar }: { mods: number; aoMudar: (mods: number) => void }) {
   return (
-    <div role="group" aria-label="Mods" className="flex flex-wrap gap-2">
-      {DISPONIVEIS.map((sigla) => {
-        const ligado = (mods & MODS[sigla]) !== 0;
-        return (
-          <button
-            key={sigla}
-            type="button"
-            aria-pressed={ligado}
-            title={NOMES[sigla]}
-            onClick={() => aoMudar(alternarMod(mods, sigla))}
-            className={cn(
-              "grid size-11 place-items-center rounded-full border-2 font-titulo text-base tracking-wide transition-colors",
-              ligado ? "border-texto bg-primaria text-texto ring-2 ring-primaria" : "border-borda bg-superficie-elevada text-texto-suave hover:text-texto",
-            )}
-          >
-            {sigla}
-          </button>
-        );
-      })}
-    </div>
+    <ChipsDeMods
+      mods={DISPONIVEIS.map((sigla) => ({ id: sigla, sigla, nome: NOMES[sigla], ligado: (mods & MODS[sigla]) !== 0 }))}
+      aoAlternar={(sigla) => aoMudar(alternarMod(mods, sigla as SiglaDoMod))}
+    />
   );
 }

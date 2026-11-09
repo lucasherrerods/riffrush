@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { avisar } from "@/shared/ui/avisos";
-import type { FiltrosDaBusca, RespostaDaBusca, ResultadoDaBusca } from "./encore";
+import { TAMANHO_DA_PAGINA, type FiltrosDaBusca, type RespostaDaBusca, type ResultadoDaBusca } from "./encore";
 import { TelaDeBuscaDeMusicas } from "./TelaDeBuscaDeMusicas";
 
 function resultado(titulo: string, extra: Partial<ResultadoDaBusca> = {}): ResultadoDaBusca {
@@ -52,10 +52,10 @@ describe("TelaDeBuscaDeMusicas", () => {
     expect(buscar.mock.calls.map((c) => (c as unknown as [FiltrosDaBusca])[0].texto)).toEqual(["", "abc"]);
   });
 
-  it("os filtros de instrumento, dificuldade e gênero são selects e entram na busca", async () => {
+  it("os filtros de instrumento, dificuldade e gênero entram na busca", async () => {
     const { buscar, usuario } = abrir();
-    await usuario.selectOptions(screen.getByRole("combobox", { name: "Instrumento" }), "baixo");
-    await usuario.selectOptions(screen.getByRole("combobox", { name: "Dificuldade" }), "expert");
+    await usuario.click(within(screen.getByRole("radiogroup", { name: "Instrumento" })).getByRole("radio", { name: "Baixo" }));
+    await usuario.click(screen.getByRole("radio", { name: "Expert" }));
     await usuario.selectOptions(screen.getByRole("combobox", { name: "Gênero" }), "metal");
     await waitFor(() => expect(ultimaChamada(buscar)[0]).toMatchObject({ instrumento: "baixo", dificuldade: "expert", genero: "metal" }));
     // Com gênero, o texto procura só no nome da música.
@@ -73,7 +73,7 @@ describe("TelaDeBuscaDeMusicas", () => {
   it("o check de só com vídeo entra na busca", async () => {
     const { buscar, usuario } = abrir();
     await screen.findByRole("heading", { name: "Hit" });
-    await usuario.click(screen.getByRole("switch", { name: "Só com vídeo" }));
+    await usuario.click(screen.getByRole("button", { name: "Só com vídeo" }));
     await waitFor(() => expect(ultimaChamada(buscar)[0]).toMatchObject({ soComVideo: true }));
     expect(screen.getByRole("searchbox", { name: "Buscar músicas" })).toHaveAttribute("placeholder", "Nome da música");
   });
@@ -81,18 +81,21 @@ describe("TelaDeBuscaDeMusicas", () => {
   it("o check de oficiais e a ordem de mais jogadas entram na busca", async () => {
     const { buscar, usuario } = abrir();
     await screen.findByRole("heading", { name: "Hit" });
-    await usuario.click(screen.getByRole("switch", { name: "Oficiais" }));
+    await usuario.click(screen.getByRole("button", { name: "Oficiais" }));
     await usuario.selectOptions(screen.getByRole("combobox", { name: "Ordem" }), "mais-jogadas");
     await waitFor(() => expect(ultimaChamada(buscar)[0]).toMatchObject({ soOficiais: true, ordem: "mais-jogadas" }));
   });
 
-  it("pagina os resultados", async () => {
-    const buscar = vi.fn(async (): Promise<RespostaDaBusca> => ({ total: 25, resultados: [resultado("Hit")] }));
-    const { usuario } = abrir(buscar);
-    expect(await screen.findByText("Página 1 de 3")).toBeInTheDocument();
-    await usuario.click(screen.getByRole("button", { name: "Próxima página" }));
-    await waitFor(() => expect(ultimaChamada(buscar)[1]).toBe(2));
-    expect(await screen.findByText("Página 2 de 3")).toBeInTheDocument();
+  it("carrega mais resultados no fim da lista, sem repetir, até acabar", async () => {
+    const buscar = vi.fn(async (_f: FiltrosDaBusca, pagina: number): Promise<RespostaDaBusca> =>
+      pagina === 1 ? { total: TAMANHO_DA_PAGINA + 1, resultados: [resultado("Hit")] } : { total: TAMANHO_DA_PAGINA + 1, resultados: [resultado("Hit"), resultado("Outra")] },
+    );
+    const { usuario } = abrir(buscar as unknown as Parameters<typeof abrir>[0]);
+    await usuario.click(await screen.findByRole("button", { name: "Carregar mais" }));
+    expect(await screen.findByRole("heading", { name: "Outra" })).toBeInTheDocument();
+    expect(ultimaChamada(buscar)[1]).toBe(2);
+    expect(screen.getAllByRole("heading", { name: "Hit" })).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Carregar mais" })).not.toBeInTheDocument();
   });
 
   it("avisa quando não encontra nada", async () => {
@@ -124,9 +127,9 @@ describe("TelaDeBuscaDeMusicas", () => {
       const { usuario } = abrir(undefined, { aoBaixar });
       await usuario.click(await screen.findByRole("button", { name: "Baixar Hit" }));
       expect(aoBaixar).toHaveBeenCalledWith(hit, expect.objectContaining({ comVideo: false }));
-      expect(await screen.findByText("Baixando 42%")).toBeInTheDocument();
+      expect(await screen.findByRole("progressbar", { name: "Baixando Hit" })).toHaveAttribute("aria-valuenow", "42");
       terminar(true);
-      await waitFor(() => expect(screen.queryByText(/Baixando/)).not.toBeInTheDocument());
+      await waitFor(() => expect(screen.queryByRole("progressbar")).not.toBeInTheDocument());
     });
 
     it("baixa um por vez", async () => {
@@ -140,7 +143,7 @@ describe("TelaDeBuscaDeMusicas", () => {
     it("a opção de vídeo de fundo vai para o download", async () => {
       const aoBaixar = vi.fn(async () => true);
       const { usuario } = abrir(undefined, { aoBaixar });
-      await usuario.click(screen.getByRole("switch", { name: "Baixar com vídeo de fundo" }));
+      await usuario.click(screen.getByRole("button", { name: "Baixar com vídeo de fundo" }));
       await usuario.click(await screen.findByRole("button", { name: "Baixar Hit" }));
       expect(aoBaixar).toHaveBeenCalledWith(hit, expect.objectContaining({ comVideo: true }));
     });

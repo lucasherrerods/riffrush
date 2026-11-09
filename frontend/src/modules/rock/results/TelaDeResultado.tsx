@@ -7,8 +7,7 @@ import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
 import { corDaPrecisao, type Resultado } from "@/modules/rock/gameplay";
 import { DIFICULDADES } from "@/modules/rock/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
-import { cn } from "@/shared/lib/utils";
-import { SeloDaNota } from "@/shared/ui/SeloDaNota";
+import { CartaoDeResultado } from "@/modules/resultado";
 import { Button } from "@/shared/ui/button";
 import { estrelasDoResultado } from "./recordes";
 
@@ -63,11 +62,7 @@ export function TelaDeResultado(props: Props) {
     else if (evento.code === "KeyR" && podeRepetir) aoRepetir();
   });
 
-  const estatisticas = [
-    { rotulo: "Notas acertadas", valor: `${resultado.acertos} / ${resultado.total}` },
-    { rotulo: "Maior sequência", valor: resultado.maiorSequencia === null ? "—" : String(resultado.maiorSequencia) },
-    { rotulo: "Dificuldade", valor: DIFICULDADES.find((d) => d.id === resultado.dificuldade)?.rotulo ?? "" },
-  ];
+  const dificuldade = DIFICULDADES.find((d) => d.id === resultado.dificuldade)?.rotulo ?? "";
   const julgamentos = resultado.julgamentos && [
     { rotulo: "Perfeito", valor: resultado.julgamentos.perfeito },
     { rotulo: "Ótimo", valor: resultado.julgamentos.otimo },
@@ -76,94 +71,66 @@ export function TelaDeResultado(props: Props) {
   ];
 
   return (
-    // Com a sala cheia o placar não cabe: a tela rola e os botões ficam presos embaixo, sem fundo, para não esconder nada.
-    <div className="flex h-full flex-col overflow-y-auto">
-      <div className="flex shrink-0 grow flex-col items-center px-8 pt-6 max-md:px-4 max-md:pt-4">
-        <div className="my-auto flex w-full flex-col items-center gap-5">
-          <div className="text-center">
-            <p className="text-sm font-semibold tracking-[0.3em] text-texto-suave">RESULTADO</p>
-            <h1 className="titulo-de-tela mt-1">{titulo}</h1>
-            <p className="mt-1 text-sm text-texto-suave">{artista}</p>
-            {jogador && (
-              <p className="mt-3 flex items-center justify-center gap-2 text-sm font-bold">
-                {jogador.avatar && <img src={jogador.avatar} alt="" referrerPolicy="no-referrer" className="size-8 rounded-sm" />}
-                Partida de {jogador.nome}
-              </p>
-            )}
-          </div>
-
-          <div role="img" aria-label={`${estrelas} de 5 estrelas`} className="flex gap-3">
+    <CartaoDeResultado
+      titulo={titulo}
+      subtitulo={
+        <>
+          {artista} · <span>{dificuldade}</span>
+        </>
+      }
+      precisao={precisao}
+      autor={
+        jogador && (
+          <p className="mt-2 flex items-center gap-2 text-sm font-bold">
+            {jogador.avatar && <img src={jogador.avatar} alt="" referrerPolicy="no-referrer" className="size-8 rounded-sm" />}
+            Partida de {jogador.nome}
+          </p>
+        )
+      }
+      destaques={
+        <div className="flex flex-wrap items-center gap-4">
+          <div role="img" aria-label={`${estrelas} de 5 estrelas`} className="flex gap-2">
             {Array.from({ length: 5 }, (_, i) => (
-              <motion.div
-                key={i}
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: 0.4 + i * 0.15, type: "spring", stiffness: 200 }}
-              >
-                <Star className={i < estrelas ? "size-10 fill-ouro text-ouro" : "size-10 text-borda"} />
+              <motion.div key={i} initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ delay: 0.4 + i * 0.15, type: "spring", stiffness: 200 }}>
+                <Star className={i < estrelas ? "size-8 fill-ouro text-ouro" : "size-8 text-borda"} />
               </motion.div>
             ))}
           </div>
-
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex items-center gap-6">
-              <SeloDaNota precisao={precisao} className="text-8xl max-md:text-6xl" />
-              <p aria-label={`${formatar(resultado.pontos)} pontos`} className="font-mono text-6xl font-black tabular-nums max-md:text-5xl">
-                {formatar(pontosNaTela)}
-              </p>
-            </div>
-            <p className="text-sm font-bold tracking-[0.2em] text-texto-suave">
-              PRECISÃO{" "}
-              <span aria-label="Precisão" className={cn("font-titulo text-3xl tracking-normal tabular-nums", corDaPrecisao(precisao))}>
-                {(precisao * 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%
-              </span>
-            </p>
-            {(recordeNovo || fullCombo) && (
-              <div className="flex gap-2">
-                {recordeNovo && (
-                  <span className="flex items-center gap-2 rounded-full bg-destaque px-4 py-2 text-base font-black text-fundo">
-                    <Trophy className="size-4 opacity-70" /> Novo recorde
-                  </span>
-                )}
-                {fullCombo && <span className="rounded-full bg-primaria px-4 py-2 text-base font-black">Full combo!</span>}
-              </div>
-            )}
-          </div>
-
-          {extra}
-
-          <dl className="grid grid-cols-4 gap-4 max-md:grid-cols-2">
-            {estatisticas.map((e) => (
-              <div key={e.rotulo} className="chapa w-36 px-3 py-2 text-center">
-                <dd className="text-xl font-black">{e.valor}</dd>
-                <dt className="text-sm text-texto-suave">{e.rotulo}</dt>
-              </div>
-            ))}
-          </dl>
-
-          {julgamentos && (
-            <dl className="flex gap-6">
-              {julgamentos.map((j) => (
-                <div key={j.rotulo} className="text-center">
-                  <dd className="font-titulo text-2xl tabular-nums">{j.valor}</dd>
-                  <dt className="text-sm text-texto-suave">{j.rotulo}</dt>
-                </div>
-              ))}
-            </dl>
+          {recordeNovo && (
+            <span className="flex items-center gap-2 rounded-full bg-destaque px-4 py-1 text-base font-black text-fundo">
+              <Trophy className="size-4 opacity-70" /> Novo recorde
+            </span>
           )}
+          {fullCombo && <span className="rounded-full bg-primaria px-4 py-1 text-base font-black">Full combo!</span>}
         </div>
-      </div>
-
-      <div className="pointer-events-none sticky bottom-0 flex justify-center gap-4 px-8 pt-4 pb-6 max-md:px-4 max-md:pb-4 [&>*]:pointer-events-auto">
-        {podeRepetir && (
-          <Button size="lg" variant="outline" onClick={aoRepetir}>
-            <RotateCcw className="opacity-70" /> Tocar de novo{dispositivo === "teclado" && !estreita && " (R)"}
+      }
+      numeros={[
+        { rotulo: "Pontuação", valor: formatar(pontosNaTela), rotuloDoValor: `${formatar(resultado.pontos)} pontos` },
+        {
+          rotulo: "Precisão",
+          valor: (
+            <span aria-label="Precisão" className={corDaPrecisao(precisao)}>{(precisao * 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%
+            </span>
+          ),
+        },
+        { rotulo: "Maior sequência", valor: resultado.maiorSequencia === null ? "—" : String(resultado.maiorSequencia) },
+        { rotulo: "Notas acertadas", valor: `${resultado.acertos} / ${resultado.total}` },
+      ]}
+      julgamentos={julgamentos}
+      extra={extra}
+      botoes={
+        <>
+          {podeRepetir && (
+            <Button variant="secondary" onClick={aoRepetir}>
+              <RotateCcw className="opacity-70" /> Tocar de novo{dispositivo === "teclado" && !estreita && " (R)"}
+            </Button>
+          )}
+          <Button onClick={aoContinuar}>
+            <ListMusic className="opacity-70" /> {rotuloDeContinuar ?? "Escolher outra"}
+            {!estreita && ` (${rotuloDoComando("confirmar", dispositivo)})`}
           </Button>
-        )}
-        <Button size="lg" onClick={aoContinuar}>
-          <ListMusic className="opacity-70" /> {rotuloDeContinuar ?? "Escolher outra"}{!estreita && ` (${rotuloDoComando("confirmar", dispositivo)})`}
-        </Button>
-      </div>
-    </div>
+        </>
+      }
+    />
   );
 }
