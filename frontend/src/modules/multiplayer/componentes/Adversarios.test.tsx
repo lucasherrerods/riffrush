@@ -35,6 +35,16 @@ describe("Adversarios", () => {
     expect(screen.getByRole("meter", { name: "Vida de Vitor" })).toHaveAttribute("aria-valuenow", "50");
   });
 
+  it("mostra a sequência de acertos seguidos de cada adversário", () => {
+    const estado = { pontos: 0, vida: 0.5, sequencia: 42, pulso: 0, derrota: false, terminou: false };
+    const { rerender } = render(<Adversarios sala={sala({ adversarios: { 2: estado } })} />);
+    expect(screen.getByLabelText("Sequência de Vitor")).toHaveTextContent("42x");
+    rerender(<Adversarios compacto sala={sala({ adversarios: { 2: estado } })} />);
+    expect(screen.getByLabelText("Sequência de Vitor")).toHaveTextContent("42x");
+    rerender(<Adversarios sala={sala({ adversarios: { 2: { ...estado, sequencia: 0 } } })} />);
+    expect(screen.queryByLabelText("Sequência de Vitor")).toBeNull();
+  });
+
   it("marca quem foi vaiado", () => {
     render(<Adversarios sala={sala({ adversarios: { 2: { pontos: 0, vida: 0, sequencia: 0, pulso: 0, derrota: true, terminou: true } } })} />);
     expect(screen.getByText("Vaiado")).toBeInTheDocument();
