@@ -17,6 +17,8 @@ export interface ConjuntoSalvo extends Conjunto {
   estrelas?: Record<string, number>;
   mapas: DificuldadeSalva[];
   usadoEm: number;
+  /** A imagem de fundo do mapa, tirada do .osz na importação. Conjuntos salvos antes dela não têm. */
+  capa?: Blob;
 }
 
 /** Só os mapas baixados do osu! que não mudam mais valem XP: a API confere a partida pelo .osu oficial. */
@@ -90,6 +92,25 @@ export async function abrirBibliotecaDoMania({ nome = "riffrush-mania", relogio 
   };
 }
 
+const TIPOS_DE_IMAGEM: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp", bmp: "image/bmp" };
+
+/** O fundo da primeira dificuldade que tem um, como imagem. */
+function capaDoPacote({ mapas, arquivos }: OszLido): Blob | undefined {
+  for (const { fundo } of mapas) {
+    const bytes = fundo && arquivos.get(fundo);
+    const tipo = fundo && TIPOS_DE_IMAGEM[fundo.split(".").pop()?.toLowerCase() ?? ""];
+    if (bytes && tipo) return new Blob([bytes as BlobPart], { type: tipo });
+  }
+  return undefined;
+}
+
+/** De onde vem a capa na roda: o fundo guardado; sem ele, a capa do site do osu! para os baixados de lá. */
+export function fonteDaCapa(conjunto: ConjuntoSalvo): Blob | string | undefined {
+  if (conjunto.capa) return conjunto.capa;
+  if (conjunto.origem === "osu" && conjunto.beatmapsetId) return `https://assets.ppy.sh/beatmaps/${conjunto.beatmapsetId}/covers/list@2x.jpg`;
+  return undefined;
+}
+
 /** Lê o .osz e guarda o conjunto. Lança `ErroDoOsz` se o pacote não serve para o Mania. */
 export async function importarOsz(
   biblioteca: BibliotecaDoMania,
@@ -98,7 +119,8 @@ export async function importarOsz(
 ): Promise<ConjuntoSalvo> {
   // O .osu é lido pelo motor em WASM, que só carrega quando o Mania abre.
   await iniciarMotorDoMania();
-  const { conjunto, mapas } = lerOsz(new Uint8Array(await osz.arrayBuffer()));
+  const lido = lerOsz(new Uint8Array(await osz.arrayBuffer()));
+  const { conjunto, mapas } = lido;
   const salvo: ConjuntoSalvo = {
     ...conjunto,
     id: conjunto.beatmapsetId ? `osu:${conjunto.beatmapsetId}` : `arquivo:${mapas[0].hash}`,
@@ -107,6 +129,7 @@ export async function importarOsz(
     estrelas,
     mapas: mapas.map(({ texto: _texto, ...dificuldade }) => dificuldade),
     usadoEm: 0,
+    capa: capaDoPacote(lido),
   };
   await biblioteca.guardar(salvo, osz);
   return salvo;

@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type DragEvent } from "react";
-import { ArrowLeft, Dices, Info, ListOrdered, Music, Search, Upload } from "lucide-react";
+import { ArrowLeft, Dices, Info, ListOrdered, Search, Upload } from "lucide-react";
 import { Carrossel, indiceDandoAVolta, passosSemDarAVolta, type DificuldadeDoCarrossel, type ItemDoCarrossel } from "@/modules/selecao";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
@@ -11,13 +11,15 @@ import { NumeroDestacado } from "@/shared/ui/NumeroDestacado";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import type { ConjuntoSalvo, DificuldadeSalva } from "../beatmaps/biblioteca";
 import { faixaDasEstrelas, type FaixaDeDificuldade } from "../beatmaps/dificuldades";
-import { TeclaDoMania } from "../menu/TeclaDoMania";
 import type { PosicaoNoRankingDoMania } from "../ranking/api";
 import { PainelDoRankingDoMania } from "../ranking/PainelDoRankingDoMania";
 import { filtrarConjuntos, teclasDaBiblioteca, type OrdemDaSelecao } from "./filtroDaSelecao";
+import { CapaDoConjunto } from "./CapaDoConjunto";
 import { SeletorDeMods } from "./SeletorDeMods";
 
 interface Props {
+  /** O conjunto que abre selecionado (ex.: o que acabou de ser baixado na busca). */
+  selecionado?: string;
   aoVoltar?: () => void;
   aoBuscarMapas?: () => void;
   conjuntos: ConjuntoSalvo[] | null;
@@ -70,12 +72,10 @@ function rotuloDaDificuldade(conjunto: ConjuntoSalvo, dificuldade: DificuldadeSa
   );
 }
 
-const capa = <TeclaDoMania icone={Music} className="size-full" />;
-
 /** A seleção do Mania: os conjuntos na mesma roda da seleção do Rock, com busca, filtro de teclas, ordem e as abas de detalhes e ranking. */
-export function TelaDeSelecaoMania({ aoVoltar, aoBuscarMapas, conjuntos, mods, aoMudarMods, aoImportar, aoJogar, aoTreinar, aoAssistir }: Props) {
+export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conjuntos, mods, aoMudarMods, aoImportar, aoJogar, aoTreinar, aoAssistir }: Props) {
   // A seleção segue o id do conjunto: muda a ordem ou o filtro e ela continua no mesmo mapa, se ele ainda aparecer.
-  const [id, setId] = useState<string | null>(null);
+  const [id, setId] = useState<string | null>(selecionado ?? null);
   const [hash, setHash] = useState<string | null>(null);
   const [texto, setTexto] = useState("");
   const [teclas, setTeclas] = useState<number | "todas">("todas");
@@ -136,7 +136,7 @@ export function TelaDeSelecaoMania({ aoVoltar, aoBuscarMapas, conjuntos, mods, a
     receber(evento.dataTransfer.files);
   };
 
-  const itens: ItemDoCarrossel[] = lista.map((c) => ({ id: c.id, titulo: c.tituloUnicode || c.titulo, artista: c.artistaUnicode || c.artista, capa }));
+  const itens: ItemDoCarrossel[] = lista.map((c) => ({ id: c.id, titulo: c.tituloUnicode || c.titulo, artista: c.artistaUnicode || c.artista, capa: <CapaDoConjunto conjunto={c} /> }));
   const dificuldades: DificuldadeDoCarrossel[] = (conjunto?.mapas ?? []).map((m) => {
     const estrelas = conjunto?.estrelas?.[m.hash];
     return { id: m.hash, rotulo: rotuloDaDificuldade(conjunto!, m), cor: estrelas === undefined ? "bg-borda" : COR_DA_FAIXA[faixaDasEstrelas(estrelas)] };
@@ -168,8 +168,14 @@ export function TelaDeSelecaoMania({ aoVoltar, aoBuscarMapas, conjuntos, mods, a
       }}
       onDragLeave={() => setArrastando(false)}
       onDrop={aoSoltar}
-      className={cn("grid h-full grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:p-4", arrastando && "outline-2 outline-dashed outline-primaria -outline-offset-8")}
+      className={cn("relative isolate grid h-full grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:p-4", arrastando && "outline-2 outline-dashed outline-primaria -outline-offset-8")}
     >
+      {/* Como no Rock: a capa do mapa, borrada, pinta o fundo e troca junto com a seleção. */}
+      {conjunto && (
+        <div key={conjunto.id} aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden opacity-20">
+          <CapaDoConjunto conjunto={conjunto} className="scale-110 blur-3xl" />
+        </div>
+      )}
       <aside className="col-span-5 flex min-h-0 flex-col gap-4 max-md:col-span-1">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">

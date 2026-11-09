@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, Download } from "lucide-react";
+import { ArrowLeft, Check, Download, Play } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
 import { Button } from "@/shared/ui/button";
@@ -22,12 +22,14 @@ interface Props {
   /** Os conjuntos que já estão na biblioteca, pelo beatmapset_id. */
   baixados: Set<number>;
   aoBaixar: (osz: Blob, mapa: MapaDaBusca) => Promise<void>;
+  /** Abre o conjunto já baixado na seleção, pronto para jogar; sem ele, só aparece "Baixado". */
+  aoJogar?: (beatmapsetId: number) => void;
   /** Para os testes. */
   buscar?: (filtros: FiltrosDaBusca) => Promise<MapaDaBusca[]>;
   baixar?: typeof baixarOsz;
 }
 
-export function TelaDeBuscaMania({ aoVoltar, baixados, aoBaixar, buscar = buscarMapas, baixar = baixarOsz }: Props) {
+export function TelaDeBuscaMania({ aoVoltar, baixados, aoBaixar, aoJogar, buscar = buscarMapas, baixar = baixarOsz }: Props) {
   const [texto, setTexto] = useState("");
   const [status, setStatus] = useState<StatusDaBusca>("ranked");
   const [teclas, setTeclas] = useState<number[]>([]);
@@ -106,7 +108,7 @@ export function TelaDeBuscaMania({ aoVoltar, baixados, aoBaixar, buscar = buscar
           const jaBaixado = baixados.has(mapa.beatmapsetId);
           return (
             <li key={mapa.beatmapsetId} className="chapa flex items-center gap-4 bg-superficie-elevada/95 p-3">
-              {mapa.capa && <img src={mapa.capa} alt="" loading="lazy" className="h-14 w-24 rounded-full border-2 border-primaria object-cover" />}
+              {mapa.capa && <img src={mapa.capa} alt="" loading="lazy" className="h-14 w-24 shrink-0 rounded-md border border-borda object-cover" />}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-titulo text-xl tracking-wide uppercase">{mapa.tituloUnicode}</p>
                 <p className="truncate text-texto-suave">
@@ -117,7 +119,12 @@ export function TelaDeBuscaMania({ aoVoltar, baixados, aoBaixar, buscar = buscar
                 </p>
                 {progresso !== undefined && <BarraDeProgresso fracao={progresso} rotulo={`Baixando ${mapa.titulo}`} />}
               </div>
-              {jaBaixado ? (
+              {jaBaixado && aoJogar ? (
+                <Button className="font-titulo text-base tracking-wide text-texto uppercase" onClick={() => aoJogar(mapa.beatmapsetId)} aria-label={`Jogar ${mapa.titulo}`}>
+                  <Play aria-hidden />
+                  Jogar
+                </Button>
+              ) : jaBaixado ? (
                 <span className="flex items-center gap-1 text-sucesso">
                   <Check aria-hidden className="size-4" />
                   Baixado
