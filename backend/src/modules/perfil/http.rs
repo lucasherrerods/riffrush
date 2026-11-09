@@ -24,6 +24,8 @@ impl From<ErroDoPerfil> for ErroDaApi {
             ErroDoPerfil::SessaoInvalida => Self::NaoAutorizado,
             ErroDoPerfil::ImagemInvalida(erro) => Self::Invalido(erro.to_string()),
             ErroDoPerfil::TrocaFrequente => Self::MuitasRequisicoes,
+            ErroDoPerfil::NaoEAmigo => Self::Proibido,
+            ErroDoPerfil::NaoEncontrado => Self::NaoEncontrado,
             ErroDoPerfil::Falha(falha) => Self::Interno(falha.0),
         }
     }
@@ -200,6 +202,12 @@ pub async fn perfil(State(estado): State<EstadoDoApp>, Token(token): Token) -> R
     Ok(Json(estado.perfil.perfil(&token).await?.into()))
 }
 
+/// O perfil de um amigo: o mesmo do `/eu/perfil`, sem o e-mail.
+#[utoipa::path(get, path = "/amigos/{conta_id}/perfil", params(("conta_id" = Uuid, Path)), responses((status = 200, body = RespostaDoPerfil), (status = 401), (status = 403), (status = 404)), security(("token" = [])))]
+pub async fn perfil_do_amigo(State(estado): State<EstadoDoApp>, Token(token): Token, Path(conta_id): Path<Uuid>) -> Result<Json<RespostaDoPerfil>, ErroDaApi> {
+    Ok(Json(estado.perfil.perfil_do_amigo(&token, conta_id).await?.into()))
+}
+
 #[derive(Serialize, ToSchema)]
 pub struct RecordeDaConta {
     musica_id: String,
@@ -301,6 +309,7 @@ const CORPO_MAXIMO_DA_IMAGEM: usize = 1024 * 1024 + 4096;
 pub fn rotas() -> Router<EstadoDoApp> {
     Router::new()
         .route("/eu/perfil", get(perfil))
+        .route("/amigos/{conta_id}/perfil", get(perfil_do_amigo))
         .route("/eu/recordes", get(recordes))
         .route(
             "/eu/imagens/{tipo}",

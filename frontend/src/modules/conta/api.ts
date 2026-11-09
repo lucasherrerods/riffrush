@@ -150,6 +150,9 @@ export function criarApi(base: string, buscar?: typeof fetch) {
       chamar<{ token: string; conta: ContaDaApi }>("POST", "/auth/google", { corpo: { codigo, verificador, redirect_uri, cliente } }),
     eu: (token: string) => chamar<ContaDaApi>("GET", "/eu", { token }),
     perfil: (token: string, sinal?: AbortSignal) => chamar<PerfilDaApi>("GET", "/eu/perfil", { token, sinal }),
+    /** O perfil de um amigo, sem o e-mail. A API recusa quem não é amigo. */
+    perfilDoAmigo: (token: string, contaId: string, sinal?: AbortSignal) =>
+      chamar<PerfilDaApi>("GET", `/amigos/${encodeURIComponent(contaId)}/perfil`, { token, sinal }),
     recordes: (token: string) => chamar<RecordeDaConta[]>("GET", "/eu/recordes", { token }),
     trocarImagem: (token: string, tipo: TipoDeImagem, imagem: Blob) =>
       chamar<{ endereco: string }>("POST", `/eu/imagens/${tipo}`, { token, corpo: imagem }),

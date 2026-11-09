@@ -5,8 +5,9 @@ use uuid::Uuid;
 use super::dominio::{montar_perfil, Perfil, Recorde, PARTIDAS_RECENTES};
 use super::imagem::{endereco_da_imagem, pode_trocar, validar_imagem, ErroDaImagem, Imagem, TipoDeImagem};
 use super::portas::RepositorioDoPerfil;
+use crate::modules::amizade::{Relacao, RepositorioDeAmizades};
 use crate::modules::catalogo::ServicosDoCatalogo;
-use crate::modules::conta::{FalhaExterna, ServicosDaConta};
+use crate::modules::conta::{Conta, FalhaExterna, ServicosDaConta};
 
 #[derive(Clone)]
 pub struct ServicosDoPerfil {
@@ -15,6 +16,8 @@ pub struct ServicosDoPerfil {
     pub conta: ServicosDaConta,
     /// Nome, banda e capa das músicas que aparecem no perfil.
     pub catalogo: ServicosDoCatalogo,
+    /// Só amigos veem o perfil um do outro.
+    pub amizades: Arc<dyn RepositorioDeAmizades>,
     /// O endereço da própria API visto de fora, para montar o das imagens.
     pub url_publica: String,
 }
@@ -25,6 +28,10 @@ pub enum ErroDoPerfil {
     SessaoInvalida,
     #[error(transparent)]
     ImagemInvalida(#[from] ErroDaImagem),
+    #[error("só dá para ver o perfil de amigos")]
+    NaoEAmigo,
+    #[error("conta não encontrada")]
+    NaoEncontrado,
     #[error("espere um pouco antes de trocar de novo")]
     TrocaFrequente,
     #[error(transparent)]
@@ -45,6 +52,19 @@ impl ServicosDoPerfil {
     pub async fn recordes(&self, token: &str) -> Result<Vec<Recorde>, ErroDoPerfil> {
         let conta = self.conta.conta_da_sessao(token).await.map_err(|_| ErroDoPerfil::SessaoInvalida)?;
         Ok(self.repositorio.recordes(conta.id).await?)
+    }
+
+    /// O perfil de um amigo, igual ao de quem está logado, mas sem o e-mail.
+    pub async fn perfil_do_amigo(&self, token: &str, amigo: Uuid) -> Result<Perfil, ErroDoPerfil> {
+        let conta = self.conta.conta_da_sessao(token).await.map_err(|_| ErroDoPerfil::SessaoInvalida)?;
+        if self.amizades.relacao(conta.id, amigo).await? != Relacao::Amigos {
+            return Err(ErroDoPerfil::NaoEAmigo);
+        }
+        let do_amigo = self.conta.contas.buscar(amigo).await?.ok_or(ErroDoPerfil::NaoEncontrado)?;
+        let dados = self.repositorio.dados(amigo, PARTIDAS_RECENTES).await?.ok_or(ErroDoPerfil::NaoEncontrado)?;
+        let mut perfil = montar_perfil(Conta { email: None, ..do_amigo }, dados);
+        perfil.musicas = self.catalogo.dados(&perfil.ids_das_musicas()).await;
+        Ok(perfil)
     }
 
     /// Troca a foto ou a capa de quem está logado e devolve o endereço da nova.
@@ -102,6 +122,7 @@ pub mod fakes {
             repositorio: repositorio.clone(),
             conta,
             catalogo: crate::modules::catalogo::fakes::servicos_do_catalogo(Default::default()).0,
+            amizades: Arc::new(crate::modules::amizade::fakes::AmizadesEmMemoria::default()),
             url_publica: "https://api.exemplo.com".into(),
         };
         (servicos, repositorio)
@@ -273,5 +294,56 @@ mod tests {
         servicos.remover_imagem(&entrada.token, TipoDeImagem::Capa).await.unwrap();
 
         assert_eq!(servicos.imagem(entrada.conta.id, TipoDeImagem::Capa).await.unwrap(), None);
+    }
+
+    /// Ana e Beto logados e amigos, Caio logado sem amizade. Devolve os serviços, o repositório e (id, token) de cada um.
+    async fn com_amigos() -> (ServicosDoPerfil, Arc<fakes::PerfilEmMemoria>, [(Uuid, String); 3]) {
+        let (conta, banco, _) = servicos();
+        let mut pessoas = Vec::new();
+        for nome in ["ana", "beto", "caio"] {
+            let sessao = conta.entrar_com_google(&pedido(&format!("pessoa:{nome}"))).await.unwrap();
+            pessoas.push((sessao.conta.id, sessao.token));
+        }
+        let (_, amizades) = crate::modules::amizade::fakes::servicos_de_amizade(conta.clone(), banco);
+        let agora = conta.relogio.agora();
+        amizades.criar_pedido(pessoas[0].0, pessoas[1].0, agora).await.unwrap();
+        amizades.aceitar(pessoas[0].0, pessoas[1].0, agora).await.unwrap();
+        let (servicos, repositorio) = servicos_do_perfil(conta);
+        let servicos = ServicosDoPerfil { amizades, ..servicos };
+        for (id, _) in &pessoas {
+            repositorio.dados.lock().unwrap().insert(*id, dados());
+        }
+        (servicos, repositorio, pessoas.try_into().unwrap())
+    }
+
+    #[tokio::test]
+    async fn amigo_ve_o_perfil_do_outro_sem_o_email() {
+        let (servicos, _, [ana, beto, _]) = com_amigos().await;
+        let perfil = servicos.perfil_do_amigo(&ana.1, beto.0).await.unwrap();
+        assert_eq!(perfil.conta.id, beto.0);
+        assert_eq!(perfil.conta.email, None);
+        assert_eq!(perfil.musicas_distintas, 2);
+    }
+
+    #[tokio::test]
+    async fn quem_nao_e_amigo_nao_ve_o_perfil() {
+        let (servicos, _, [ana, _, caio]) = com_amigos().await;
+        assert!(matches!(servicos.perfil_do_amigo(&caio.1, ana.0).await, Err(ErroDoPerfil::NaoEAmigo)));
+    }
+
+    #[tokio::test]
+    async fn perfil_de_amigo_sem_sessao_e_recusado() {
+        let (servicos, _, [_, beto, _]) = com_amigos().await;
+        assert!(matches!(
+            servicos.perfil_do_amigo("token-falso", beto.0).await,
+            Err(ErroDoPerfil::SessaoInvalida)
+        ));
+    }
+
+    #[tokio::test]
+    async fn amigo_cuja_conta_sumiu_vira_nao_encontrado() {
+        let (servicos, repositorio, [ana, beto, _]) = com_amigos().await;
+        repositorio.dados.lock().unwrap().remove(&beto.0);
+        assert!(matches!(servicos.perfil_do_amigo(&ana.1, beto.0).await, Err(ErroDoPerfil::NaoEncontrado)));
     }
 }

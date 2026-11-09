@@ -22,8 +22,8 @@ export const editorDaSessao: EditorDeImagens = {
 
 const FORMATOS = "image/png,image/jpeg,image/webp";
 
-/** O topo do perfil: a capa, a foto e o que vier ao lado dela (nome, nível). */
-export function ImagensDoPerfil({ avatar, capa, editor, children }: { avatar: string | null; capa: string | null; editor: EditorDeImagens; children: ReactNode }) {
+/** O topo do perfil: a capa, a foto e o que vier ao lado dela (nome, nível). Sem editor, só mostra. */
+export function ImagensDoPerfil({ avatar, capa, editor, children }: { avatar: string | null; capa: string | null; editor: EditorDeImagens | null; children: ReactNode }) {
   const [enderecos, setEnderecos] = useState<Record<TipoDeImagem, string | null>>({ foto: avatar, capa });
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -45,17 +45,18 @@ export function ImagensDoPerfil({ avatar, capa, editor, children }: { avatar: st
   const escolher = (tipo: TipoDeImagem) => (evento: React.ChangeEvent<HTMLInputElement>) => {
     const arquivo = evento.target.files?.[0];
     evento.target.value = "";
-    if (arquivo) void fazer(tipo, () => editor.trocar(tipo, arquivo));
+    if (arquivo && editor) void fazer(tipo, () => editor.trocar(tipo, arquivo));
   };
 
   return (
     <>
-      {(["foto", "capa"] as const).map((tipo) => (
+      {editor && (["foto", "capa"] as const).map((tipo) => (
         <input key={tipo} ref={arquivos[tipo]} type="file" accept={FORMATOS} className="sr-only" tabIndex={-1} aria-label={`Arquivo da ${tipo}`} onChange={escolher(tipo)} />
       ))}
 
       <div className="relative h-40 overflow-hidden rounded-lg bg-superficie-elevada max-md:h-24">
         {enderecos.capa && <img src={enderecos.capa} alt="Capa do perfil" className="size-full object-cover" />}
+        {editor && (
         <div className="absolute right-2 bottom-2 flex gap-2">
           {enderecos.capa && (
             <Button variant="secondary" size="icon-sm" disabled={ocupado} aria-label="Remover capa" onClick={() => fazer("capa", () => editor.remover("capa"))}>
@@ -67,11 +68,13 @@ export function ImagensDoPerfil({ avatar, capa, editor, children }: { avatar: st
             {enderecos.capa ? "Trocar capa" : "Adicionar capa"}
           </Button>
         </div>
+        )}
       </div>
 
       <div className="flex items-center gap-6 max-md:gap-3">
         <div className="relative shrink-0">
           <FotoDaConta avatar={enderecos.foto} className="size-20 max-md:size-14" />
+          {editor && (
           <Button
             variant="secondary"
             size="icon-xs"
@@ -82,10 +85,11 @@ export function ImagensDoPerfil({ avatar, capa, editor, children }: { avatar: st
           >
             <Camera />
           </Button>
+          )}
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           {children}
-          {ehFotoPropria(enderecos.foto) && (
+          {editor && ehFotoPropria(enderecos.foto) && (
             <Button variant="link" size="xs" disabled={ocupado} className="self-start px-0" onClick={() => fazer("foto", () => editor.remover("foto"))}>
               Voltar para a foto do Google
             </Button>

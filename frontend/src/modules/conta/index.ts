@@ -5,5 +5,6 @@ export { ExcluirConta } from "./ExcluirConta";
 export { FotoDaConta } from "./FotoDaConta";
 export { GanhoDeXp } from "./GanhoDeXp";
 export const TelaDePerfil = adiar(() => import("./TelaDePerfil").then((m) => m.TelaDePerfil));
+export const PerfilDoAmigo = adiar(() => import("./TelaDePerfil").then((m) => m.PerfilDoAmigo));
 export { contasLigadas, sessaoDaConta } from "./sessao";
 export { useConta } from "./useConta";
