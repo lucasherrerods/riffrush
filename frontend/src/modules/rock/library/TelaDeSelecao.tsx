@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Dices, Dumbbell, Ellipsis, Gauge, FileAudio, Flame, Heart, Info, ListOrdered, LoaderCircle, Play, RotateCcw, Search, Trash2, Trophy } from "lucide-react";
+import { Dices, Dumbbell, Ellipsis, Gauge, FileAudio, Flame, Heart, Info, ListOrdered, LoaderCircle, Play, RotateCcw, Search, Trash2, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/rock/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
@@ -18,7 +18,7 @@ import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/shared/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
-import { BotaoDaSelecao, Carrossel, indiceDandoAVolta } from "@/modules/selecao";
+import { BarraDaSelecao, BotaoDaSelecao, Carrossel, TituloDaSelecao, indiceDandoAVolta } from "@/modules/selecao";
 import { AvatarPalhetando } from "./componentes/AvatarPalhetando";
 import { Capa } from "./componentes/Capa";
 import { alternarFavorita, carregarFavoritas, indicesVisiveis, salvarFavoritas, selecaoNoFiltro } from "./favoritas";
@@ -343,12 +343,7 @@ export function TelaDeSelecao(props: Props) {
   );
 
   const cabecalho = (
-    <header className="flex items-center gap-4 bg-superficie px-8 py-2 max-md:gap-2 max-md:px-2">
-      <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
-        <ArrowLeft />
-      </Button>
-      <h1 className="titulo-de-tela min-w-0 truncate text-destaque max-md:text-lg">Selecione a música</h1>
-      <div className="flex-1" />
+    <BarraDaSelecao titulo="Selecione a música" aoVoltar={aoVoltar}>
       <BotaoDaSelecao asChild>
         <label className="">
           <FileAudio className="opacity-70" />
@@ -374,22 +369,16 @@ export function TelaDeSelecao(props: Props) {
           <span className="max-md:sr-only">Buscar músicas</span>
         </BotaoDaSelecao>
       )}
-    </header>
+    </BarraDaSelecao>
   );
 
   if (estreita) {
     return (
       <div className="relative isolate flex h-full flex-col">
-        {cabecalho}
         <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
+          {cabecalho}
           <section aria-label="Informações da música" className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <h2 className="truncate text-2xl leading-[1.1]">{musica.titulo}</h2>
-                <p className="truncate text-base text-texto-suave">{musica.artista}</p>
-              </div>
-              {favoritar}
-            </div>
+            <TituloDaSelecao titulo={musica.titulo} subtitulo={musica.artista} acao={favoritar} />
             <div className="flex flex-wrap gap-2 [&_button]:h-9 [&_button]:gap-1.5 [&_button]:px-3 [&_button]:text-xs">
               <Button variant="outline" size="sm" onClick={() => setJanela("detalhes")}>
                 <Info className="opacity-70" /> Detalhes
@@ -442,19 +431,16 @@ export function TelaDeSelecao(props: Props) {
         </motion.div>
       </AnimatePresence>
 
-      {cabecalho}
-
-      <div className="grid min-h-0 flex-1 grid-cols-12 gap-8 p-8 max-md:grid-cols-1 max-md:gap-4 max-md:p-4">
+      <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:gap-4 max-md:p-4">
         <section aria-label="Informações da música" className="col-span-5 flex min-h-0 min-w-0 flex-col gap-4 max-md:col-span-1">
+          {cabecalho}
           {/* Tudo cabe sem rolagem: capa pequena ao lado do título e os dados numa linha só. */}
-          <div className="flex items-center gap-4">
-            <Capa musica={musica} girando className="size-28 rounded-md border border-borda max-md:hidden" />
-            <div className="min-w-0 flex-1">
-              <h2 className="truncate text-4xl leading-[1.1] max-md:text-2xl">{musica.titulo}</h2>
-              <p className="truncate text-lg text-texto-suave">{musica.artista}</p>
-            </div>
-            {favoritar}
-          </div>
+          <TituloDaSelecao
+            titulo={musica.titulo}
+            subtitulo={musica.artista}
+            capa={<Capa musica={musica} girando className="size-16 shrink-0 rounded-md border border-borda max-md:hidden" />}
+            acao={favoritar}
+          />
 
           {instrumentos.length > 1 && (
             <GrupoDeOpcoes

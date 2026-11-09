@@ -73,3 +73,14 @@ export function AcaoDaBusca({ nome, estado }: { nome: string; estado: EstadoDaAc
     </Button>
   );
 }
+
+/** O fim da lista, quando há mais resultados para pedir. */
+export function CarregarMais({ carregando, aoCarregar }: { carregando: boolean; aoCarregar: () => void }) {
+  return (
+    <li className="flex justify-center py-2">
+      <Button variant="secondary" disabled={carregando} onClick={aoCarregar}>
+        {carregando ? "Carregando…" : "Carregar mais"}
+      </Button>
+    </li>
+  );
+}

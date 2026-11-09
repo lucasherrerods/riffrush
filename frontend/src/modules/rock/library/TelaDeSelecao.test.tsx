@@ -253,7 +253,7 @@ describe("TelaDeSelecao na tela estreita", () => {
 describe("TelaDeSelecao com estética arcade", () => {
   it("tem um header com o título da tela", () => {
     abrir();
-    expect(within(screen.getByRole("banner")).getByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
   });
 
   it("o painel mostra BPM, gênero e intensidade em cards", () => {

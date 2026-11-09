@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@/shared/ui/button";
-import { AcaoDaBusca, Chip, GrupoDeChips, ItemDaBusca, TelaDeBusca, type EstadoDaBusca } from "@/modules/busca";
+import { AcaoDaBusca, CarregarMais, Chip, GrupoDeChips, ItemDaBusca, TelaDeBusca, type EstadoDaBusca } from "@/modules/busca";
 import { faixaDasEstrelas } from "../beatmaps/dificuldades";
 import { baixarOsz, buscarMapas, type FiltrosDaBusca, type MapaDaBusca, type PaginaDaBusca, type StatusDaBusca } from "./api";
 
@@ -141,13 +140,7 @@ export function TelaDeBuscaMania({ aoVoltar, baixados, aoBaixar, aoJogar, buscar
           />
         );
       })}
-      {mapas && temMais && (
-        <li className="flex justify-center py-2">
-          <Button variant="secondary" disabled={carregandoMais} onClick={carregarMais}>
-            {carregandoMais ? "Carregando…" : "Carregar mais"}
-          </Button>
-        </li>
-      )}
+      {mapas && temMais && <CarregarMais carregando={carregandoMais} aoCarregar={() => void carregarMais()} />}
     </TelaDeBusca>
   );
 }

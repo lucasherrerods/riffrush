@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { avisar } from "@/shared/ui/avisos";
-import type { FiltrosDaBusca, RespostaDaBusca, ResultadoDaBusca } from "./encore";
+import { TAMANHO_DA_PAGINA, type FiltrosDaBusca, type RespostaDaBusca, type ResultadoDaBusca } from "./encore";
 import { TelaDeBuscaDeMusicas } from "./TelaDeBuscaDeMusicas";
 
 function resultado(titulo: string, extra: Partial<ResultadoDaBusca> = {}): ResultadoDaBusca {
@@ -86,13 +86,16 @@ describe("TelaDeBuscaDeMusicas", () => {
     await waitFor(() => expect(ultimaChamada(buscar)[0]).toMatchObject({ soOficiais: true, ordem: "mais-jogadas" }));
   });
 
-  it("pagina os resultados", async () => {
-    const buscar = vi.fn(async (): Promise<RespostaDaBusca> => ({ total: 25, resultados: [resultado("Hit")] }));
-    const { usuario } = abrir(buscar);
-    expect(await screen.findByText("Página 1 de 3")).toBeInTheDocument();
-    await usuario.click(screen.getByRole("button", { name: "Próxima página" }));
-    await waitFor(() => expect(ultimaChamada(buscar)[1]).toBe(2));
-    expect(await screen.findByText("Página 2 de 3")).toBeInTheDocument();
+  it("carrega mais resultados no fim da lista, sem repetir, até acabar", async () => {
+    const buscar = vi.fn(async (_f: FiltrosDaBusca, pagina: number): Promise<RespostaDaBusca> =>
+      pagina === 1 ? { total: TAMANHO_DA_PAGINA + 1, resultados: [resultado("Hit")] } : { total: TAMANHO_DA_PAGINA + 1, resultados: [resultado("Hit"), resultado("Outra")] },
+    );
+    const { usuario } = abrir(buscar as unknown as Parameters<typeof abrir>[0]);
+    await usuario.click(await screen.findByRole("button", { name: "Carregar mais" }));
+    expect(await screen.findByRole("heading", { name: "Outra" })).toBeInTheDocument();
+    expect(ultimaChamada(buscar)[1]).toBe(2);
+    expect(screen.getAllByRole("heading", { name: "Hit" })).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Carregar mais" })).not.toBeInTheDocument();
   });
 
   it("avisa quando não encontra nada", async () => {

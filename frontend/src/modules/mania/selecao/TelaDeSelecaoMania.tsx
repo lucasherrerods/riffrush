@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type DragEvent } from "react";
-import { ArrowLeft, Dices, Info, ListOrdered, Search, Upload } from "lucide-react";
-import { BotaoDaSelecao, Carrossel, indiceDandoAVolta, passosSemDarAVolta, type DificuldadeDoCarrossel, type ItemDoCarrossel } from "@/modules/selecao";
+import { Dices, Info, ListOrdered, Search, Upload } from "lucide-react";
+import { BarraDaSelecao, BotaoDaSelecao, Carrossel, TituloDaSelecao, indiceDandoAVolta, passosSemDarAVolta, type DificuldadeDoCarrossel, type ItemDoCarrossel } from "@/modules/selecao";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -177,38 +177,26 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
         </div>
       )}
       <aside className="col-span-5 flex min-h-0 flex-col gap-4 max-md:col-span-1">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            {aoVoltar && (
-              <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
-                <ArrowLeft aria-hidden />
-              </Button>
-            )}
-            <SeletorDeMods mods={mods} aoMudar={aoMudarMods} />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {aoBuscarMapas && (
-              <BotaoDaSelecao onClick={aoBuscarMapas}>
-                <Search aria-hidden className="text-primaria" />
-                Buscar mapas
-              </BotaoDaSelecao>
-            )}
-            <BotaoDaSelecao onClick={() => seletor.current?.click()}>
-              <Upload aria-hidden className="text-primaria" />
-              Importar .osz
+        <BarraDaSelecao aoVoltar={aoVoltar} esquerda={<SeletorDeMods mods={mods} aoMudar={aoMudarMods} />}>
+          {aoBuscarMapas && (
+            <BotaoDaSelecao onClick={aoBuscarMapas}>
+              <Search aria-hidden />
+              Buscar mapas
             </BotaoDaSelecao>
-          </div>
-          <input ref={seletor} type="file" accept=".osz" multiple aria-label="Arquivos .osz" className="sr-only" onChange={(e) => receber(e.target.files)} />
-        </div>
+          )}
+          <BotaoDaSelecao onClick={() => seletor.current?.click()}>
+            <Upload aria-hidden />
+            Importar .osz
+          </BotaoDaSelecao>
+        </BarraDaSelecao>
+        <input ref={seletor} type="file" accept=".osz" multiple aria-label="Arquivos .osz" className="sr-only" onChange={(e) => receber(e.target.files)} />
 
         {conjunto && (
-          <div className="chapa bg-superficie-elevada/95 px-4 py-3">
-            <h2 className="truncate font-titulo text-3xl tracking-wide uppercase">{conjunto.tituloUnicode || conjunto.titulo}</h2>
-            <p className="truncate text-texto-suave">
-              {conjunto.artistaUnicode || conjunto.artista} · mapa de {conjunto.mapper}
-            </p>
-            {conjunto.origem === "importado" && <p className="text-sm text-texto-suave">Importado · sem XP nem ranking</p>}
-          </div>
+          <TituloDaSelecao
+            titulo={conjunto.tituloUnicode || conjunto.titulo}
+            subtitulo={`${conjunto.artistaUnicode || conjunto.artista} · mapa de ${conjunto.mapper}`}
+            aviso={conjunto.origem === "importado" && "Importado · sem XP nem ranking"}
+          />
         )}
 
         {conjunto && (

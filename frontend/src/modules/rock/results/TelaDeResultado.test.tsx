@@ -39,7 +39,7 @@ describe("TelaDeResultado", () => {
   it("partida de outra pessoa mostra de quem é, e a sequência que a API não tem vira traço", () => {
     abrir({ resultado: { ...resultado, maiorSequencia: null }, jogador: { nome: "Srr 4", avatar: null } });
     expect(screen.getByText("Partida de Srr 4")).toBeInTheDocument();
-    expect(screen.getByText("Maior sequência").previousSibling).toHaveTextContent("—");
+    expect(screen.getByText("Maior sequência").nextSibling).toHaveTextContent("—");
   });
 
   it("mostra a música, os pontos e as estrelas", () => {
@@ -65,10 +65,10 @@ describe("TelaDeResultado", () => {
   it("usa a precisão de cada julgamento, com duas casas, e mostra quantos de cada", () => {
     abrir({ resultado: { ...resultado, precisao: 0.8535, julgamentos: { perfeito: 80, otimo: 7, bom: 3 } } });
     expect(screen.getByLabelText("Precisão")).toHaveTextContent("85,35%");
-    expect(screen.getByText("Perfeito").previousSibling).toHaveTextContent("80");
-    expect(screen.getByText("Ótimo").previousSibling).toHaveTextContent("7");
-    expect(screen.getByText("Bom").previousSibling).toHaveTextContent("3");
-    expect(screen.getByText("Erro").previousSibling).toHaveTextContent("10");
+    expect(screen.getByText("Perfeito").nextSibling).toHaveTextContent("80");
+    expect(screen.getByText("Ótimo").nextSibling).toHaveTextContent("7");
+    expect(screen.getByText("Bom").nextSibling).toHaveTextContent("3");
+    expect(screen.getByText("Erro").nextSibling).toHaveTextContent("10");
   });
 
   it("mostra as estatísticas da partida", () => {

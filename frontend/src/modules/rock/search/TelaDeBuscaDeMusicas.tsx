@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Chip, GrupoDeChips, TelaDeBusca } from "@/modules/busca";
+import { CarregarMais, Chip, GrupoDeChips, TelaDeBusca } from "@/modules/busca";
 import { useValorAtrasado } from "@/shared/hooks/useValorAtrasado";
-import { Button } from "@/shared/ui/button";
 import { CampoDeSelecao } from "@/shared/ui/CampoDeSelecao";
 import { ConfirmacaoDeTamanho } from "./componentes/ConfirmacaoDeTamanho";
 import { ResultadoDoEncore } from "./componentes/ResultadoDoEncore";
@@ -93,6 +91,7 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarPadrao, atrasoMs
   const [filtros, setFiltros] = useState<Omit<FiltrosDaBusca, "texto">>(FILTROS_PADRAO);
   const [pagina, setPagina] = useState(1);
   const [estado, setEstado] = useState<Estado>({ tipo: "carregando" });
+  const [carregandoMais, setCarregandoMais] = useState(false);
   const textoAtrasado = useValorAtrasado(texto, atrasoMs);
 
   const mudarFiltros = (parcial: Partial<FiltrosDaBusca>) => {
@@ -106,16 +105,25 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarPadrao, atrasoMs
 
   useEffect(() => {
     const controle = new AbortController();
-    setEstado({ tipo: "carregando" });
+    // A primeira página troca a lista; as seguintes vão para o fim dela.
+    if (pagina === 1) setEstado({ tipo: "carregando" });
+    else setCarregandoMais(true);
     buscar({ ...filtros, texto: textoAtrasado }, pagina, { sinal: controle.signal })
-      .then((resposta) => setEstado({ tipo: "pronto", resposta }))
+      .then((resposta) =>
+        setEstado((atual) => {
+          if (pagina === 1 || atual.tipo !== "pronto") return { tipo: "pronto", resposta };
+          const vistos = new Set(atual.resposta.resultados.map((r) => r.md5));
+          return { tipo: "pronto", resposta: { total: resposta.total, resultados: [...atual.resposta.resultados, ...resposta.resultados.filter((r) => !vistos.has(r.md5))] } };
+        }),
+      )
       .catch((erro: Error) => {
         if (!controle.signal.aborted) setEstado({ tipo: "erro", mensagem: erro.message });
-      });
+      })
+      .finally(() => !controle.signal.aborted && setCarregandoMais(false));
     return () => controle.abort();
   }, [buscar, filtros, textoAtrasado, pagina]);
 
-  const totalDePaginas = estado.tipo === "pronto" ? Math.max(1, Math.ceil(estado.resposta.total / TAMANHO_DA_PAGINA)) : 1;
+  const temMais = estado.tipo === "pronto" && pagina * TAMANHO_DA_PAGINA < estado.resposta.total;
 
   return (
     <>
@@ -142,19 +150,6 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarPadrao, atrasoMs
             </div>
           </>
         }
-        barra={
-          <nav aria-label="Paginação" className="flex items-center justify-end gap-1 text-texto-suave max-md:text-sm">
-            <Button variant="ghost" size="icon" aria-label="Página anterior" disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)}>
-              <ChevronLeft />
-            </Button>
-            <span>
-              Página {pagina} de {totalDePaginas}
-            </span>
-            <Button variant="ghost" size="icon" aria-label="Próxima página" disabled={pagina >= totalDePaginas} onClick={() => setPagina((p) => p + 1)}>
-              <ChevronRight />
-            </Button>
-          </nav>
-        }
         estado={estado.tipo === "pronto" ? { tipo: "pronto", vazio: estado.resposta.resultados.length === 0 } : estado}
         mensagemDeVazio="Nenhuma música encontrada. Tente outro nome ou tire algum filtro."
         fonte="Charts da comunidade, servidos pelo Chorus Encore (enchor.us)."
@@ -171,6 +166,7 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarPadrao, atrasoMs
               aoJogar={() => aoJogar?.(r.md5)}
             />
           ))}
+        {temMais && <CarregarMais carregando={carregandoMais} aoCarregar={() => setPagina((p) => p + 1)} />}
       </TelaDeBusca>
       {pergunta && <ConfirmacaoDeTamanho titulo={pergunta.titulo} bytes={pergunta.bytes} aoResponder={responder} />}
     </>
