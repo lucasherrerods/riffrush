@@ -115,6 +115,8 @@ export function TelaDeSelecao(props: Props) {
     if (proxima !== undefined) aoSelecionar(proxima);
   };
   const visiveis = filtrar({});
+  // Com o filtro vazio não há música escolhida: os detalhes somem e o TOCAR desliga, como no Mania.
+  const vazia = !visiveis.length;
   const alternarFiltro = () => {
     efeito("mover");
     const ligado = !soFavoritas;
@@ -171,6 +173,7 @@ export function TelaDeSelecao(props: Props) {
     // Com o foco na busca, as letras são dela.
     if (evento.target instanceof HTMLInputElement && evento.code !== "ArrowDown" && evento.code !== "ArrowUp" && evento.code !== "Enter" && evento.code !== "Escape") return;
     if (evento.code === "Delete" && podeRemover) return setRemovendo(true);
+    if (vazia && (evento.code === "KeyF" || evento.code === "Enter")) return;
     if (evento.code === "KeyF") return alternarFavoritaAtual();
     // Shift+Tab é do modo competitivo; o Tab sozinho troca o instrumento.
     if (evento.code === "Tab" && !evento.shiftKey && instrumentos.length > 1) {
@@ -239,6 +242,7 @@ export function TelaDeSelecao(props: Props) {
     </div>
   ) : (
     <BotaoDeTocar
+      desabilitado={vazia}
       aoTocar={jogar}
       aoTreinar={
         props.aoTreinar &&
@@ -374,9 +378,9 @@ export function TelaDeSelecao(props: Props) {
         <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
           {cabecalho}
           <section aria-label="Informações da música" className="flex flex-col gap-3">
-            <TituloDaSelecao titulo={musica.titulo} subtitulo={musica.artista} acao={favoritar} />
+            {!vazia && <TituloDaSelecao titulo={musica.titulo} subtitulo={musica.artista} acao={favoritar} />}
             <div className="flex flex-wrap gap-2 [&_button]:h-9 [&_button]:gap-1.5 [&_button]:px-3 [&_button]:text-xs">
-              <Button variant="outline" size="sm" onClick={() => setJanela("detalhes")}>
+              <Button variant="outline" size="sm" disabled={vazia} onClick={() => setJanela("detalhes")}>
                 <Info className="opacity-70" /> Detalhes
               </Button>
               {ranking && (
@@ -414,64 +418,72 @@ export function TelaDeSelecao(props: Props) {
     <div className="relative isolate flex h-full flex-col">
       {/* A capa da música, borrada, pinta o fundo da tela e troca junto com a seleção. */}
       <AnimatePresence initial={false}>
-        <motion.div
-          key={musica.id}
-          aria-hidden
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.2 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
-          className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
-        >
-          <Capa musica={musica} decorativa className="size-full scale-110 blur-3xl" />
-        </motion.div>
+        {!vazia && (
+          <motion.div
+            key={musica.id}
+            aria-hidden
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.2 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+          >
+            <Capa musica={musica} decorativa className="size-full scale-110 blur-3xl" />
+          </motion.div>
+        )}
       </AnimatePresence>
 
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:gap-4 max-md:p-4">
         <section aria-label="Informações da música" className="col-span-5 flex min-h-0 min-w-0 flex-col gap-4 max-md:col-span-1">
           {cabecalho}
-          {/* Tudo cabe sem rolagem: capa pequena ao lado do título e os dados numa linha só. */}
-          <TituloDaSelecao
-            titulo={musica.titulo}
-            subtitulo={musica.artista}
-            capa={<Capa musica={musica} girando className="size-16 shrink-0 rounded-md border border-borda max-md:hidden" />}
-            acao={favoritar}
-          />
-
-          {instrumentos.length > 1 && (
-            <GrupoDeOpcoes
-              titulo="Instrumento"
-              opcoes={instrumentos.map((i) => ({ id: i.id, rotulo: i.rotulo }))}
-              valor={instrumento}
-              aoEscolher={escolherInstrumento}
-            />
-          )}
-
-          {ranking ? (
-            // Como no osu!: o ranking da música ao lado da roda, e os detalhes numa aba vizinha.
-            <Tabs defaultValue="ranking" className="min-h-0 flex-1">
-              <TabsList className="w-full">
-                <TabsTrigger value="detalhes">
-                  <Info className="opacity-70" /> Detalhes
-                </TabsTrigger>
-                <TabsTrigger value="ranking">
-                  <ListOrdered className="opacity-70" /> Ranking
-                </TabsTrigger>
-              </TabsList>
-              {/* Os dados da música ficam nesta aba para sobrar altura para o ranking. */}
-              <TabsContent value="detalhes" className="flex flex-col gap-4">
-                {dados}
-                {detalhes}
-              </TabsContent>
-              <TabsContent value="ranking" className="flex min-h-0 flex-col">
-                {ranking}
-              </TabsContent>
-            </Tabs>
+          {vazia ? (
+            <div className="flex-1" />
           ) : (
             <>
-              {dados}
-              {detalhes}
-              <div className="flex-1" />
+            {/* Tudo cabe sem rolagem: capa pequena ao lado do título e os dados numa linha só. */}
+            <TituloDaSelecao
+              titulo={musica.titulo}
+              subtitulo={musica.artista}
+              capa={<Capa musica={musica} girando className="size-16 shrink-0 rounded-md border border-borda max-md:hidden" />}
+              acao={favoritar}
+            />
+
+            {instrumentos.length > 1 && (
+              <GrupoDeOpcoes
+                titulo="Instrumento"
+                opcoes={instrumentos.map((i) => ({ id: i.id, rotulo: i.rotulo }))}
+                valor={instrumento}
+                aoEscolher={escolherInstrumento}
+              />
+            )}
+
+            {ranking ? (
+              // Como no osu!: o ranking da música ao lado da roda, e os detalhes numa aba vizinha.
+              <Tabs defaultValue="ranking" className="min-h-0 flex-1">
+                <TabsList className="w-full">
+                  <TabsTrigger value="detalhes">
+                    <Info className="opacity-70" /> Detalhes
+                  </TabsTrigger>
+                  <TabsTrigger value="ranking">
+                    <ListOrdered className="opacity-70" /> Ranking
+                  </TabsTrigger>
+                </TabsList>
+                {/* Os dados da música ficam nesta aba para sobrar altura para o ranking. */}
+                <TabsContent value="detalhes" className="flex flex-col gap-4">
+                  {dados}
+                  {detalhes}
+                </TabsContent>
+                <TabsContent value="ranking" className="flex min-h-0 flex-col">
+                  {ranking}
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <>
+                {dados}
+                {detalhes}
+                <div className="flex-1" />
+              </>
+            )}
             </>
           )}
           {tocar}
