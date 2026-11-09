@@ -36,6 +36,7 @@ async fn app() -> (Router, String) {
         entrada.conta.id,
         DadosDoPerfil {
             criada_em: DateTime::UNIX_EPOCH,
+            capa: None,
             musicas_distintas: 1,
             por_dificuldade: vec![EstatisticasDaDificuldade {
                 dificuldade: Dificuldade::Expert,
@@ -152,4 +153,63 @@ async fn recordes_de_quem_esta_logado() {
 
     let (_, openapi) = chamar(&app, "/openapi.json", None).await;
     assert!(openapi["paths"]["/eu/recordes"]["get"].is_object());
+}
+
+async fn enviar(app: &Router, metodo: &str, caminho: &str, token: &str, corpo: Vec<u8>) -> (StatusCode, Value) {
+    let pedido = Request::builder()
+        .method(metodo)
+        .uri(caminho)
+        .header("authorization", format!("Bearer {token}"))
+        .header("content-type", "image/webp")
+        .body(Body::from(corpo))
+        .unwrap();
+    let resposta = app.clone().oneshot(pedido).await.unwrap();
+    let status = resposta.status();
+    let bytes = resposta.into_body().collect().await.unwrap().to_bytes();
+    (status, serde_json::from_slice(&bytes).unwrap_or(Value::Null))
+}
+
+#[tokio::test]
+async fn troca_a_capa_e_qualquer_um_ve_a_imagem() {
+    let (app, token) = app().await;
+    let webp = b"RIFF\0\0\0\0WEBPVP8 ".to_vec();
+
+    let (status, corpo) = enviar(&app, "POST", "/eu/imagens/capa", &token, webp.clone()).await;
+    assert_eq!(status, StatusCode::OK);
+    let endereco = corpo["endereco"].as_str().unwrap();
+    let caminho = endereco.trim_start_matches("https://api.exemplo.com");
+
+    let resposta = app.clone().oneshot(Request::get(caminho).body(Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(resposta.status(), StatusCode::OK);
+    assert_eq!(resposta.headers()["content-type"], "image/webp");
+    assert!(resposta.headers()["cache-control"].to_str().unwrap().contains("immutable"));
+    assert_eq!(resposta.into_body().collect().await.unwrap().to_bytes().to_vec(), webp);
+
+    assert_eq!(enviar(&app, "DELETE", "/eu/imagens/capa", &token, vec![]).await.0, StatusCode::NO_CONTENT);
+    assert_eq!(chamar(&app, caminho, None).await.0, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn recusa_imagem_grande_tipo_desconhecido_e_sem_token() {
+    let (app, token) = app().await;
+    assert_eq!(
+        enviar(&app, "POST", "/eu/imagens/capa", &token, vec![0xFF; 2 * 1024 * 1024]).await.0,
+        StatusCode::PAYLOAD_TOO_LARGE
+    );
+    assert_eq!(
+        enviar(&app, "POST", "/eu/imagens/foto", &token, b"<svg/>".to_vec()).await.0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        enviar(&app, "POST", "/eu/imagens/banner", &token, b"RIFF\0\0\0\0WEBP".to_vec()).await.0,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        enviar(&app, "POST", "/eu/imagens/foto", "inventado", b"RIFF\0\0\0\0WEBP".to_vec()).await.0,
+        StatusCode::UNAUTHORIZED
+    );
+
+    let (_, openapi) = chamar(&app, "/openapi.json", None).await;
+    assert!(openapi["paths"]["/eu/imagens/{tipo}"]["post"].is_object());
+    assert!(openapi["paths"]["/contas/{id}/imagens/{tipo}"]["get"].is_object());
 }

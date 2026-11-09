@@ -77,6 +77,8 @@ pub struct Recorde {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DadosDoPerfil {
     pub criada_em: DateTime<Utc>,
+    /// Endereço da capa que a pessoa escolheu.
+    pub capa: Option<String>,
     pub musicas_distintas: u32,
     pub por_dificuldade: Vec<EstatisticasDaDificuldade>,
     pub por_instrumento: Vec<PartidasNoInstrumento>,
@@ -90,6 +92,7 @@ pub struct Perfil {
     pub conta: Conta,
     pub nivel: Nivel,
     pub criada_em: DateTime<Utc>,
+    pub capa: Option<String>,
     pub partidas: u32,
     pub derrotas: u32,
     /// De 0 a 1, contando todas as notas de todas as partidas.
@@ -147,6 +150,7 @@ pub fn montar_perfil(conta: Conta, dados: DadosDoPerfil) -> Perfil {
         nivel: conta.nivel(),
         conta,
         criada_em: dados.criada_em,
+        capa: dados.capa,
         partidas: por_dificuldade.iter().map(|e| e.partidas).sum(),
         derrotas: por_dificuldade.iter().map(|e| e.derrotas).sum(),
         precisao: precisao_pelo_valor(valor_dos_acertos, notas),
@@ -190,6 +194,7 @@ mod tests {
     fn dados(por_dificuldade: Vec<EstatisticasDaDificuldade>) -> DadosDoPerfil {
         DadosDoPerfil {
             criada_em: DateTime::UNIX_EPOCH,
+            capa: None,
             musicas_distintas: 3,
             por_dificuldade,
             por_instrumento: vec![],

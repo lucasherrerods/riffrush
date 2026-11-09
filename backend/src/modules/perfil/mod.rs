@@ -3,6 +3,7 @@
 mod casos_de_uso;
 mod dominio;
 mod http;
+mod imagem;
 mod portas;
 mod postgres;
 
@@ -14,8 +15,9 @@ pub use dominio::{
     PARTIDAS_RECENTES,
 };
 pub use http::{
-    __path_perfil, __path_recordes, perfil, recordes, rotas, DadosDaMusicaNoPerfil, DificuldadeDoPerfil, InstrumentoDoPerfil, MusicaDoPerfil, PartidaDoPerfil,
-    RecordeDaConta, RespostaDoPerfil,
+    __path_imagem, __path_perfil, __path_recordes, __path_remover_imagem, __path_trocar_imagem, imagem, perfil, recordes, remover_imagem, rotas, trocar_imagem,
+    DadosDaMusicaNoPerfil, DificuldadeDoPerfil, ImagemTrocada, InstrumentoDoPerfil, MusicaDoPerfil, PartidaDoPerfil, RecordeDaConta, RespostaDoPerfil,
 };
+pub use imagem::{ErroDaImagem, FormatoDaImagem, Imagem, TipoDeImagem};
 pub use portas::RepositorioDoPerfil;
 pub use postgres::PerfilPostgres;
