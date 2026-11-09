@@ -1,4 +1,4 @@
-import { PROTOCOLO_DO_JOGO, avisoDeEspectadores, fichaDoPedido, lerComandoDaPresenca, lerEstado, lerMensagemDaTransmissao, linkDoChartConfere, verificarFicha } from "./presenca";
+import { PROTOCOLO_DO_JOGO, avisoDeEspectadores, fichaDoPedido, lerComandoDaPresenca, lerEstado, lerMensagemDaTransmissao, lerPrivadaDaApi, linkDoChartConfere, verificarFicha } from "./presenca";
 
 // A mesma ficha do teste da API (backend/src/modules/presenca/dominio.rs): os dois lados precisam concordar.
 const FICHA_COM_NIVEL =
@@ -66,6 +66,24 @@ describe("lerComandoDaPresenca", () => {
     expect(lerComandoDaPresenca(JSON.stringify({ tipo: "convite", para: "../x", codigo: "ABCDE" }))).toBeNull();
     expect(lerComandoDaPresenca(JSON.stringify({ tipo: "convite", para: amiga, codigo: "nao vale" }))).toBeNull();
     expect(lerComandoDaPresenca("{quebrado")).toBeNull();
+  });
+});
+
+describe("lerPrivadaDaApi", () => {
+  const de = { id: "11111111-1111-1111-1111-111111111111", nome: "Ana", avatar: null };
+  const para = "22222222-2222-2222-2222-222222222222";
+
+  it("lê a mensagem que a API guardou e pede para entregar", () => {
+    const corpo = { id: 7, de, para, texto: "oi", em: 1000 };
+    expect(lerPrivadaDaApi(JSON.stringify(corpo))).toEqual(corpo);
+  });
+
+  it("recusa o que veio incompleto ou com conta inválida", () => {
+    expect(lerPrivadaDaApi(JSON.stringify({ id: 7, de, para: "../x", texto: "oi", em: 1000 }))).toBeNull();
+    expect(lerPrivadaDaApi(JSON.stringify({ id: "7", de, para, texto: "oi", em: 1000 }))).toBeNull();
+    expect(lerPrivadaDaApi(JSON.stringify({ id: 7, de: { id: "x", nome: "Ana" }, para, texto: "oi", em: 1000 }))).toBeNull();
+    expect(lerPrivadaDaApi(JSON.stringify({ id: 7, de, para, em: 1000 }))).toBeNull();
+    expect(lerPrivadaDaApi("{quebrado")).toBeNull();
   });
 });
 

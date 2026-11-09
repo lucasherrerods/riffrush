@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::modules::amizade::ServicosDeAmizade;
 use crate::modules::conta::ServicosDaConta;
+use crate::modules::conversa::ServicosDeConversa;
 use crate::modules::mania::ServicosDoMania;
 use crate::modules::moderacao::ServicosDeModeracao;
 use crate::modules::perfil::ServicosDoPerfil;
@@ -20,4 +21,5 @@ pub struct EstadoDoApp {
     pub moderacao: ServicosDeModeracao,
     pub mania: ServicosDoMania,
     pub amizade: ServicosDeAmizade,
+    pub conversa: ServicosDeConversa,
 }

@@ -40,10 +40,12 @@ import {
   fichaDoPedido,
   lerComandoDaPresenca,
   lerMensagemDaTransmissao,
+  lerPrivadaDaApi,
   verificarFicha,
   type MensagemDaPresenca,
   type PessoaDaFicha,
   type PessoaOnline,
+  type PrivadaDaApi,
 } from "./presenca";
 
 interface Env {
@@ -316,6 +318,15 @@ export class Presenca extends DurableObject<Env> {
     if (!continua) this.paraTodos({ tipo: "saiu", id }, socket);
   }
 
+  /** Quem mandou recebe a cópia também, para os outros aparelhos dele mostrarem a conversa igual. */
+  async entregarPrivada(privada: PrivadaDaApi) {
+    const texto = JSON.stringify({ tipo: "privada", ...privada } satisfies MensagemDaPresenca);
+    for (const socket of this.ctx.getWebSockets(PESSOA)) {
+      const { id } = socket.deserializeAttachment() as PessoaOnline;
+      if (id === privada.para || id === privada.de.id) enviar(socket, texto);
+    }
+  }
+
   private pessoas() {
     return this.ctx.getWebSockets(PESSOA).map((s) => s.deserializeAttachment() as PessoaOnline);
   }
@@ -568,16 +579,32 @@ async function enviarDenuncia(env: Env, mensagem: MensagemDoChat, denunciante: s
   }
 }
 
-/** A rota que a API chama para avisar banimentos, com o pedido assinado pelo segredo em comum. */
-async function avisoDeModeracao(pedido: Request, env: Env) {
+/** O corpo de um pedido da API, assinado pelo segredo em comum, ou a resposta de recusa. */
+async function corpoDaApi(pedido: Request, env: Env): Promise<string | Response> {
   if (pedido.method !== "POST") return new Response("Esperava POST.", { status: 405 });
   const corpo = await pedido.text();
   const hora = Number(pedido.headers.get(CABECALHO_DA_HORA));
   const confere = await conferirPedido(env.SEGREDO_DA_PRESENCA ?? "", hora, Math.floor(Date.now() / 1000), corpo, pedido.headers.get(CABECALHO_DA_ASSINATURA) ?? "");
-  if (!confere) return new Response("Assinatura inválida.", { status: 401 });
+  return confere ? corpo : new Response("Assinatura inválida.", { status: 401 });
+}
+
+/** A rota que a API chama para avisar banimentos. */
+async function avisoDeModeracao(pedido: Request, env: Env) {
+  const corpo = await corpoDaApi(pedido, env);
+  if (corpo instanceof Response) return corpo;
   const aviso = lerAvisoDaApi(corpo);
   if (!aviso) return new Response("Aviso inválido.", { status: 400 });
   await env.CHAT.get(env.CHAT.idFromName("chat")).moderar(aviso);
+  return new Response(null, { status: 204 });
+}
+
+/** A rota que a API chama depois de guardar uma mensagem entre amigos. */
+async function entregaDePrivada(pedido: Request, env: Env) {
+  const corpo = await corpoDaApi(pedido, env);
+  if (corpo instanceof Response) return corpo;
+  const privada = lerPrivadaDaApi(corpo);
+  if (!privada) return new Response("Mensagem inválida.", { status: 400 });
+  await env.PRESENCA.get(env.PRESENCA.idFromName("presenca")).entregarPrivada(privada);
   return new Response(null, { status: 204 });
 }
 
@@ -635,6 +662,7 @@ export default {
     }
 
     if (pathname === "/chat/moderacao") return avisoDeModeracao(pedido, env);
+    if (pathname === "/privada") return entregaDePrivada(pedido, env);
 
     if (pathname === "/chat") {
       const autenticado = await comPessoa(pedido, env);

@@ -7,6 +7,7 @@ use riffrush_api::modules::catalogo::{CatalogoPostgres, DadosDaMusica, Repositor
 use riffrush_api::modules::conta::{
     ContasPostgres, FilaDePartidas, PartidaNaFila, PartidaRegistrada, PerfilDoGoogle, RepositorioDeContas, RepositorioDeSessoes,
 };
+use riffrush_api::modules::conversa::{ConversasPostgres, NaoLidas, NovaMensagem, RepositorioDeConversas};
 use riffrush_api::modules::moderacao::{Denuncia, ModeracaoPostgres, RepositorioDeModeracao, Situacao};
 use riffrush_api::modules::perfil::{FormatoDaImagem, Imagem, PerfilPostgres, RepositorioDoPerfil, TipoDeImagem};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar, ResumoDaPartida};
@@ -1122,4 +1123,41 @@ async fn amizades_pedem_aceitam_bloqueiam_e_sugerem_amigos_de_amigos() {
     assert_eq!(amizades.relacao(ana, beto).await.unwrap(), Relacao::Nenhuma);
     banco.excluir(ana).await.unwrap();
     assert_eq!(amizades.conta_do_codigo(&codigo).await.unwrap(), None);
+}
+
+#[tokio::test]
+async fn conversas_guardam_paginam_contam_as_nao_lidas_e_somem_com_a_conta() {
+    let Some(banco) = banco().await else { return };
+    let conversas = ConversasPostgres(banco.0.clone());
+    let agora = Utc::now();
+    let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+    let beto = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+    let caio = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+    let mandar = |de, para, texto: &str| NovaMensagem {
+        de,
+        para,
+        texto: texto.into(),
+        enviada_em: agora,
+    };
+
+    let primeira = conversas.guardar(&mandar(ana, beto, "oi")).await.unwrap();
+    conversas.guardar(&mandar(beto, ana, "e aí")).await.unwrap();
+    conversas.guardar(&mandar(ana, beto, "bora?")).await.unwrap();
+    // Outra conversa não aparece no histórico do par.
+    conversas.guardar(&mandar(caio, beto, "oi beto")).await.unwrap();
+
+    let historico = conversas.mensagens(beto, ana, None, 50).await.unwrap();
+    assert_eq!(historico.iter().map(|m| m.texto.as_str()).collect::<Vec<_>>(), ["bora?", "e aí", "oi"]);
+    let pagina = conversas.mensagens(ana, beto, Some(historico[0].id), 1).await.unwrap();
+    assert_eq!(pagina.iter().map(|m| m.texto.as_str()).collect::<Vec<_>>(), ["e aí"]);
+    assert_eq!(historico[2].id, primeira.id);
+
+    let mut nao_lidas = conversas.nao_lidas(beto).await.unwrap();
+    nao_lidas.sort_by_key(|n| n.quantas);
+    assert_eq!(nao_lidas, [NaoLidas { de: caio, quantas: 1 }, NaoLidas { de: ana, quantas: 2 }]);
+    conversas.marcar_lidas(beto, ana, agora).await.unwrap();
+    assert_eq!(conversas.nao_lidas(beto).await.unwrap(), [NaoLidas { de: caio, quantas: 1 }]);
+
+    banco.excluir(ana).await.unwrap();
+    assert!(conversas.mensagens(beto, ana, None, 50).await.unwrap().is_empty());
 }
