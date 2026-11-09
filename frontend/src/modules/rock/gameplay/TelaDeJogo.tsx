@@ -24,7 +24,7 @@ import type { Resultado } from "./resultado";
 import { limitesDaVolta, registrarVolta, rotuloDasVoltas, VOLTAS_INICIAIS, type Voltas } from "@/shared/lib/treino";
 import { EscolhaDoTreino } from "@/shared/ui/EscolhaDoTreino";
 import { noTempoReal, rotuloDaVelocidade } from "./velocidade";
-import type { JogadorLocal, OpcoesDaPartida } from "./opcoesDaPartida";
+import { reiniciaAPartida, type JogadorLocal, type OpcoesDaPartida } from "./opcoesDaPartida";
 
 // Os testes e o módulo leem daqui; a definição fica num arquivo leve, para a tela da partida poder ser baixada só na hora de jogar.
 export { OPCOES_PADRAO_DA_PARTIDA, type JogadorLocal, type OpcoesDaPartida } from "./opcoesDaPartida";
@@ -143,9 +143,12 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     () => (treino && carregada ? [musicaInteira(carregada.duracao), ...trechosDaMusica(carregada.secoes ?? [], carregada.batidas, carregada.duracao)] : []),
     [treino, carregada],
   );
+  // O modo competitivo (Shift+Tab) troca só a cena em volta da pista: a sessão segue com as opções anteriores.
+  const opcoesDaSessao = useRef(opcoes);
+  if (reiniciaAPartida(opcoesDaSessao.current, opcoes)) opcoesDaSessao.current = opcoes;
   // A música e a pista recomeçam juntas: as duas dependem só da sessão.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const sessao = useMemo(() => ({}), [carregada, rodada, opcoes, musica.id, dificuldade, instrumento, aoTerminar, inicioEmRede, replay, jogadores, trecho, contagemNoTreino]);
+  const sessao = useMemo(() => ({}), [carregada, rodada, opcoesDaSessao.current, musica.id, dificuldade, instrumento, aoTerminar, inicioEmRede, replay, jogadores, trecho, contagemNoTreino]);
 
   useEffect(() => {
     let cancelado = false;
