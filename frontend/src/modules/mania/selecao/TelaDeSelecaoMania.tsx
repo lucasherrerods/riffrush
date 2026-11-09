@@ -9,6 +9,7 @@ import {
   BotaoDeTocar,
   Carrossel,
   FiltrosDaBiblioteca,
+  FundoDaSelecao,
   RodapeDeComandos,
   TituloDaSelecao,
   alternarFavorita,
@@ -211,11 +212,7 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
       className={cn("relative isolate flex h-full flex-col", arrastando && "outline-2 outline-dashed outline-primaria -outline-offset-8")}
     >
       {/* Como no Rock: a capa do mapa, borrada, pinta o fundo e troca junto com a seleção. */}
-      {conjunto && (
-        <div key={conjunto.id} aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden opacity-20">
-          <CapaDoConjunto conjunto={conjunto} className="scale-110 blur-3xl" />
-        </div>
-      )}
+      <FundoDaSelecao chave={conjunto?.id}>{conjunto && <CapaDoConjunto conjunto={conjunto} className="scale-105 blur-md" />}</FundoDaSelecao>
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:p-4">
       <aside className="col-span-5 flex min-h-0 flex-col gap-4 max-md:col-span-1">
         <BarraDaSelecao aoVoltar={aoVoltar} abaixo={<SeletorDeMods mods={mods} aoMudar={aoMudarMods} />}>

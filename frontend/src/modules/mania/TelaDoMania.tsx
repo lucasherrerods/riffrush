@@ -366,7 +366,8 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
 
   return (
     <main className="relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
-      <FundoDoMania />
+      {/* Na seleção o fundo é a capa do mapa, borrada, que a própria tela desenha. */}
+      {tela.nome !== "selecao" && <FundoDoMania />}
       {cabecalho}
       <div className="relative min-h-0 flex-1">
         {tela.nome === "busca" ? (

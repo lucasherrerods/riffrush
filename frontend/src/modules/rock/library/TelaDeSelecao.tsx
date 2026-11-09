@@ -1,5 +1,4 @@
 import { useRef, useState, type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { Ellipsis, FileAudio, Flame, Info, ListOrdered, RotateCcw, Search, Trash2, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/rock/character";
@@ -26,6 +25,7 @@ import {
   Carrossel,
   ChipsDeMods,
   FiltrosDaBiblioteca,
+  FundoDaSelecao,
   RodapeDeComandos,
   TituloDaSelecao,
   alternarFavorita,
@@ -417,21 +417,9 @@ export function TelaDeSelecao(props: Props) {
   return (
     <div className="relative isolate flex h-full flex-col">
       {/* A capa da música, borrada, pinta o fundo da tela e troca junto com a seleção. */}
-      <AnimatePresence initial={false}>
-        {!vazia && (
-          <motion.div
-            key={musica.id}
-            aria-hidden
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.2 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
-            className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
-          >
-            <Capa musica={musica} decorativa className="size-full scale-110 blur-3xl" />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <FundoDaSelecao chave={vazia ? undefined : musica.id}>
+        <Capa musica={musica} decorativa className="size-full scale-110 blur-3xl" />
+      </FundoDaSelecao>
 
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:gap-4 max-md:p-4">
         <section aria-label="Informações da música" className="col-span-5 flex min-h-0 min-w-0 flex-col gap-4 max-md:col-span-1">
