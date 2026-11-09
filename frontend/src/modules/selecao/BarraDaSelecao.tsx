@@ -5,26 +5,26 @@ interface PropsDaBarra {
   /** Só para leitores de tela. */
   titulo?: string;
   aoVoltar?: () => void;
-  /** Ao lado do voltar (ex.: os mods do Mania). */
-  esquerda?: React.ReactNode;
-  /** As ações à direita (BotaoDaSelecao). */
+  /** Na linha de baixo (ex.: os mods). */
+  abaixo?: React.ReactNode;
+  /** As ações à direita do voltar (BotaoDaSelecao), sempre numa linha só. */
   children?: React.ReactNode;
 }
 
-/** O topo da coluna de informações da seleção, igual nos dois modos: voltar à esquerda e as ações à direita. */
-export function BarraDaSelecao({ titulo, aoVoltar, esquerda, children }: PropsDaBarra) {
+/** O topo da coluna de informações da seleção, igual nos dois modos: voltar e as ações numa linha, e os mods embaixo. */
+export function BarraDaSelecao({ titulo, aoVoltar, abaixo, children }: PropsDaBarra) {
   return (
-    <header className="flex items-start justify-between gap-4 max-md:gap-2">
-      <div className="flex shrink-0 items-center gap-2">
+    <header className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
         {aoVoltar && (
-          <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
+          <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar" className="shrink-0">
             <ArrowLeft aria-hidden />
           </Button>
         )}
         {titulo && <h1 className="sr-only">{titulo}</h1>}
-        {esquerda}
+        <div className="flex min-w-0 items-center justify-end gap-2">{children}</div>
       </div>
-      <div className="flex flex-wrap items-center justify-end gap-2">{children}</div>
+      {abaixo}
     </header>
   );
 }

@@ -14,7 +14,7 @@ export interface ModDoChip {
 /** Os mods da partida em chips redondos no topo da seleção. */
 export function ChipsDeMods({ mods, aoAlternar }: { mods: ModDoChip[]; aoAlternar: (id: string) => void }) {
   return (
-    <div role="group" aria-label="Mods" className="flex flex-wrap gap-2">
+    <div role="group" aria-label="Mods" className="flex flex-wrap justify-end gap-2">
       {mods.map((mod) => (
         <button
           key={mod.id}

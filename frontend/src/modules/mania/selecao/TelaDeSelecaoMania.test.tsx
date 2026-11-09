@@ -91,3 +91,13 @@ it("tem o botão de tocar e o rodapé com os atalhos, como no Rock", () => {
   expect(screen.getByRole("button", { name: /TOCAR/ })).toBeInTheDocument();
   expect(screen.getByText("Confirmar")).toBeInTheDocument();
 });
+
+it("a Aleatória sorteia com as teclas do filtro e a seleção vai para o mapa que chega", async () => {
+  const sortearMapa = vi.fn(async () => {});
+  const props = { conjuntos, mods: 0, aoMudarMods: vi.fn(), aoImportar: vi.fn(), aoJogar: vi.fn(), sortearMapa };
+  const { rerender } = render(<TelaDeSelecaoMania {...props} />);
+  await userEvent.click(screen.getByRole("button", { name: "Aleatória" }));
+  expect(sortearMapa).toHaveBeenCalledWith("todas");
+  rerender(<TelaDeSelecaoMania {...props} selecionado="c" />);
+  expect(titulo()).toBe("Gama");
+});

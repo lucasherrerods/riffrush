@@ -34,7 +34,8 @@ import { TelaDeJogoMania, type EventoDoManiaAoVivo, type MapaParaJogar, type Opc
 import { TelaDeSelecaoMania } from "./selecao/TelaDeSelecaoMania";
 import { carregarConfiguracoesDoMania, salvarConfiguracoesDoMania } from "./settings/configuracoesMania";
 import { JanelaDeConfiguracoesMania } from "./settings/JanelaDeConfiguracoesMania";
-import type { FiltrosDaBusca, MapaDaBusca, PaginaDaBusca, baixarOsz } from "./busca/api";
+import { baixarOsz, buscarMapas, type FiltrosDaBusca, type MapaDaBusca, type PaginaDaBusca } from "./busca/api";
+import { sortearMapa } from "./busca/sortear";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 import { definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
@@ -185,16 +186,23 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     for (const { arquivo, motivo } of erros) avisar.error(`${arquivo}: ${motivo}`);
   };
 
+  const guardarDaBusca = (osz: Blob, mapa: MapaDaBusca) => guardarBaixado(osz, { status: mapa.status, estrelas: Object.fromEntries(mapa.dificuldades.map((d) => [d.hash, d.estrelas])) });
   const aoBaixar = async (osz: Blob, mapa: MapaDaBusca) => {
-    const estrelas = Object.fromEntries(mapa.dificuldades.map((d) => [d.hash, d.estrelas]));
     try {
-      await guardarBaixado(osz, { status: mapa.status, estrelas });
+      await guardarDaBusca(osz, mapa);
       avisar(`${mapa.titulo} baixado`);
     } catch (erro) {
       avisar.error(`${mapa.titulo}: ${erro instanceof Error ? erro.message : String(erro)}`);
     }
   };
   const baixados = new Set((conjuntos ?? []).flatMap((c) => (c.origem === "osu" && c.beatmapsetId ? [c.beatmapsetId] : [])));
+  /** Como a Aleatória do Rock: baixa um mapa ranked novo e o deixa selecionado. */
+  const sortearMapaNovo = async (teclas: number | "todas") => {
+    const mapa = await sortearMapa(teclas, { buscar: buscar ?? buscarMapas, baixados });
+    const osz = await (baixar ?? baixarOsz)(mapa.beatmapsetId);
+    await guardarDaBusca(osz, mapa);
+    setTela({ nome: "selecao", conjuntoId: `osu:${mapa.beatmapsetId}` });
+  };
 
   const aoJogar = async (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva, treino = false, replay?: ReplayAssistido) => {
     const mapa = await carregarMapa(conjunto, dificuldade);
@@ -364,7 +372,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         {tela.nome === "busca" ? (
           <TelaDeBuscaMania aoVoltar={() => setTela({ nome: tela.veioDaSelecao ? "selecao" : "menu" })} baixados={baixados} aoBaixar={aoBaixar} aoJogar={(beatmapsetId) => setTela({ nome: "selecao", conjuntoId: `osu:${beatmapsetId}` })} buscar={buscar} baixar={baixar} />
         ) : (
-          <TelaDeSelecaoMania selecionado={tela.nome === "selecao" ? tela.conjuntoId : undefined} aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", veioDaSelecao: true })} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
+          <TelaDeSelecaoMania selecionado={tela.nome === "selecao" ? tela.conjuntoId : undefined} aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", veioDaSelecao: true })} sortearMapa={sortearMapaNovo} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
         )}
         {painelDeAmigos}
       </div>

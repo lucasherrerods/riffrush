@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { Info, ListOrdered, Search, Upload } from "lucide-react";
 import {
   BarraDaSelecao,
   BotaoDaSelecao,
+  BotaoDeAleatoria,
   BotaoDeFavoritar,
   BotaoDeTocar,
   Carrossel,
@@ -42,6 +43,8 @@ interface Props {
   aoJogar: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void;
   /** Abre o mapa no treino; sem ele o botão não aparece. */
   aoTreinar?: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void;
+  /** Baixa um mapa ranked sorteado, com as teclas do filtro, e o abre selecionado; sem ele o botão não aparece. */
+  sortearMapa?: (teclas: number | "todas") => Promise<unknown>;
   /** Assistir ao replay de uma partida do ranking da dificuldade escolhida. */
   aoAssistir?: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva, linha: PosicaoNoRankingDoMania) => void;
 }
@@ -96,9 +99,13 @@ function rotuloDaDificuldade(conjunto: ConjuntoSalvo, dificuldade: DificuldadeSa
 }
 
 /** A seleção do Mania: os conjuntos na mesma roda da seleção do Rock, com busca, filtro de teclas, ordem e as abas de detalhes e ranking. */
-export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conjuntos, mods, aoMudarMods, aoImportar, aoJogar, aoTreinar, aoAssistir }: Props) {
+export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conjuntos, mods, aoMudarMods, aoImportar, aoJogar, aoTreinar, aoAssistir, sortearMapa }: Props) {
   // A seleção segue o id do conjunto: muda a ordem ou o filtro e ela continua no mesmo mapa, se ele ainda aparecer.
   const [id, setId] = useState<string | null>(selecionado ?? null);
+  // O mapa sorteado chega depois de a tela abrir: a seleção vai para ele.
+  useEffect(() => {
+    if (selecionado) setId(selecionado);
+  }, [selecionado]);
   const [hash, setHash] = useState<string | null>(null);
   const [texto, setTexto] = useState("");
   const [teclas, setTeclas] = useState<number | "todas">("todas");
@@ -126,7 +133,6 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
   };
   const andar = (passos: number) => escolher(indiceDandoAVolta(indice, passos, lista.length));
   const pular = (passos: number) => escolher(indice + passosSemDarAVolta(indice, passos, lista.length));
-  const sortear = () => lista.length > 1 && escolher(indiceDandoAVolta(indice, 1 + Math.floor(Math.random() * (lista.length - 1)), lista.length));
   const jogar = () => conjunto && dificuldade && aoJogar(conjunto, dificuldade);
   const favorita = !!conjunto && favoritas.has(conjunto.id);
   const alternarFavoritaAtual = () => {
@@ -211,17 +217,18 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
       )}
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:p-4">
       <aside className="col-span-5 flex min-h-0 flex-col gap-4 max-md:col-span-1">
-        <BarraDaSelecao aoVoltar={aoVoltar} esquerda={<SeletorDeMods mods={mods} aoMudar={aoMudarMods} />}>
+        <BarraDaSelecao aoVoltar={aoVoltar} abaixo={<SeletorDeMods mods={mods} aoMudar={aoMudarMods} />}>
+          <BotaoDaSelecao onClick={() => seletor.current?.click()}>
+            <Upload aria-hidden />
+            <span className="max-md:sr-only">Importar .osz</span>
+          </BotaoDaSelecao>
+          {sortearMapa && <BotaoDeAleatoria aoSortear={() => sortearMapa(teclas)} />}
           {aoBuscarMapas && (
             <BotaoDaSelecao onClick={aoBuscarMapas}>
               <Search aria-hidden />
-              Buscar mapas
+              <span className="max-md:sr-only">Buscar mapas</span>
             </BotaoDaSelecao>
           )}
-          <BotaoDaSelecao onClick={() => seletor.current?.click()}>
-            <Upload aria-hidden />
-            Importar .osz
-          </BotaoDaSelecao>
         </BarraDaSelecao>
         <input ref={seletor} type="file" accept=".osz" multiple aria-label="Arquivos .osz" className="sr-only" onChange={(e) => receber(e.target.files)} />
 
@@ -270,8 +277,6 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
             aoMudarOrdem={setOrdem}
             soFavoritas={soFavoritas}
             aoAlternarFavoritas={() => setSoFavoritas((ligado) => !ligado)}
-            aoSortear={sortear}
-            podeSortear={lista.length > 1}
             contagem={`${lista.length ? `${indice + 1} de ${lista.length} ${lista.length === 1 ? "mapa" : "mapas"}` : ""}${lista.length < todos.length && lista.length ? ` · ${todos.length} na biblioteca` : ""}`}
           >
             {opcoesDeTeclas.length > 1 && (

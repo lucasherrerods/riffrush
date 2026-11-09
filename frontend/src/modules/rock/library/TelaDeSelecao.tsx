@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Dices, Ellipsis, FileAudio, Flame, Info, ListOrdered, LoaderCircle, RotateCcw, Search, Trash2, Trophy } from "lucide-react";
+import { Ellipsis, FileAudio, Flame, Info, ListOrdered, RotateCcw, Search, Trash2, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/rock/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
@@ -11,7 +11,6 @@ import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { cn } from "@/shared/lib/utils";
-import { avisar } from "@/shared/ui/avisos";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu";
 import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
@@ -20,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import {
   BarraDaSelecao,
   BotaoDaSelecao,
+  BotaoDeAleatoria,
   BotaoDeFavoritar,
   BotaoDeTocar,
   Carrossel,
@@ -123,18 +123,7 @@ export function TelaDeSelecao(props: Props) {
     if (proxima !== undefined && proxima !== indice) aoSelecionar(proxima);
   };
 
-  const [sorteandoOficial, setSorteandoOficial] = useState(false);
-  const sortearOficial = async () => {
-    if (!props.sortearOficial) return;
-    setSorteandoOficial(true);
-    try {
-      await props.sortearOficial(dificuldade, props.instrumento);
-    } catch (erro) {
-      avisar.error(erro instanceof Error ? erro.message : String(erro));
-    } finally {
-      setSorteandoOficial(false);
-    }
-  };
+
 
   /** Anda pelas músicas visíveis dando a volta no fim da lista. */
   const andar = (passos: number) => {
@@ -354,7 +343,7 @@ export function TelaDeSelecao(props: Props) {
   );
 
   const cabecalho = (
-    <BarraDaSelecao titulo="Selecione a música" aoVoltar={aoVoltar} esquerda={mods}>
+    <BarraDaSelecao titulo="Selecione a música" aoVoltar={aoVoltar} abaixo={mods}>
       <BotaoDaSelecao asChild>
         <label className="">
           <FileAudio className="opacity-70" />
@@ -368,12 +357,7 @@ export function TelaDeSelecao(props: Props) {
           />
         </label>
       </BotaoDaSelecao>
-      {props.sortearOficial && (
-        <BotaoDaSelecao disabled={sorteandoOficial} onClick={() => void sortearOficial()} aria-label="Aleatória">
-          {sorteandoOficial ? <LoaderCircle className="animate-spin opacity-70" /> : <Dices className="opacity-70" />}
-          <span className="max-md:sr-only">Aleatória</span>
-        </BotaoDaSelecao>
-      )}
+      {props.sortearOficial && <BotaoDeAleatoria aoSortear={() => props.sortearOficial!(dificuldade, props.instrumento)} />}
       {props.aoBuscarMusicas && (
         <BotaoDaSelecao onClick={props.aoBuscarMusicas}>
           <Search className="opacity-70" />
