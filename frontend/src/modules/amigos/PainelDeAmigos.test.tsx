@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ApiDosAmigos, ListasDeAmigos, PessoaDaAmizade } from "./api";
 import { PainelDeAmigos } from "./PainelDeAmigos";
@@ -23,9 +23,24 @@ const api = vi.hoisted(() => ({
   desbloquear: vi.fn(async () => undefined),
 }));
 
+const conversasFalsas = vi.hoisted(() => {
+  let atual: import("./conversas").Conversas = {};
+  const ouvintes = new Set<() => void>();
+  return {
+    inscrever: (o: () => void) => (ouvintes.add(o), () => void ouvintes.delete(o)),
+    estado: () => atual,
+    enviar: vi.fn(() => true),
+    marcarComoLida: vi.fn(),
+    definir(novas: import("./conversas").Conversas) {
+      atual = novas;
+      for (const o of ouvintes) o();
+    },
+  };
+});
+
 vi.mock("./loja", async () => {
   const { ListaDeAmigos } = await vi.importActual<typeof import("./lista")>("./lista");
-  return { listaDeAmigos: new ListaDeAmigos(api as unknown as ApiDosAmigos, () => "t") };
+  return { listaDeAmigos: new ListaDeAmigos(api as unknown as ApiDosAmigos, () => "t"), conversas: conversasFalsas };
 });
 
 const presencaFalsa = vi.hoisted(() => ({ estadoDaAna: { tipo: "selecao" } as import("@/modules/presenca").EstadoOnline }));
@@ -37,6 +52,7 @@ vi.mock("@/modules/presenca", async (original) => ({
 
 beforeEach(() => {
   presencaFalsa.estadoDaAna = { tipo: "selecao" };
+  conversasFalsas.definir({});
   api.listas.mockResolvedValue(listas);
 });
 
@@ -61,6 +77,28 @@ describe("PainelDeAmigos", () => {
     const { aoConvidar, usuario } = abrir({ salaParaConvidar: "ABCDE" });
     await usuario.click(await screen.findByRole("button", { name: "Convidar" }));
     expect(aoConvidar).toHaveBeenCalledWith("a", "ABCDE");
+  });
+
+  it("conversa com o amigo: mostra o que chegou, marca como lido e manda mensagem", async () => {
+    const ana = { id: "a", nome: "AnaRock", avatar: null };
+    conversasFalsas.definir({ a: { mensagens: [{ de: ana, para: "eu", texto: "bora jogar?", em: 1, minha: false }], naoLidas: 1 } });
+    const { usuario } = abrir();
+    const botao = await screen.findByRole("button", { name: "Conversar com AnaRock" });
+    expect(within(botao).getByLabelText("1 pendentes")).toBeInTheDocument();
+    await usuario.click(botao);
+    expect(screen.getByText("bora jogar?")).toBeInTheDocument();
+    expect(conversasFalsas.marcarComoLida).toHaveBeenCalledWith("a");
+    await usuario.type(screen.getByRole("textbox", { name: "Mensagem" }), "agora!{Enter}");
+    expect(conversasFalsas.enviar).toHaveBeenCalledWith("a", "agora!");
+    await usuario.click(screen.getByRole("button", { name: "Voltar para os amigos" }));
+    expect(screen.getByText("Online (1)")).toBeInTheDocument();
+  });
+
+  it("com o amigo offline, dá para ler a conversa mas não escrever", async () => {
+    const { usuario } = abrir();
+    await usuario.click(await screen.findByRole("button", { name: "Conversar com RafaBass" }));
+    expect(screen.getByText(/RafaBass está offline/)).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Mensagem" })).not.toBeInTheDocument();
   });
 
   it("a busca filtra pelo nome", async () => {

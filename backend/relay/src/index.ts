@@ -260,6 +260,8 @@ function fechar(socket: WebSocket, motivo: string) {
  */
 export class Presenca extends DurableObject<Env> {
   private janelas = new Map<WebSocket, Janela>();
+  /** O mesmo limite do chat global para as mensagens privadas. */
+  private baldes = new Map<WebSocket, Balde>();
 
   async fetch(pedido: Request): Promise<Response> {
     if (pedido.headers.get("Upgrade") !== "websocket") return new Response("Esperava um WebSocket.", { status: 426 });
@@ -294,6 +296,18 @@ export class Presenca extends DurableObject<Env> {
       }
       return;
     }
+    if (comando.tipo === "privada") {
+      const gasto = gastarDoBalde(this.baldes.get(socket) ?? BALDE_CHEIO, Date.now());
+      this.baldes.set(socket, gasto.balde);
+      if (!gasto.passa) return;
+      const { id, nome, avatar } = atual;
+      const privada = JSON.stringify({ tipo: "privada", de: { id, nome, avatar }, para: comando.para, texto: comando.texto, em: Date.now() } satisfies MensagemDaPresenca);
+      for (const destino of this.ctx.getWebSockets(PESSOA)) {
+        const dono = (destino.deserializeAttachment() as PessoaOnline).id;
+        if (dono === comando.para || destino === socket) enviar(destino, privada);
+      }
+      return;
+    }
     const pessoa: PessoaOnline = { ...atual, estado: comando.estado };
     socket.serializeAttachment(pessoa);
     this.paraTodos({ tipo: "pessoa", pessoa });
@@ -309,6 +323,7 @@ export class Presenca extends DurableObject<Env> {
 
   private saiu(socket: WebSocket) {
     this.janelas.delete(socket);
+    this.baldes.delete(socket);
     const { id } = socket.deserializeAttachment() as PessoaOnline;
     fechar(socket, "saiu");
     // Se a mesma conta já abriu outra conexão, ela continua na lista.

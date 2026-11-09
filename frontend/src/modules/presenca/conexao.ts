@@ -1,5 +1,5 @@
 import type { Modo } from "@/shared/modo";
-import { aplicarMensagem, lerConvite, urlDaPresenca, type ConviteParaSala, type EstadoOnline, type PessoaOnline } from "./protocolo";
+import { aplicarMensagem, lerConvite, lerMensagemPrivada, urlDaPresenca, type ConviteParaSala, type EstadoOnline, type MensagemPrivada, type PessoaOnline } from "./protocolo";
 import { SocketComFicha, type DependenciasDoSocket } from "./socketComFicha";
 
 export interface EstadoDaPresenca {
@@ -19,6 +19,7 @@ export class ConexaoDePresenca {
   private estadoAtual: EstadoDaPresenca = { conectada: false, pessoas: [] };
   private ouvintes = new Set<() => void>();
   private ouvintesDeConvite = new Set<(convite: ConviteParaSala) => void>();
+  private ouvintesDePrivadas = new Set<(mensagem: MensagemPrivada) => void>();
   private socket: SocketComFicha;
   private onde: EstadoOnline = { tipo: "menu" };
   private modo: Modo = "rock";
@@ -32,7 +33,9 @@ export class ConexaoDePresenca {
       },
       aoReceber: (texto) => {
         const convite = lerConvite(texto);
+        const privada = !convite && lerMensagemPrivada(texto);
         if (convite) for (const ouvinte of this.ouvintesDeConvite) ouvinte(convite);
+        else if (privada) for (const ouvinte of this.ouvintesDePrivadas) ouvinte(privada);
         else this.mudar({ ...this.estadoAtual, pessoas: aplicarMensagem(this.estadoAtual.pessoas, texto) });
       },
       aoCair: () => this.mudar({ conectada: false, pessoas: [] }),
@@ -54,6 +57,20 @@ export class ConexaoDePresenca {
       this.ouvintesDeConvite.delete(ouvinte);
     };
   };
+
+  ouvirPrivadas = (ouvinte: (mensagem: MensagemPrivada) => void) => {
+    this.ouvintesDePrivadas.add(ouvinte);
+    return () => {
+      this.ouvintesDePrivadas.delete(ouvinte);
+    };
+  };
+
+  /** Manda uma mensagem só para essa conta. Sem conexão, devolve false e nada sai. */
+  enviarPrivada(para: string, texto: string): boolean {
+    if (!this.estadoAtual.conectada) return false;
+    this.socket.enviar(JSON.stringify({ tipo: "privada", para, texto }));
+    return true;
+  }
 
   /** Chama a conta para a sala online. Sem conexão, o convite não sai. */
   convidar(para: string, codigo: string) {

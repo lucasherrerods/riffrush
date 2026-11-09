@@ -75,6 +75,22 @@ describe("ConexaoDePresenca", () => {
     expect(conexao.estado().pessoas).toEqual([]);
   });
 
+  it("manda mensagem privada pela mesma conexão e avisa quem ouve, sem mexer na lista", async () => {
+    const { conexao } = montar();
+    const recebidas = vi.fn();
+    conexao.ouvirPrivadas(recebidas);
+    expect(conexao.enviarPrivada("b", "oi")).toBe(false);
+    conexao.ligar();
+    await umInstante();
+    socket().abrir();
+    expect(conexao.enviarPrivada("b", "oi")).toBe(true);
+    expect(socket().enviadas.at(-1)).toEqual({ tipo: "privada", para: "b", texto: "oi" });
+    const de = { id: "a", nome: "Ana", avatar: null };
+    socket().entregar({ tipo: "privada", de, para: "b", texto: "oi", em: 5 });
+    expect(recebidas).toHaveBeenCalledWith({ de, para: "b", texto: "oi", em: 5 });
+    expect(conexao.estado().pessoas).toEqual([]);
+  });
+
   it("a rede caiu: limpa a lista e tenta de novo, com ficha nova", async () => {
     const { conexao, esperas, pedirFicha } = montar();
     conexao.ligar();

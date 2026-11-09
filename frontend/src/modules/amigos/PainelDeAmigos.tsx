@@ -1,7 +1,7 @@
 import type { Modo } from "@/shared/modo";
 import { EtiquetaDeModo } from "@/shared/ui/EtiquetaDeModo";
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
-import { Check, Copy, Ellipsis, Eye, Search, Send, UserPlus, Users, X } from "lucide-react";
+import { Check, Copy, Ellipsis, Eye, MessageSquare, Search, Send, UserPlus, Users, X } from "lucide-react";
 import { FotoDaConta } from "@/modules/conta";
 import { descreverEstado, podeAssistir, usePresenca, type PessoaOnline } from "@/modules/presenca";
 import { useTeclado } from "@/shared/hooks/useTeclado";
@@ -13,6 +13,8 @@ import { avisar } from "@/shared/ui/avisos";
 import { convitePodeSair, filtrarPorNome, separarPorPresenca, vistoHa, type AmigoOnline } from "./amigos";
 import type { ApiDosAmigos, PessoaDaAmizade, SugestaoDeAmizade } from "./api";
 import { listaDeAmigos } from "./loja";
+import { ConversaComAmigo, useConversas } from "./ConversaComAmigo";
+import { lerConversa } from "./conversas";
 
 interface Props {
   aoFechar: () => void;
@@ -115,8 +117,18 @@ function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar, aoAssistir }: { ami
   const presenca = usePresenca();
   const [busca, setBusca] = useState("");
   const [agora] = useState(() => new Date());
+  const [conversandoCom, setConversandoCom] = useState<string | null>(null);
+  const todas = useConversas();
   if (!amigos.length) return <Vazio>Nenhum amigo ainda. Passe o seu código ou adicione o de alguém.</Vazio>;
   const { online, offline } = separarPorPresenca(filtrarPorNome(amigos, busca), presenca.pessoas);
+  const conversando = amigos.find((a) => a.conta_id === conversandoCom);
+  if (conversando) {
+    const estaOnline = presenca.pessoas.some((p) => p.id === conversando.conta_id);
+    return <ConversaComAmigo amigo={conversando} online={estaOnline} conectada={presenca.conectada} aoVoltar={() => setConversandoCom(null)} />;
+  }
+  const conversar = (amigo: { conta_id: string; nome: string }) => (
+    <BotaoDeConversar nome={amigo.nome} naoLidas={lerConversa(todas, amigo.conta_id).naoLidas} aoClicar={() => setConversandoCom(amigo.conta_id)} />
+  );
   return (
     <>
       <label className="relative">
@@ -143,6 +155,7 @@ function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar, aoAssistir }: { ami
                   Convidar
                 </Button>
               )}
+              {conversar(amigo)}
               <MenuDoAmigo pessoa={amigo} />
             </LinhaDeAmigo>
           ))}
@@ -150,12 +163,26 @@ function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar, aoAssistir }: { ami
         <Secao titulo={`Offline (${offline.length})`}>
           {offline.map((amigo) => (
             <LinhaDeAmigo key={amigo.conta_id} pessoa={amigo} modo={amigo.ultimo_modo} detalhe={vistoHa(amigo.visto_em, agora)}>
+              {conversar(amigo)}
               <MenuDoAmigo pessoa={amigo} />
             </LinhaDeAmigo>
           ))}
         </Secao>
       </div>
     </>
+  );
+}
+
+function BotaoDeConversar({ nome, naoLidas, aoClicar }: { nome: string; naoLidas: number; aoClicar: () => void }) {
+  return (
+    <Button variant="ghost" size="icon" className="relative" aria-label={`Conversar com ${nome}`} onClick={aoClicar}>
+      <MessageSquare />
+      {naoLidas > 0 && (
+        <span className="absolute -top-1 -right-1">
+          <Contador valor={naoLidas} />
+        </span>
+      )}
+    </Button>
   );
 }
 

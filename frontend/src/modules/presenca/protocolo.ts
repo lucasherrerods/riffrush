@@ -50,6 +50,26 @@ export function lerConvite(bruta: string): ConviteParaSala | null {
   }
 }
 
+/** Mensagem de uma conta para outra. O relay manda para quem recebe e devolve para quem mandou. */
+export interface MensagemPrivada {
+  de: ConviteParaSala["de"];
+  para: string;
+  texto: string;
+  /** Hora de chegada no relay, em ms. */
+  em: number;
+}
+
+export function lerMensagemPrivada(bruta: string): MensagemPrivada | null {
+  try {
+    const msg = JSON.parse(bruta);
+    if (msg?.tipo !== "privada" || typeof msg.texto !== "string" || typeof msg.para !== "string" || typeof msg.em !== "number") return null;
+    if (typeof msg.de?.id !== "string" || typeof msg.de.nome !== "string") return null;
+    return { de: { id: msg.de.id, nome: msg.de.nome, avatar: typeof msg.de.avatar === "string" ? msg.de.avatar : null }, para: msg.para, texto: msg.texto, em: msg.em };
+  } catch {
+    return null;
+  }
+}
+
 /** A partida que quem assiste precisa montar igual. */
 export interface PartidaTransmitida {
   musica: string;

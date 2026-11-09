@@ -1,5 +1,5 @@
 import {
-  lerAvisoDeEspectadores, lerConvite, aplicarMensagem, entradasDoLote, entradasParaOLote, ordenarPessoas, urlDaPresenca, urlDaTransmissao, type PessoaOnline } from "./protocolo";
+  lerAvisoDeEspectadores, lerConvite, lerMensagemPrivada, aplicarMensagem, entradasDoLote, entradasParaOLote, ordenarPessoas, urlDaPresenca, urlDaTransmissao, type PessoaOnline } from "./protocolo";
 
 const pessoa = (id: string, nome: string, estado: PessoaOnline["estado"] = { tipo: "menu" }): PessoaOnline => ({ id, nome, avatar: null, estado });
 const tocando = (transmitindo: boolean): PessoaOnline["estado"] => ({
@@ -82,5 +82,19 @@ describe("lerConvite", () => {
     expect(lerConvite(JSON.stringify({ tipo: "lista", pessoas: [] }))).toBeNull();
     expect(lerConvite(JSON.stringify({ tipo: "convite", de: { id: 3 }, codigo: "ABCDE" }))).toBeNull();
     expect(lerConvite("{")).toBeNull();
+  });
+});
+
+describe("lerMensagemPrivada", () => {
+  const de = { id: "a", nome: "Ana", avatar: null };
+
+  it("lê a mensagem privada que o relay entrega", () => {
+    expect(lerMensagemPrivada(JSON.stringify({ tipo: "privada", de, para: "b", texto: "oi", em: 10 }))).toEqual({ de, para: "b", texto: "oi", em: 10 });
+  });
+
+  it("ignora o que não é mensagem privada ou veio incompleto", () => {
+    expect(lerMensagemPrivada(JSON.stringify({ tipo: "convite", de, codigo: "ABCDE" }))).toBeNull();
+    expect(lerMensagemPrivada(JSON.stringify({ tipo: "privada", de, para: "b", em: 10 }))).toBeNull();
+    expect(lerMensagemPrivada("{quebrado")).toBeNull();
   });
 });

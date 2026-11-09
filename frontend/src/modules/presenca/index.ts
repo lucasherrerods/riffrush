@@ -1,6 +1,6 @@
 import { adiar } from "@/shared/lib/adiar";
 export { abrirCanalDeTransmissao, chatGlobal, presenca, presencaDisponivel, transmitirPartida, usePresenca, useSouDaModeracao } from "./presenca";
-export type { ConviteParaSala, EstadoOnline, PartidaTransmitida, PessoaOnline } from "./protocolo";
+export type { ConviteParaSala, EstadoOnline, MensagemPrivada, PartidaTransmitida, PessoaOnline } from "./protocolo";
 export { assistirNoModoCerto, modoDaPessoa, tirarPedidoDeAssistir } from "./assistirEmOutroModo";
 export { useAoVivo, type AssistindoAoVivo, type FaseAoVivo } from "./useAoVivo";
 export { descreverEstado } from "./descrever";

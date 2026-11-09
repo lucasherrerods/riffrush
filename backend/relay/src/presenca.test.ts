@@ -67,6 +67,17 @@ describe("lerComandoDaPresenca", () => {
     expect(lerComandoDaPresenca(JSON.stringify({ tipo: "convite", para: amiga, codigo: "nao vale" }))).toBeNull();
     expect(lerComandoDaPresenca("{quebrado")).toBeNull();
   });
+
+  it("lê a mensagem privada com o texto limpo", () => {
+    expect(lerComandoDaPresenca(JSON.stringify({ tipo: "privada", para: amiga, texto: "  oi\n  bora?  " }))).toEqual({ tipo: "privada", para: amiga, texto: "oi bora?" });
+    expect(lerComandoDaPresenca(JSON.stringify({ tipo: "privada", para: amiga, texto: "a".repeat(500) }))).toEqual({ tipo: "privada", para: amiga, texto: "a".repeat(200) });
+  });
+
+  it("recusa mensagem privada sem texto ou para conta inválida", () => {
+    expect(lerComandoDaPresenca(JSON.stringify({ tipo: "privada", para: amiga, texto: "   " }))).toBeNull();
+    expect(lerComandoDaPresenca(JSON.stringify({ tipo: "privada", para: amiga, texto: 5 }))).toBeNull();
+    expect(lerComandoDaPresenca(JSON.stringify({ tipo: "privada", para: "../x", texto: "oi" }))).toBeNull();
+  });
 });
 
 describe("lerMensagemDaTransmissao", () => {
