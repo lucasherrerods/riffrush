@@ -9,6 +9,16 @@ const VIDA_BAIXA = 0.25;
 
 const milhares = (pontos: number) => `${Math.floor(pontos / 1000)}k`;
 
+/** Acertos seguidos do adversário; some quando ele erra e a sequência zera. */
+function Sequencia({ nome, sequencia = 0 }: { nome: string; sequencia?: number }) {
+  if (sequencia <= 0) return null;
+  return (
+    <span aria-label={`Sequência de ${nome}`} className="font-mono font-bold text-primaria tabular-nums">
+      {sequencia}x
+    </span>
+  );
+}
+
 /**
  * Os outros jogadores durante a partida: chibi, pontos e vida ao vivo (sem a pista deles).
  * No celular (`compacto`) vira uma linha de pílulas pequenas, para não cobrir a pista.
@@ -28,6 +38,7 @@ export function Adversarios({ sala, compacto = false }: { sala: EstadoDaSala; co
                 <span className="truncate font-bold">{jogador.personagem.nome}</span>
                 <span className="font-mono text-texto-suave tabular-nums">{milhares(estado?.pontos ?? 0)}</span>
               </span>
+              <Sequencia nome={jogador.personagem.nome} sequencia={estado?.sequencia} />
               <MedidorDeVida vida={estado?.vida ?? VIDA_INICIAL} fantasma={estado?.fantasma} horizontal rotulo={`Vida de ${jogador.personagem.nome}`} className="h-1 w-full" />
             </li>
           );
@@ -51,7 +62,10 @@ export function Adversarios({ sala, compacto = false }: { sala: EstadoDaSala; co
             <Avatar personagem={jogador.personagem} tocando={!!estado && !estado.terminou} pulso={estado?.pulso ?? 0} triste={vida < VIDA_BAIXA} reacao={estado ? reacaoDoFimDaPartida(estado) : null} className="h-16 w-auto" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-base font-bold">{jogador.personagem.nome}</p>
-              <p className="font-mono text-base font-black tabular-nums">{(estado?.pontos ?? 0).toLocaleString("pt-BR")}</p>
+              <p className="flex items-baseline justify-between gap-2 text-base">
+                <span className="font-mono font-black tabular-nums">{(estado?.pontos ?? 0).toLocaleString("pt-BR")}</span>
+                <Sequencia nome={jogador.personagem.nome} sequencia={estado?.sequencia} />
+              </p>
               <MedidorDeVida vida={vida} fantasma={estado?.fantasma} horizontal rotulo={`Vida de ${jogador.personagem.nome}`} className="mt-1 h-2 w-full" />
               {estado?.derrota && <p className="text-base font-bold text-perigo">Vaiado</p>}
             </div>
