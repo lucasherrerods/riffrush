@@ -52,10 +52,13 @@ describe("Lobby", () => {
     expect(screen.getAllByText(/^Nv /)).toHaveLength(1);
   });
 
-  it("o host expulsa um convidado, mas não a si mesmo", async () => {
+  it("o host expulsa um convidado depois de confirmar, mas não a si mesmo", async () => {
+    const usuario = userEvent.setup();
     render(lobby(primeira.id, { jogadores: [{ id: 1, personagem: PERSONAGEM_PADRAO }, { id: 2, personagem: vitor }] }));
     expect(screen.getAllByRole("button", { name: /^Expulsar/ })).toHaveLength(1);
-    await userEvent.setup().click(screen.getByRole("button", { name: "Expulsar Vitor" }));
+    await usuario.click(screen.getByRole("button", { name: "Expulsar Vitor" }));
+    expect(expulsar).not.toHaveBeenCalled();
+    await usuario.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Expulsar/ }));
     expect(expulsar).toHaveBeenCalledWith(2);
   });
 
