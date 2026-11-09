@@ -512,15 +512,8 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
         </CabecalhoDoPlayerDeMusica>
       )}
       <div className="relative flex-1">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={tela === "jogo" ? `jogo-${partida}` : tela}
-            initial={{ opacity: 0, scale: 1.02 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-0"
-          >
+        {/* A troca de tela é instantânea, como no Mania. */}
+        <div key={tela === "jogo" ? `jogo-${partida}` : tela} className="absolute inset-0">
             {tela === "menu" && (
               <MenuPrincipal
                 volumeDosEfeitos={configuracoes.volumeDosEfeitos}
@@ -799,8 +792,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 }
               />
             )}
-          </motion.div>
-        </AnimatePresence>
+        </div>
         <AnimatePresence>
           {amigosAbertos && !naPista && contasLigadas && (
             <motion.div
