@@ -1,4 +1,4 @@
-import { TAMANHO_MAXIMO_DO_TEXTO, adicionarMensagem, gastarDoBalde, limparTexto, BALDE_CHEIO } from "./chat";
+import { TAMANHO_MAXIMO_DO_TEXTO, adicionarMensagem, gastarDoBalde, limparTexto, BALDE_CHEIO, formatarHorario } from "./chat";
 
 describe("limparTexto", () => {
   it("tira espaços das pontas e junta quebras de linha num espaço só", () => {
@@ -53,5 +53,15 @@ describe("adicionarMensagem", () => {
     expect(lista).toHaveLength(50);
     expect(lista[0]).toBe(10);
     expect(lista.at(-1)).toBe(59);
+  });
+});
+
+describe("formatarHorario", () => {
+  it("mostra dia/mês/ano e hora:minuto com zeros à esquerda", () => {
+    expect(formatarHorario(new Date(2026, 0, 5, 9, 3).getTime())).toBe("05/01/2026 09:03");
+  });
+
+  it("usa 24 horas", () => {
+    expect(formatarHorario(new Date(2026, 10, 9, 21, 45).getTime())).toBe("09/11/2026 21:45");
   });
 });

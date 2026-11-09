@@ -162,7 +162,7 @@ export function ChatGlobal({ aceito, aoResponder, className }: Props) {
         bloqueado={bloqueado}
         mensagens={mensagens
           .filter((m) => !silenciados.includes(m.autor.id))
-          .map((m) => ({ id: String(m.n), autor: m.autor.nome, texto: m.texto, minha: m.autor.id === conta?.id, selo: m.autor.moderacao ? "Mod" : undefined, etiqueta: m.modo && <EtiquetaDeModo modo={m.modo} /> }))}
+          .map((m) => ({ id: String(m.n), autor: m.autor.nome, texto: m.texto, em: m.em, minha: m.autor.id === conta?.id, selo: m.autor.moderacao ? "Mod" : undefined, etiqueta: m.modo && <EtiquetaDeModo modo={m.modo} /> }))}
         aoEnviar={(texto) => chatGlobal.enviar(texto)}
         acoesDaMensagem={acoes}
         minimizar={{

@@ -84,8 +84,8 @@ describe("Lobby", () => {
 
   it("tem o chat da sala, com a minha mensagem marcada, e manda pelo protocolo", async () => {
     const chat = [
-      { n: 1, de: 2, autor: "Vitor", texto: "bora?" },
-      { n: 2, de: 1, autor: "Rockstar", texto: "bora" },
+      { n: 1, de: 2, autor: "Vitor", texto: "bora?", em: 0 },
+      { n: 2, de: 1, autor: "Rockstar", texto: "bora", em: 0 },
     ];
     render(lobby(primeira.id, { chat }));
     const log = screen.getByRole("log", { name: "Chat da sala" });

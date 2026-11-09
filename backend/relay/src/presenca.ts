@@ -59,7 +59,36 @@ export type MensagemDaPresenca =
   | { tipo: "lista"; pessoas: PessoaOnline[] }
   | { tipo: "pessoa"; pessoa: PessoaOnline }
   | { tipo: "saiu"; id: string }
-  | { tipo: "convite"; de: Pessoa; codigo: string };
+  | { tipo: "convite"; de: Pessoa; codigo: string }
+  | ({ tipo: "privada" } & PrivadaDaApi);
+
+/**
+ * Uma mensagem entre amigos que a API já guardou. Quem confere a amizade e limpa o texto é a API;
+ * o relay só entrega a quem mandou e a quem recebe, se estiverem conectados.
+ */
+export interface PrivadaDaApi {
+  id: number;
+  de: Pessoa;
+  para: string;
+  texto: string;
+  /** Hora em que a API guardou, em ms. */
+  em: number;
+}
+
+export function lerPrivadaDaApi(corpo: string): PrivadaDaApi | null {
+  let dados: Record<string, unknown>;
+  try {
+    dados = JSON.parse(corpo);
+  } catch {
+    return null;
+  }
+  const { id, para, texto, em } = dados ?? {};
+  const de = dados?.de as Record<string, unknown> | undefined;
+  if (!Number.isInteger(id) || typeof para !== "string" || !ID_DA_CONTA.test(para) || typeof texto !== "string" || typeof em !== "number") return null;
+  if (typeof de?.id !== "string" || !ID_DA_CONTA.test(de.id) || typeof de.nome !== "string") return null;
+  const avatar = typeof de.avatar === "string" ? de.avatar : null;
+  return { id: id as number, de: { id: de.id, nome: de.nome, avatar }, para, texto, em };
+}
 
 /** O que o app manda pela presença: o estado novo ou um convite para a sala em que está. */
 export type ComandoDaPresenca = { tipo: "estado"; estado: EstadoOnline } | { tipo: "convite"; para: string; codigo: string };

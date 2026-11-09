@@ -23,6 +23,21 @@ describe("api dos amigos", () => {
     expect(pedido(buscar).url).toBe("https://api/amigos?modo=mania");
   });
 
+  it("conversa com o amigo: histórico paginado, envio, lidas e não lidas", async () => {
+    let chamada = montar([]);
+    await chamada.api.mensagens("t", "a", 40);
+    expect(pedido(chamada.buscar)).toMatchObject({ url: "https://api/amigos/a/mensagens?antes=40", metodo: "GET" });
+    chamada = montar({ id: 1, de: "eu", para: "a", texto: "oi", enviada_em: "2026-11-09T12:00:00Z" });
+    expect((await chamada.api.enviarMensagem("t", "a", "oi")).id).toBe(1);
+    expect(pedido(chamada.buscar)).toMatchObject({ url: "https://api/amigos/a/mensagens", metodo: "POST", corpo: '{"texto":"oi"}' });
+    chamada = montar(null, 204);
+    await chamada.api.marcarLidas("t", "a");
+    expect(pedido(chamada.buscar)).toMatchObject({ url: "https://api/amigos/a/mensagens/lidas", metodo: "POST" });
+    chamada = montar([{ conta_id: "a", quantas: 2 }]);
+    expect(await chamada.api.naoLidas("t")).toEqual([{ conta_id: "a", quantas: 2 }]);
+    expect(pedido(chamada.buscar).url).toBe("https://api/conversas/nao-lidas");
+  });
+
   it("pede pelo código ou pela conta", async () => {
     const { api, buscar } = montar({ amigos: true });
     expect(await api.pedir("t", { codigo: "RIFF-ABCDEF" })).toEqual({ amigos: true });
