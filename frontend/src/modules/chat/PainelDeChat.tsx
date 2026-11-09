@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { ChevronDown, ChevronUp, MessageSquare, Send, type LucideIcon } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
-import { TAMANHO_MAXIMO_DO_TEXTO, limparTexto } from "./chat";
+import { TAMANHO_MAXIMO_DO_TEXTO, formatarHorario, limparTexto } from "./chat";
 
 export interface MensagemDoChat {
   id: string;
@@ -14,6 +14,8 @@ export interface MensagemDoChat {
   selo?: string;
   /** Uma etiqueta antes do nome, como o modo de jogo de quem escreveu. */
   etiqueta?: ReactNode;
+  /** Quando a mensagem chegou, em ms. */
+  em?: number;
 }
 
 export interface AcaoDaMensagem {
@@ -105,6 +107,7 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
             {mensagens.map((m) => (
               <li key={m.id} className="group flex items-start gap-1 break-words">
                 <p className="min-w-0 flex-1">
+                  {m.em !== undefined && <time dateTime={new Date(m.em).toISOString()} className="mr-1 text-xs text-texto-suave tabular-nums max-md:text-[10px]">{formatarHorario(m.em)}</time>}
                   {m.etiqueta && <span className="mr-1 align-middle">{m.etiqueta}</span>}
                   <span className={cn("font-bold", m.minha ? "text-destaque" : "text-texto")}>{m.autor}</span>
                   {m.selo && <span className="ml-1 rounded-full bg-ouro px-2 text-base font-bold text-fundo max-md:px-1.5 max-md:text-[10px]">{m.selo}</span>}

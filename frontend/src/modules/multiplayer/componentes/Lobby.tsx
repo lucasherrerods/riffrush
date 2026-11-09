@@ -307,7 +307,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos,
         <PainelDeChat
           titulo="Chat da sala"
           className="min-h-48 flex-1"
-          mensagens={sala.chat.map((m) => ({ id: String(m.n), autor: m.autor, texto: m.texto, minha: m.de === sala.meuId }))}
+          mensagens={sala.chat.map((m) => ({ id: String(m.n), autor: m.autor, texto: m.texto, em: m.em, minha: m.de === sala.meuId }))}
           aoEnviar={enviarChat}
           aviso={
             codigo

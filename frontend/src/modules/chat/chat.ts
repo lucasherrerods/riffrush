@@ -43,3 +43,11 @@ export function gastarDoBalde(balde: Balde, agora: number): { passa: boolean; ba
 }
 
 export const adicionarMensagem = <T>(lista: T[], mensagem: T, maximo = MENSAGENS_GUARDADAS) => [...lista, mensagem].slice(-maximo);
+
+const dois = (n: number) => String(n).padStart(2, "0");
+
+/** "dd/MM/yyyy HH:mm" no fuso de quem lê. */
+export function formatarHorario(em: number): string {
+  const d = new Date(em);
+  return `${dois(d.getDate())}/${dois(d.getMonth() + 1)}/${d.getFullYear()} ${dois(d.getHours())}:${dois(d.getMinutes())}`;
+}

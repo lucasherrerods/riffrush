@@ -16,6 +16,12 @@ describe("PainelDeChat", () => {
     expect(within(log).getByText("bora jogar?")).toBeInTheDocument();
   });
 
+  it("mostra o horário de chegada quando a mensagem tem", () => {
+    const mensagens = [{ id: "1", autor: "Lucas", texto: "oi", em: new Date(2026, 10, 9, 21, 5).getTime() }];
+    render(<PainelDeChat titulo="Chat" mensagens={mensagens} aoEnviar={vi.fn()} />);
+    expect(screen.getByText("09/11/2026 21:05")).toBeInTheDocument();
+  });
+
   it("texto com cara de HTML aparece como texto, sem virar elemento", () => {
     const html = '<img src=x onerror="alert(1)">';
     render(<PainelDeChat titulo="Chat" mensagens={[{ id: "1", autor: "x", texto: html }]} aoEnviar={vi.fn()} />);

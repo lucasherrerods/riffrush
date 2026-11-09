@@ -310,8 +310,8 @@ describe("chat da sala", () => {
   }
 
   it("guarda a mensagem com o nome de quem mandou, carimbado pelo servidor", () => {
-    const sala = reduzir(salaComDois(), 2, { tipo: "chat", texto: "  bora!  " }, 0).estado;
-    expect(sala.chat).toEqual([{ n: 1, de: 2, autor: "Vitor", texto: "bora!" }]);
+    const sala = reduzir(salaComDois(), 2, { tipo: "chat", texto: "  bora!  " }, 0, 1234).estado;
+    expect(sala.chat).toEqual([{ n: 1, de: 2, autor: "Vitor", texto: "bora!", em: 1234 }]);
   });
 
   it("ignora quem não está na sala, como um expulso que continua conectado", () => {
