@@ -98,7 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         relogio,
     });
     if config.osu.is_none() {
-        tracing::warn!("sem OSU_CLIENT_ID e OSU_CLIENT_SECRET: as partidas do Mania esperam na fila sem XP");
+        tracing::info!("sem OSU_CLIENT_ID e OSU_CLIENT_SECRET: o Mania confere as partidas pelo espelho catboy.best");
     }
     let servicos_do_mania = ServicosDoMania {
         repositorio: Arc::new(ManiaPostgres(banco.clone())),

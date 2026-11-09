@@ -1,5 +1,6 @@
-//! O osu! oficial, só para o servidor conferir as partidas: o status e as estrelas pela API v2 (com um token do
-//! próprio app, que nunca vai para o cliente) e o .osu pelo endereço público. O áudio nunca passa por aqui.
+//! De onde o servidor tira o .osu, o status e as estrelas para conferir as partidas. Com credenciais, a API v2 do
+//! osu! oficial (com um token do próprio app, que nunca vai para o cliente); sem elas, o espelho catboy.best, que
+//! devolve os mesmos campos sem login. O áudio nunca passa por aqui.
 
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -11,6 +12,9 @@ use super::portas::{BeatmapBaixado, BeatmapDoOsu, FonteDeBeatmaps};
 use crate::modules::conta::FalhaExterna;
 
 const URL_DO_OSU: &str = "https://osu.ppy.sh";
+const URL_DO_ESPELHO: &str = "https://catboy.best";
+/// O espelho recusa pedidos que não dizem de que app vêm.
+const AGENTE: &str = concat!("RiffRush/", env!("CARGO_PKG_VERSION"));
 const MODO_MANIA: u8 = 3;
 /// Renova o token um pouco antes de ele vencer.
 const FOLGA_DO_TOKEN: Duration = Duration::from_secs(60);
@@ -23,7 +27,7 @@ pub struct CredenciaisDoOsu {
 
 pub struct Osu {
     pub http: reqwest::Client,
-    /// Sem credenciais, nenhuma partida é conferida: elas esperam na fila até a API ser configurada.
+    /// Sem credenciais, os dados vêm do espelho.
     pub credenciais: Option<CredenciaisDoOsu>,
     pub url: String,
     token: Mutex<Option<(String, Instant)>>,
@@ -31,7 +35,8 @@ pub struct Osu {
 
 impl Osu {
     pub fn novo(http: reqwest::Client, credenciais: Option<CredenciaisDoOsu>) -> Self {
-        Self::com_url(http, credenciais, URL_DO_OSU.into())
+        let url = if credenciais.is_some() { URL_DO_OSU } else { URL_DO_ESPELHO };
+        Self::com_url(http, credenciais, url.into())
     }
 
     /// Para os testes, que apontam para um servidor de mentira.
@@ -93,11 +98,15 @@ struct BeatmapDaApi {
 #[async_trait]
 impl FonteDeBeatmaps for Osu {
     async fn baixar(&self, beatmap_id: u64) -> Result<BeatmapBaixado, FalhaExterna> {
-        let token = self.token().await?;
-        let resposta = self
-            .http
-            .get(format!("{}/api/v2/beatmaps/{beatmap_id}", self.url))
-            .bearer_auth(token)
+        let pedido = if self.credenciais.is_some() {
+            self.http
+                .get(format!("{}/api/v2/beatmaps/{beatmap_id}", self.url))
+                .bearer_auth(self.token().await?)
+        } else {
+            self.http.get(format!("{}/api/v2/b/{beatmap_id}", self.url))
+        };
+        let resposta = pedido
+            .header(reqwest::header::USER_AGENT, AGENTE)
             .send()
             .await
             .map_err(|e| FalhaExterna(format!("osu! beatmap: {e}")))?;
@@ -116,6 +125,7 @@ impl FonteDeBeatmaps for Osu {
         let texto = self
             .http
             .get(format!("{}/osu/{beatmap_id}", self.url))
+            .header(reqwest::header::USER_AGENT, AGENTE)
             .send()
             .await
             .and_then(reqwest::Response::error_for_status)
