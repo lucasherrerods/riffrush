@@ -51,11 +51,20 @@ describe("buscarMapas", () => {
       resposta([conjunto(1), conjunto(2, [{ id: 20, mode_int: 3, cs: 7, difficulty_rating: 4, version: "7K", checksum: "d".repeat(32), total_length: 1 }])]),
     );
     const cliente = criarClienteDosEspelhos({ buscar });
-    const mapas = await buscarMapas({ texto: "camellia", status: "ranked", teclas: [7], pagina: 2 }, cliente);
+    const { mapas, temMais } = await buscarMapas({ texto: "camellia", status: "ranked", teclas: [7], pagina: 2 }, cliente);
     expect(mapas.map((m) => m.beatmapsetId)).toEqual([2]);
+    expect(temMais).toBe(false);
     const url = new URL(String(buscar.mock.calls[0][0]));
     expect(url.origin + url.pathname).toBe("https://catboy.best/api/v2/search");
     expect(Object.fromEntries(url.searchParams)).toMatchObject({ q: "camellia", mode: "3", status: "1", limit: "50", offset: "100" });
+  });
+
+  it("página cheia avisa que tem mais, mesmo que o filtro de teclas deixe poucos mapas", async () => {
+    const cheia = Array.from({ length: 50 }, (_, i) => conjunto(i + 1));
+    const cliente = criarClienteDosEspelhos({ buscar: async () => resposta(cheia) });
+    const { mapas, temMais } = await buscarMapas({ texto: "", teclas: [9] }, cliente);
+    expect(mapas).toEqual([]);
+    expect(temMais).toBe(true);
   });
 
   it("sem status escolhido, não filtra", async () => {
@@ -68,7 +77,7 @@ describe("buscarMapas", () => {
     let agora = 0;
     const buscar = vi.fn(async (url: string | URL | Request) => (String(url).startsWith("https://catboy.best") ? resposta({}, 530) : resposta([conjunto(1)])));
     const cliente = criarClienteDosEspelhos({ buscar, relogio: () => agora });
-    expect(await buscarMapas({ texto: "a" }, cliente)).toHaveLength(1);
+    expect((await buscarMapas({ texto: "a" }, cliente)).mapas).toHaveLength(1);
     expect(buscar).toHaveBeenCalledTimes(2);
     expect(String(buscar.mock.calls[1][0])).toMatch(/^https:\/\/osu\.direct\/api\/v2\/search\?.*amount=50/);
     // Logo depois, vai direto ao que funciona.
@@ -87,7 +96,7 @@ describe("buscarMapas", () => {
         : Promise.resolve(resposta([conjunto(1)])),
     );
     const cliente = criarClienteDosEspelhos({ buscar, tempoLimiteMs: 20 });
-    expect(await buscarMapas({ texto: "a" }, cliente)).toHaveLength(1);
+    expect((await buscarMapas({ texto: "a" }, cliente)).mapas).toHaveLength(1);
   });
 
   it("com todos os espelhos fora do ar, avisa", async () => {

@@ -70,6 +70,15 @@ describe("lerComandoDaPresenca", () => {
 });
 
 describe("lerMensagemDaTransmissao", () => {
+  it("o início do Mania guarda o modo, os mods e a semente, e os lotes cabem as colunas de até 18 teclas", () => {
+    const partida = { musica: "osu:42", dificuldade: "Hard", instrumento: "7K", hashDoChart: "b".repeat(32), semFalha: false, velocidade: 1 };
+    const lida = lerMensagemDaTransmissao(JSON.stringify({ tipo: "inicio", partida: { ...partida, modo: "mania", mods: 64, semente: 4294967295 } }));
+    expect(lida).toEqual({ tipo: "inicio", partida: { ...partida, modo: "mania", mods: 64, semente: 4294967295 } });
+    const estranha = lerMensagemDaTransmissao(JSON.stringify({ tipo: "inicio", partida: { ...partida, modo: "xadrez", mods: -1, semente: 1.5 } }));
+    expect(estranha).toEqual({ tipo: "inicio", partida });
+    expect(lerMensagemDaTransmissao('{"tipo":"lote","ate":1,"entradas":[[1,35]]}')).toEqual({ tipo: "lote", ate: 1, entradas: [[1, 35]] });
+  });
+
   it("aceita o início, os lotes de entradas, a pausa e o fim", () => {
     expect(lerMensagemDaTransmissao('{"tipo":"lote","ate":12.5,"entradas":[[12001,0],[12100,5]]}')).toEqual({ tipo: "lote", ate: 12.5, entradas: [[12001, 0], [12100, 5]] });
     expect(lerMensagemDaTransmissao('{"tipo":"pausa","pausado":true}')).toEqual({ tipo: "pausa", pausado: true });
@@ -91,7 +100,7 @@ describe("lerMensagemDaTransmissao", () => {
   });
 
   it("recusa lotes com entradas inválidas, mensagens grandes e JSON quebrado", () => {
-    expect(lerMensagemDaTransmissao('{"tipo":"lote","ate":1,"entradas":[[1,13]]}')).toBeNull();
+    expect(lerMensagemDaTransmissao('{"tipo":"lote","ate":1,"entradas":[[1,36]]}')).toBeNull();
     expect(lerMensagemDaTransmissao('{"tipo":"lote","ate":1,"entradas":[["x",0]]}')).toBeNull();
     expect(lerMensagemDaTransmissao(`{"tipo":"lote","ate":1,"entradas":[${"[1,0],".repeat(2000)}[1,0]]}`)).toBeNull();
     expect(lerMensagemDaTransmissao("{quebrado")).toBeNull();

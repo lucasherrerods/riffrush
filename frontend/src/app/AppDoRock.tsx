@@ -13,7 +13,19 @@ import { playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
 import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa, estaEmTelaCheia, modoDoF11 } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
 import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, entrarNaSalaOnline, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
-import { ChatGlobal, TelaDeEspectador, TelaOnline, presenca, presencaDisponivel, transmitirPartida, usePresenca, useSouDaModeracao, type PessoaOnline } from "@/modules/presenca";
+import {
+  ChatGlobal,
+  TelaDeEspectador,
+  TelaOnline,
+  assistirNoModoCerto,
+  presenca,
+  presencaDisponivel,
+  tirarPedidoDeAssistir,
+  transmitirPartida,
+  usePresenca,
+  useSouDaModeracao,
+  type PessoaOnline,
+} from "@/modules/presenca";
 import { JanelaDoChart, TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, sortearChartOficial, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/rock/search";
 import { TelaDeResultado, anotarRecorde, definirRecordes, recordeDe, useRecordes } from "@/modules/rock/results";
 import { EscolhaDeDispositivos, ResultadoDaTelaDividida, eventoDoJogador, opcoesDoJogador, type DispositivoDoJogador, type ResultadoDoJogador } from "@/modules/rock/splitscreen";
@@ -279,6 +291,16 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
   const idsDosAmigos = useIdsDosAmigos(contasLigadas && !!conta && tela === "online");
   const assistir = useCallback((pessoa: PessoaOnline) => {
     setAmigosAbertos(false);
+    // Quem está no Mania é assistido no Mania: o app troca de modo e abre a partida lá.
+    assistirNoModoCerto(pessoa, "rock", (p) => {
+      setEspectando(p);
+      setTela("espectador");
+    });
+  }, []);
+  // Veio do Mania para assistir alguém que está no Rock.
+  useEffect(() => {
+    const pessoa = tirarPedidoDeAssistir();
+    if (!pessoa) return;
     setEspectando(pessoa);
     setTela("espectador");
   }, []);

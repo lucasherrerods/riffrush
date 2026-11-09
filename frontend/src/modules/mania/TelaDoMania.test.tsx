@@ -116,15 +116,14 @@ describe("TelaDoMania", () => {
       status: "ranked",
       dificuldades: [{ beatmapId: 11, nome: "Hard", teclas: 4, estrelas: 3.2, hash: "h", duracaoS: 1 }],
     };
-    render(<TelaDoMania abrirBiblioteca={async () => biblioteca} buscar={async () => [mapa]} baixar={async () => arquivoOsz()} />);
+    render(<TelaDoMania abrirBiblioteca={async () => biblioteca} buscar={async () => ({ mapas: [mapa], temMais: false })} baixar={async () => arquivoOsz()} />);
     const usuario = userEvent.setup();
     await usuario.click(screen.getByRole("button", { name: "Buscar mapas" }));
     await usuario.click(await screen.findByRole("button", { name: "Baixar Musica" }));
-    expect(await screen.findByText("Baixado")).toBeInTheDocument();
     const [salvo] = await biblioteca.listar();
     expect(salvo).toMatchObject({ id: "osu:7", origem: "osu", status: "ranked" });
-    await usuario.click(screen.getByRole("button", { name: "Voltar" }));
-    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    // Baixado, o mapa abre na seleção direto da busca.
+    await usuario.click(await screen.findByRole("button", { name: "Jogar Musica" }));
     expect(await screen.findByRole("heading", { name: "Música" })).toBeInTheDocument();
     expect(screen.queryByText("Importado · sem XP nem ranking")).not.toBeInTheDocument();
   });
@@ -134,13 +133,11 @@ describe("TelaDoMania", () => {
     try {
       const biblioteca = bibliotecaNaMemoria();
       const mapa = { beatmapsetId: 7, titulo: "Musica", tituloUnicode: "Música", artista: "Banda", artistaUnicode: "Banda", mapper: "Mapper", status: "ranked", dificuldades: [] };
-      render(<TelaDoMania abrirBiblioteca={async () => biblioteca} buscar={async () => [mapa]} baixar={async () => arquivoOsz()} decodificar={async () => ({ duration: 10 }) as AudioBuffer} />);
+      render(<TelaDoMania abrirBiblioteca={async () => biblioteca} buscar={async () => ({ mapas: [mapa], temMais: false })} baixar={async () => arquivoOsz()} decodificar={async () => ({ duration: 10 }) as AudioBuffer} />);
       const usuario = userEvent.setup();
       await usuario.click(screen.getByRole("button", { name: "Buscar mapas" }));
       await usuario.click(await screen.findByRole("button", { name: "Baixar Musica" }));
-      await screen.findByText("Baixado");
-      await usuario.click(screen.getByRole("button", { name: "Voltar" }));
-    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+      await usuario.click(await screen.findByRole("button", { name: "Jogar Musica" }));
       await screen.findByRole("heading", { name: "Música" });
       expect(screen.getByRole("radio", { name: /4K.*Hard/ })).toBeChecked();
       const fontesAntes = audio().fontes.length;

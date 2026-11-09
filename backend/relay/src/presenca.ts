@@ -163,6 +163,11 @@ export interface PartidaTransmitida {
   velocidade: number;
   /** O .sng da música no Encore, para quem assiste baixar com um clique. */
   urlDoEncore?: string;
+  /** O modo da partida. Sem ele, é o Rock. */
+  modo?: Modo;
+  /** Só no Mania: os bits dos mods e a semente do Random, para quem assiste montar a mesma partida. */
+  mods?: number;
+  semente?: number;
 }
 
 /** Só o caminho de um chart no servidor de arquivos do Encore, sem nada além disso. */
@@ -176,8 +181,8 @@ export function linkDoChartConfere(url: unknown, musica: string): url is string 
 }
 
 /**
- * Cada entrada é `[tempo em ms, código]`: código 0 a 4 aperta a pista, 5 a 9 solta, 10 ativa o star power,
- * 11 aperta e 12 solta a nota aberta.
+ * Cada entrada é `[tempo em ms, código]`. No Rock, código 0 a 4 aperta a pista, 5 a 9 solta, 10 ativa o star power,
+ * 11 aperta e 12 solta a nota aberta. No Mania, o código é `coluna * 2 + (1 se toca)`, com até 18 colunas.
  * `ate` é até onde a partida de quem joga já chegou, em segundos.
  */
 export type MensagemDaTransmissao =
@@ -186,7 +191,9 @@ export type MensagemDaTransmissao =
   | { tipo: "pausa"; pausado: boolean }
   | { tipo: "fim" };
 
-const CODIGO_MAXIMO = 12;
+const CODIGO_MAXIMO = 35;
+const MAIOR_U32 = 0xffffffff;
+const inteiroAte = (valor: unknown, maximo: number): valor is number => Number.isInteger(valor) && (valor as number) >= 0 && (valor as number) <= maximo;
 /** Um lote por segundo; nem os trechos mais rápidos passam de algumas dezenas de entradas. */
 const ENTRADAS_POR_LOTE = 500;
 
@@ -223,6 +230,10 @@ export function lerMensagemDaTransmissao(bruta: string): MensagemDaTransmissao |
     const partida: PartidaTransmitida = { musica, dificuldade, instrumento, hashDoChart: hash, semFalha: p?.semFalha === true, velocidade };
     // Link estranho não derruba a transmissão: só não vai junto.
     if (linkDoChartConfere(p?.urlDoEncore, musica)) partida.urlDoEncore = p.urlDoEncore;
+    const modo = lerModo(p?.modo);
+    if (modo) partida.modo = modo;
+    if (inteiroAte(p?.mods, MAIOR_U32)) partida.mods = p.mods;
+    if (inteiroAte(p?.semente, MAIOR_U32)) partida.semente = p.semente;
     return { tipo: "inicio", partida };
   }
   return null;

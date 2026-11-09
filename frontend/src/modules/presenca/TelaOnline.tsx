@@ -1,3 +1,4 @@
+import { EtiquetaDeModo } from "@/shared/ui/EtiquetaDeModo";
 import { useState } from "react";
 import { ArrowLeft, Eye, House, Loader2, Play, Radio, Search, UserRound, Users } from "lucide-react";
 import { useTeclado } from "@/shared/hooks/useTeclado";
@@ -158,6 +159,7 @@ function CartaoDaPessoa({ pessoa, amigo, aoAssistir }: { pessoa: PessoaOnline; a
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="flex items-center gap-2">
           <span className="truncate text-base font-bold">{pessoa.nome}</span>
+          {pessoa.estado.modo && <EtiquetaDeModo modo={pessoa.estado.modo} />}
           {amigo && <span className="shrink-0 rounded-sm bg-primary px-1.5 font-titulo text-sm leading-5 text-primary-foreground">Amigo</span>}
         </span>
         <span className="flex items-center gap-1 text-base text-texto-suave">

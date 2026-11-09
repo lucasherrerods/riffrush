@@ -8,6 +8,7 @@ const dificuldade = (d: PerfilDaApi["por_dificuldade"][number]["dificuldade"], p
 const perfil: PerfilDaApi = {
   nome: "Lucas",
   avatar: null,
+  capa: null,
   email: "lucas@exemplo.com",
   xp_total: 1234,
   nivel: { nivel: 4, xp_no_nivel: 30, xp_para_o_proximo: 200 },
@@ -89,5 +90,56 @@ describe("TelaDePerfil em outro modo", () => {
     expect(screen.getByText("Nv 4")).toBeInTheDocument();
     expect(screen.getByText("números do mania")).toBeInTheDocument();
     expect(screen.queryByText("87,65%")).not.toBeInTheDocument();
+  });
+
+  describe("capa e foto", () => {
+    const editor = () => ({
+      trocar: vi.fn(async (tipo: string) => `http://api/contas/1/imagens/${tipo}?v=2`),
+      remover: vi.fn(async (tipo: string) => (tipo === "foto" ? "https://google/foto" : null)),
+    });
+    const arquivo = () => new File(["x"], "eu.png", { type: "image/png" });
+
+    it("adiciona uma capa e mostra a nova no topo", async () => {
+      const e = editor();
+      render(<TelaDePerfil aoVoltar={() => {}} tituloDaMusica={tituloDaMusica} carregar={async () => perfil} editor={e} />);
+      await screen.findByRole("heading", { name: "Lucas" });
+      expect(screen.queryByAltText("Capa do perfil")).not.toBeInTheDocument();
+
+      await userEvent.upload(screen.getByLabelText("Arquivo da capa"), arquivo());
+
+      expect(e.trocar).toHaveBeenCalledWith("capa", expect.any(File));
+      expect(await screen.findByAltText("Capa do perfil")).toHaveAttribute("src", "http://api/contas/1/imagens/capa?v=2");
+      expect(screen.getByRole("button", { name: /Trocar capa/ })).toBeInTheDocument();
+    });
+
+    it("remove a capa", async () => {
+      const e = editor();
+      render(<TelaDePerfil aoVoltar={() => {}} tituloDaMusica={tituloDaMusica} carregar={async () => ({ ...perfil, capa: "http://api/capa" })} editor={e} />);
+      await userEvent.click(await screen.findByRole("button", { name: "Remover capa" }));
+      expect(e.remover).toHaveBeenCalledWith("capa");
+      expect(screen.queryByAltText("Capa do perfil")).not.toBeInTheDocument();
+    });
+
+    it("troca a foto e deixa voltar para a do Google", async () => {
+      const e = editor();
+      render(<TelaDePerfil aoVoltar={() => {}} tituloDaMusica={tituloDaMusica} carregar={async () => perfil} editor={e} />);
+      await screen.findByRole("heading", { name: "Lucas" });
+      expect(screen.queryByRole("button", { name: /foto do Google/ })).not.toBeInTheDocument();
+
+      await userEvent.upload(screen.getByLabelText("Arquivo da foto"), arquivo());
+      await userEvent.click(await screen.findByRole("button", { name: /foto do Google/ }));
+
+      expect(e.remover).toHaveBeenCalledWith("foto");
+      expect(screen.queryByRole("button", { name: /foto do Google/ })).not.toBeInTheDocument();
+    });
+
+    it("mostra o erro quando a API recusa a imagem", async () => {
+      const e = editor();
+      e.trocar.mockRejectedValueOnce(new Error("a imagem é grande demais"));
+      render(<TelaDePerfil aoVoltar={() => {}} tituloDaMusica={tituloDaMusica} carregar={async () => perfil} editor={e} />);
+      await screen.findByRole("heading", { name: "Lucas" });
+      await userEvent.upload(screen.getByLabelText("Arquivo da foto"), arquivo());
+      expect(await screen.findByRole("alert")).toHaveTextContent("a imagem é grande demais");
+    });
   });
 });

@@ -49,4 +49,23 @@ describe("criarApi", () => {
     const api = criarApi("http://api", async () => resposta(204));
     await expect(api.sair("t")).resolves.toBeUndefined();
   });
+
+  it("troca a imagem mandando os bytes com o tipo do arquivo, sem virar JSON", async () => {
+    const buscar = vi.fn(async () => resposta(200, { endereco: "http://api/contas/1/imagens/capa?v=1" }));
+    const imagem = new Blob(["abc"], { type: "image/webp" });
+    expect(await criarApi("http://api", buscar).trocarImagem("t", "capa", imagem)).toEqual({ endereco: "http://api/contas/1/imagens/capa?v=1" });
+    const [url, init] = buscar.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("http://api/eu/imagens/capa");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBe(imagem);
+    expect((init.headers as Record<string, string>)["content-type"]).toBe("image/webp");
+  });
+
+  it("remover a imagem é um DELETE com o tipo", async () => {
+    const buscar = vi.fn(async () => resposta(204));
+    await criarApi("http://api", buscar).removerImagem("t", "foto");
+    const [url, init] = buscar.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("http://api/eu/imagens/foto");
+    expect(init.method).toBe("DELETE");
+  });
 });

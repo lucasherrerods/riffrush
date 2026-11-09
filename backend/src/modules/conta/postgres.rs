@@ -42,8 +42,11 @@ fn falha(erro: sqlx::Error) -> FalhaExterna {
 impl RepositorioDeContas for ContasPostgres {
     async fn entrar(&self, perfil: &PerfilDoGoogle, novo_id: Uuid) -> Result<Conta, FalhaExterna> {
         sqlx::query_as::<_, LinhaDaConta>(
-            "INSERT INTO contas (id, google_sub, nome, avatar, email) VALUES ($1, $2, $3, $4, $5)
-             ON CONFLICT (google_sub) DO UPDATE SET nome = EXCLUDED.nome, avatar = EXCLUDED.avatar,
+            // Quem escolheu uma foto própria fica com ela; a do Google é guardada para quando a remover.
+            "INSERT INTO contas (id, google_sub, nome, avatar, avatar_do_google, email) VALUES ($1, $2, $3, $4, $4, $5)
+             ON CONFLICT (google_sub) DO UPDATE SET nome = EXCLUDED.nome, avatar_do_google = EXCLUDED.avatar_do_google,
+                 avatar = CASE WHEN EXISTS (SELECT 1 FROM imagens_das_contas i WHERE i.conta_id = contas.id AND i.tipo = 'foto')
+                     THEN contas.avatar ELSE EXCLUDED.avatar END,
                  email = COALESCE(EXCLUDED.email, contas.email)
              RETURNING id, nome, avatar, email, xp_total",
         )

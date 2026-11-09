@@ -16,6 +16,8 @@ pub struct Config {
     pub url_do_relay: Option<String>,
     /// Client da API do osu! (osu.ppy.sh/home/account/edit, "OAuth"); sem ele, as partidas do Mania esperam na fila.
     pub osu: Option<(String, String)>,
+    /// O endereço da API visto de fora (`https://...`), para montar o endereço das fotos e capas enviadas.
+    pub url_publica: String,
 }
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -33,7 +35,7 @@ impl Config {
 
     /// Lê de uma função, para os testes não mexerem nas variáveis do processo.
     pub fn ler(variavel: impl Fn(&str) -> Option<String>) -> Result<Self, ErroDeConfig> {
-        let endereco = variavel("ENDERECO")
+        let endereco: SocketAddr = variavel("ENDERECO")
             .unwrap_or_else(|| "0.0.0.0:8080".into())
             .parse()
             .map_err(|_| ErroDeConfig::Invalida("ENDERECO"))?;
@@ -53,7 +55,11 @@ impl Config {
         let osu = variavel("OSU_CLIENT_ID")
             .filter(|s| !s.is_empty())
             .zip(variavel("OSU_CLIENT_SECRET").filter(|s| !s.is_empty()));
+        let url_publica = variavel("URL_PUBLICA_DA_API")
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| format!("http://localhost:{}", endereco.port()));
         Ok(Self {
+            url_publica,
             osu,
             segredo_do_relay,
             url_do_relay,
