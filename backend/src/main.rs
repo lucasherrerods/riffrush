@@ -69,6 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         repositorio: Arc::new(PerfilPostgres(banco.clone())),
         conta: conta.clone(),
         catalogo: catalogo.clone(),
+        url_publica: config.url_publica.clone(),
     };
     let segredo_do_relay = config.segredo_do_relay.as_ref().map(|s| Arc::new(s.clone().into_bytes()));
     let moderacao = ServicosDeModeracao {

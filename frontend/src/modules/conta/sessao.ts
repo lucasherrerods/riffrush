@@ -1,7 +1,7 @@
 import { valorDosAcertos, type Resultado } from "@/modules/rock/gameplay";
 import { invoke } from "@tauri-apps/api/core";
 import { URL_DA_API } from "@/shared/lib/api";
-import { ErroDaApi, criarApi, type ApiDaConta, type ClienteDoGoogle, type ContaDaApi, type RegistroDaPartida, type XpDaPartida } from "./api";
+import { ErroDaApi, criarApi, type ApiDaConta, type ClienteDoGoogle, type ContaDaApi, type RegistroDaPartida, type TipoDeImagem, type XpDaPartida } from "./api";
 import { desafioDoVerificador, gerarVerificador, lerRetornoDoGoogle, urlDoLoginDoGoogle } from "./pkce";
 
 export interface EstadoDaConta {
@@ -122,6 +122,24 @@ export class SessaoDaConta {
     const token = this.token();
     if (!token) throw new Error("Entre com o Google para ver o perfil.");
     return this.ambiente.api.perfil(token, sinal);
+  }
+
+  /** Envia a foto ou a capa (já reduzida) e devolve o endereço dela. A foto nova aparece na hora em todo o app. */
+  async trocarImagem(tipo: TipoDeImagem, imagem: Blob) {
+    const token = this.token();
+    if (!token) throw new Error("Entre com o Google para mudar o perfil.");
+    const { endereco } = await this.ambiente.api.trocarImagem(token, tipo, imagem);
+    const conta = this.estadoAtual.conta;
+    if (tipo === "foto" && conta) this.mudar({ conta: { ...conta, avatar: endereco } });
+    return endereco;
+  }
+
+  /** Sem a foto própria, a conta volta para a do Google, que só a API conhece. */
+  async removerImagem(tipo: TipoDeImagem) {
+    const token = this.token();
+    if (!token) throw new Error("Entre com o Google para mudar o perfil.");
+    await this.ambiente.api.removerImagem(token, tipo);
+    if (tipo === "foto") this.mudar({ conta: await this.ambiente.api.eu(token) });
   }
 
   /** Os recordes de quem está logado. Sem conta, nenhum. */

@@ -113,6 +113,8 @@ export interface RecordeDaConta {
 export interface PerfilDaApi {
   nome: string;
   avatar: string | null;
+  /** A imagem que a pessoa escolheu para o topo do perfil. */
+  capa: string | null;
   email: string | null;
   xp_total: number;
   nivel: NivelDaConta;
@@ -133,6 +135,9 @@ export interface PerfilDaApi {
   recentes: PartidaDoPerfil[];
 }
 
+/** A foto aparece em todo canto (ranking, amigos, salas); a capa só no perfil. */
+export type TipoDeImagem = "foto" | "capa";
+
 /** O Google tem um client id para a web e outro para o desktop (que aceita qualquer porta no loopback). */
 export type ClienteDoGoogle = "web" | "desktop";
 
@@ -146,6 +151,9 @@ export function criarApi(base: string, buscar?: typeof fetch) {
     eu: (token: string) => chamar<ContaDaApi>("GET", "/eu", { token }),
     perfil: (token: string, sinal?: AbortSignal) => chamar<PerfilDaApi>("GET", "/eu/perfil", { token, sinal }),
     recordes: (token: string) => chamar<RecordeDaConta[]>("GET", "/eu/recordes", { token }),
+    trocarImagem: (token: string, tipo: TipoDeImagem, imagem: Blob) =>
+      chamar<{ endereco: string }>("POST", `/eu/imagens/${tipo}`, { token, corpo: imagem }),
+    removerImagem: (token: string, tipo: TipoDeImagem) => chamar<void>("DELETE", `/eu/imagens/${tipo}`, { token }),
     sair: (token: string) => chamar<void>("POST", "/auth/sair", { token }),
     excluirConta: (token: string) => chamar<void>("DELETE", "/eu", { token }),
     registrarPartida: (token: string, partida: PartidaParaAApi) => chamar<XpDaPartida | PartidaNaFila>("POST", "/partidas", { token, corpo: partida }),

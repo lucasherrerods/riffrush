@@ -5,6 +5,7 @@ use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use super::dominio::{DadosDoPerfil, EstatisticasDaDificuldade, MusicaMaisTocada, PartidaRecente, PartidasNoInstrumento, Recorde, MAIS_TOCADAS};
+use super::imagem::{FormatoDaImagem, Imagem, TipoDeImagem};
 use super::portas::RepositorioDoPerfil;
 use crate::modules::conta::FalhaExterna;
 use crate::modules::progresso::{Dificuldade, Instrumento};
@@ -14,6 +15,7 @@ pub struct PerfilPostgres(pub PgPool);
 #[derive(FromRow)]
 struct Resumo {
     criada_em: DateTime<Utc>,
+    capa: Option<String>,
     musicas_distintas: i64,
 }
 
@@ -63,7 +65,7 @@ const RECORDES: &str = "
     ORDER BY musica_id, dificuldade, instrumento, pontos DESC, jogada_em";
 
 const RESUMO: &str = "
-    SELECT c.criada_em, (SELECT COUNT(DISTINCT musica_id) FROM partidas WHERE conta_id = c.id) AS musicas_distintas
+    SELECT c.criada_em, c.capa, (SELECT COUNT(DISTINCT musica_id) FROM partidas WHERE conta_id = c.id) AS musicas_distintas
     FROM contas c WHERE c.id = $1";
 
 const POR_DIFICULDADE: &str = "
@@ -108,6 +110,20 @@ fn positivo(valor: i64) -> u64 {
 
 fn contagem(valor: i64) -> u32 {
     u32::try_from(valor.max(0)).unwrap_or(u32::MAX)
+}
+
+#[derive(FromRow)]
+struct LinhaDaImagem {
+    formato: String,
+    conteudo: Vec<u8>,
+}
+
+/// A foto vai para a conta, que aparece em todo canto; a capa só no perfil.
+fn coluna_do_endereco(tipo: TipoDeImagem) -> &'static str {
+    match tipo {
+        TipoDeImagem::Foto => "avatar",
+        TipoDeImagem::Capa => "capa",
+    }
 }
 
 #[async_trait]
@@ -188,6 +204,7 @@ impl RepositorioDoPerfil for PerfilPostgres {
             .collect();
         Ok(Some(DadosDoPerfil {
             criada_em: resumo.criada_em,
+            capa: resumo.capa,
             musicas_distintas: contagem(resumo.musicas_distintas),
             por_dificuldade,
             por_instrumento,
@@ -215,5 +232,67 @@ impl RepositorioDoPerfil for PerfilPostgres {
                 })
             })
             .collect())
+    }
+
+    async fn guardar_imagem(&self, conta_id: Uuid, tipo: TipoDeImagem, imagem: &Imagem, endereco: &str, agora: DateTime<Utc>) -> Result<(), FalhaExterna> {
+        let mut transacao = self.0.begin().await.map_err(falha)?;
+        sqlx::query(
+            "INSERT INTO imagens_das_contas (conta_id, tipo, formato, conteudo, atualizada_em) VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (conta_id, tipo) DO UPDATE SET formato = EXCLUDED.formato, conteudo = EXCLUDED.conteudo, atualizada_em = EXCLUDED.atualizada_em",
+        )
+        .bind(conta_id)
+        .bind(tipo.texto())
+        .bind(imagem.formato.texto())
+        .bind(&imagem.conteudo)
+        .bind(agora)
+        .execute(&mut *transacao)
+        .await
+        .map_err(falha)?;
+        sqlx::query(&format!("UPDATE contas SET {} = $2 WHERE id = $1", coluna_do_endereco(tipo)))
+            .bind(conta_id)
+            .bind(endereco)
+            .execute(&mut *transacao)
+            .await
+            .map_err(falha)?;
+        transacao.commit().await.map_err(falha)
+    }
+
+    async fn apagar_imagem(&self, conta_id: Uuid, tipo: TipoDeImagem) -> Result<(), FalhaExterna> {
+        let mut transacao = self.0.begin().await.map_err(falha)?;
+        sqlx::query("DELETE FROM imagens_das_contas WHERE conta_id = $1 AND tipo = $2")
+            .bind(conta_id)
+            .bind(tipo.texto())
+            .execute(&mut *transacao)
+            .await
+            .map_err(falha)?;
+        let volta = match tipo {
+            TipoDeImagem::Foto => "UPDATE contas SET avatar = avatar_do_google WHERE id = $1",
+            TipoDeImagem::Capa => "UPDATE contas SET capa = NULL WHERE id = $1",
+        };
+        sqlx::query(volta).bind(conta_id).execute(&mut *transacao).await.map_err(falha)?;
+        transacao.commit().await.map_err(falha)
+    }
+
+    async fn imagem(&self, conta_id: Uuid, tipo: TipoDeImagem) -> Result<Option<Imagem>, FalhaExterna> {
+        let linha = sqlx::query_as::<_, LinhaDaImagem>("SELECT formato, conteudo FROM imagens_das_contas WHERE conta_id = $1 AND tipo = $2")
+            .bind(conta_id)
+            .bind(tipo.texto())
+            .fetch_optional(&self.0)
+            .await
+            .map_err(falha)?;
+        Ok(linha.and_then(|l| {
+            Some(Imagem {
+                formato: FormatoDaImagem::do_texto(&l.formato)?,
+                conteudo: l.conteudo,
+            })
+        }))
+    }
+
+    async fn ultima_troca(&self, conta_id: Uuid) -> Result<Option<DateTime<Utc>>, FalhaExterna> {
+        sqlx::query_scalar::<_, Option<DateTime<Utc>>>("SELECT MAX(atualizada_em) FROM imagens_das_contas WHERE conta_id = $1")
+            .bind(conta_id)
+            .fetch_one(&self.0)
+            .await
+            .map_err(falha)
     }
 }

@@ -13,7 +13,7 @@ class Memoria {
 
 function montar(api: Partial<ApiDaConta> = {}, busca = "") {
   const ambiente: Ambiente = {
-    api: { entrar: vi.fn(async () => ({ token: "tok", conta })), eu: vi.fn(async () => conta), sair: vi.fn(async () => {}), excluirConta: vi.fn(async () => {}), registrarPartida: vi.fn(), situacaoDaPartida: vi.fn(), registrarPartidaDoMania: vi.fn(), situacaoDaPartidaDoMania: vi.fn(), perfil: vi.fn(), recordes: vi.fn(async () => []), ...api },
+    api: { entrar: vi.fn(async () => ({ token: "tok", conta })), eu: vi.fn(async () => conta), sair: vi.fn(async () => {}), excluirConta: vi.fn(async () => {}), registrarPartida: vi.fn(), situacaoDaPartida: vi.fn(), registrarPartidaDoMania: vi.fn(), situacaoDaPartidaDoMania: vi.fn(), perfil: vi.fn(), recordes: vi.fn(async () => []), trocarImagem: vi.fn(), removerImagem: vi.fn(), ...api },
     clientId: "id",
     local: new Memoria(),
     temporario: new Memoria(),
@@ -262,5 +262,51 @@ describe("SessaoDaConta", () => {
     await expect(sessao.excluirConta()).rejects.toThrow("falhou");
     expect(ambiente.local.getItem("riffrush:token")).toBe("tok");
     expect(sessao.estado().conta).toBe(conta);
+  });
+});
+
+describe("SessaoDaConta: foto e capa", () => {
+  async function logado(api: Partial<ApiDaConta>) {
+    const montado = montar(api);
+    montado.ambiente.local.setItem("riffrush:token", "tok");
+    await montado.sessao.iniciar();
+    return montado;
+  }
+
+  it("trocar a foto manda a imagem e já mostra a nova na conta", async () => {
+    const trocarImagem = vi.fn(async () => ({ endereco: "http://api/contas/1/imagens/foto?v=2" }));
+    const { sessao } = await logado({ trocarImagem });
+    const imagem = new Blob(["x"], { type: "image/webp" });
+
+    expect(await sessao.trocarImagem("foto", imagem)).toBe("http://api/contas/1/imagens/foto?v=2");
+
+    expect(trocarImagem).toHaveBeenCalledWith("tok", "foto", imagem);
+    expect(sessao.estado().conta?.avatar).toBe("http://api/contas/1/imagens/foto?v=2");
+  });
+
+  it("trocar a capa não mexe na foto da conta", async () => {
+    const { sessao } = await logado({ trocarImagem: vi.fn(async () => ({ endereco: "http://api/capa" })) });
+    await sessao.trocarImagem("capa", new Blob(["x"]));
+    expect(sessao.estado().conta?.avatar).toBeNull();
+  });
+
+  it("remover a foto busca a conta de novo, que volta com a do Google", async () => {
+    const doGoogle = { ...conta, avatar: "https://google/foto" };
+    const eu = vi.fn(async () => conta);
+    const removerImagem = vi.fn(async () => {});
+    const { sessao } = await logado({ eu, removerImagem });
+    eu.mockResolvedValueOnce(doGoogle);
+
+    await sessao.removerImagem("foto");
+
+    expect(removerImagem).toHaveBeenCalledWith("tok", "foto");
+    expect(sessao.estado().conta).toEqual(doGoogle);
+  });
+
+  it("sem conta não manda nada", async () => {
+    const trocarImagem = vi.fn();
+    const { sessao } = montar({ trocarImagem });
+    await expect(sessao.trocarImagem("foto", new Blob(["x"]))).rejects.toThrow();
+    expect(trocarImagem).not.toHaveBeenCalled();
   });
 });
