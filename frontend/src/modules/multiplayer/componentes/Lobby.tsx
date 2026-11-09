@@ -41,7 +41,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos,
   const estouPronto = sala.prontos.includes(sala.meuId);
   const [qr, setQr] = useState("");
   const [comecando, setComecando] = useState(false);
-  const [novoLider, setNovoLider] = useState<{ id: number; nome: string } | null>(null);
+  const [confirmacao, setConfirmacao] = useState<{ tipo: "lideranca" | "expulsar"; id: number; nome: string } | null>(null);
   const musica = musicas.find((m) => m.id === sala.musica.id);
   const tituloDaMusica = musica?.titulo ?? ("titulo" in sala.musica ? sala.musica.titulo : sala.musica.id);
   const [favoritas] = useState(carregarFavoritas);
@@ -108,33 +108,8 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos,
               >
                 {jogador ? (
                   <>
-                    {sala.souHost && jogador.id !== sala.meuId && (
-                      <div className="absolute top-2 right-2 flex flex-col max-md:top-1 max-md:right-1">
-                        {/* Só no online: na LAN a sala e a música importada moram no PC de quem criou. */}
-                        {codigo && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Passar a liderança para ${jogador.personagem.nome}`}
-                            className="size-12 text-ouro max-md:size-7"
-                            onClick={() => setNovoLider({ id: jogador.id, nome: jogador.personagem.nome })}
-                          >
-                            <Crown className="size-8 max-md:size-5" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Expulsar ${jogador.personagem.nome}`}
-                          className="size-12 text-texto-suave hover:text-perigo max-md:size-7"
-                          onClick={() => expulsar(jogador.id)}
-                        >
-                          <IconeDeChute className="size-8 max-md:size-5" />
-                        </Button>
-                      </div>
-                    )}
                     <Avatar personagem={jogador.personagem} className="h-24 w-auto max-md:hidden" />
-                    <p className={cn("mt-2 max-w-full truncate text-base font-bold max-md:mt-0 max-md:text-sm", sala.souHost && jogador.id !== sala.meuId && "max-md:pr-8")}>{jogador.personagem.nome}</p>
+                    <p className="mt-2 max-w-full truncate text-base font-bold max-md:mt-0 max-md:text-sm">{jogador.personagem.nome}</p>
                     {jogador.personagem.nivel && <p className="font-titulo text-base leading-none text-destaque max-md:text-sm">Nv {jogador.personagem.nivel}</p>}
                     <div className="flex flex-wrap gap-1 max-md:mt-1">
                       {jogador.id === sala.hostId && <span className="rounded-full bg-ouro px-2 text-base font-bold text-fundo max-md:text-xs">Host</span>}
@@ -145,6 +120,31 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos,
                         </span>
                       )}
                     </div>
+                    {sala.souHost && jogador.id !== sala.meuId && (
+                      <div className="mt-auto flex w-full gap-2 pt-3 max-md:flex-col max-md:gap-1 max-md:pt-2">
+                        {/* Só no online: na LAN a sala e a música importada moram no PC de quem criou. */}
+                        {codigo && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            aria-label={`Passar a liderança para ${jogador.personagem.nome}`}
+                            className="flex-1"
+                            onClick={() => setConfirmacao({ tipo: "lideranca", id: jogador.id, nome: jogador.personagem.nome })}
+                          >
+                            <Crown className="text-ouro" /> Tornar host
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          aria-label={`Expulsar ${jogador.personagem.nome}`}
+                          className="flex-1 border-perigo/60 text-perigo hover:bg-perigo/10 hover:text-perigo"
+                          onClick={() => setConfirmacao({ tipo: "expulsar", id: jogador.id, nome: jogador.personagem.nome })}
+                        >
+                          <IconeDeChute /> Expulsar
+                        </Button>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="flex h-32 w-full flex-col items-center justify-center gap-2 text-texto-suave max-md:h-14 max-md:gap-1">
@@ -307,7 +307,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos,
         <PainelDeChat
           titulo="Chat da sala"
           className="min-h-48 flex-1"
-          mensagens={sala.chat.map((m) => ({ id: String(m.n), autor: m.autor, texto: m.texto, minha: m.de === sala.meuId }))}
+          mensagens={sala.chat.map((m) => ({ id: String(m.n), autor: m.autor, texto: m.texto, em: m.em, minha: m.de === sala.meuId }))}
           aoEnviar={enviarChat}
           aviso={
             codigo
@@ -316,21 +316,40 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos,
           }
         />
       </div>
-      <Dialog open={!!novoLider} onOpenChange={(aberto) => !aberto && setNovoLider(null)}>
+      <Dialog open={!!confirmacao} onOpenChange={(aberto) => !aberto && setConfirmacao(null)}>
         <DialogContent>
-          <DialogTitle>Passar a liderança para {novoLider?.nome}?</DialogTitle>
-          <DialogDescription>Quem lidera escolhe a música e dá a largada. Você continua na sala como convidado.</DialogDescription>
+          {confirmacao?.tipo === "expulsar" ? (
+            <>
+              <DialogTitle>Expulsar {confirmacao.nome} da sala?</DialogTitle>
+              <DialogDescription>{confirmacao.nome} sai da sala agora e não volta mais para ela.</DialogDescription>
+            </>
+          ) : (
+            <>
+              <DialogTitle>Passar a liderança para {confirmacao?.nome}?</DialogTitle>
+              <DialogDescription>Quem lidera escolhe a música e dá a largada. Você continua na sala como convidado.</DialogDescription>
+            </>
+          )}
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="ghost">Cancelar</Button>
             </DialogClose>
             <Button
+              variant={confirmacao?.tipo === "expulsar" ? "destructive" : "default"}
               onClick={() => {
-                if (novoLider) passarLideranca(novoLider.id);
-                setNovoLider(null);
+                if (confirmacao?.tipo === "expulsar") expulsar(confirmacao.id);
+                else if (confirmacao) passarLideranca(confirmacao.id);
+                setConfirmacao(null);
               }}
             >
-              <Crown className="text-ouro" /> Passar
+              {confirmacao?.tipo === "expulsar" ? (
+                <>
+                  <IconeDeChute /> Expulsar
+                </>
+              ) : (
+                <>
+                  <Crown className="text-ouro" /> Passar
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

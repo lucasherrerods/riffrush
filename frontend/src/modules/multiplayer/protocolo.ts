@@ -73,6 +73,8 @@ export interface MensagemDaSala {
   de: number;
   autor: string;
   texto: string;
+  /** Hora de chegada neste aparelho, em ms desde 1970. */
+  em: number;
 }
 
 export interface EstadoDaSala {
@@ -140,7 +142,7 @@ const mensagemDaSala = (estado: EstadoDaSala): Mensagem => ({
 });
 
 /** Atualiza a sala com uma mensagem recebida de `de`. `agora` é o performance.now() da chegada. */
-export function reduzir(estado: EstadoDaSala, de: number, mensagem: Mensagem, agora: number): Reacao {
+export function reduzir(estado: EstadoDaSala, de: number, mensagem: Mensagem, agora: number, horario = Date.now()): Reacao {
   const nada = { estado, enviar: [] };
   switch (mensagem.tipo) {
     case "bemVindo":
@@ -226,7 +228,7 @@ export function reduzir(estado: EstadoDaSala, de: number, mensagem: Mensagem, ag
       const baldesDoChat = { ...estado.baldesDoChat, [de]: limite.balde };
       if (!limite.passa) return { estado: { ...estado, baldesDoChat }, enviar: [] };
       const n = (estado.chat.at(-1)?.n ?? 0) + 1;
-      return { estado: { ...estado, baldesDoChat, chat: adicionarMensagem(estado.chat, { n, de, autor, texto }) }, enviar: [] };
+      return { estado: { ...estado, baldesDoChat, chat: adicionarMensagem(estado.chat, { n, de, autor, texto, em: horario }) }, enviar: [] };
     }
   }
 }

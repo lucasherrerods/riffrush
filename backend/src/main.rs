@@ -70,6 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         repositorio: Arc::new(PerfilPostgres(banco.clone())),
         conta: conta.clone(),
         catalogo: catalogo.clone(),
+        url_publica: config.url_publica.clone(),
     };
     let segredo_do_relay = config.segredo_do_relay.as_ref().map(|s| Arc::new(s.clone().into_bytes()));
     let relay = Arc::new(RelayHttp {
@@ -99,7 +100,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         relogio,
     });
     if config.osu.is_none() {
-        tracing::warn!("sem OSU_CLIENT_ID e OSU_CLIENT_SECRET: as partidas do Mania esperam na fila sem XP");
+        tracing::info!("sem OSU_CLIENT_ID e OSU_CLIENT_SECRET: o Mania confere as partidas pelo espelho catboy.best");
     }
     let servicos_do_mania = ServicosDoMania {
         repositorio: Arc::new(ManiaPostgres(banco.clone())),

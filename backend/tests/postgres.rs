@@ -9,7 +9,7 @@ use riffrush_api::modules::conta::{
 };
 use riffrush_api::modules::conversa::{ConversasPostgres, NaoLidas, NovaMensagem, RepositorioDeConversas};
 use riffrush_api::modules::moderacao::{Denuncia, ModeracaoPostgres, RepositorioDeModeracao, Situacao};
-use riffrush_api::modules::perfil::{PerfilPostgres, RepositorioDoPerfil};
+use riffrush_api::modules::perfil::{FormatoDaImagem, Imagem, PerfilPostgres, RepositorioDoPerfil, TipoDeImagem};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar, ResumoDaPartida};
 use riffrush_api::modules::ranking::{MusicaPopular, Ordem, RankingPostgres, RepositorioDoRanking};
 use riffrush_api::modules::rejulgamento::{
@@ -56,6 +56,40 @@ async fn login_sem_email_mantem_o_que_ja_estava_guardado() {
     pessoa.email = None;
     let de_novo = banco.entrar(&pessoa, Uuid::new_v4()).await.unwrap();
     assert_eq!(de_novo.email.as_deref(), Some("lucas@exemplo.com"));
+}
+
+#[tokio::test]
+async fn foto_propria_sobrevive_ao_login_e_ao_remover_volta_a_do_google() {
+    let Some(banco) = banco().await else { return };
+    let repositorio = PerfilPostgres(banco.0.clone());
+    let mut pessoa = perfil();
+    pessoa.avatar = Some("https://google/foto".into());
+    let conta = banco.entrar(&pessoa, Uuid::new_v4()).await.unwrap();
+    let imagem = Imagem {
+        formato: FormatoDaImagem::Webp,
+        conteudo: b"RIFF\0\0\0\0WEBP".to_vec(),
+    };
+    let agora = Utc::now();
+    repositorio
+        .guardar_imagem(conta.id, TipoDeImagem::Foto, &imagem, "https://api/foto", agora)
+        .await
+        .unwrap();
+    repositorio
+        .guardar_imagem(conta.id, TipoDeImagem::Capa, &imagem, "https://api/capa", agora)
+        .await
+        .unwrap();
+
+    pessoa.avatar = Some("https://google/nova".into());
+    assert_eq!(banco.entrar(&pessoa, Uuid::new_v4()).await.unwrap().avatar.as_deref(), Some("https://api/foto"));
+    assert_eq!(repositorio.imagem(conta.id, TipoDeImagem::Foto).await.unwrap(), Some(imagem));
+    assert_eq!(repositorio.dados(conta.id, 1).await.unwrap().unwrap().capa.as_deref(), Some("https://api/capa"));
+    assert!(repositorio.ultima_troca(conta.id).await.unwrap().is_some());
+
+    repositorio.apagar_imagem(conta.id, TipoDeImagem::Foto).await.unwrap();
+    repositorio.apagar_imagem(conta.id, TipoDeImagem::Capa).await.unwrap();
+    assert_eq!(banco.buscar(conta.id).await.unwrap().unwrap().avatar.as_deref(), Some("https://google/nova"));
+    assert_eq!(repositorio.dados(conta.id, 1).await.unwrap().unwrap().capa, None);
+    assert_eq!(repositorio.imagem(conta.id, TipoDeImagem::Foto).await.unwrap(), None);
 }
 
 #[tokio::test]

@@ -9,6 +9,7 @@ export class ErroDaApi extends Error {
 
 interface OpcoesDaChamada {
   token?: string;
+  /** Vai em JSON; um `Blob` (imagem) vai como está, com o tipo dele. */
   corpo?: unknown;
   /** Cancela o pedido quando a resposta não interessa mais. */
   sinal?: AbortSignal;
@@ -21,10 +22,11 @@ export function criarCliente(base: string, buscar: typeof fetch = (...args) => f
   // Com barra no fim, o endereço ficaria "//eu" e a API responderia 404.
   base = base.replace(/\/+$/, "");
   return async function chamar<T>(metodo: string, caminho: string, { token, corpo, sinal, bytes }: OpcoesDaChamada = {}): Promise<T> {
+    const arquivo = corpo instanceof Blob;
     const resposta = await buscar(`${base}${caminho}`, {
       method: metodo,
-      headers: { "content-type": "application/json", ...(token && { authorization: `Bearer ${token}` }) },
-      body: corpo === undefined ? undefined : JSON.stringify(corpo),
+      headers: { "content-type": arquivo ? corpo.type : "application/json", ...(token && { authorization: `Bearer ${token}` }) },
+      body: corpo === undefined ? undefined : arquivo ? corpo : JSON.stringify(corpo),
       signal: sinal,
     });
     if (!resposta.ok) {

@@ -3,7 +3,7 @@
 import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { osu, pacote } from "@/test/beatmaps";
-import { abrirBibliotecaDoMania, beatmapIdParaAApi, importarOsz, type ConjuntoSalvo } from "./biblioteca";
+import { abrirBibliotecaDoMania, beatmapIdParaAApi, fonteDaCapa, importarOsz, type ConjuntoSalvo } from "./biblioteca";
 
 const motor = vi.hoisted(() => ({ iniciado: 0 }));
 vi.mock("../gameplay/motor", async (original) => {
@@ -30,6 +30,15 @@ describe("biblioteca do Mania", () => {
     const [lido] = await biblioteca.listar();
     expect(lido.mapas[0]).toMatchObject({ dificuldade: "Hard", teclas: 4, notas: 2 });
     expect(lido.mapas[0]).not.toHaveProperty("texto");
+  });
+
+  it("guarda o fundo do mapa como capa, para a roda não precisar abrir o pacote", async () => {
+    const biblioteca = await abrir();
+    const comFundo = new Blob([new Uint8Array(pacote({ "a.osu": osu(), "audio.mp3": new Uint8Array([9]), "fundo.jpg": new Uint8Array([1, 2, 3]) }))]);
+    await importarOsz(biblioteca, comFundo, { origem: "osu" });
+    const [lido] = await biblioteca.listar();
+    expect(lido.capa?.type).toBe("image/jpeg");
+    expect(new Uint8Array(await lido.capa!.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
   });
 
   it("abrir devolve o pacote lido de novo, com áudio e .osu", async () => {
@@ -90,4 +99,18 @@ it("partida em mapa do osu! vai para a API mesmo fora do ranked; importado e sem
   expect(beatmapIdParaAApi(conjunto("osu", "ranked"), 42)).toBe(42);
   expect(beatmapIdParaAApi(conjunto("importado"), 42)).toBeUndefined();
   expect(beatmapIdParaAApi(conjunto("osu", "ranked"), 0)).toBeUndefined();
+});
+
+describe("fonteDaCapa", () => {
+  const base = { id: "osu:7", beatmapsetId: 7, origem: "osu" } as ConjuntoSalvo;
+  it("usa o fundo guardado", () => {
+    const capa = new Blob([]);
+    expect(fonteDaCapa({ ...base, capa })).toBe(capa);
+  });
+  it("sem fundo guardado, um mapa do osu! usa a capa do site", () => {
+    expect(fonteDaCapa(base)).toBe("https://assets.ppy.sh/beatmaps/7/covers/list@2x.jpg");
+  });
+  it("um importado sem fundo fica sem capa", () => {
+    expect(fonteDaCapa({ id: "arquivo:x", origem: "importado" } as ConjuntoSalvo)).toBeUndefined();
+  });
 });

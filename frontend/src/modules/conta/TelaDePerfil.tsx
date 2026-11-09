@@ -9,7 +9,7 @@ import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
 import { NumeroDestacado } from "@/shared/ui/NumeroDestacado";
 import { ComCarregamento } from "@/shared/ui/ComCarregamento";
 import type { PerfilDaApi } from "./api";
-import { FotoDaConta } from "./FotoDaConta";
+import { ImagensDoPerfil, editorDaSessao, type EditorDeImagens } from "./ImagensDoPerfil";
 import { SeloMod } from "@/shared/ui/SeloMod";
 import { sessaoDaConta } from "./sessao";
 
@@ -22,6 +22,8 @@ interface Props {
   carregar?: (sinal: AbortSignal) => Promise<PerfilDaApi>;
   /** Os números de outro modo no lugar dos do Rock. O cartão da conta, com nível e XP, é o mesmo nos dois. */
   estatisticas?: ReactNode;
+  /** Troca a foto e a capa. Por padrão, as de quem está logado. */
+  editor?: EditorDeImagens;
 }
 
 const formatar = (n: number) => n.toLocaleString("pt-BR");
@@ -32,7 +34,7 @@ const mesEAno = (data: string) => new Date(data).toLocaleDateString("pt-BR", { m
 
 
 /** O perfil de quem está logado: nível, números das partidas, desempenho por dificuldade e as últimas jogadas. */
-export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar = (sinal) => sessaoDaConta.perfil(sinal), estatisticas }: Props) {
+export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar = (sinal) => sessaoDaConta.perfil(sinal), estatisticas, editor = editorDaSessao }: Props) {
   const { estado, tentarDeNovo } = useCarregamento(carregar);
 
   return (
@@ -46,21 +48,32 @@ export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar =
 
       <div className="sem-barra-de-rolagem rolagem-de-toque mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-4 max-md:gap-2">
         <ComCarregamento estado={estado} tentarDeNovo={tentarDeNovo} oQue="o perfil">
-          {(perfil) => <Conteudo perfil={perfil} tituloDaMusica={tituloDaMusica} mod={mod} estatisticas={estatisticas} />}
+          {(perfil) => <Conteudo perfil={perfil} tituloDaMusica={tituloDaMusica} mod={mod} estatisticas={estatisticas} editor={editor} />}
         </ComCarregamento>
       </div>
     </div>
   );
 }
 
-function Conteudo({ perfil, tituloDaMusica, mod, estatisticas }: { perfil: PerfilDaApi; tituloDaMusica: Props["tituloDaMusica"]; mod: boolean; estatisticas?: ReactNode }) {
+function Conteudo({
+  perfil,
+  tituloDaMusica,
+  mod,
+  estatisticas,
+  editor,
+}: {
+  perfil: PerfilDaApi;
+  tituloDaMusica: Props["tituloDaMusica"];
+  mod: boolean;
+  estatisticas?: ReactNode;
+  editor: EditorDeImagens;
+}) {
   const { nivel, xp_no_nivel, xp_para_o_proximo } = perfil.nivel;
 
   return (
     <>
-      <section className="placa flex items-center gap-6 p-6 max-md:gap-3 max-md:p-3">
-        <FotoDaConta avatar={perfil.avatar} className="size-20 max-md:size-14" />
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
+      <section className="placa flex flex-col gap-6 p-6 max-md:gap-3 max-md:p-3">
+        <ImagensDoPerfil avatar={perfil.avatar} capa={perfil.capa} editor={editor}>
           <h2 className="truncate text-2xl leading-[1.1] font-bold max-md:text-lg">{perfil.nome}</h2>
           {mod && <SeloMod />}
           <p className="truncate text-base text-texto-suave max-md:whitespace-normal max-md:text-xs">
@@ -79,7 +92,7 @@ function Conteudo({ perfil, tituloDaMusica, mod, estatisticas }: { perfil: Perfi
               {formatar(xp_no_nivel)} / {formatar(xp_para_o_proximo)} XP
             </span>
           </div>
-        </div>
+        </ImagensDoPerfil>
       </section>
 
       {estatisticas ?? <EstatisticasDoRock perfil={perfil} tituloDaMusica={tituloDaMusica} />}

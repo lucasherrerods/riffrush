@@ -204,9 +204,10 @@ async fn as_rotas_do_mania_estao_no_openapi() {
     }
 }
 
-/// Um osu! de mentira: token, a API do beatmap e o .osu.
+/// Um osu! de mentira: token, a API do beatmap, a do espelho e o .osu.
 async fn osu_de_mentira(texto: String, status: &'static str, modo: u8) -> String {
     let md5 = motor::hash_do_beatmap(texto.as_bytes());
+    let md5_do_espelho = md5.clone();
     let rotas = Router::new()
         .route(
             "/oauth/token",
@@ -224,6 +225,19 @@ async fn osu_de_mentira(texto: String, status: &'static str, modo: u8) -> String
                         json!({ "mode_int": modo, "status": status, "difficulty_rating": 3.75, "beatmapset_id": 7, "checksum": md5 }),
                     ))
                 }
+            }),
+        )
+        .route(
+            "/api/v2/b/{id}",
+            get(move |cabecalhos: axum::http::HeaderMap| async move {
+                // Como o catboy.best: sem user-agent do app, recusa.
+                let agente = cabecalhos.get("user-agent").and_then(|v| v.to_str().ok()).unwrap_or_default();
+                if !agente.starts_with("RiffRush") {
+                    return Err(StatusCode::FORBIDDEN);
+                }
+                Ok(Json(
+                    json!({ "mode_int": modo, "status": status, "difficulty_rating": 2.5, "beatmapset_id": 9, "checksum": md5_do_espelho }),
+                ))
             }),
         )
         .route("/osu/{id}", get(move || async move { texto }));
@@ -253,13 +267,23 @@ async fn o_adaptador_do_osu_baixa_o_osu_e_o_status() {
 }
 
 #[tokio::test]
-async fn o_adaptador_do_osu_recusa_outro_modo_e_falha_sem_credenciais() {
+async fn o_adaptador_do_osu_recusa_outro_modo() {
     let url = osu_de_mentira(mapa(10), "ranked", 0).await;
     assert_eq!(
-        Osu::com_url(reqwest::Client::new(), credenciais(), url.clone()).baixar(42).await.unwrap(),
+        Osu::com_url(reqwest::Client::new(), credenciais(), url).baixar(42).await.unwrap(),
         BeatmapBaixado::NaoEhMania
     );
-    assert!(Osu::com_url(reqwest::Client::new(), None, url).baixar(42).await.is_err());
+}
+
+#[tokio::test]
+async fn sem_credenciais_o_adaptador_baixa_pelo_espelho() {
+    let texto = mapa(10);
+    let osu = Osu::com_url(reqwest::Client::new(), None, osu_de_mentira(texto.clone(), "ranked", 3).await);
+    let BeatmapBaixado::Pronto(beatmap) = osu.baixar(42).await.unwrap() else {
+        panic!("devia baixar pelo espelho")
+    };
+    assert_eq!((beatmap.status.as_str(), beatmap.estrelas, beatmap.beatmapset_id), ("ranked", 2.5, Some(9)));
+    assert_eq!(beatmap.texto, texto);
 }
 
 async fn banco() -> Option<PgPool> {

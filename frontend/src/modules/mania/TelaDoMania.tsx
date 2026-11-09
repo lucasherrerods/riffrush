@@ -34,7 +34,7 @@ import { TelaDeJogoMania, type EventoDoManiaAoVivo, type MapaParaJogar, type Opc
 import { TelaDeSelecaoMania } from "./selecao/TelaDeSelecaoMania";
 import { carregarConfiguracoesDoMania, salvarConfiguracoesDoMania } from "./settings/configuracoesMania";
 import { JanelaDeConfiguracoesMania } from "./settings/JanelaDeConfiguracoesMania";
-import type { FiltrosDaBusca, MapaDaBusca, baixarOsz } from "./busca/api";
+import type { FiltrosDaBusca, MapaDaBusca, PaginaDaBusca, baixarOsz } from "./busca/api";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 import { definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
@@ -43,7 +43,7 @@ import { criarPlayerDoMania, faixasDaBiblioteca, playerDoMania } from "./player/
 import { FundoDoMania } from "./menu/FundoDoMania";
 import { MenuDoMania } from "./menu/MenuDoMania";
 
-type Tela = { nome: "menu" } | { nome: "selecao" } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil" } | { nome: "online" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido };
+type Tela = { nome: "menu" } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil" } | { nome: "online" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido };
 
 /** Um replay do ranking aberto para assistir: as entradas, os mods e a semente da partida, e de quem ela é. */
 type ReplayAssistido = ReplayDoMania & { nome: string };
@@ -56,7 +56,7 @@ interface Props {
   /** Para os testes. */
   abrirBiblioteca?: () => Promise<BibliotecaDoMania>;
   decodificar?: (contexto: AudioContext, bytes: Uint8Array) => Promise<AudioBuffer>;
-  buscar?: (filtros: FiltrosDaBusca) => Promise<MapaDaBusca[]>;
+  buscar?: (filtros: FiltrosDaBusca) => Promise<PaginaDaBusca>;
   baixar?: typeof baixarOsz;
 }
 
@@ -362,9 +362,9 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
       {cabecalho}
       <div className="relative min-h-0 flex-1">
         {tela.nome === "busca" ? (
-          <TelaDeBuscaMania aoVoltar={() => setTela({ nome: tela.veioDaSelecao ? "selecao" : "menu" })} baixados={baixados} aoBaixar={aoBaixar} buscar={buscar} baixar={baixar} />
+          <TelaDeBuscaMania aoVoltar={() => setTela({ nome: tela.veioDaSelecao ? "selecao" : "menu" })} baixados={baixados} aoBaixar={aoBaixar} aoJogar={(beatmapsetId) => setTela({ nome: "selecao", conjuntoId: `osu:${beatmapsetId}` })} buscar={buscar} baixar={baixar} />
         ) : (
-          <TelaDeSelecaoMania aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", veioDaSelecao: true })} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
+          <TelaDeSelecaoMania selecionado={tela.nome === "selecao" ? tela.conjuntoId : undefined} aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", veioDaSelecao: true })} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
         )}
         {painelDeAmigos}
       </div>

@@ -144,7 +144,13 @@ export function traduzirConjunto(conjunto: ConjuntoDoOsu): MapaDaBusca | null {
   };
 }
 
-export async function buscarMapas(filtros: FiltrosDaBusca, cliente: ClienteDosEspelhos = padrao()): Promise<MapaDaBusca[]> {
+export interface PaginaDaBusca {
+  mapas: MapaDaBusca[];
+  /** O espelho mandou a página cheia: deve haver mais. */
+  temMais: boolean;
+}
+
+export async function buscarMapas(filtros: FiltrosDaBusca, cliente: ClienteDosEspelhos = padrao()): Promise<PaginaDaBusca> {
   const conjuntos = await cliente.emCadaEspelho(async (espelho, signal) => {
     const resposta = await cliente.buscar(espelho.urlDaBusca(filtros), { signal });
     if (!resposta.ok) throw new Error(`${espelho.nome}: ${resposta.status}`);
@@ -153,10 +159,12 @@ export async function buscarMapas(filtros: FiltrosDaBusca, cliente: ClienteDosEs
     return corpo as ConjuntoDoOsu[];
   });
   const teclas = filtros.teclas ?? [];
-  return conjuntos
+  const mapas = conjuntos
     .map(traduzirConjunto)
     .filter((m): m is MapaDaBusca => m !== null)
     .filter((m) => !teclas.length || m.dificuldades.some((d) => teclas.includes(d.teclas)));
+  // O filtro de teclas roda aqui, então a página pode vir quase vazia mesmo com mais mapas depois dela.
+  return { mapas, temMais: conjuntos.length >= POR_PAGINA };
 }
 
 /** Baixa o .osz de um conjunto, com o progresso de 0 a 1 quando o espelho informa o tamanho. */

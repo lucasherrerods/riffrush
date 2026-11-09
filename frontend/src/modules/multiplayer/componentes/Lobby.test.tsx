@@ -52,10 +52,13 @@ describe("Lobby", () => {
     expect(screen.getAllByText(/^Nv /)).toHaveLength(1);
   });
 
-  it("o host expulsa um convidado, mas não a si mesmo", async () => {
+  it("o host expulsa um convidado depois de confirmar, mas não a si mesmo", async () => {
+    const usuario = userEvent.setup();
     render(lobby(primeira.id, { jogadores: [{ id: 1, personagem: PERSONAGEM_PADRAO }, { id: 2, personagem: vitor }] }));
     expect(screen.getAllByRole("button", { name: /^Expulsar/ })).toHaveLength(1);
-    await userEvent.setup().click(screen.getByRole("button", { name: "Expulsar Vitor" }));
+    await usuario.click(screen.getByRole("button", { name: "Expulsar Vitor" }));
+    expect(expulsar).not.toHaveBeenCalled();
+    await usuario.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Expulsar/ }));
     expect(expulsar).toHaveBeenCalledWith(2);
   });
 
@@ -81,8 +84,8 @@ describe("Lobby", () => {
 
   it("tem o chat da sala, com a minha mensagem marcada, e manda pelo protocolo", async () => {
     const chat = [
-      { n: 1, de: 2, autor: "Vitor", texto: "bora?" },
-      { n: 2, de: 1, autor: "Rockstar", texto: "bora" },
+      { n: 1, de: 2, autor: "Vitor", texto: "bora?", em: 0 },
+      { n: 2, de: 1, autor: "Rockstar", texto: "bora", em: 0 },
     ];
     render(lobby(primeira.id, { chat }));
     const log = screen.getByRole("log", { name: "Chat da sala" });
