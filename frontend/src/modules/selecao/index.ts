@@ -6,3 +6,4 @@ export { alternarFavorita, carregarFavoritas, indicesVisiveis, salvarFavoritas, 
 export { AvisoDaLista, BotaoDeFavoritar, BotaoDeTocar, ChipsDeMods, FiltrosDaBiblioteca, RodapeDeComandos, type Comando, type ModDoChip } from "./PecasDaSelecao";
 export { BotaoDeAleatoria } from "./BotaoDeAleatoria";
 export { FundoDaSelecao } from "./FundoDaSelecao";
+export { MenuDeApagar } from "./MenuDeApagar";
