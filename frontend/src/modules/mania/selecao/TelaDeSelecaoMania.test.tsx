@@ -136,3 +136,13 @@ it("com a confirmação aberta, o Enter não joga o mapa", async () => {
   fireEvent.keyDown(window, { code: "Enter" });
   expect(aoJogar).not.toHaveBeenCalled();
 });
+
+it("os mods ficam num popover aberto pelo botão Modificadores", async () => {
+  const aoMudarMods = vi.fn();
+  const usuario = userEvent.setup();
+  render(<TelaDeSelecaoMania conjuntos={conjuntos} mods={0} aoMudarMods={aoMudarMods} aoImportar={vi.fn()} aoJogar={vi.fn()} />);
+  expect(screen.queryByRole("button", { name: "HR" })).not.toBeInTheDocument();
+  await usuario.click(screen.getByRole("button", { name: /Modificadores/ }));
+  await usuario.click(screen.getByRole("button", { name: "HR" }));
+  expect(aoMudarMods).toHaveBeenCalled();
+});

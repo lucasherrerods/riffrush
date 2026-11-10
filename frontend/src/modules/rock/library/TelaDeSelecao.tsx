@@ -20,6 +20,7 @@ import {
   BotaoDaSelecao,
   BotaoDeAleatoria,
   BotaoDeFavoritar,
+  BotaoDeModificadores,
   BotaoDeTocar,
   Carrossel,
   ChipsDeMods,
@@ -255,12 +256,14 @@ export function TelaDeSelecao(props: Props) {
   );
 
   const mods = (
+    <BotaoDeModificadores ligados={velocidadeDaMusica === 1 ? 0 : 1}>
     <ChipsDeMods
       mods={velocidadesDaMusica()
         .filter((v) => v !== 1)
         .map((v) => ({ id: String(v), sigla: rotuloDaVelocidade(v), nome: `Velocidade ${rotuloDaVelocidade(v)}`, ligado: v === velocidadeDaMusica }))}
       aoAlternar={(id) => aoVelocidadeDaMusica(Number(id) === velocidadeDaMusica ? 1 : Number(id))}
     />
+    </BotaoDeModificadores>
   );
 
   const filtros = (
@@ -327,7 +330,8 @@ export function TelaDeSelecao(props: Props) {
   );
 
   const cabecalho = (
-    <BarraDaSelecao titulo="Selecione a música" aoVoltar={voltar} abaixo={mods}>
+    <BarraDaSelecao titulo="Selecione a música" aoVoltar={voltar}>
+      {mods}
       <BotaoDaSelecao asChild>
         <label className="">
           <FileAudio className="opacity-70" />
@@ -406,11 +410,11 @@ export function TelaDeSelecao(props: Props) {
             <div className="flex-1" />
           ) : (
             <>
-            {/* Tudo cabe sem rolagem: capa pequena ao lado do título e os dados numa linha só. */}
+            {/* Como no Mania: a capa em faixa no topo, com o título embaixo. */}
             <TituloDaSelecao
               titulo={musica.titulo}
               subtitulo={musica.artista}
-              capa={<Capa musica={musica} girando className="size-16 shrink-0 rounded-md border border-borda max-md:hidden" />}
+              faixa={<Capa musica={musica} girando className="size-full" />}
               acao={favoritar}
             />
 
@@ -455,7 +459,7 @@ export function TelaDeSelecao(props: Props) {
           {tocar}
         </section>
 
-        <div className="col-span-7 flex min-h-0 min-w-0 flex-col gap-4 max-md:col-span-1">
+        <div className="col-span-6 col-start-7 flex min-h-0 min-w-0 flex-col gap-4 max-md:col-span-1 max-md:col-start-auto">
           {filtros}
           {lista}
         </div>

@@ -36,7 +36,7 @@ export function TelaDeBusca(props: Props) {
   });
 
   return (
-    <section className="respiro-de-tela relative flex h-full flex-col">
+    <section className="respiro-de-tela relative mx-auto flex h-full w-[70%] flex-col max-lg:w-full">
       <h1 className="sr-only">{props.titulo}</h1>
       <div className="flex items-center gap-2">
         {aoVoltar && (
@@ -58,7 +58,7 @@ export function TelaDeBusca(props: Props) {
       {estado.tipo === "carregando" && <p className="text-texto-suave">Buscando…</p>}
       {estado.tipo === "pronto" && estado.vazio && <p className="text-texto-suave">{props.mensagemDeVazio ?? "Nada encontrado."}</p>}
 
-      <ul aria-label="Resultados" aria-busy={estado.tipo === "carregando"} className="rolagem-de-toque flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+      <ul aria-label="Resultados" aria-busy={estado.tipo === "carregando"} className="rolagem-de-toque grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-2 overflow-y-auto max-lg:grid-cols-1">
         {estado.tipo === "pronto" && props.children}
       </ul>
       {props.fonte && <p className="text-xs text-texto-suave">{props.fonte}</p>}

@@ -441,8 +441,10 @@ describe("TelaDeSelecao removendo músicas", () => {
     });
   });
 
-  it("as velocidades ficam em chips no topo: ligar uma muda a velocidade, clicar de novo volta ao normal", async () => {
+  it("as velocidades ficam no popover de Modificadores: ligar uma muda a velocidade", async () => {
     const { aoVelocidadeDaMusica, aoSelecionar, usuario } = abrir();
+    expect(screen.queryByRole("group", { name: "Mods" })).not.toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: /Modificadores/ }));
     const mods = screen.getByRole("group", { name: "Mods" });
     await usuario.click(within(mods).getByRole("button", { name: "1,25x" }));
     expect(aoVelocidadeDaMusica).toHaveBeenCalledWith(1.25);
