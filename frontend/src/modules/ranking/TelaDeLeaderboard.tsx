@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from "react";
-import { ArrowLeft, Music, Search, Users } from "lucide-react";
+import { BotaoVoltar } from "@/shared/ui/BotaoVoltar";
+import { Music, Search, Users } from "lucide-react";
 import { sessaoDaConta, useConta } from "@/modules/conta";
 import { DIFICULDADES, nomeDaMusica } from "@/modules/rock/songs";
 import { porcentagem } from "@/shared/lib/formatar";
 import { useCarregamento } from "@/shared/hooks/useCarregamento";
-import { Button } from "@/shared/ui/button";
 import { CampoDeSelecao } from "@/shared/ui/CampoDeSelecao";
 import { Input } from "@/shared/ui/input";
 import { ComCarregamento } from "@/shared/ui/ComCarregamento";
@@ -52,9 +52,7 @@ export function TelaDeLeaderboard({ aoVoltar, carregarPlayers = carregarPlayersP
   return (
     <div className="respiro-de-tela flex h-full flex-col">
       <header className="flex items-center gap-4 max-md:gap-2">
-        <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
-          <ArrowLeft />
-        </Button>
+        <BotaoVoltar aoVoltar={aoVoltar} />
         <h1 className="titulo-de-tela">Leaderboard</h1>
       </header>
 

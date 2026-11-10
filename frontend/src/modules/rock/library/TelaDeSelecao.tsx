@@ -167,11 +167,16 @@ export function TelaDeSelecao(props: Props) {
   // No celular, Detalhes e Ranking abrem em janelas em vez de abas.
   const [janela, setJanela] = useState<"detalhes" | "ranking" | null>(null);
 
+  const voltar = () => {
+    efeito("voltar");
+    aoVoltar();
+  };
+
   useTeclado((evento) => {
     // Com o modal ou o menu de opções aberto, as teclas são dele: Esc o fecha, sem voltar ao menu.
     if (removendo || menuAberto || janela) return;
     // Com o foco na busca, as letras são dela.
-    if (evento.target instanceof HTMLInputElement && evento.code !== "ArrowDown" && evento.code !== "ArrowUp" && evento.code !== "Enter" && evento.code !== "Escape") return;
+    if (evento.target instanceof HTMLInputElement && evento.code !== "ArrowDown" && evento.code !== "ArrowUp" && evento.code !== "Enter") return;
     if (evento.code === "Delete" && podeRemover) return setRemovendo(true);
     if (vazia && (evento.code === "KeyF" || evento.code === "Enter")) return;
     if (evento.code === "KeyF") return alternarFavoritaAtual();
@@ -192,9 +197,8 @@ export function TelaDeSelecao(props: Props) {
     } else if (evento.code === "Enter") {
       evento.preventDefault();
       jogar();
-    } else if (evento.code === "Escape" || evento.code === "Backspace") {
-      efeito("voltar");
-      aoVoltar();
+    } else if (evento.code === "Backspace" && !(evento.target instanceof HTMLInputElement)) {
+      voltar();
     }
   });
 
@@ -348,7 +352,7 @@ export function TelaDeSelecao(props: Props) {
   );
 
   const cabecalho = (
-    <BarraDaSelecao titulo="Selecione a música" aoVoltar={aoVoltar} abaixo={mods}>
+    <BarraDaSelecao titulo="Selecione a música" aoVoltar={voltar} abaixo={mods}>
       <BotaoDaSelecao asChild>
         <label className="">
           <FileAudio className="opacity-70" />

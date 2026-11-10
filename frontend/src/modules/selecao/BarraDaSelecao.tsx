@@ -1,5 +1,4 @@
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/shared/ui/button";
+import { BotaoVoltar } from "@/shared/ui/BotaoVoltar";
 
 interface PropsDaBarra {
   /** Só para leitores de tela. */
@@ -16,11 +15,7 @@ export function BarraDaSelecao({ titulo, aoVoltar, abaixo, children }: PropsDaBa
   return (
     <header className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        {aoVoltar && (
-          <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar" className="shrink-0">
-            <ArrowLeft aria-hidden />
-          </Button>
-        )}
+        {aoVoltar && <BotaoVoltar aoVoltar={aoVoltar} />}
         {titulo && <h1 className="sr-only">{titulo}</h1>}
         <div className="flex min-w-0 items-center justify-end gap-2">{children}</div>
       </div>

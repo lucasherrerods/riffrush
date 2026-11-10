@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
-import { ArrowLeft } from "lucide-react";
+import { BotaoVoltar } from "@/shared/ui/BotaoVoltar";
 import { CapaPequena, DIFICULDADES, INSTRUMENTOS, nomeDaMusica } from "@/modules/rock/songs";
 import { useCarregamento } from "@/shared/hooks/useCarregamento";
 import { haQuantoTempo, porcentagem } from "@/shared/lib/formatar";
 import { cn } from "@/shared/lib/utils";
-import { Button } from "@/shared/ui/button";
 import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
 import { NumeroDestacado } from "@/shared/ui/NumeroDestacado";
 import { ComCarregamento } from "@/shared/ui/ComCarregamento";
@@ -40,9 +39,7 @@ export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar =
   return (
     <div className="respiro-de-tela flex h-full flex-col">
       <header className="flex items-center gap-4 max-md:gap-2">
-        <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
-          <ArrowLeft />
-        </Button>
+        <BotaoVoltar aoVoltar={aoVoltar} />
         <h1 className="titulo-de-tela">Perfil</h1>
       </header>
 
