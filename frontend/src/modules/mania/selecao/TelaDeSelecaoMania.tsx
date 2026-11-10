@@ -10,6 +10,7 @@ import {
   Carrossel,
   FiltrosDaBiblioteca,
   FundoDaSelecao,
+  MenuDeApagar,
   RodapeDeComandos,
   TituloDaSelecao,
   alternarFavorita,
@@ -52,6 +53,8 @@ interface Props {
   aoMudarMods: (mods: number) => void
   aoImportar: (arquivos: File[]) => void
   aoJogar: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void
+  /** Apaga o conjunto da biblioteca; sem ele o menu de opções não aparece. */
+  aoRemover?: (conjunto: ConjuntoSalvo) => void
   /** Abre o mapa no treino; sem ele o botão não aparece. */
   aoTreinar?: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void
   /** Baixa um mapa ranked sorteado, com as teclas do filtro, e o abre selecionado; sem ele o botão não aparece. */
@@ -131,6 +134,7 @@ export function TelaDeSelecaoMania({
   aoMudarMods,
   aoImportar,
   aoJogar,
+  aoRemover,
   aoTreinar,
   aoAssistir,
   sortearMapa,
@@ -152,6 +156,8 @@ export function TelaDeSelecaoMania({
   )
   const [soFavoritas, setSoFavoritas] = useState(false)
   const seletor = useRef<HTMLInputElement>(null)
+  const [menuAberto, setMenuAberto] = useState(false)
+  const [removendo, setRemovendo] = useState(false)
 
   const todos = conjuntos ?? []
   const lista = useMemo(
@@ -198,6 +204,7 @@ export function TelaDeSelecaoMania({
   }
 
   useTeclado((evento) => {
+    if (menuAberto || removendo) return
     // Com o foco num campo (a busca), as teclas são dele, menos as que andam pela roda.
     const digitando =
       evento.target instanceof HTMLInputElement ||
@@ -470,6 +477,21 @@ export function TelaDeSelecaoMania({
               aoEscolherDificuldade={setHash}
               aoJogar={jogar}
               aoGirar={andar}
+              menuDaSelecionada={
+                aoRemover &&
+                conjunto && (
+                  <MenuDeApagar
+                    nome={conjunto.tituloUnicode || conjunto.titulo}
+                    rotuloDoItem="Apagar mapa"
+                    descricao="O mapa e os arquivos salvos serão apagados deste aparelho. Isso não pode ser desfeito."
+                    menuAberto={menuAberto}
+                    aoMudarMenu={setMenuAberto}
+                    confirmando={removendo}
+                    aoMudarConfirmando={setRemovendo}
+                    aoConfirmar={() => aoRemover(conjunto)}
+                  />
+                )
+              }
             />
           )}
         </div>

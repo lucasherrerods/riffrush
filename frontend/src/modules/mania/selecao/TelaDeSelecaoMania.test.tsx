@@ -117,3 +117,22 @@ it("avisa o conjunto selecionado a cada troca, para o player tocar a música del
   fireEvent.keyDown(window, { code: "ArrowDown" });
   expect(aoMudarSelecao).toHaveBeenLastCalledWith("b");
 });
+
+it("o menu de opções apaga o mapa selecionado depois de confirmar", async () => {
+  const aoRemover = vi.fn();
+  const usuario = userEvent.setup();
+  render(<TelaDeSelecaoMania conjuntos={conjuntos} mods={0} aoMudarMods={vi.fn()} aoImportar={vi.fn()} aoJogar={vi.fn()} aoRemover={aoRemover} />);
+  await usuario.click(screen.getByRole("button", { name: "Opções de Alfa" }));
+  await usuario.click(screen.getByRole("menuitem", { name: /Apagar mapa/ }));
+  await usuario.click(screen.getByRole("button", { name: "Remover" }));
+  expect(aoRemover).toHaveBeenCalledWith(expect.objectContaining({ id: "a" }));
+});
+
+it("com a confirmação aberta, o Enter não joga o mapa", async () => {
+  const aoJogar = vi.fn();
+  const usuario = userEvent.setup();
+  render(<TelaDeSelecaoMania conjuntos={conjuntos} mods={0} aoMudarMods={vi.fn()} aoImportar={vi.fn()} aoJogar={aoJogar} aoRemover={vi.fn()} />);
+  await usuario.click(screen.getByRole("button", { name: "Opções de Alfa" }));
+  fireEvent.keyDown(window, { code: "Enter" });
+  expect(aoJogar).not.toHaveBeenCalled();
+});

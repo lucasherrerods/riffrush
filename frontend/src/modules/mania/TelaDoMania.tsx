@@ -63,7 +63,7 @@ interface Props {
 
 /** A raiz do Riff Rush Mania: seleção, partida e resultado. */
 export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
-  const { conjuntos, importar, guardarBaixado, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
+  const { conjuntos, importar, guardarBaixado, remover, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
   const [tela, setTela] = useState<Tela>({ nome: "menu" });
   const souDaModeracao = useSouDaModeracao();
   const [amigosAbertos, setAmigosAbertos] = useState(false);
@@ -391,7 +391,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         {tela.nome === "busca" ? (
           <TelaDeBuscaMania aoVoltar={() => setTela({ nome: tela.veioDaSelecao ? "selecao" : "menu" })} baixados={baixados} aoBaixar={aoBaixar} aoJogar={(beatmapsetId) => setTela({ nome: "selecao", conjuntoId: `osu:${beatmapsetId}` })} buscar={buscar} baixar={baixar} />
         ) : (
-          <TelaDeSelecaoMania aoMudarSelecao={setIdSelecionado} selecionado={(tela.nome === "selecao" ? tela.conjuntoId : undefined) ?? idAoEntrar ?? undefined} aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", veioDaSelecao: true })} sortearMapa={sortearMapaNovo} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
+          <TelaDeSelecaoMania aoMudarSelecao={setIdSelecionado} selecionado={(tela.nome === "selecao" ? tela.conjuntoId : undefined) ?? idAoEntrar ?? undefined} aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", veioDaSelecao: true })} sortearMapa={sortearMapaNovo} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoRemover={(conjunto) => void remover(conjunto.id)} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
         )}
         {painelDeAmigos}
       </div>
