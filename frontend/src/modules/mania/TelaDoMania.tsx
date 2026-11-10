@@ -39,7 +39,7 @@ import { sortearMapa } from "./busca/sortear";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 import { definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
-import { CabecalhoDoPlayerDeMusica, type FaixaDoPlayer, type PlayerDeMusica } from "@/modules/player";
+import { CabecalhoDoPlayerDeMusica, useMusicaAoEntrar, useSeguirMapa, useTrilhaDaPartida, type FaixaDoPlayer, type PlayerDeMusica } from "@/modules/player";
 import { criarPlayerDoMania, faixasDaBiblioteca, playerDoMania } from "./player/trilhaDoMania";
 import { FundoDoMania } from "./menu/FundoDoMania";
 import { MenuDoMania } from "./menu/MenuDoMania";
@@ -73,10 +73,17 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   const faixas = useMemo(() => faixasDaBiblioteca(conjuntos ?? [], abrirPacote), [conjuntos, abrirPacote]);
   useEffect(() => {
     player.definirFila(faixas);
-    if (!player.estado().musica && faixas[0]) player.seguir(faixas[0]);
+    player.sortearInicio();
   }, [player, faixas]);
   // Na partida a pista toca a música do mapa; nos menus a trilha volta aos poucos.
-  useEffect(() => player.suspender(tela.nome === "jogo", { esmaecer: tela.nome !== "jogo" }), [player, tela.nome]);
+  // A música acompanha o mapa selecionado e, depois da partida, continua de onde o jogador saiu.
+  const [idSelecionado, setIdSelecionado] = useState<string | null>(null);
+  const faixaSelecionada = useMemo(() => faixas.find((f) => f.id === idSelecionado) ?? null, [faixas, idSelecionado]);
+  useSeguirMapa(player, tela.nome === "selecao" ? faixaSelecionada : null);
+  const faseDaTrilha = tela.nome === "jogo" ? "jogo" : tela.nome === "resultado" && tela.resultado.derrota ? "falha" : "menu";
+  const retomarTrilha = useTrilhaDaPartida(player, faixaSelecionada, faseDaTrilha);
+  const [idAoEntrar, setIdAoEntrar] = useState<string | null>(null);
+  useMusicaAoEntrar(player, tela.nome === "selecao", setIdAoEntrar);
   // Na troca de modo, a trilha do Mania some aos poucos enquanto o disco gira, e volta quando o Mania volta.
   useEffect(() => {
     player.suspender(false, { esmaecer: true });
@@ -265,6 +272,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         replay={tela.replay?.entradas}
         rotuloDoReplay={tela.replay && `REPLAY · ${tela.replay.nome}`}
         aoSair={() => setTela({ nome: "selecao" })}
+        aoMarcarPontoDaMusica={retomarTrilha}
         aoTransmitir={canal && transmitir}
         aoTerminar={(resultado) => aoTerminar(tela.mapa, tela.aoVivo, resultado, tela.replay)}
       />
@@ -382,7 +390,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         {tela.nome === "busca" ? (
           <TelaDeBuscaMania aoVoltar={() => setTela({ nome: tela.veioDaSelecao ? "selecao" : "menu" })} baixados={baixados} aoBaixar={aoBaixar} aoJogar={(beatmapsetId) => setTela({ nome: "selecao", conjuntoId: `osu:${beatmapsetId}` })} buscar={buscar} baixar={baixar} />
         ) : (
-          <TelaDeSelecaoMania selecionado={tela.nome === "selecao" ? tela.conjuntoId : undefined} aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", veioDaSelecao: true })} sortearMapa={sortearMapaNovo} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
+          <TelaDeSelecaoMania aoMudarSelecao={setIdSelecionado} selecionado={(tela.nome === "selecao" ? tela.conjuntoId : undefined) ?? idAoEntrar ?? undefined} aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", veioDaSelecao: true })} sortearMapa={sortearMapaNovo} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
         )}
         {painelDeAmigos}
       </div>

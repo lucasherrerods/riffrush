@@ -1,5 +1,5 @@
 import { obterContextoDeAudio, saidaDeAudio } from "@/modules/audio";
-import { acaoDeVoltar, indiceVizinho, posicaoNaMusica } from "./fila";
+import { acaoDeVoltar, indiceSorteado, indiceVizinho, pontoAleatorioDeInicio, pontoDeVolta, posicaoNaMusica, type SaidaDaPartida } from "./fila";
 
 /** O que o player toca: as músicas do Rock ou os mapas da biblioteca do Mania. */
 export interface FaixaDoPlayer {
@@ -19,6 +19,8 @@ export interface EstadoDoPlayerDeMusica<F extends FaixaDoPlayer = FaixaDoPlayer>
 }
 
 type Carregar<F> = (musica: F) => Promise<AudioBuffer>;
+/** De onde a música abre, sabendo a duração dela. */
+type PontoDeAbertura = (duracao: number) => number;
 
 /** A trilha dos menus de um modo: segue a música que cada tela pede. Cada modo tem o seu, com a própria fila. */
 export class PlayerDeMusica<F extends FaixaDoPlayer = FaixaDoPlayer> {
@@ -36,10 +38,12 @@ export class PlayerDeMusica<F extends FaixaDoPlayer = FaixaDoPlayer> {
   private suspenso = false;
   private navegar: ((passos: number) => void) | null = null;
   private tocavaAntesDeSuspender = false;
+  private pontoAoCarregar: PontoDeAbertura | null = null;
 
   constructor(
     private contexto: () => AudioContext = obterContextoDeAudio,
     private carregar: Carregar<F>,
+    private sortear: () => number = Math.random,
   ) {}
 
   inscrever = (ouvinte: () => void) => {
@@ -74,6 +78,27 @@ export class PlayerDeMusica<F extends FaixaDoPlayer = FaixaDoPlayer> {
   seguir(musica: F) {
     if (musica.id === this.estadoAtual.musica?.id) return;
     void this.abrir(musica);
+  }
+
+  /** Na abertura do jogo: sorteia uma música da fila e a toca num ponto do meio. Se já há música, fica nela. */
+  sortearInicio() {
+    if (this.estadoAtual.musica) return;
+    const sorteada = this.fila[indiceSorteado(this.fila.length, this.sortear())];
+    if (sorteada) this.seguirMapa(sorteada);
+  }
+
+  /** O mapa escolhido na seleção: uma música nova entra num ponto sorteado do meio dela. */
+  seguirMapa(musica: F) {
+    if (musica.id === this.estadoAtual.musica?.id) return;
+    void this.abrir(musica, (duracao) => pontoAleatorioDeInicio(duracao, this.sortear()));
+  }
+
+  /** Depois da partida, a trilha volta para a música dela, no ponto que a saída pede. */
+  voltarDaPartida(musica: F, saida: SaidaDaPartida) {
+    const ponto: PontoDeAbertura = (duracao) => pontoDeVolta(saida, duracao, this.sortear());
+    if (musica.id !== this.estadoAtual.musica?.id) return void this.abrir(musica, ponto);
+    if (this.estadoAtual.carregando) this.pontoAoCarregar = ponto;
+    else this.irPara(ponto(this.estadoAtual.duracao));
   }
 
   /** Como `seguir`, mas tira do pause quando é a mesma música: é o botão de ouvir a prévia. */
@@ -159,8 +184,9 @@ export class PlayerDeMusica<F extends FaixaDoPlayer = FaixaDoPlayer> {
     this.mudar({ tocando: true });
   }
 
-  private async abrir(musica: F) {
+  private async abrir(musica: F, ponto: PontoDeAbertura | null = null) {
     const pedido = ++this.pedido;
+    this.pontoAoCarregar = ponto;
     this.pararFonte();
     this.buffer = null;
     this.deslocamento = 0;
@@ -169,6 +195,7 @@ export class PlayerDeMusica<F extends FaixaDoPlayer = FaixaDoPlayer> {
       const buffer = await this.carregar(musica);
       if (pedido !== this.pedido) return;
       this.buffer = buffer;
+      if (this.pontoAoCarregar) this.deslocamento = Math.min(Math.max(this.pontoAoCarregar(buffer.duration), 0), buffer.duration);
       this.mudar({ carregando: false, duracao: buffer.duration });
       // Música aberta durante a partida fica pronta para tocar quando a partida acabar.
       if (this.suspenso) this.tocavaAntesDeSuspender = true;

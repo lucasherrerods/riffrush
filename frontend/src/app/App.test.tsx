@@ -95,7 +95,7 @@ vi.mock("@/modules/player", async (original) => ({
 vi.mock("@/modules/rock/player", async (original) => ({
   musicaDeAbertura: (await original<typeof import("@/modules/rock/player/musicaDeAbertura")>()).musicaDeAbertura,
   useSeguirMusica: vi.fn(),
-  playerDeMusica: { definirFila: vi.fn(), definirNavegacao: vi.fn(), seguir: vi.fn(), definirVolume: vi.fn(), suspender: vi.fn(), estado: () => ({ musica: null }) },
+  playerDeMusica: { definirFila: vi.fn(), definirNavegacao: vi.fn(), seguir: vi.fn(), seguirMapa: vi.fn(), sortearInicio: vi.fn(), definirVolume: vi.fn(), suspender: vi.fn(), estado: () => ({ musica: null }) },
 }));
 
 vi.stubGlobal("AudioContext", AudioContextFalso);
@@ -110,7 +110,7 @@ beforeEach(() => {
   definirRecordes([]);
   vi.mocked(sessaoDaConta.token).mockReturnValue(null);
   biblioteca.salvas = [];
-  vi.mocked(playerDeMusica.seguir).mockClear();
+  vi.mocked(playerDeMusica.seguirMapa).mockClear();
   biblioteca.guardar.mockClear();
   // Os avisos do sonner ficam num estado global e passariam de um teste para o outro.
   avisar.dismiss();
@@ -264,13 +264,13 @@ describe("App", () => {
   it("com músicas baixadas, o menu abre tocando uma delas, não a do jogo", async () => {
     biblioteca.salvas = [{ ...MUSICAS_EMBUTIDAS[0], id: "arquivo:salva", titulo: "Salva de Ontem", arquivo: new File(["x"], "salva.wav") }];
     abrir();
-    await waitFor(() => expect(playerDeMusica.seguir).toHaveBeenCalledWith(expect.objectContaining({ id: "arquivo:salva" })));
-    expect(playerDeMusica.seguir).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(playerDeMusica.seguirMapa).toHaveBeenCalledWith(expect.objectContaining({ id: "arquivo:salva" })));
+    expect(playerDeMusica.seguirMapa).toHaveBeenCalledTimes(1);
   });
 
   it("sem músicas baixadas, o menu abre tocando a música do jogo", async () => {
     abrir();
-    await waitFor(() => expect(playerDeMusica.seguir).toHaveBeenCalledWith(expect.objectContaining({ id: MUSICAS_EMBUTIDAS[0].id })));
+    await waitFor(() => expect(playerDeMusica.seguirMapa).toHaveBeenCalledWith(expect.objectContaining({ id: MUSICAS_EMBUTIDAS[0].id })));
   });
 
   it("a música importada fica salva na biblioteca", async () => {

@@ -8,7 +8,7 @@ import { EntradaDaPartida, TelaDeJogo, type JogadorLocal, type Resultado, desemp
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/rock/library";
 import { Fundo, MenuPrincipal, PARTE_DA_TELA_DO_MODO, type PalcoCompartilhado } from "@/modules/menu";
 import { CartaoDaConta, ExcluirConta, GanhoDeXp, PerfilDoAmigo, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
-import { CabecalhoDoPlayerDeMusica, indiceVizinho, type FaixaDoPlayer, type PlayerDeMusica } from "@/modules/player";
+import { CabecalhoDoPlayerDeMusica, indiceVizinho, useMusicaAoEntrar, useTrilhaDaPartida, type FaixaDoPlayer, type PlayerDeMusica } from "@/modules/player";
 import { musicaDeAbertura, playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
 import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa, estaEmTelaCheia, modoDoF11 } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
@@ -229,8 +229,9 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
   useEffect(() => {
     playerDeMusica.definirFila(filaDoPlayer);
     if (playerDeMusica.estado().musica || !bibliotecaPronta) return;
+    // Entra num ponto do meio da música, como o mapa escolhido na seleção.
     const abertura = musicaDeAbertura(filaDoPlayer, salvas ?? []);
-    if (abertura) playerDeMusica.seguir(abertura);
+    if (abertura) playerDeMusica.seguirMapa(abertura);
   }, [filaDoPlayer, bibliotecaPronta, salvas]);
   useEffect(() => {
     playerDeMusica.definirVolume(configuracoes.volumeDoPlayer);
@@ -247,10 +248,13 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
   }, [volumeGeral]);
   // Assistir ao vivo também é uma partida na tela: sem o player do menu e sem o cabeçalho.
   const naPista = tela === "jogo" || tela === "espectador";
-  useEffect(() => {
-    // Ao sair da pista, a trilha volta aos poucos.
-    playerDeMusica.suspender(naPista, { esmaecer: !naPista });
-  }, [naPista]);
+  // Na pista e na tela de falha a trilha fica calada; depois ela volta aos poucos, na música da partida.
+  const faseDaTrilha = naPista ? "jogo" : tela === "resultado" && resultado?.resultado.derrota ? "falha" : "menu";
+  const marcarPontoDaTrilha = useTrilhaDaPartida(playerDeMusica, semAudio(musica) ? null : musica, faseDaTrilha);
+  useMusicaAoEntrar(playerDeMusica, tela === "selecao", (id) => {
+    const tocando = musicas.findIndex((m) => m.id === id);
+    if (tocando >= 0) setIndice(tocando);
+  });
 
   // Só aparece online quem aceitou, com conta e com o relay configurado.
   const online = presencaDisponivel && contasLigadas && !!conta && configuracoes.mostrarOnline === true;
@@ -764,6 +768,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 jogadores={jogadoresLocais}
                 aoTerminarJuntos={terminarDividido}
                 treino={treinando}
+                aoMarcarPontoDaMusica={marcarPontoDaTrilha}
               />
             )}
             {tela === "telaDividida" && (
