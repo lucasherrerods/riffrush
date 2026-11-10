@@ -30,14 +30,16 @@ interface PropsDoTitulo {
   /** Uma linha menor abaixo (ex.: "Importado · sem XP nem ranking"). */
   aviso?: React.ReactNode;
   capa?: React.ReactNode;
+  /** Uma imagem larga acima do título, na largura do cartão (ex.: o fundo do mapa no Mania). */
+  faixa?: React.ReactNode;
   /** À direita do título (ex.: favoritar). */
   acao?: React.ReactNode;
 }
 
 /** O cartão com o nome do que está selecionado. */
-export function TituloDaSelecao({ titulo, subtitulo, aviso, capa, acao }: PropsDoTitulo) {
-  return (
-    <div className="chapa flex items-center gap-4 bg-superficie-elevada/95 px-4 py-3">
+export function TituloDaSelecao({ titulo, subtitulo, aviso, capa, faixa, acao }: PropsDoTitulo) {
+  const linha = (
+    <div className="flex items-center gap-4 px-4 py-3">
       {capa}
       <div className="min-w-0 flex-1">
         <h2 className="truncate font-titulo text-3xl tracking-wide uppercase max-md:text-2xl">{titulo}</h2>
@@ -45,6 +47,12 @@ export function TituloDaSelecao({ titulo, subtitulo, aviso, capa, acao }: PropsD
         {aviso && <p className="text-sm text-texto-suave">{aviso}</p>}
       </div>
       {acao}
+    </div>
+  );
+  return (
+    <div className="chapa overflow-hidden bg-superficie-elevada/95">
+      {faixa && <div className="aspect-[16/5] w-full max-md:hidden">{faixa}</div>}
+      {linha}
     </div>
   );
 }

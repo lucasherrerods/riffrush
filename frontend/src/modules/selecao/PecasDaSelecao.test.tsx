@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { BotaoDeFavoritar, BotaoDeTocar, ChipsDeMods, FiltrosDaBiblioteca, RodapeDeComandos } from ".";
+import { BotaoDeFavoritar, BotaoDeTocar, ChipsDeMods, FiltrosDaBiblioteca, RodapeDeComandos, TituloDaSelecao } from ".";
 
 it("os chips de mods ligam pelo id", async () => {
   const aoAlternar = vi.fn();
@@ -59,4 +59,11 @@ it("os filtros da biblioteca buscam, ligam favoritos e sorteiam", async () => {
   expect(aoAlternarFavoritas).toHaveBeenCalled();
   expect(aoSortear).toHaveBeenCalled();
   expect(screen.getByText("1 de 2 músicas")).toBeInTheDocument();
+});
+
+it("o título mostra a faixa acima do nome, quando houver", () => {
+  render(<TituloDaSelecao titulo="White Prism" subtitulo="artista" faixa={<img alt="capa" src="capa.jpg" />} />);
+  const faixa = screen.getByAltText("capa");
+  const nome = screen.getByRole("heading", { name: "White Prism" });
+  expect(faixa.compareDocumentPosition(nome) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
