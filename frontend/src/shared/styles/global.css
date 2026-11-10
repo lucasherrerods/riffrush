@@ -447,3 +447,10 @@ body {
   filter: none;
   mix-blend-mode: normal;
 }
+
+/* A faixa da capa na seleção: inteira no centro e com metade da opacidade nas bordas. */
+@utility bordas-esfumadas {
+  mask-image: linear-gradient(to right, rgb(0 0 0 / 0.5), black 15%, black 85%, rgb(0 0 0 / 0.5)),
+    linear-gradient(to bottom, rgb(0 0 0 / 0.5), black 25%, black 75%, rgb(0 0 0 / 0.5));
+  mask-composite: intersect;
+}
