@@ -13,13 +13,15 @@ interface Props<T extends string> {
   valor: T;
   aoEscolher: (valor: T) => void;
   className?: string;
+  /** Esconde o título da tela (ele continua nomeando o grupo), para caber numa linha apertada. */
+  tituloEscondido?: boolean;
 }
 
 /** Uma escolha entre várias opções, como chips de texto ou bolinhas de cor. */
-export function GrupoDeOpcoes<T extends string>({ titulo, opcoes, valor, aoEscolher, className }: Props<T>) {
+export function GrupoDeOpcoes<T extends string>({ titulo, opcoes, valor, aoEscolher, className, tituloEscondido = false }: Props<T>) {
   return (
     <div className={className}>
-      <p className="mb-1.5 text-sm font-semibold text-texto-suave max-md:mb-1 max-md:text-xs">{titulo}</p>
+      <p className={tituloEscondido ? "sr-only" : "mb-1.5 text-sm font-semibold text-texto-suave max-md:mb-1 max-md:text-xs"}>{titulo}</p>
       <div role="radiogroup" aria-label={titulo} className="flex flex-wrap gap-2">
         {opcoes.map((opcao) => {
           const escolhida = opcao.id === valor;

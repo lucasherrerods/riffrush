@@ -1,6 +1,5 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
 import { registrarUso } from "@/modules/gamepad";
 import { anotarRecorde } from "@/modules/rock/results";
 import { type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
@@ -16,7 +15,7 @@ function abrir({ indice = 0, dificuldade = "medio" as Dificuldade, instrumento =
       indice={indice}
       dificuldade={dificuldade}
       instrumento={instrumento}
-      personagem={PERSONAGEM_PADRAO}
+     
       volumeDosEfeitos={0}
       velocidadeDaMusica={1}
       {...acoes}
@@ -40,7 +39,7 @@ describe("TelaDeSelecao", () => {
         indice={0}
         dificuldade="dificil"
         instrumento="baixo"
-        personagem={PERSONAGEM_PADRAO}
+       
         volumeDosEfeitos={0}
         velocidadeDaMusica={1}
         aoSelecionar={vi.fn()}
@@ -138,7 +137,7 @@ describe("TelaDeSelecao", () => {
 
   it("com ranking, abre na aba Ranking e a aba Detalhes mostra a dificuldade e o recorde local", async () => {
     const acoes = { aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoInstrumento: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn(), aoVelocidadeDaMusica: vi.fn() };
-    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} velocidadeDaMusica={1} ranking={<p>top da música</p>} {...acoes} />);
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" volumeDosEfeitos={0} velocidadeDaMusica={1} ranking={<p>top da música</p>} {...acoes} />);
     expect(screen.getByRole("tab", { name: /Ranking/ })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("top da música")).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("tab", { name: /Detalhes/ }));
@@ -200,9 +199,10 @@ describe("TelaDeSelecao", () => {
     expect(screen.getByRole("img", { name: /Capa de Neon Highway/ })).toHaveAttribute("src", "blob:capa");
   });
 
-  it("mostra o personagem palhetando a guitarra ao lado da música", () => {
+  it("não mostra o personagem: a dificuldade fica na faixa de dados, junto com gênero e intensidade", () => {
     abrir();
-    expect(screen.getByRole("img", { name: "Personagem Rockstar" })).toHaveAttribute("data-instrumento", "guitarra");
+    expect(screen.queryByRole("img", { name: /^Personagem/ })).not.toBeInTheDocument();
+    expect(screen.getAllByText("Dificuldade").length).toBeGreaterThan(0);
   });
 });
 
@@ -465,7 +465,7 @@ describe("no celular", () => {
   const acoes = () => ({ aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoInstrumento: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn(), aoVelocidadeDaMusica: vi.fn() });
 
   it("troca as abas por botões que abrem Detalhes e Ranking em modais", async () => {
-    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} velocidadeDaMusica={1} ranking={<p>top da música</p>} {...acoes()} />);
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" volumeDosEfeitos={0} velocidadeDaMusica={1} ranking={<p>top da música</p>} {...acoes()} />);
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
     expect(screen.queryByText("top da música")).not.toBeInTheDocument();
     const usuario = userEvent.setup();
@@ -480,7 +480,7 @@ describe("no celular", () => {
 
   it("Esc fecha o modal sem voltar ao menu", async () => {
     const a = acoes();
-    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} velocidadeDaMusica={1} ranking={<p>top da música</p>} {...a} />);
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" volumeDosEfeitos={0} velocidadeDaMusica={1} ranking={<p>top da música</p>} {...a} />);
     const usuario = userEvent.setup();
     await usuario.click(screen.getByRole("button", { name: /Ranking/ }));
     await usuario.keyboard("{Escape}");
@@ -490,7 +490,7 @@ describe("no celular", () => {
 
   it("deixa o TOCAR fixo no rodapé, depois da lista", async () => {
     const a = acoes();
-    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} velocidadeDaMusica={1} {...a} />);
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" volumeDosEfeitos={0} velocidadeDaMusica={1} {...a} />);
     const rodape = screen.getByRole("contentinfo");
     await userEvent.setup().click(within(rodape).getByRole("button", { name: /TOCAR/ }));
     expect(a.aoJogar).toHaveBeenCalled();
@@ -498,7 +498,7 @@ describe("no celular", () => {
 
   it("arrastar o dedo na lista troca a música", () => {
     const a = acoes();
-    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} velocidadeDaMusica={1} {...a} />);
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" volumeDosEfeitos={0} velocidadeDaMusica={1} {...a} />);
     const lista = screen.getByRole("list", { name: "Músicas" });
     fireEvent.touchStart(lista, { touches: [{ clientY: 300 }] });
     fireEvent.touchMove(lista, { touches: [{ clientY: 200 }] });
@@ -507,7 +507,7 @@ describe("no celular", () => {
 
   it("o toque que arrastou não vira clique na música onde o dedo começou", () => {
     const a = acoes();
-    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} velocidadeDaMusica={1} {...a} />);
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" volumeDosEfeitos={0} velocidadeDaMusica={1} {...a} />);
     const lista = screen.getByRole("list", { name: "Músicas" });
     const botao = lista.querySelector('[data-indice="2"] button')!;
     fireEvent.touchStart(botao, { touches: [{ clientY: 300 }] });
@@ -521,7 +521,7 @@ describe("no celular", () => {
   it("apertar e segurar sem mover não vira clique", () => {
     vi.useFakeTimers();
     const a = acoes();
-    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" personagem={PERSONAGEM_PADRAO} volumeDosEfeitos={0} velocidadeDaMusica={1} {...a} />);
+    render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" volumeDosEfeitos={0} velocidadeDaMusica={1} {...a} />);
     const botao = screen.getByRole("list", { name: "Músicas" }).querySelector('[data-indice="2"] button')!;
     fireEvent.touchStart(botao, { touches: [{ clientY: 300 }] });
     act(() => vi.advanceTimersByTime(500));
