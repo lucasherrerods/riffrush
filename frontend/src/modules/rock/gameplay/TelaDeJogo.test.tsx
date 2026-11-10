@@ -75,6 +75,18 @@ beforeEach(() => {
 });
 
 describe("TelaDeJogo", () => {
+  it("ao sair da tela, avisa em que ponto da música a partida estava", async () => {
+    const aoMarcarPontoDaMusica = vi.fn();
+    carregarCom([nota(1)]);
+    const { unmount } = render(
+      <TelaDeJogo musica={MUSICAS_DE_TESTE[0]} dificuldade="medio" opcoes={OPCOES_PADRAO_DA_PARTIDA} personagem={PERSONAGEM_PADRAO} aoSair={vi.fn()} aoTerminar={vi.fn()} aoMarcarPontoDaMusica={aoMarcarPontoDaMusica} />,
+    );
+    await partidaPronta();
+    irPara(10);
+    unmount();
+    expect(aoMarcarPontoDaMusica).toHaveBeenLastCalledWith(10);
+  });
+
   it("mostra o carregamento e depois a música", async () => {
     carregarCom([nota(1)]);
     abrir();

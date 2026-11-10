@@ -146,6 +146,15 @@ describe("TelaDeJogoMania", () => {
     expect(audio().fontes.at(-1)!.parada).toBe(true);
   });
 
+  it("ao sair, avisa em que ponto do áudio a música estava", async () => {
+    const aoMarcarPontoDaMusica = vi.fn();
+    render(<TelaDeJogoMania mapa={mapa} mods={16} aoTerminar={vi.fn()} aoSair={vi.fn()} decodificar={decodificar} aoMarcarPontoDaMusica={aoMarcarPontoDaMusica} />);
+    await pronta();
+    await irPara(2000);
+    fireEvent.keyDown(window, { code: "Escape" });
+    expect(aoMarcarPontoDaMusica).toHaveBeenCalledWith(3);
+  });
+
   describe("treino", () => {
     const abrirTreino = () => {
       const aoTerminar = vi.fn();

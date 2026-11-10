@@ -92,6 +92,24 @@ describe("TelaDoMania", () => {
     expect(await screen.findByRole("region", { name: "Seleção de mapas" })).toBeInTheDocument();
   });
 
+  // Bug: voltar da partida abria a seleção no primeiro conjunto, e a trilha trocava de música.
+  it("depois da partida, a seleção volta no mesmo conjunto", async () => {
+    const { usuario } = await abrir();
+    await screen.findByText(/Nenhum mapa ainda/);
+    const outro = new File([new Uint8Array(pacote({ "b.osu": osu({ titulo: "Outra", tituloUnicode: "Outra", conjuntoId: 8, beatmapId: 12 }), "audio.mp3": new Uint8Array([1]) }))], "outra.osz");
+    await usuario.upload(screen.getByLabelText("Arquivos .osz"), [arquivoOsz(), outro]);
+    await screen.findByRole("heading", { level: 2 });
+    const tituloAntes = screen.getByRole("heading", { level: 2 }).textContent;
+    fireEvent.keyDown(window, { code: "ArrowDown" });
+    const escolhido = screen.getByRole("heading", { level: 2 }).textContent;
+    expect(escolhido).not.toBe(tituloAntes);
+    await usuario.click(screen.getByRole("button", { name: /TOCAR/ }));
+    expect(await screen.findByLabelText("Pista do Mania")).toBeInTheDocument();
+    fireEvent.keyDown(window, { code: "Escape" });
+    expect(await screen.findByRole("region", { name: "Seleção de mapas" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(escolhido);
+  });
+
   it("Treinar abre o mapa na escolha das partes, sem jogar o mapa inteiro", async () => {
     const { usuario } = await abrir();
     await screen.findByText(/Nenhum mapa ainda/);

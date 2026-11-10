@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, saidaDeAudio } from "@/modules/audio";
+import { pontoDaPartida } from "@/modules/player";
 import { limitesDaVolta, registrarVolta, rotuloDasVoltas, VOLTAS_INICIAIS, type Trecho, type Voltas } from "@/shared/lib/treino";
 import { Button } from "@/shared/ui/button";
 import { EscolhaDoTreino } from "@/shared/ui/EscolhaDoTreino";
@@ -74,6 +75,8 @@ interface Props {
   opcoes?: OpcoesDoMania;
   aoTerminar: (resultado: ResultadoDoMania) => void;
   aoSair: () => void;
+  /** Quando a partida acaba de qualquer jeito: o segundo do áudio em que a música estava, para a trilha dos menus continuar dali. */
+  aoMarcarPontoDaMusica?: (segundos: number) => void;
   /** Treino: o jogador escolhe uma parte do mapa, que repete até ele sair. A partida nunca termina, então nada vai para o ranking. */
   treino?: boolean;
   /** Para os testes: o decodificador do áudio. */
@@ -93,7 +96,7 @@ const decodificarPadrao = (contexto: AudioContext, bytes: Uint8Array) => context
 /** No treino ninguém falha, e os mods que derrubam a partida no primeiro erro não fazem sentido. */
 const modsDoTreino = (mods: number) => (mods & ~(MODS.SD | MODS.PF)) | MODS.NF;
 
-export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_PADRAO_DO_MANIA, aoTerminar, aoSair, treino = false, decodificar = decodificarPadrao, replay, rotuloDoReplay, aoTransmitir, aoVivo }: Props) {
+export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_PADRAO_DO_MANIA, aoTerminar, aoSair, treino = false, decodificar = decodificarPadrao, replay, rotuloDoReplay, aoTransmitir, aoVivo, aoMarcarPontoDaMusica }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [pronta, setPronta] = useState(false);
@@ -103,8 +106,8 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
   const [voltas, setVoltas] = useState<Voltas>(VOLTAS_INICIAIS);
   /** Segundos que faltam para a música voltar, na contagem do treino. */
   const [falta, setFalta] = useState(0);
-  const retornos = useRef({ aoTerminar, aoSair, aoTransmitir });
-  retornos.current = { aoTerminar, aoSair, aoTransmitir };
+  const retornos = useRef({ aoTerminar, aoSair, aoTransmitir, aoMarcarPontoDaMusica });
+  retornos.current = { aoTerminar, aoSair, aoTransmitir, aoMarcarPontoDaMusica };
   // Lido só ao montar: quem assiste remonta a tela (pela key) a cada sincronização.
   const inicioAoVivo = useRef(aoVivo?.inicio);
   // Trocar de trecho não decodifica o áudio de novo.
@@ -319,6 +322,7 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
       pedido = requestAnimationFrame(desenhar);
 
       pararTudo = () => {
+        retornos.current.aoMarcarPontoDaMusica?.(pontoDaPartida(inicio, agoraNoAudio(contexto), velocidade));
         encerrarTransmissao();
         cancelAnimationFrame(pedido);
         observador?.disconnect();

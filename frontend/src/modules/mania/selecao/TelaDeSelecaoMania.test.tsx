@@ -109,3 +109,11 @@ it("o Esc volta para a tela anterior", () => {
   fireEvent.keyDown(window, { code: "Escape" });
   expect(aoVoltar).toHaveBeenCalledOnce();
 });
+
+it("avisa o conjunto selecionado a cada troca, para o player tocar a música dele", () => {
+  const aoMudarSelecao = vi.fn();
+  render(<TelaDeSelecaoMania conjuntos={conjuntos} mods={0} aoMudarMods={vi.fn()} aoImportar={vi.fn()} aoJogar={vi.fn()} aoMudarSelecao={aoMudarSelecao} />);
+  expect(aoMudarSelecao).toHaveBeenLastCalledWith("a");
+  fireEvent.keyDown(window, { code: "ArrowDown" });
+  expect(aoMudarSelecao).toHaveBeenLastCalledWith("b");
+});

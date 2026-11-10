@@ -44,6 +44,8 @@ interface Props {
   /** O conjunto que abre selecionado (ex.: o que acabou de ser baixado na busca). */
   selecionado?: string
   aoVoltar?: () => void
+  /** A cada troca de conjunto selecionado, para o player tocar a música dele. */
+  aoMudarSelecao?: (conjuntoId: string) => void
   aoBuscarMapas?: () => void
   conjuntos: ConjuntoSalvo[] | null
   mods: number
@@ -132,6 +134,7 @@ export function TelaDeSelecaoMania({
   aoTreinar,
   aoAssistir,
   sortearMapa,
+  aoMudarSelecao,
 }: Props) {
   // A seleção segue o id do conjunto: muda a ordem ou o filtro e ela continua no mesmo mapa, se ele ainda aparecer.
   const [id, setId] = useState<string | null>(selecionado ?? null)
@@ -168,6 +171,10 @@ export function TelaDeSelecaoMania({
     0,
   )
   const conjunto = lista[indice] as ConjuntoSalvo | undefined
+  const idDoConjunto = conjunto?.id
+  useEffect(() => {
+    if (idDoConjunto) aoMudarSelecao?.(idDoConjunto)
+  }, [idDoConjunto, aoMudarSelecao])
   const dificuldade =
     conjunto?.mapas.find((m) => m.hash === hash) ?? conjunto?.mapas[0]
 

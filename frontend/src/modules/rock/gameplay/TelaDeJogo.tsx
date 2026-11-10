@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Eye, Loader2, Pause, Skull } from "lucide-react";
 import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, pausarAudio, retomarAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
+import { pontoDaPartida } from "@/modules/player";
 import { suportaWebGL, type Personagem } from "@/modules/rock/character";
 import { cenaDaPartida } from "./cena";
 import { Palco, type EstadoDoPalco } from "@/modules/rock/stage";
@@ -55,6 +56,8 @@ interface Props {
     adversarios?: ReactNode;
   };
   aoSair: () => void;
+  /** Quando a tela da partida fecha de qualquer jeito: o segundo da música em que ela estava, para a trilha dos menus continuar dali. */
+  aoMarcarPontoDaMusica?: (segundos: number) => void;
   /** `gerarReplay` só vem quando o jogador tocou de verdade: sem bot, sem derrota e sem ser um replay. A API decide o que vale para o ranking. */
   aoTerminar: (resultado: Resultado, gerarReplay?: () => Promise<Uint8Array>) => void;
   /** Assiste a uma partida gravada: as entradas vêm do replay e o teclado só pausa. */
@@ -82,7 +85,7 @@ const FOLGA_DO_FIM = 0.5;
 const SALTO_DAS_SETAS: Record<string, number> = { ArrowLeft: -5, ArrowRight: 5 };
 const nada = () => {};
 
-export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, esperandoEntrada, rede, aoSair, aoTerminar, placar, replay, transmissao, espectadores = 0, jogadores, aoTerminarJuntos, treino = false }: Props) {
+export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opcoes, personagem, recorde, esperandoEntrada, rede, aoSair, aoTerminar, placar, replay, transmissao, espectadores = 0, jogadores, aoTerminarJuntos, treino = false, aoMarcarPontoDaMusica }: Props) {
   const divididos = jogadores && jogadores.length > 1 ? jogadores : null;
   const quantos = divididos?.length ?? 1;
   // O replay toca na velocidade em que foi gravado, não na das configurações de quem assiste.
@@ -119,6 +122,8 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
   const emRede = !!rede;
   // A rede chega como objeto novo a cada render; só o instante de largada reinicia a partida.
   const inicioEmRede = rede?.inicio;
+  const marcarPonto = useRef(aoMarcarPontoDaMusica);
+  marcarPonto.current = aoMarcarPontoDaMusica;
   const [carregada, setCarregada] = useState<MusicaCarregada | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [urlDoVideo, setUrlDoVideo] = useState<string | null>(null);
@@ -395,6 +400,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     quadro = requestAnimationFrame(aCadaQuadro);
 
     return () => {
+      marcarPonto.current?.(pausadoAgora ? posicaoNaPausa * velocidade : pontoDaPartida(inicio, agoraNoAudio(audio), velocidade));
       cancelarRetomada();
       cancelAnimationFrame(quadro);
       document.removeEventListener("visibilitychange", aoMudarVisibilidade);
