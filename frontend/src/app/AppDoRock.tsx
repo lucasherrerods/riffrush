@@ -9,7 +9,7 @@ import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas
 import { Fundo, MenuPrincipal, PARTE_DA_TELA_DO_MODO, type PalcoCompartilhado } from "@/modules/menu";
 import { CartaoDaConta, ExcluirConta, GanhoDeXp, PerfilDoAmigo, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, useMusicaAoEntrar, useTrilhaDaPartida, type FaixaDoPlayer, type PlayerDeMusica } from "@/modules/player";
-import { playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
+import { musicaDeAbertura, playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
 import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa, estaEmTelaCheia, modoDoF11 } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
 import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, entrarNaSalaOnline, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
@@ -224,10 +224,15 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
 
   // O player toca a biblioteca desde a abertura, menos as músicas que perderam o áudio.
   const filaDoPlayer = useMemo(() => musicas.filter((m) => !semAudio(m)), [musicas]);
+  // A primeira música espera a biblioteca: com músicas baixadas, sorteia uma delas em vez da do jogo.
+  const bibliotecaPronta = salvas !== null && (salvas.length === 0 || musicas.some((m) => m.id === salvas[0].id));
   useEffect(() => {
     playerDeMusica.definirFila(filaDoPlayer);
-    playerDeMusica.sortearInicio();
-  }, [filaDoPlayer]);
+    if (playerDeMusica.estado().musica || !bibliotecaPronta) return;
+    // Entra num ponto do meio da música, como o mapa escolhido na seleção.
+    const abertura = musicaDeAbertura(filaDoPlayer, salvas ?? []);
+    if (abertura) playerDeMusica.seguirMapa(abertura);
+  }, [filaDoPlayer, bibliotecaPronta, salvas]);
   useEffect(() => {
     playerDeMusica.definirVolume(configuracoes.volumeDoPlayer);
   }, [configuracoes.volumeDoPlayer]);
@@ -487,8 +492,8 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
     <main data-parte={PARTE_DA_TELA_DO_MODO} className={cn("dark relative flex h-dvh w-screen flex-col overflow-hidden text-texto", !(palco && tela === "menu") && "bg-fundo")}>
       {/* As telas menos usadas chegam só quando abertas: a abertura do jogo baixa menos código. */}
       <Suspense fallback={<TelaCarregando />}>
-      {/* Na tela inicial compartilhada, o disco do app faz o papel do fundo. */}
-      {!(naPista && configuracoes.modoCompetitivo) && !(palco && tela === "menu") && <Fundo tocando={naPista} />}
+      {/* Na tela inicial compartilhada, o disco do app faz o papel do fundo; na seleção, a capa borrada da música. */}
+      {!(naPista && configuracoes.modoCompetitivo) && !(palco && tela === "menu") && tela !== "selecao" && <Fundo tocando={naPista} />}
       {entrada && tela === "jogo" && (
         <EntradaDaPartida
           key={partida}

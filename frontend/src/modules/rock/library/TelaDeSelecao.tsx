@@ -422,7 +422,7 @@ export function TelaDeSelecao(props: Props) {
     <div className="relative isolate flex h-full flex-col">
       {/* A capa da música, borrada, pinta o fundo da tela e troca junto com a seleção. */}
       <FundoDaSelecao chave={vazia ? undefined : musica.id}>
-        <Capa musica={musica} decorativa className="size-full scale-110 blur-3xl" />
+        <Capa musica={musica} decorativa className="size-full scale-105 blur-md" />
       </FundoDaSelecao>
 
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:gap-4 max-md:p-4">
