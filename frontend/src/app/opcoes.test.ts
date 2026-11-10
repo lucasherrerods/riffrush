@@ -1,7 +1,12 @@
+import { PREFERENCIAS_DE_AUDIO_PADRAO } from "@/modules/audio";
 import { CONFIGURACOES_PADRAO } from "@/modules/settings";
 import { mesmasOpcoes, opcoesDaPartida } from "./opcoes";
 
 describe("opcoesDaPartida", () => {
+  it("os volumes da partida vêm do áudio global, não das configurações do Rock", () => {
+    expect(opcoesDaPartida(CONFIGURACOES_PADRAO, { ...PREFERENCIAS_DE_AUDIO_PADRAO, volumeDaMusica: 0.2, volumeDosEfeitos: 0.1 })).toMatchObject({ volumeDaMusica: 0.2, volumeDosEfeitos: 0.1 });
+  });
+
   it("leva a skin escolhida, e a clássica se ela não existe mais", () => {
     expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, skinDaPista: "neon" }).skin.id).toBe("neon");
     expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, skinDaPista: "highway:apagada" }).skin.id).toBe("classica");
@@ -50,11 +55,11 @@ describe("opcoesDaPartida", () => {
   });
 
   it("leva o jeito de jogar e a tecla da palheta", () => {
-    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, jeitoDeJogar: "palhetada", teclaDaPalheta: "KeyP" }, false)).toMatchObject({ jeitoDeJogar: "palhetada", teclaDaPalheta: "KeyP" });
+    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, jeitoDeJogar: "palhetada", teclaDaPalheta: "KeyP" }, PREFERENCIAS_DE_AUDIO_PADRAO, false)).toMatchObject({ jeitoDeJogar: "palhetada", teclaDaPalheta: "KeyP" });
   });
 
   it("no celular é sempre tapping: não há palheta na tela de toque", () => {
-    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, jeitoDeJogar: "palhetada" }, true).jeitoDeJogar).toBe("tapping");
+    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, jeitoDeJogar: "palhetada" }, PREFERENCIAS_DE_AUDIO_PADRAO, true).jeitoDeJogar).toBe("tapping");
   });
 
   it("com a nota aberta desligada, a partida joga sem ela", () => {
@@ -71,7 +76,7 @@ describe("opcoesDaPartida", () => {
 describe("mesmasOpcoes", () => {
   it("compara campo a campo, e listas item a item", () => {
     const base = opcoesDaPartida(CONFIGURACOES_PADRAO);
-    expect(mesmasOpcoes(base, opcoesDaPartida({ ...CONFIGURACOES_PADRAO, volumeGeral: 0.2 }))).toBe(true);
+    expect(mesmasOpcoes(base, opcoesDaPartida(CONFIGURACOES_PADRAO, { ...PREFERENCIAS_DE_AUDIO_PADRAO, volumeGeral: 0.2 }))).toBe(true);
     expect(mesmasOpcoes(base, { ...base, teclas: [...base.teclas] })).toBe(true);
     expect(mesmasOpcoes(base, { ...base, teclas: ["KeyQ", ...base.teclas.slice(1)] })).toBe(false);
     expect(mesmasOpcoes(base, { ...base, volumeDaMusica: 0.1 })).toBe(false);
