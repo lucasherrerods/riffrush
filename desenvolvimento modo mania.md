@@ -252,7 +252,7 @@ As janelas dependem do OD do mapa (valores do mania, em milissegundos, ± em vol
 
 | Julgamento | Janela | Peso na precisão |
 |---|---|---|
-| MAX | 16 | 305 |
+| MAX | 16 | 300 |
 | 300 | 64 − 3 × OD | 300 |
 | 200 | 97 − 3 × OD | 200 |
 | 100 | 127 − 3 × OD | 100 |
@@ -272,7 +272,7 @@ As janelas dependem do OD do mapa (valores do mania, em milissegundos, ± em vol
 
 ### 8.3 Pontuação, precisão e nota
 
-- **Precisão** = Σ(peso do julgamento) / (305 × total de julgamentos) × 100.
+- **Precisão** = Σ(peso do julgamento) / (300 × total de julgamentos) × 100, como no ScoreV1 (MAX e 300 valem o mesmo).
 - **Pontuação:** até 1.000.000, multiplicada pelos mods de redução (EZ, NF, HT). Mods de aumento não aumentam além disso, como no mania atual.
 - **Notas:**
 
