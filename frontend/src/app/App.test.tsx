@@ -100,7 +100,7 @@ vi.mock("@/modules/player", async (original) => ({
 vi.mock("@/modules/rock/player", async (original) => ({
   musicaDeAbertura: (await original<typeof import("@/modules/rock/player/musicaDeAbertura")>()).musicaDeAbertura,
   useSeguirMusica: vi.fn(),
-  playerDeMusica: { definirFila: vi.fn(), definirNavegacao: vi.fn(), seguir: vi.fn(), seguirMapa: vi.fn(), sortearInicio: vi.fn(), definirVolume: vi.fn(), suspender: vi.fn(), estado: () => ({ musica: null }) },
+  playerDeMusica: { inscrever: () => () => {}, definirFila: vi.fn(), definirNavegacao: vi.fn(), seguir: vi.fn(), seguirMapa: vi.fn(), sortearInicio: vi.fn(), definirVolume: vi.fn(), suspender: vi.fn(), estado: ((parado) => () => parado)({ musica: null }) },
 }));
 
 vi.stubGlobal("AudioContext", AudioContextFalso);
