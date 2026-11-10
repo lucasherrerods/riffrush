@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
-import { Info, ListOrdered, Search, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react"
+import { Info, ListOrdered, Search, Upload } from "lucide-react"
 import {
   AvisoDaLista,
   BarraDaSelecao,
@@ -19,39 +19,50 @@ import {
   salvarFavoritas,
   type DificuldadeDoCarrossel,
   type ItemDoCarrossel,
-} from "@/modules/selecao";
-import { useTeclado } from "@/shared/hooks/useTeclado";
-import { cn } from "@/shared/lib/utils";
-import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
-import { NumeroDestacado } from "@/shared/ui/NumeroDestacado";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
-import type { ConjuntoSalvo, DificuldadeSalva } from "../beatmaps/biblioteca";
-import { faixaDasEstrelas, type FaixaDeDificuldade } from "../beatmaps/dificuldades";
-import type { PosicaoNoRankingDoMania } from "../ranking/api";
-import { PainelDoRankingDoMania } from "../ranking/PainelDoRankingDoMania";
-import { filtrarConjuntos, teclasDaBiblioteca, type OrdemDaSelecao } from "./filtroDaSelecao";
-import { CapaDoConjunto } from "./CapaDoConjunto";
-import { SeletorDeMods } from "./SeletorDeMods";
+} from "@/modules/selecao"
+import { useTeclado } from "@/shared/hooks/useTeclado"
+import { cn } from "@/shared/lib/utils"
+import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes"
+import { NumeroDestacado } from "@/shared/ui/NumeroDestacado"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs"
+import type { ConjuntoSalvo, DificuldadeSalva } from "../beatmaps/biblioteca"
+import {
+  faixaDasEstrelas,
+  type FaixaDeDificuldade,
+} from "../beatmaps/dificuldades"
+import type { PosicaoNoRankingDoMania } from "../ranking/api"
+import { PainelDoRankingDoMania } from "../ranking/PainelDoRankingDoMania"
+import {
+  filtrarConjuntos,
+  teclasDaBiblioteca,
+  type OrdemDaSelecao,
+} from "./filtroDaSelecao"
+import { CapaDoConjunto } from "./CapaDoConjunto"
+import { SeletorDeMods } from "./SeletorDeMods"
 
 interface Props {
   /** O conjunto que abre selecionado (ex.: o que acabou de ser baixado na busca). */
-  selecionado?: string;
-  aoVoltar?: () => void;
-  aoBuscarMapas?: () => void;
-  conjuntos: ConjuntoSalvo[] | null;
-  mods: number;
-  aoMudarMods: (mods: number) => void;
-  aoImportar: (arquivos: File[]) => void;
-  aoJogar: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void;
+  selecionado?: string
+  aoVoltar?: () => void
+  aoBuscarMapas?: () => void
+  conjuntos: ConjuntoSalvo[] | null
+  mods: number
+  aoMudarMods: (mods: number) => void
+  aoImportar: (arquivos: File[]) => void
+  aoJogar: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void
   /** Abre o mapa no treino; sem ele o botão não aparece. */
-  aoTreinar?: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void;
+  aoTreinar?: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void
   /** Baixa um mapa ranked sorteado, com as teclas do filtro, e o abre selecionado; sem ele o botão não aparece. */
-  sortearMapa?: (teclas: number | "todas") => Promise<unknown>;
+  sortearMapa?: (teclas: number | "todas") => Promise<unknown>
   /** Assistir ao replay de uma partida do ranking da dificuldade escolhida. */
-  aoAssistir?: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva, linha: PosicaoNoRankingDoMania) => void;
+  aoAssistir?: (
+    conjunto: ConjuntoSalvo,
+    dificuldade: DificuldadeSalva,
+    linha: PosicaoNoRankingDoMania,
+  ) => void
 }
 
-const CHAVE_DAS_FAVORITAS = "riffrush:mania:favoritas";
+const CHAVE_DAS_FAVORITAS = "riffrush:mania:favoritas"
 
 const COMANDOS = [
   { teclas: "← →", rotulo: "Dificuldade" },
@@ -59,12 +70,12 @@ const COMANDOS = [
   { teclas: "Enter", rotulo: "Confirmar" },
   { teclas: "F", rotulo: "Favoritar" },
   { teclas: "Esc", rotulo: "Voltar" },
-];
+]
 
-const ehOsz = (arquivo: File) => arquivo.name.toLowerCase().endsWith(".osz");
+const ehOsz = (arquivo: File) => arquivo.name.toLowerCase().endsWith(".osz")
 
 /** Quantos mapas o Page Up e o Page Down pulam. */
-const PAGINA = 8;
+const PAGINA = 8
 
 /** A faixa de estrelas do osu! dá a cor da faixa lateral, do verde ao rosa, como as dificuldades do Rock. */
 const COR_DA_FAIXA: Record<FaixaDeDificuldade, string> = {
@@ -74,243 +85,389 @@ const COR_DA_FAIXA: Record<FaixaDeDificuldade, string> = {
   Insane: "bg-primaria",
   Expert: "bg-texto",
   "Expert+": "bg-texto",
-};
+}
 
 const ORDENS: { id: OrdemDaSelecao; rotulo: string }[] = [
   { id: "recentes", rotulo: "Jogados por último" },
   { id: "titulo", rotulo: "Título" },
   { id: "artista", rotulo: "Artista" },
   { id: "estrelas", rotulo: "Estrelas" },
-];
+]
 
-const formatarEstrelas = (estrelas: number) => `${estrelas.toFixed(2).replace(".", ",")}★`;
+const formatarEstrelas = (estrelas: number) =>
+  `${estrelas.toFixed(2).replace(".", ",")}★`
 const formatarDuracao = (ms: number) => {
-  const segundos = Math.round(ms / 1000);
-  return `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, "0")}`;
-};
+  const segundos = Math.round(ms / 1000)
+  return `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, "0")}`
+}
 
-function rotuloDaDificuldade(conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) {
-  const estrelas = conjunto.estrelas?.[dificuldade.hash];
+function rotuloDaDificuldade(
+  conjunto: ConjuntoSalvo,
+  dificuldade: DificuldadeSalva,
+) {
+  const estrelas = conjunto.estrelas?.[dificuldade.hash]
   return (
     <span className="flex items-baseline gap-2">
       <span>{dificuldade.teclas}K</span>
       <span className="truncate normal-case">{dificuldade.dificuldade}</span>
-      {estrelas !== undefined && <span className="font-mono text-base text-texto-suave">{formatarEstrelas(estrelas)}</span>}
+      {estrelas !== undefined && (
+        <span className="font-mono text-base text-texto-suave">
+          {formatarEstrelas(estrelas)}
+        </span>
+      )}
     </span>
-  );
+  )
 }
 
 /** A seleção do Mania: os conjuntos na mesma roda da seleção do Rock, com busca, filtro de teclas, ordem e as abas de detalhes e ranking. */
-export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conjuntos, mods, aoMudarMods, aoImportar, aoJogar, aoTreinar, aoAssistir, sortearMapa }: Props) {
+export function TelaDeSelecaoMania({
+  selecionado,
+  aoVoltar,
+  aoBuscarMapas,
+  conjuntos,
+  mods,
+  aoMudarMods,
+  aoImportar,
+  aoJogar,
+  aoTreinar,
+  aoAssistir,
+  sortearMapa,
+}: Props) {
   // A seleção segue o id do conjunto: muda a ordem ou o filtro e ela continua no mesmo mapa, se ele ainda aparecer.
-  const [id, setId] = useState<string | null>(selecionado ?? null);
+  const [id, setId] = useState<string | null>(selecionado ?? null)
   // O mapa sorteado chega depois de a tela abrir: a seleção vai para ele.
   useEffect(() => {
-    if (selecionado) setId(selecionado);
-  }, [selecionado]);
-  const [hash, setHash] = useState<string | null>(null);
-  const [texto, setTexto] = useState("");
-  const [teclas, setTeclas] = useState<number | "todas">("todas");
-  const [ordem, setOrdem] = useState<OrdemDaSelecao>("recentes");
-  const [arrastando, setArrastando] = useState(false);
-  const [favoritas, setFavoritas] = useState(() => carregarFavoritas(CHAVE_DAS_FAVORITAS));
-  const [soFavoritas, setSoFavoritas] = useState(false);
-  const seletor = useRef<HTMLInputElement>(null);
+    if (selecionado) setId(selecionado)
+  }, [selecionado])
+  const [hash, setHash] = useState<string | null>(null)
+  const [texto, setTexto] = useState("")
+  const [teclas, setTeclas] = useState<number | "todas">("todas")
+  const [ordem, setOrdem] = useState<OrdemDaSelecao>("recentes")
+  const [arrastando, setArrastando] = useState(false)
+  const [favoritas, setFavoritas] = useState(() =>
+    carregarFavoritas(CHAVE_DAS_FAVORITAS),
+  )
+  const [soFavoritas, setSoFavoritas] = useState(false)
+  const seletor = useRef<HTMLInputElement>(null)
 
-  const todos = conjuntos ?? [];
-  const lista = useMemo(() => filtrarConjuntos(conjuntos ?? [], { texto, teclas, ordem, favoritas, soFavoritas }), [conjuntos, texto, teclas, ordem, favoritas, soFavoritas]);
-  const opcoesDeTeclas = teclasDaBiblioteca(todos);
+  const todos = conjuntos ?? []
+  const lista = useMemo(
+    () =>
+      filtrarConjuntos(conjuntos ?? [], {
+        texto,
+        teclas,
+        ordem,
+        favoritas,
+        soFavoritas,
+      }),
+    [conjuntos, texto, teclas, ordem, favoritas, soFavoritas],
+  )
+  const opcoesDeTeclas = teclasDaBiblioteca(todos)
   const indice = Math.max(
     lista.findIndex((c) => c.id === id),
     0,
-  );
-  const conjunto = lista[indice] as ConjuntoSalvo | undefined;
-  const dificuldade = conjunto?.mapas.find((m) => m.hash === hash) ?? conjunto?.mapas[0];
+  )
+  const conjunto = lista[indice] as ConjuntoSalvo | undefined
+  const dificuldade =
+    conjunto?.mapas.find((m) => m.hash === hash) ?? conjunto?.mapas[0]
 
   const escolher = (i: number) => {
-    const proximo = lista[i];
-    if (!proximo || proximo.id === conjunto?.id) return;
-    setId(proximo.id);
-    setHash(null);
-  };
-  const andar = (passos: number) => escolher(indiceDandoAVolta(indice, passos, lista.length));
-  const pular = (passos: number) => escolher(indice + passosSemDarAVolta(indice, passos, lista.length));
-  const jogar = () => conjunto && dificuldade && aoJogar(conjunto, dificuldade);
-  const favorita = !!conjunto && favoritas.has(conjunto.id);
+    const proximo = lista[i]
+    if (!proximo || proximo.id === conjunto?.id) return
+    setId(proximo.id)
+    setHash(null)
+  }
+  const andar = (passos: number) =>
+    escolher(indiceDandoAVolta(indice, passos, lista.length))
+  const pular = (passos: number) =>
+    escolher(indice + passosSemDarAVolta(indice, passos, lista.length))
+  const jogar = () => conjunto && dificuldade && aoJogar(conjunto, dificuldade)
+  const favorita = !!conjunto && favoritas.has(conjunto.id)
   const alternarFavoritaAtual = () => {
-    if (!conjunto) return;
-    const novas = alternarFavorita(favoritas, conjunto.id);
-    setFavoritas(novas);
-    salvarFavoritas(CHAVE_DAS_FAVORITAS, novas);
-  };
+    if (!conjunto) return
+    const novas = alternarFavorita(favoritas, conjunto.id)
+    setFavoritas(novas)
+    salvarFavoritas(CHAVE_DAS_FAVORITAS, novas)
+  }
 
   useTeclado((evento) => {
     // Com o foco num campo (a busca), as teclas são dele, menos as que andam pela roda.
-    const digitando = evento.target instanceof HTMLInputElement || evento.target instanceof HTMLSelectElement;
+    const digitando =
+      evento.target instanceof HTMLInputElement ||
+      evento.target instanceof HTMLSelectElement
     if (evento.code === "ArrowDown" || evento.code === "ArrowUp") {
-      evento.preventDefault();
-      return andar(evento.code === "ArrowDown" ? 1 : -1);
+      evento.preventDefault()
+      return andar(evento.code === "ArrowDown" ? 1 : -1)
     }
     if (evento.code === "PageDown" || evento.code === "PageUp") {
-      evento.preventDefault();
-      return pular(evento.code === "PageDown" ? PAGINA : -PAGINA);
+      evento.preventDefault()
+      return pular(evento.code === "PageDown" ? PAGINA : -PAGINA)
     }
-    if (evento.code === "Enter" && !(evento.target instanceof HTMLButtonElement)) return jogar();
-    if (digitando) return;
-    if (evento.code === "KeyF") return alternarFavoritaAtual();
-    if (evento.code === "Home") return escolher(0);
-    if (evento.code === "End") return escolher(lista.length - 1);
-    if ((evento.code === "ArrowLeft" || evento.code === "ArrowRight") && conjunto && dificuldade) {
-      const posicao = conjunto.mapas.indexOf(dificuldade);
-      const proxima = conjunto.mapas[posicao + (evento.code === "ArrowRight" ? 1 : -1)];
-      if (proxima) setHash(proxima.hash);
+    if (
+      evento.code === "Enter" &&
+      !(evento.target instanceof HTMLButtonElement)
+    )
+      return jogar()
+    if (digitando) return
+    if (evento.code === "KeyF") return alternarFavoritaAtual()
+    if (evento.code === "Home") return escolher(0)
+    if (evento.code === "End") return escolher(lista.length - 1)
+    if (
+      (evento.code === "ArrowLeft" || evento.code === "ArrowRight") &&
+      conjunto &&
+      dificuldade
+    ) {
+      const posicao = conjunto.mapas.indexOf(dificuldade)
+      const proxima =
+        conjunto.mapas[posicao + (evento.code === "ArrowRight" ? 1 : -1)]
+      if (proxima) setHash(proxima.hash)
     }
-  });
+  })
 
   const receber = (arquivos: FileList | null) => {
-    const osz = [...(arquivos ?? [])].filter(ehOsz);
-    if (osz.length) aoImportar(osz);
-  };
+    const osz = [...(arquivos ?? [])].filter(ehOsz)
+    if (osz.length) aoImportar(osz)
+  }
   const aoSoltar = (evento: DragEvent) => {
-    evento.preventDefault();
-    setArrastando(false);
-    receber(evento.dataTransfer.files);
-  };
+    evento.preventDefault()
+    setArrastando(false)
+    receber(evento.dataTransfer.files)
+  }
 
-  const itens: ItemDoCarrossel[] = lista.map((c) => ({ id: c.id, titulo: c.tituloUnicode || c.titulo, artista: c.artistaUnicode || c.artista, capa: <CapaDoConjunto conjunto={c} />, favorita: favoritas.has(c.id) }));
-  const dificuldades: DificuldadeDoCarrossel[] = (conjunto?.mapas ?? []).map((m) => {
-    const estrelas = conjunto?.estrelas?.[m.hash];
-    return { id: m.hash, rotulo: rotuloDaDificuldade(conjunto!, m), cor: estrelas === undefined ? "bg-borda" : COR_DA_FAIXA[faixaDasEstrelas(estrelas)] };
-  });
+  const itens: ItemDoCarrossel[] = lista.map((c) => ({
+    id: c.id,
+    titulo: c.tituloUnicode || c.titulo,
+    artista: c.artistaUnicode || c.artista,
+    capa: <CapaDoConjunto conjunto={c} />,
+    favorita: favoritas.has(c.id),
+  }))
+  const dificuldades: DificuldadeDoCarrossel[] = (conjunto?.mapas ?? []).map(
+    (m) => {
+      const estrelas = conjunto?.estrelas?.[m.hash]
+      return {
+        id: m.hash,
+        rotulo: rotuloDaDificuldade(conjunto!, m),
+        cor:
+          estrelas === undefined
+            ? "bg-borda"
+            : COR_DA_FAIXA[faixaDasEstrelas(estrelas)],
+      }
+    },
+  )
 
-  const estrelas = conjunto && dificuldade ? conjunto.estrelas?.[dificuldade.hash] : undefined;
+  const estrelas =
+    conjunto && dificuldade ? conjunto.estrelas?.[dificuldade.hash] : undefined
   const detalhes = dificuldade && (
     <div className="grid grid-cols-3 gap-2 max-md:grid-cols-2">
-      <NumeroDestacado rotulo="Duração" valor={formatarDuracao(dificuldade.duracaoMs)} />
+      <NumeroDestacado
+        rotulo="Duração"
+        valor={formatarDuracao(dificuldade.duracaoMs)}
+      />
       <NumeroDestacado rotulo="Notas" valor={String(dificuldade.notas)} />
-      <NumeroDestacado rotulo="Notas longas" valor={String(dificuldade.notasLongas)} />
+      <NumeroDestacado
+        rotulo="Notas longas"
+        valor={String(dificuldade.notasLongas)}
+      />
       <NumeroDestacado rotulo="Teclas" valor={`${dificuldade.teclas}K`} />
-      <NumeroDestacado rotulo="OD" valor={String(dificuldade.od).replace(".", ",")} />
-      <NumeroDestacado rotulo="HP" valor={String(dificuldade.hp).replace(".", ",")} />
-      {estrelas !== undefined && <NumeroDestacado rotulo="Estrelas" valor={formatarEstrelas(estrelas)} />}
-      {conjunto?.status && <NumeroDestacado rotulo="Status" valor={conjunto.status} />}
+      <NumeroDestacado
+        rotulo="OD"
+        valor={String(dificuldade.od).replace(".", ",")}
+      />
+      <NumeroDestacado
+        rotulo="HP"
+        valor={String(dificuldade.hp).replace(".", ",")}
+      />
+      {estrelas !== undefined && (
+        <NumeroDestacado rotulo="Estrelas" valor={formatarEstrelas(estrelas)} />
+      )}
+      {conjunto?.status && (
+        <NumeroDestacado rotulo="Status" valor={conjunto.status} />
+      )}
     </div>
-  );
+  )
   const ranking = dificuldade?.beatmapId && conjunto?.origem === "osu" && (
-    <PainelDoRankingDoMania beatmapId={dificuldade.beatmapId} aoAssistir={aoAssistir && ((linha) => aoAssistir(conjunto, dificuldade, linha))} />
-  );
+    <PainelDoRankingDoMania
+      beatmapId={dificuldade.beatmapId}
+      aoAssistir={
+        aoAssistir && ((linha) => aoAssistir(conjunto, dificuldade, linha))
+      }
+    />
+  )
 
   return (
     <section
       aria-label="Seleção de mapas"
       onDragOver={(e) => {
-        e.preventDefault();
-        setArrastando(true);
+        e.preventDefault()
+        setArrastando(true)
       }}
       onDragLeave={() => setArrastando(false)}
       onDrop={aoSoltar}
-      className={cn("relative isolate flex h-full flex-col", arrastando && "outline-2 outline-dashed outline-primaria -outline-offset-8")}
+      className={cn(
+        "relative isolate flex h-full flex-col",
+        arrastando &&
+          "outline-2 outline-dashed outline-primaria -outline-offset-8",
+      )}
     >
       {/* Como no Rock: a capa do mapa, borrada, pinta o fundo e troca junto com a seleção. */}
-      <FundoDaSelecao chave={conjunto?.id}>{conjunto && <CapaDoConjunto conjunto={conjunto} className="scale-105 blur-md" />}</FundoDaSelecao>
+      <FundoDaSelecao chave={conjunto?.id}>
+        {conjunto && (
+          <CapaDoConjunto conjunto={conjunto} className="scale-105 blur-md" />
+        )}
+      </FundoDaSelecao>
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:p-4">
-      <aside className="col-span-5 flex min-h-0 flex-col gap-4 max-md:col-span-1">
-        <BarraDaSelecao aoVoltar={aoVoltar} abaixo={<SeletorDeMods mods={mods} aoMudar={aoMudarMods} />}>
-          <BotaoDaSelecao onClick={() => seletor.current?.click()}>
-            <Upload aria-hidden />
-            <span className="max-md:sr-only">Importar .osz</span>
-          </BotaoDaSelecao>
-          {sortearMapa && <BotaoDeAleatoria aoSortear={() => sortearMapa(teclas)} />}
-          {aoBuscarMapas && (
-            <BotaoDaSelecao onClick={aoBuscarMapas}>
-              <Search aria-hidden />
-              <span className="max-md:sr-only">Buscar mapas</span>
-            </BotaoDaSelecao>
-          )}
-        </BarraDaSelecao>
-        <input ref={seletor} type="file" accept=".osz" multiple aria-label="Arquivos .osz" className="sr-only" onChange={(e) => receber(e.target.files)} />
-
-        {conjunto && (
-          <TituloDaSelecao
-            titulo={conjunto.tituloUnicode || conjunto.titulo}
-            subtitulo={`${conjunto.artistaUnicode || conjunto.artista} · mapa de ${conjunto.mapper}`}
-            aviso={conjunto.origem === "importado" && "Importado · sem XP nem ranking"}
-            faixa={<CapaDoConjunto conjunto={conjunto} className="object-top" />}
-            acao={<BotaoDeFavoritar favorita={favorita} aoAlternar={alternarFavoritaAtual} />}
-          />
-        )}
-
-        {conjunto && (
-          // Como no Rock: o ranking ao lado da roda e os números da dificuldade na aba vizinha.
-          <Tabs key={ranking ? "com-ranking" : "sem-ranking"} defaultValue={ranking ? "ranking" : "detalhes"} className="min-h-0 flex-1">
-            <TabsList className="w-full">
-              <TabsTrigger value="detalhes">
-                <Info className="opacity-70" /> Detalhes
-              </TabsTrigger>
-              <TabsTrigger value="ranking">
-                <ListOrdered className="opacity-70" /> Ranking
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="detalhes" className="min-h-0 overflow-y-auto">
-              {detalhes}
-            </TabsContent>
-            <TabsContent value="ranking" className="flex min-h-0 flex-col overflow-y-auto">
-              {ranking || <p className="chapa bg-superficie-elevada/90 p-4 text-texto-suave">Só os mapas baixados pela busca do osu! têm ranking.</p>}
-            </TabsContent>
-          </Tabs>
-        )}
-        {!conjunto && <div className="flex-1" />}
-
-        <BotaoDeTocar aoTocar={jogar} aoTreinar={aoTreinar && (() => conjunto && dificuldade && aoTreinar(conjunto, dificuldade))} desabilitado={!dificuldade} />
-      </aside>
-
-      <div className="col-span-7 flex min-h-0 flex-col gap-4 max-md:col-span-1">
-        {!!todos.length && (
-          <FiltrosDaBiblioteca
-            texto={texto}
-            aoMudarTexto={setTexto}
-            placeholder="Buscar na biblioteca"
-            rotuloDoCampo="Filtrar mapas"
-            ordens={ORDENS}
-            ordem={ordem}
-            aoMudarOrdem={setOrdem}
-            soFavoritas={soFavoritas}
-            aoAlternarFavoritas={() => setSoFavoritas((ligado) => !ligado)}
-            contagem={`${lista.length ? `${indice + 1} de ${lista.length} ${lista.length === 1 ? "mapa" : "mapas"}` : ""}${lista.length < todos.length && lista.length ? ` · ${todos.length} na biblioteca` : ""}`}
+        <aside className="col-span-5 flex min-h-0 flex-col gap-4 max-md:col-span-1">
+          <BarraDaSelecao
+            aoVoltar={aoVoltar}
+            abaixo={<SeletorDeMods mods={mods} aoMudar={aoMudarMods} />}
           >
-            {opcoesDeTeclas.length > 1 && (
-              <GrupoDeOpcoes
-                titulo="Teclas"
-                opcoes={[{ id: "todas", rotulo: "Todas" }, ...opcoesDeTeclas.map((t) => ({ id: String(t), rotulo: `${t}K` }))]}
-                valor={String(teclas)}
-                aoEscolher={(valor) => setTeclas(valor === "todas" ? "todas" : Number(valor))}
-              />
+            <BotaoDaSelecao onClick={() => seletor.current?.click()}>
+              <Upload aria-hidden />
+              <span className="max-md:sr-only">Importar .osz</span>
+            </BotaoDaSelecao>
+            {sortearMapa && (
+              <BotaoDeAleatoria aoSortear={() => sortearMapa(teclas)} />
             )}
-          </FiltrosDaBiblioteca>
-        )}
-
-        {conjuntos === null && <p className="text-texto-suave">Abrindo a biblioteca…</p>}
-        {conjuntos?.length === 0 && (
-          <AvisoDaLista>Nenhum mapa ainda. Arraste um .osz para cá ou use o botão de importar.</AvisoDaLista>
-        )}
-        {!!todos.length && !lista.length && <AvisoDaLista>Nenhum mapa com esse filtro.</AvisoDaLista>}
-        {!!lista.length && (
-          <Carrossel
-            className="flex-1"
-            rotulo="Mapas"
-            itens={itens}
-            indice={indice}
-            dificuldade={dificuldade?.hash ?? ""}
-            dificuldades={dificuldades}
-            aoEscolherItem={escolher}
-            aoEscolherDificuldade={setHash}
-            aoJogar={jogar}
-            aoGirar={andar}
+            {aoBuscarMapas && (
+              <BotaoDaSelecao onClick={aoBuscarMapas}>
+                <Search aria-hidden />
+                <span className="max-md:sr-only">Buscar mapas</span>
+              </BotaoDaSelecao>
+            )}
+          </BarraDaSelecao>
+          <input
+            ref={seletor}
+            type="file"
+            accept=".osz"
+            multiple
+            aria-label="Arquivos .osz"
+            className="sr-only"
+            onChange={(e) => receber(e.target.files)}
           />
-        )}
-      </div>
+
+          {conjunto && (
+            <TituloDaSelecao
+              titulo={conjunto.tituloUnicode || conjunto.titulo}
+              subtitulo={`${conjunto.artistaUnicode || conjunto.artista} · mapa de ${conjunto.mapper}`}
+              aviso={
+                conjunto.origem === "importado" &&
+                "Importado · sem XP nem ranking"
+              }
+              faixa={<CapaDoConjunto conjunto={conjunto} />}
+              acao={
+                <BotaoDeFavoritar
+                  favorita={favorita}
+                  aoAlternar={alternarFavoritaAtual}
+                />
+              }
+            />
+          )}
+
+          {conjunto && (
+            // Como no Rock: o ranking ao lado da roda e os números da dificuldade na aba vizinha.
+            <Tabs
+              key={ranking ? "com-ranking" : "sem-ranking"}
+              defaultValue={ranking ? "ranking" : "detalhes"}
+              className="min-h-0 flex-1"
+            >
+              <TabsList className="w-full">
+                <TabsTrigger value="detalhes">
+                  <Info className="opacity-70" /> Detalhes
+                </TabsTrigger>
+                <TabsTrigger value="ranking">
+                  <ListOrdered className="opacity-70" /> Ranking
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="detalhes" className="min-h-0 overflow-y-auto">
+                {detalhes}
+              </TabsContent>
+              <TabsContent
+                value="ranking"
+                className="flex min-h-0 flex-col overflow-y-auto"
+              >
+                {ranking || (
+                  <p className="chapa bg-superficie-elevada/90 p-4 text-texto-suave">
+                    Só os mapas baixados pela busca do osu! têm ranking.
+                  </p>
+                )}
+              </TabsContent>
+            </Tabs>
+          )}
+          {!conjunto && <div className="flex-1" />}
+
+          <BotaoDeTocar
+            aoTocar={jogar}
+            aoTreinar={
+              aoTreinar &&
+              (() =>
+                conjunto && dificuldade && aoTreinar(conjunto, dificuldade))
+            }
+            desabilitado={!dificuldade}
+          />
+        </aside>
+
+        <div className="col-span-7 flex min-h-0 flex-col gap-4 max-md:col-span-1">
+          {!!todos.length && (
+            <FiltrosDaBiblioteca
+              texto={texto}
+              aoMudarTexto={setTexto}
+              placeholder="Buscar na biblioteca"
+              rotuloDoCampo="Filtrar mapas"
+              ordens={ORDENS}
+              ordem={ordem}
+              aoMudarOrdem={setOrdem}
+              soFavoritas={soFavoritas}
+              aoAlternarFavoritas={() => setSoFavoritas((ligado) => !ligado)}
+              contagem={`${lista.length ? `${indice + 1} de ${lista.length} ${lista.length === 1 ? "mapa" : "mapas"}` : ""}${lista.length < todos.length && lista.length ? ` · ${todos.length} na biblioteca` : ""}`}
+            >
+              {opcoesDeTeclas.length > 1 && (
+                <GrupoDeOpcoes
+                  titulo="Teclas"
+                  opcoes={[
+                    { id: "todas", rotulo: "Todas" },
+                    ...opcoesDeTeclas.map((t) => ({
+                      id: String(t),
+                      rotulo: `${t}K`,
+                    })),
+                  ]}
+                  valor={String(teclas)}
+                  aoEscolher={(valor) =>
+                    setTeclas(valor === "todas" ? "todas" : Number(valor))
+                  }
+                />
+              )}
+            </FiltrosDaBiblioteca>
+          )}
+
+          {conjuntos === null && (
+            <p className="text-texto-suave">Abrindo a biblioteca…</p>
+          )}
+          {conjuntos?.length === 0 && (
+            <AvisoDaLista>
+              Nenhum mapa ainda. Arraste um .osz para cá ou use o botão de
+              importar.
+            </AvisoDaLista>
+          )}
+          {!!todos.length && !lista.length && (
+            <AvisoDaLista>Nenhum mapa com esse filtro.</AvisoDaLista>
+          )}
+          {!!lista.length && (
+            <Carrossel
+              className="flex-1"
+              rotulo="Mapas"
+              itens={itens}
+              indice={indice}
+              dificuldade={dificuldade?.hash ?? ""}
+              dificuldades={dificuldades}
+              aoEscolherItem={escolher}
+              aoEscolherDificuldade={setHash}
+              aoJogar={jogar}
+              aoGirar={andar}
+            />
+          )}
+        </div>
       </div>
       <RodapeDeComandos comandos={COMANDOS} />
     </section>
-  );
+  )
 }
