@@ -19,15 +19,16 @@ export function iniciarMotorComBytes(bytes: BufferSource) {
   initSync({ module: bytes });
 }
 
-/** Até onde, em segundos de cada lado da batida, o toque ganha cada julgamento. A janela de acerto é de
- * 110 ms para cada lado; as faixas dentro dela são só o retorno na tela. O teste de paridade confere com o motor. */
-export const JANELAS = { perfeito: 0.035, otimo: 0.07, bom: 0.11 } as const;
+/** Até onde, em segundos de cada lado da batida, o toque ganha cada julgamento: as janelas do osu!mania com OD 8,
+ * e o 50 vai até a janela de acerto de 110 ms. A nota perdida é o Miss. O teste de paridade confere com o motor. */
+export const JANELAS = { max: 0.016, j300: 0.04, j200: 0.073, j100: 0.103, j50: 0.11 } as const;
 export type Julgamento = keyof typeof JANELAS;
-/** Quanto cada julgamento vale na precisão. */
-export const VALOR_DO_JULGAMENTO: Record<Julgamento, number> = { perfeito: 300, otimo: 200, bom: 100 };
-export const JANELA_DE_ACERTO = JANELAS.bom;
+/** Quanto cada julgamento vale na precisão, como no ScoreV1: o MAX vale o mesmo que o 300. */
+export const VALOR_DO_JULGAMENTO: Record<Julgamento, number> = { max: 300, j300: 300, j200: 200, j100: 100, j50: 50 };
+export const JANELA_DE_ACERTO = JANELAS.j50;
 export const PONTOS_POR_NOTA = 50;
-const JULGAMENTOS: Julgamento[] = ["perfeito", "otimo", "bom"];
+/** Na ordem dos códigos do motor. */
+export const JULGAMENTOS = Object.keys(JANELAS) as Julgamento[];
 
 export const quantizar = (tempo: number) => quantizarNoMotor(tempo);
 export const julgar = (distancia: number) => JULGAMENTOS[julgarNoMotor(distancia)];
@@ -149,7 +150,7 @@ export function criarPartida(
     sequencia: 0,
     maiorSequencia: 0,
     acertos: 0,
-    julgamentos: { perfeito: 0, otimo: 0, bom: 0 },
+    julgamentos: { max: 0, j300: 0, j200: 0, j100: 0, j50: 0 },
     valorDosAcertos: 0,
     erros: 0,
     vida: 0.5,
@@ -181,7 +182,7 @@ function sincronizar(partida: Partida) {
   partida.sequencia = proximo();
   partida.maiorSequencia = proximo();
   partida.acertos = proximo();
-  partida.julgamentos = { perfeito: proximo(), otimo: proximo(), bom: proximo() };
+  partida.julgamentos = { max: proximo(), j300: proximo(), j200: proximo(), j100: proximo(), j50: proximo() };
   partida.valorDosAcertos = proximo();
   partida.erros = proximo();
   partida.vida = proximo();

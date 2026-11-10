@@ -141,7 +141,7 @@ describe("SessaoDaConta", () => {
     const { sessao, ambiente } = montar({ registrarPartida: vi.fn(async () => ({ xp_ganho: 0, antes: conta.nivel, depois: conta.nivel })) });
     ambiente.local.setItem("riffrush:token", "tok");
     await sessao.iniciar();
-    await sessao.registrarPartida({ ...resultado, julgamentos: { perfeito: 2, otimo: 2, bom: 0 } });
+    await sessao.registrarPartida({ ...resultado, julgamentos: { max: 1, j300: 1, j200: 2, j100: 0, j50: 0 } });
     expect(vi.mocked(ambiente.api.registrarPartida).mock.calls[0][1]).toMatchObject({ valor_dos_acertos: 1000 });
   });
 

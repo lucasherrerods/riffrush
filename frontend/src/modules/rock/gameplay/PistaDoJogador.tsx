@@ -50,7 +50,7 @@ export interface Hud {
   /** Última reação do personagem (erro, star power, derrota). */
   reacao: Reacao | null;
   fantasma: boolean;
-  /** O último acerto, para o aviso de PERFEITO / ÓTIMO / BOM ao lado da pista. */
+  /** O último acerto, para o aviso do julgamento ao lado da pista. */
   julgamento: { julgamento: Julgamento; tempo: number } | null;
 }
 

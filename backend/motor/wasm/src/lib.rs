@@ -10,12 +10,9 @@ const PERDIDA: u8 = 2;
 const SEGURANDO: u8 = 4;
 const SOLTA: u8 = 8;
 
+/// 0 é MAX, 1 é 300, 2 é 200, 3 é 100 e 4 é 50.
 fn codigo_do_julgamento(julgamento: motor::Julgamento) -> f64 {
-    match julgamento {
-        motor::Julgamento::Perfeito => 0.0,
-        motor::Julgamento::Otimo => 1.0,
-        motor::Julgamento::Bom => 2.0,
-    }
+    julgamento.indice() as f64
 }
 
 fn bandeiras(nota: &motor::NotaEmJogo) -> u8 {
@@ -142,8 +139,8 @@ impl MotorDaPartida {
     }
 
     /// O que mudou desde a última chamada, na ordem:
-    /// - 22 números do estado: tempo (NaN antes de começar), pontos, sequência, maior sequência, acertos,
-    ///   perfeitos, ótimos, bons, valor dos acertos, erros, vida, compassos de star power, barra de star power (0 a 1),
+    /// - 24 números do estado: tempo (NaN antes de começar), pontos, sequência, maior sequência, acertos,
+    ///   quantos MAX, 300, 200, 100 e 50, valor dos acertos, erros, vida, compassos de star power, barra de star power (0 a 1),
     ///   star power ativo, derrota, fantasma, a primeira nota que ainda importa, o multiplicador, a precisão,
     ///   toques em vão, bônus de solo e full combo;
     /// - quantas notas mudaram e, para cada uma, índice, bandeiras e até onde o sustain rendeu;
@@ -157,9 +154,11 @@ impl MotorDaPartida {
             f64::from(p.sequencia),
             f64::from(p.maior_sequencia),
             f64::from(p.acertos),
-            f64::from(p.perfeitos),
-            f64::from(p.otimos),
-            f64::from(p.bons),
+            f64::from(p.contagem[0]),
+            f64::from(p.contagem[1]),
+            f64::from(p.contagem[2]),
+            f64::from(p.contagem[3]),
+            f64::from(p.contagem[4]),
             f64::from(p.valor_dos_acertos),
             f64::from(p.erros),
             p.vida,
@@ -243,7 +242,7 @@ pub fn quantizar(tempo: f64) -> f64 {
     motor::quantizar(tempo)
 }
 
-/// 0 é perfeito, 1 ótimo e 2 bom.
+/// O código de `codigo_do_julgamento`.
 #[wasm_bindgen]
 pub fn julgar(distancia: f64) -> f64 {
     codigo_do_julgamento(motor::julgar(distancia))
