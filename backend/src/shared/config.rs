@@ -18,6 +18,8 @@ pub struct Config {
     pub osu: Option<(String, String)>,
     /// O endereço da API visto de fora (`https://...`), para montar o endereço das fotos e capas enviadas.
     pub url_publica: String,
+    /// Chave (32 bytes em base64) que cifra o texto das mensagens privadas no banco.
+    pub chave_das_mensagens: String,
 }
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -58,7 +60,11 @@ impl Config {
         let url_publica = variavel("URL_PUBLICA_DA_API")
             .filter(|s| !s.is_empty())
             .unwrap_or_else(|| format!("http://localhost:{}", endereco.port()));
+        let chave_das_mensagens = variavel("CHAVE_DAS_MENSAGENS")
+            .filter(|s| !s.is_empty())
+            .ok_or(ErroDeConfig::Faltando("CHAVE_DAS_MENSAGENS"))?;
         Ok(Self {
+            chave_das_mensagens,
             url_publica,
             osu,
             segredo_do_relay,
@@ -87,6 +93,7 @@ mod tests {
             ("DATABASE_URL", "postgres://x"),
             ("GOOGLE_CLIENT_ID", "id"),
             ("GOOGLE_CLIENT_SECRET", "segredo"),
+            ("CHAVE_DAS_MENSAGENS", "chave"),
         ]))
         .unwrap();
         assert_eq!(config.endereco.to_string(), "0.0.0.0:8080");
@@ -100,6 +107,7 @@ mod tests {
             ("DATABASE_URL", "postgres://x"),
             ("GOOGLE_CLIENT_ID", "id"),
             ("GOOGLE_CLIENT_SECRET", "segredo"),
+            ("CHAVE_DAS_MENSAGENS", "chave"),
             ("ORIGENS_PERMITIDAS", "http://a, http://b,"),
         ]))
         .unwrap();
@@ -120,11 +128,20 @@ mod tests {
     }
 
     #[test]
+    fn sem_a_chave_das_mensagens_nao_sobe() {
+        assert_eq!(
+            Config::ler(com(&[("DATABASE_URL", "x"), ("GOOGLE_CLIENT_ID", "id"), ("GOOGLE_CLIENT_SECRET", "segredo")])).unwrap_err(),
+            ErroDeConfig::Faltando("CHAVE_DAS_MENSAGENS")
+        );
+    }
+
+    #[test]
     fn endereco_invalido_e_erro() {
         let erro = Config::ler(com(&[
             ("DATABASE_URL", "x"),
             ("GOOGLE_CLIENT_ID", "id"),
             ("GOOGLE_CLIENT_SECRET", "segredo"),
+            ("CHAVE_DAS_MENSAGENS", "chave"),
             ("ENDERECO", "nao"),
         ]))
         .unwrap_err();

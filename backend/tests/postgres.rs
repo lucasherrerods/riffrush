@@ -7,7 +7,7 @@ use riffrush_api::modules::catalogo::{CatalogoPostgres, DadosDaMusica, Repositor
 use riffrush_api::modules::conta::{
     ContasPostgres, FilaDePartidas, PartidaNaFila, PartidaRegistrada, PerfilDoGoogle, RepositorioDeContas, RepositorioDeSessoes,
 };
-use riffrush_api::modules::conversa::{ConversasPostgres, NaoLidas, NovaMensagem, RepositorioDeConversas};
+use riffrush_api::modules::conversa::{CifraDasMensagens, ConversasPostgres, NaoLidas, NovaMensagem, RepositorioDeConversas};
 use riffrush_api::modules::moderacao::{Denuncia, ModeracaoPostgres, RepositorioDeModeracao, Situacao};
 use riffrush_api::modules::perfil::{FormatoDaImagem, Imagem, PerfilPostgres, RepositorioDoPerfil, TipoDeImagem};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar, ResumoDaPartida};
@@ -1128,7 +1128,7 @@ async fn amizades_pedem_aceitam_bloqueiam_e_sugerem_amigos_de_amigos() {
 #[tokio::test]
 async fn conversas_guardam_paginam_contam_as_nao_lidas_e_somem_com_a_conta() {
     let Some(banco) = banco().await else { return };
-    let conversas = ConversasPostgres(banco.0.clone());
+    let conversas = conversas_cifradas(&banco.0);
     let agora = Utc::now();
     let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
     let beto = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
@@ -1160,4 +1160,53 @@ async fn conversas_guardam_paginam_contam_as_nao_lidas_e_somem_com_a_conta() {
 
     banco.excluir(ana).await.unwrap();
     assert!(conversas.mensagens(beto, ana, None, 50).await.unwrap().is_empty());
+}
+
+fn conversas_cifradas(banco: &sqlx::PgPool) -> ConversasPostgres {
+    let cifra = CifraDasMensagens::da_chave("AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=").unwrap();
+    ConversasPostgres::nova(banco.clone(), std::sync::Arc::new(cifra))
+}
+
+#[tokio::test]
+async fn conversas_guardam_o_texto_cifrado_e_cifram_as_antigas() {
+    let Some(banco) = banco().await else { return };
+    let conversas = conversas_cifradas(&banco.0);
+    let agora = Utc::now();
+    let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+    let beto = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+
+    let nova = conversas
+        .guardar(&NovaMensagem {
+            de: ana,
+            para: beto,
+            texto: "segredo novo".into(),
+            enviada_em: agora,
+        })
+        .await
+        .unwrap();
+    // Uma mensagem de antes da cifra, com o texto aberto.
+    let (antiga,): (i64,) = sqlx::query_as("INSERT INTO mensagens_privadas (de, para, texto, enviada_em) VALUES ($1, $2, 'segredo antigo', $3) RETURNING id")
+        .bind(beto)
+        .bind(ana)
+        .bind(agora)
+        .fetch_one(&banco.0)
+        .await
+        .unwrap();
+
+    assert!(conversas.cifrar_as_antigas().await.unwrap() >= 1);
+    for id in [nova.id, antiga] {
+        let (texto, cifrado): (Option<String>, Option<Vec<u8>>) = sqlx::query_as("SELECT texto, texto_cifrado FROM mensagens_privadas WHERE id = $1")
+            .bind(id)
+            .fetch_one(&banco.0)
+            .await
+            .unwrap();
+        assert_eq!(texto, None);
+        assert!(!String::from_utf8_lossy(&cifrado.unwrap()).contains("segredo"));
+    }
+    let historico = conversas.mensagens(ana, beto, None, 50).await.unwrap();
+    assert_eq!(
+        historico.iter().map(|m| m.texto.as_str()).collect::<Vec<_>>(),
+        ["segredo antigo", "segredo novo"]
+    );
+    assert_eq!(conversas.cifrar_as_antigas().await.unwrap(), 0);
 }
