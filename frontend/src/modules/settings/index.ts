@@ -11,3 +11,8 @@ export {
   salvarConfiguracoes,
   type Configuracoes,
 } from "./configuracoes";
+export { MolduraDeConfiguracoes, type AbaDeConfiguracoes } from "./componentes/MolduraDeConfiguracoes";
+export { AbaDeAudio } from "./componentes/AbaDeAudio";
+export { BotaoDeTecla } from "./componentes/BotaoDeTecla";
+export { LinhaDeOpcao } from "./componentes/LinhaDeOpcao";
+export { LinhaDeSlider } from "./componentes/LinhaDeSlider";

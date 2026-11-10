@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { obterContextoDeAudio } from "@/modules/audio";
+import { obterContextoDeAudio, preferenciasDeAudio } from "@/modules/audio";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { osu, pacote } from "@/test/beatmaps";
 import type { BibliotecaDoMania, ConjuntoSalvo } from "./beatmaps/biblioteca";
@@ -181,6 +181,21 @@ describe("TelaDoMania", () => {
     expect(screen.getByRole("button", { name: "alavanca" })).toBeInTheDocument();
     await usuario.click(screen.getByRole("button", { name: "Buscar mapas" }));
     expect(await screen.findByRole("heading", { name: "Buscar mapas" })).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Voltar" }));
+    expect(screen.getByRole("navigation", { name: "Menu do Mania" })).toBeInTheDocument();
+  });
+
+  it("as configurações abrem numa tela própria, e o áudio mudado nela é o global, o mesmo do Rock", async () => {
+    const biblioteca = bibliotecaNaMemoria();
+    render(<TelaDoMania alavanca={<button type="button">alavanca</button>} abrirBiblioteca={async () => biblioteca} />);
+    const usuario = userEvent.setup();
+    await usuario.click(screen.getByRole("button", { name: "Configurações" }));
+    expect(screen.getByRole("heading", { name: "Configurações" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Menu do Mania" })).not.toBeInTheDocument();
+    await usuario.click(screen.getByRole("tab", { name: /Áudio/ }));
+    const antes = preferenciasDeAudio.estado().volumeDosEfeitos;
+    fireEvent.keyDown(screen.getByRole("slider", { name: "Volume dos efeitos" }), { key: "ArrowLeft" });
+    expect(preferenciasDeAudio.estado().volumeDosEfeitos).toBeCloseTo(antes - 0.05);
     await usuario.click(screen.getByRole("button", { name: "Voltar" }));
     expect(screen.getByRole("navigation", { name: "Menu do Mania" })).toBeInTheDocument();
   });

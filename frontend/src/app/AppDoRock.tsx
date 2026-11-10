@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { IndicadorDeVolume, definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
+import { IndicadorDeVolume, definirVolumeGeral, usePreferenciasDeAudio } from "@/modules/audio";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/rock/character";
 import { iniciarControle, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
@@ -64,12 +64,9 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
   const [chartDoLeaderboard, setChartDoLeaderboard] = useState<string | null>(null);
   // Lembrada aqui para o leaderboard voltar nela depois de abrir uma partida.
   const [musicaDoLeaderboard, setMusicaDoLeaderboard] = useState<MusicaNoRanking | null>(null);
-  const [configuracoes, setConfiguracoes] = useState<Configuracoes>(() => {
-    const salvas = carregarConfiguracoes();
-    // O volume geral vive no módulo de áudio; ao abrir, ele começa no que estava salvo.
-    definirVolumeGeral(salvas.volumeGeral);
-    return salvas;
-  });
+  const [configuracoes, setConfiguracoes] = useState<Configuracoes>(carregarConfiguracoes);
+  // O áudio é do app inteiro, igual no Mania, e já abre com os volumes salvos.
+  const audio = usePreferenciasDeAudio();
   const [personagem, setPersonagem] = useState<Personagem>(carregarPersonagem);
   const [musicas, setMusicas] = useState<Musica[]>(MUSICAS_EMBUTIDAS);
   const [indice, setIndice] = useState(0);
@@ -147,13 +144,13 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
   // A partida recomeça quando as opções trocam: configurações que ela não usa (como o volume geral do Alt + roda) não podem gerar um objeto novo.
   const opcoesAnteriores = useRef<OpcoesDaPartida | null>(null);
   const opcoes = useMemo(() => {
-    const base = opcoesDaPartida(configuracoes);
+    const base = opcoesDaPartida(configuracoes, audio);
     const novas = comControle
       ? { ...base, rotulosDosTrastes: configuracoes.botoesDoControle.map(nomeDoBotao), rotuloDaTeclaDaEstrela: nomeDoBotao(configuracoes.botaoDaEstrela) }
       : base;
     if (opcoesAnteriores.current && mesmasOpcoes(opcoesAnteriores.current, novas)) return opcoesAnteriores.current;
     return (opcoesAnteriores.current = novas);
-  }, [configuracoes, comControle]);
+  }, [configuracoes, audio, comControle]);
 
   useTeclado((evento) => {
     if (evento.code !== "Tab" || !evento.shiftKey) return;
@@ -229,18 +226,8 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
     playerDeMusica.sortearInicio();
   }, [filaDoPlayer]);
   useEffect(() => {
-    playerDeMusica.definirVolume(configuracoes.volumeDoPlayer);
-  }, [configuracoes.volumeDoPlayer]);
-  // O atalho muda o volume de qualquer tela, direto no módulo de áudio; aqui ele só é guardado nas configurações.
-  const { volume: volumeGeral } = useVolumeGeral();
-  useEffect(() => {
-    setConfiguracoes((atuais) => {
-      if (atuais.volumeGeral === volumeGeral) return atuais;
-      const novas = { ...atuais, volumeGeral };
-      salvarConfiguracoes(novas);
-      return novas;
-    });
-  }, [volumeGeral]);
+    playerDeMusica.definirVolume(audio.volumeDaMusica);
+  }, [audio.volumeDaMusica]);
   // Assistir ao vivo também é uma partida na tela: sem o player do menu e sem o cabeçalho.
   const naPista = tela === "jogo" || tela === "espectador";
   // Na pista e na tela de falha a trilha fica calada; depois ela volta aos poucos, na música da partida.
@@ -354,8 +341,6 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
   }, []);
 
   const mudarConfiguracoes = (novas: Configuracoes) => {
-    // O slider das configurações também passa pelo módulo de áudio, a única fonte do volume geral.
-    if (novas.volumeGeral !== volumeGeral) definirVolumeGeral(novas.volumeGeral);
     setConfiguracoes(novas);
     salvarConfiguracoes(novas);
   };
@@ -495,13 +480,13 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
           titulo={musica.titulo}
           artista={musica.artista}
           detalhe={[DIFICULDADES.find((d) => d.id === dificuldadeDaPartida)?.rotulo, INSTRUMENTOS.find((i) => i.id === instrumentoDaPartida)?.rotulo].filter(Boolean).join(" · ")}
-          volumeDosEfeitos={configuracoes.volumeDosEfeitos}
+          volumeDosEfeitos={audio.volumeDosEfeitos}
           aoAbrir={() => setEntrada((atual) => (atual ? { segurando: false } : atual))}
           aoTerminar={() => setEntrada(null)}
         />
       )}
       {!naPista && (
-        <CabecalhoDoPlayerDeMusica player={playerDeMusica as unknown as PlayerDeMusica<FaixaDoPlayer>} volume={volumeGeral} aoMudarVolume={definirVolumeGeral}>
+        <CabecalhoDoPlayerDeMusica player={playerDeMusica as unknown as PlayerDeMusica<FaixaDoPlayer>} volume={audio.volumeGeral} aoMudarVolume={definirVolumeGeral}>
           {contasLigadas && <BotaoDeAmigos aberto={amigosAbertos} aoAlternar={() => setAmigosAbertos((abertos) => !abertos)} />}
           {contasLigadas && (
             <CartaoDaConta
@@ -522,7 +507,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
         <div key={tela === "jogo" ? `jogo-${partida}` : tela} className="absolute inset-0">
             {tela === "menu" && (
               <MenuPrincipal
-                volumeDosEfeitos={configuracoes.volumeDosEfeitos}
+                volumeDosEfeitos={audio.volumeDosEfeitos}
                 noCelular={ehClienteWebDaSala()}
                 alavanca={alavanca}
                 troca={palco?.troca}
@@ -573,7 +558,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 dificuldade={dificuldadeDaSelecao}
                 instrumento={instrumentoDaSelecao}
                 personagem={personagemEmJogo}
-                volumeDosEfeitos={configuracoes.volumeDosEfeitos}
+                volumeDosEfeitos={audio.volumeDosEfeitos}
                 velocidadeDaMusica={configuracoes.velocidadeDaMusica}
                 aoVelocidadeDaMusica={(velocidadeDaMusica) => mudarConfiguracoes({ ...configuracoes, velocidadeDaMusica })}
                 aoSelecionar={setIndice}
@@ -725,7 +710,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
               <TelaDeMultijogador
                 personagem={personagemEmJogo}
                 musicas={musicas}
-                volumeDosEfeitos={configuracoes.volumeDosEfeitos}
+                volumeDosEfeitos={audio.volumeDosEfeitos}
                 sortearAleatoria={sortearOficial}
                 aoConvidarAmigos={contasLigadas && salaParaConvidar ? () => setAmigosAbertos(true) : undefined}
                 aoVoltar={() => setTela("menu")}
@@ -784,7 +769,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 artista={musica.artista}
                 resultado={resultado.resultado}
                 recordeNovo={resultado.recordeNovo}
-                volumeDosEfeitos={configuracoes.volumeDosEfeitos}
+                volumeDosEfeitos={audio.volumeDosEfeitos}
                 aoRepetir={() => void jogar()}
                 aoContinuar={() => {
                   if (!emRede) return setTela("selecao");

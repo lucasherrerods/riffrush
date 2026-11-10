@@ -18,12 +18,6 @@ export interface Configuracoes {
   botaoDaEstrela: number;
   /** Velocidade da música (1 é a normal). Mais lenta rende menos pontos; mais rápida, mais. */
   velocidadeDaMusica: number;
-  /** O volume de tudo (Alt + roda em qualquer tela). Os outros volumes são a mistura dentro dele. */
-  volumeGeral: number;
-  volumeDaMusica: number;
-  volumeDosEfeitos: number;
-  /** A música que toca nos menus, separada da música da partida. */
-  volumeDoPlayer: number;
   atrasoMs: number;
   semFalha: boolean;
   /** Desligada, a nota aberta vira verde. A partida continua valendo para ranking, replay e ao vivo. */
@@ -70,10 +64,6 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   botoesDoControle: BOTOES_DOS_TRASTES_PADRAO,
   botaoDaEstrela: BOTAO_DA_ESTRELA_PADRAO,
   velocidadeDaMusica: 1,
-  volumeGeral: 1,
-  volumeDaMusica: 0.8,
-  volumeDosEfeitos: 0.5,
-  volumeDoPlayer: 0.3,
   atrasoMs: 0,
   semFalha: false,
   notaAberta: true,

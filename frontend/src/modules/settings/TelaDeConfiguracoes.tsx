@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Gamepad2, Keyboard, Monitor, RotateCcw, Volume2 } from "lucide-react";
+import { Gamepad2, Keyboard, Monitor, Volume2 } from "lucide-react";
+import { PREFERENCIAS_DE_AUDIO_PADRAO, mudarPreferenciasDeAudio, usePreferenciasDeAudio } from "@/modules/audio";
 import { capturarBotao, nomeDoBotao, useControleConectado } from "@/modules/gamepad";
 import { CORES_DAS_PISTAS, COR_DA_ABERTA, COR_DA_ESTRELA, NOMES_DAS_PISTAS } from "@/modules/rock/gameplay";
 import { PISTA_ABERTA } from "@/modules/rock/songs";
@@ -8,12 +9,13 @@ import { ESCALA_MINIMA_DE_RENDERIZACAO, QUALIDADES_DO_PALCO } from "@/modules/ro
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
-import { Button } from "@/shared/ui/button";
 import { Switch } from "@/shared/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { AbaDeAudio } from "./componentes/AbaDeAudio";
+import { BotaoDeTecla } from "./componentes/BotaoDeTecla";
 import { Calibracao } from "./componentes/Calibracao";
 import { LinhaDeOpcao } from "./componentes/LinhaDeOpcao";
 import { LinhaDeSlider } from "./componentes/LinhaDeSlider";
+import { MolduraDeConfiguracoes } from "./componentes/MolduraDeConfiguracoes";
 import { SeletorDeJeitoDeJogar } from "./componentes/SeletorDeJeitoDeJogar";
 import { configuracoesPadrao, INDICE_DA_ESTRELA, INDICE_DA_PALHETA, nomeDaTecla, trocarBotao, trocarTecla, type Configuracoes } from "./configuracoes";
 
@@ -35,6 +37,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
   const [telaCheia, setTelaCheia] = useState(false);
   const [nativa] = useState(ehJanelaNativa);
   const [resolucoes, setResolucoes] = useState<ReturnType<typeof resolucoesDisponiveis>>([]);
+  const audio = usePreferenciasDeAudio();
   const mudar = (parcial: Partial<Configuracoes>) => aoMudar({ ...configuracoes, ...parcial });
 
   useEffect(() => {
@@ -75,25 +78,17 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
   };
 
   const botaoDeTecla = (indice: number, nome: string, codigo: string, cor: string) => (
-    <button
-      aria-label={`Tecla ${nome}`}
-      onClick={() => setTrocando(indice)}
-      className="min-w-28 rounded-lg border-2 bg-superficie px-4 py-2 font-mono text-base font-bold max-md:min-w-16 max-md:px-2 max-md:py-1 max-md:text-sm transition-colors hover:bg-superficie-hover"
-      style={{ borderColor: trocando === indice ? "var(--cor-texto)" : cor }}
-    >
-      {trocando === indice ? "Aperte..." : nomeDaTecla(codigo)}
-    </button>
+    <BotaoDeTecla rotulo={`Tecla ${nome}`} texto={nomeDaTecla(codigo)} esperando={trocando === indice} cor={cor} aoClicar={() => setTrocando(indice)} />
   );
 
   const botaoDoControle = (indice: number, nome: string, botao: number, cor: string) => (
-    <button
-      aria-label={`Botão do controle ${nome}`}
-      onClick={() => setTrocandoNoControle(trocandoNoControle === indice ? null : indice)}
-      className="min-w-28 rounded-lg border-2 bg-superficie px-4 py-2 font-mono text-base font-bold max-md:min-w-16 max-md:px-2 max-md:py-1 max-md:text-sm transition-colors hover:bg-superficie-hover"
-      style={{ borderColor: trocandoNoControle === indice ? "var(--cor-texto)" : cor }}
-    >
-      {trocandoNoControle === indice ? "Aperte..." : nomeDoBotao(botao)}
-    </button>
+    <BotaoDeTecla
+      rotulo={`Botão do controle ${nome}`}
+      texto={nomeDoBotao(botao)}
+      esperando={trocandoNoControle === indice}
+      cor={cor}
+      aoClicar={() => setTrocandoNoControle(trocandoNoControle === indice ? null : indice)}
+    />
   );
 
   /** Com controle ligado, cada linha mostra a tecla e o botão do controle lado a lado. */
@@ -104,37 +99,22 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
     </div>
   );
 
+  const restaurar = () => {
+    aoMudar(configuracoesPadrao());
+    mudarPreferenciasDeAudio(PREFERENCIAS_DE_AUDIO_PADRAO);
+  };
+
   return (
-    <div className="respiro-de-tela flex h-full flex-col">
-      <header className="flex items-center gap-4 max-md:gap-2">
-        <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
-          <ArrowLeft />
-        </Button>
-        <h1 className="titulo-de-tela">Configurações</h1>
-        <div className="flex-1" />
-        <Button variant="ghost" aria-label="Restaurar padrão" onClick={() => aoMudar(configuracoesPadrao())}>
-          <RotateCcw className="opacity-70" /> <span className="max-md:sr-only">Restaurar padrão</span>
-        </Button>
-      </header>
-
-      <Tabs defaultValue="controles" className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
-        <TabsList className="abas-rolaveis w-full">
-          <TabsTrigger value="controles">
-            <Keyboard className="opacity-70" /> Controles
-          </TabsTrigger>
-          <TabsTrigger value="gameplay">
-            <Gamepad2 className="opacity-70" /> Gameplay
-          </TabsTrigger>
-          <TabsTrigger value="audio">
-            <Volume2 className="opacity-70" /> Áudio
-          </TabsTrigger>
-          <TabsTrigger value="video">
-            <Monitor className="opacity-70" /> Vídeo
-          </TabsTrigger>
-        </TabsList>
-
-        <div className="rolagem-de-toque mt-2 min-h-0 flex-1 placa p-2 max-md:mt-1 max-md:p-1.5">
-          <TabsContent value="controles" className="flex flex-col gap-2">
+    <MolduraDeConfiguracoes
+      aoVoltar={aoVoltar}
+      aoRestaurar={restaurar}
+      abas={[
+        {
+          id: "controles",
+          rotulo: "Controles",
+          icone: Keyboard,
+          conteudo: (
+            <>
             {/* No celular não há teclas para trocar: o star power sai arrastando o dedo para cima, e sem palheta o jeito é sempre tapping. */}
             {estreita ? (
               <>
@@ -175,9 +155,15 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
             )}
               </>
             )}
-          </TabsContent>
-
-          <TabsContent value="gameplay" className="flex flex-col gap-2">
+            </>
+          ),
+        },
+        {
+          id: "gameplay",
+          rotulo: "Gameplay",
+          icone: Gamepad2,
+          conteudo: (
+            <>
             <LinhaDeSlider
               rotulo="Atraso do áudio"
               dica="Ajuste se as notas parecerem fora do ritmo da música"
@@ -203,49 +189,16 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
                 <Switch id="bloquear-atalhos" checked={configuracoes.bloquearAtalhos} onCheckedChange={(bloquearAtalhos) => mudar({ bloquearAtalhos })} />
               </LinhaDeOpcao>
             )}
-          </TabsContent>
-
-          <TabsContent value="audio" className="flex flex-col gap-2">
-            <LinhaDeSlider
-              rotulo="Volume geral"
-              valor={configuracoes.volumeGeral}
-              minimo={0}
-              maximo={1}
-              passo={0.05}
-              formatar={porcentagem}
-              aoMudar={(volumeGeral) => mudar({ volumeGeral })}
-            />
-            {!estreita && <p className="px-2 text-base text-texto-suave">Em qualquer tela: Alt + roda do mouse.</p>}
-            <LinhaDeSlider
-              rotulo="Volume da música"
-              valor={configuracoes.volumeDaMusica}
-              minimo={0}
-              maximo={1}
-              passo={0.05}
-              formatar={porcentagem}
-              aoMudar={(volumeDaMusica) => mudar({ volumeDaMusica })}
-            />
-            <LinhaDeSlider
-              rotulo="Volume dos efeitos"
-              valor={configuracoes.volumeDosEfeitos}
-              minimo={0}
-              maximo={1}
-              passo={0.05}
-              formatar={porcentagem}
-              aoMudar={(volumeDosEfeitos) => mudar({ volumeDosEfeitos })}
-            />
-            <LinhaDeSlider
-              rotulo="Música do menu"
-              valor={configuracoes.volumeDoPlayer}
-              minimo={0}
-              maximo={1}
-              passo={0.05}
-              formatar={porcentagem}
-              aoMudar={(volumeDoPlayer) => mudar({ volumeDoPlayer })}
-            />
-          </TabsContent>
-
-          <TabsContent value="video" className="flex flex-col gap-2">
+            </>
+          ),
+        },
+        { id: "audio", rotulo: "Áudio", icone: Volume2, conteudo: <AbaDeAudio valores={audio} aoMudar={mudarPreferenciasDeAudio} /> },
+        {
+          id: "video",
+          rotulo: "Vídeo",
+          icone: Monitor,
+          conteudo: (
+            <>
             {nativa ? (
               <div className="flex flex-col gap-3 py-2">
                 <GrupoDeOpcoes titulo="Modo de exibição (F11 alterna a tela cheia)" opcoes={MODOS_DE_JANELA} valor={configuracoes.modoDeJanela} aoEscolher={(modoDeJanela) => mudar({ modoDeJanela })} />
@@ -296,9 +249,10 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
               formatar={porcentagem}
               aoMudar={(escalaDeRenderizacao) => mudar({ escalaDeRenderizacao })}
             />
-          </TabsContent>
-        </div>
-      </Tabs>
-    </div>
+            </>
+          ),
+        },
+      ]}
+    />
   );
 }

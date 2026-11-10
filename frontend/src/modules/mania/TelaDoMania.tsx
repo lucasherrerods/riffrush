@@ -32,19 +32,19 @@ import { useBibliotecaDoMania } from "./beatmaps/useBibliotecaDoMania";
 import { ResultadoDoMania } from "./gameplay/ResultadoDoMania";
 import { TelaDeJogoMania, type EventoDoManiaAoVivo, type MapaParaJogar, type OpcoesDoMania, type ResultadoDoMania as Resultado } from "./gameplay/TelaDeJogoMania";
 import { TelaDeSelecaoMania } from "./selecao/TelaDeSelecaoMania";
-import { carregarConfiguracoesDoMania, salvarConfiguracoesDoMania } from "./settings/configuracoesMania";
-import { JanelaDeConfiguracoesMania } from "./settings/JanelaDeConfiguracoesMania";
+import { carregarConfiguracoesDoMania, salvarConfiguracoesDoMania, type ConfiguracoesDoMania } from "./settings/configuracoesMania";
+import { TelaDeConfiguracoesMania } from "./settings/TelaDeConfiguracoesMania";
 import { baixarOsz, buscarMapas, type FiltrosDaBusca, type MapaDaBusca, type PaginaDaBusca } from "./busca/api";
 import { sortearMapa } from "./busca/sortear";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
-import { definirVolumeGeral, useVolumeGeral } from "@/modules/audio";
+import { definirVolumeGeral, usePreferenciasDeAudio } from "@/modules/audio";
 import { CabecalhoDoPlayerDeMusica, useMusicaAoEntrar, useSeguirMapa, useTrilhaDaPartida, type FaixaDoPlayer, type PlayerDeMusica } from "@/modules/player";
 import { criarPlayerDoMania, faixasDaBiblioteca, playerDoMania } from "./player/trilhaDoMania";
 import { FundoDoMania } from "./menu/FundoDoMania";
 import { MenuDoMania } from "./menu/MenuDoMania";
 
-type Tela = { nome: "menu" } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil"; amigo?: string } | { nome: "online" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido };
+type Tela = { nome: "menu" } | { nome: "configuracoes"; voltarPara: Tela } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil"; amigo?: string } | { nome: "online" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido };
 
 /** Um replay do ranking aberto para assistir: as entradas, os mods e a semente da partida, e de quem ela é. */
 type ReplayAssistido = ReplayDoMania & { nome: string };
@@ -89,11 +89,14 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     player.suspender(false, { esmaecer: true });
     return () => player.suspender(true, { esmaecer: true });
   }, [player]);
-  const { volume } = useVolumeGeral();
+  // O áudio é do app inteiro: os mesmos volumes do Rock, já salvos desde a abertura.
+  const audio = usePreferenciasDeAudio();
+  useEffect(() => player.definirVolume(audio.volumeDaMusica), [player, audio.volumeDaMusica]);
+  const abrirConfiguracoes = () => setTela((atual) => (atual.nome === "configuracoes" ? atual : { nome: "configuracoes", voltarPara: atual }));
   const cabecalho = (
-    <CabecalhoDoPlayerDeMusica player={player as unknown as PlayerDeMusica<FaixaDoPlayer>} volume={volume} aoMudarVolume={definirVolumeGeral}>
+    <CabecalhoDoPlayerDeMusica player={player as unknown as PlayerDeMusica<FaixaDoPlayer>} volume={audio.volumeGeral} aoMudarVolume={definirVolumeGeral}>
       {contasLigadas && <BotaoDeAmigos aberto={amigosAbertos} aoAlternar={() => setAmigosAbertos((abertos) => !abertos)} />}
-      {contasLigadas && <CartaoDaConta mod={souDaModeracao} aoConfigurar={() => setConfigurando(true)} aoVerPerfil={() => setTela({ nome: "perfil" })} />}
+      {contasLigadas && <CartaoDaConta mod={souDaModeracao} aoConfigurar={abrirConfiguracoes} aoVerPerfil={() => setTela({ nome: "perfil" })} />}
     </CabecalhoDoPlayerDeMusica>
   );
   const painelDeAmigos = (
@@ -121,12 +124,12 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   const aoMudarDeTela = palco?.aoMudarDeTela;
   useEffect(() => aoMudarDeTela?.(tela.nome === "menu"), [tela.nome, aoMudarDeTela]);
   const [mods, setMods] = useState(0);
-  const [opcoes, setOpcoes] = useState<OpcoesDoMania>(carregarConfiguracoesDoMania);
-  const [configurando, setConfigurando] = useState(false);
-  const mudarOpcoes = (novas: OpcoesDoMania) => {
-    setOpcoes(novas);
+  const [configuracoes, setConfiguracoes] = useState<ConfiguracoesDoMania>(carregarConfiguracoesDoMania);
+  const mudarConfiguracoes = (novas: ConfiguracoesDoMania) => {
+    setConfiguracoes(novas);
     salvarConfiguracoesDoMania(novas);
   };
+  const opcoes = useMemo<OpcoesDoMania>(() => ({ ...configuracoes, volumeDaMusica: audio.volumeDaMusica }), [configuracoes, audio.volumeDaMusica]);
   const { conta } = useConta();
   const [xp, setXp] = useState<RegistroDaPartida | undefined>();
   // As preferências do online e do chat são da conta, guardadas junto com as do Rock.
@@ -291,8 +294,6 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
       />
     );
 
-  const janelaDeConfiguracoes = <JanelaDeConfiguracoesMania aberta={configurando} aoFechar={() => setConfigurando(false)} opcoes={opcoes} aoMudar={mudarOpcoes} />;
-
   if (tela.nome === "menu")
     return (
       <main data-parte={PARTE_DA_TELA_DO_MODO} className={cn("relative flex h-dvh w-screen flex-col overflow-hidden text-texto", !palco && "bg-fundo")}>
@@ -304,7 +305,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
             troca={palco?.troca}
             aoJogar={() => setTela({ nome: "selecao" })}
             aoBuscar={() => setTela({ nome: "busca" })}
-            aoConfigurar={() => setConfigurando(true)}
+            aoConfigurar={abrirConfiguracoes}
             aoLeaderboard={contasLigadas ? () => setTela({ nome: "leaderboard" }) : undefined}
             aoOnline={presencaDisponivel && contasLigadas ? () => setTela({ nome: "online" }) : undefined}
             chat={
@@ -315,7 +316,6 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
           />
           {painelDeAmigos}
         </div>
-        {janelaDeConfiguracoes}
         <Avisos />
       </main>
     );
@@ -344,13 +344,15 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
       </main>
     );
 
-  if (tela.nome === "leaderboard" || tela.nome === "perfil" || tela.nome === "online")
+  if (tela.nome === "leaderboard" || tela.nome === "perfil" || tela.nome === "online" || tela.nome === "configuracoes")
     return (
       <main className="relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
         <FundoDoMania />
         {cabecalho}
         <div className="relative min-h-0 flex-1">
-          {tela.nome === "online" ? (
+          {tela.nome === "configuracoes" ? (
+            <TelaDeConfiguracoesMania opcoes={configuracoes} aoMudar={mudarConfiguracoes} aoVoltar={() => setTela(tela.voltarPara)} />
+          ) : tela.nome === "online" ? (
             <TelaOnline
               logado={!!conta}
               euId={conta?.id ?? null}
@@ -376,7 +378,6 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
           )}
           {painelDeAmigos}
         </div>
-        {janelaDeConfiguracoes}
         <Avisos />
       </main>
     );
@@ -394,7 +395,6 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         )}
         {painelDeAmigos}
       </div>
-      {janelaDeConfiguracoes}
       <Avisos />
     </main>
   );

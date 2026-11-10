@@ -117,14 +117,11 @@ beforeEach(() => {
 });
 
 describe("App", () => {
-  it("o volume geral mudado de qualquer lugar (atalho ou cabeçalho) fica salvo e volta ao abrir de novo", () => {
-    const { unmount } = render(<App />);
-    act(() => definirVolumeGeral(0.35));
-    expect(JSON.parse(localStorage.getItem("riffrush.configuracoes")!).volumeGeral).toBe(0.35);
-    unmount();
-    act(() => definirVolumeGeral(1));
+  it("o volume geral mudado de qualquer lugar (atalho ou cabeçalho) fica salvo no áudio global, o mesmo dos dois modos", () => {
     render(<App />);
+    act(() => definirVolumeGeral(0.35));
     expect(lerVolumeGeral()).toBe(0.35);
+    expect(JSON.parse(localStorage.getItem("riffrush.audio")!).volumeGeral).toBe(0.35);
   });
 
   it("começa no menu principal", () => {
