@@ -1,3 +1,4 @@
+import { rolarAteOFim } from "@/test/intersecao";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { avisar } from "@/shared/ui/avisos";
@@ -90,12 +91,13 @@ describe("TelaDeBuscaDeMusicas", () => {
     const buscar = vi.fn(async (_f: FiltrosDaBusca, pagina: number): Promise<RespostaDaBusca> =>
       pagina === 1 ? { total: TAMANHO_DA_PAGINA + 1, resultados: [resultado("Hit")] } : { total: TAMANHO_DA_PAGINA + 1, resultados: [resultado("Hit"), resultado("Outra")] },
     );
-    const { usuario } = abrir(buscar as unknown as Parameters<typeof abrir>[0]);
-    await usuario.click(await screen.findByRole("button", { name: "Carregar mais" }));
+    abrir(buscar as unknown as Parameters<typeof abrir>[0]);
+    await screen.findByRole("heading", { name: "Hit" });
+    rolarAteOFim();
     expect(await screen.findByRole("heading", { name: "Outra" })).toBeInTheDocument();
     expect(ultimaChamada(buscar)[1]).toBe(2);
     expect(screen.getAllByRole("heading", { name: "Hit" })).toHaveLength(1);
-    expect(screen.queryByRole("button", { name: "Carregar mais" })).not.toBeInTheDocument();
+    expect(document.querySelector("[data-parte='fim-da-lista']")).toBeNull();
   });
 
   it("avisa quando não encontra nada", async () => {

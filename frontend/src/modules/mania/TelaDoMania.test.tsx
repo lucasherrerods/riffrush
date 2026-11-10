@@ -52,6 +52,11 @@ async function abrir() {
 }
 
 describe("TelaDoMania", () => {
+  it("a tela fica no tema escuro, como no Rock, para os botões contornados pegarem a borda do tema e não a branca", async () => {
+    await abrir();
+    expect(document.querySelector("main")).toHaveClass("dark");
+  });
+
   it("mostra a biblioteca vazia", async () => {
     await abrir();
     expect(await screen.findByText(/Nenhum mapa ainda/)).toBeInTheDocument();

@@ -1,3 +1,4 @@
+import { cn } from "@/shared/lib/utils";
 import { BotaoVoltar } from "@/shared/ui/BotaoVoltar";
 
 interface PropsDaBarra {
@@ -32,14 +33,16 @@ interface PropsDoTitulo {
   capa?: React.ReactNode;
   /** Uma imagem larga acima do título, na largura do cartão (ex.: o fundo do mapa no Mania). */
   faixa?: React.ReactNode;
-  /** À direita do título (ex.: favoritar). */
+  /** À direita do título (ex.: o instrumento no Rock). */
   acao?: React.ReactNode;
+  /** O coração de favoritar, no canto de cima à direita do cartão (em cima da capa). */
+  favoritar?: React.ReactNode;
 }
 
 /** O cartão com o nome do que está selecionado. */
-export function TituloDaSelecao({ titulo, subtitulo, aviso, capa, faixa, acao }: PropsDoTitulo) {
+export function TituloDaSelecao({ titulo, subtitulo, aviso, capa, faixa, acao, favoritar }: PropsDoTitulo) {
   const linha = (
-    <div className="flex items-center gap-4 px-4 py-3">
+    <div className={cn("flex items-center gap-4 px-4 py-3", favoritar && (faixa ? "max-md:pr-14" : "pr-14"))}>
       {capa}
       <div className="min-w-0 flex-1">
         <h2 className="truncate font-titulo text-3xl tracking-wide uppercase max-md:text-2xl">{titulo}</h2>
@@ -50,9 +53,10 @@ export function TituloDaSelecao({ titulo, subtitulo, aviso, capa, faixa, acao }:
     </div>
   );
   return (
-    <div className="chapa overflow-hidden bg-superficie-elevada/95">
-      {faixa && <div className="h-36 w-full bordas-esfumadas max-md:hidden">{faixa}</div>}
+    <div className="chapa relative overflow-hidden bg-superficie-elevada/95">
+      {faixa && <div className="h-[172px] w-full bordas-esfumadas max-md:hidden">{faixa}</div>}
       {linha}
+      {favoritar && <div className="absolute top-2 right-2">{favoritar}</div>}
     </div>
   );
 }
