@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { Dices, Dumbbell, Heart, Play } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -34,18 +35,25 @@ export function ChipsDeMods({ mods, aoAlternar }: { mods: ModDoChip[]; aoAlterna
   );
 }
 
+/** O coração de favoritar, redondinho, que fica no canto da capa. */
 export function BotaoDeFavoritar({ favorita, aoAlternar }: { favorita: boolean; aoAlternar: () => void }) {
   return (
-    <Button
-      variant="ghost"
-      size="sm"
+    <motion.button
+      type="button"
       aria-pressed={favorita}
+      aria-label={favorita ? "Tirar dos favoritos" : "Favoritar"}
       title="Favoritar (F)"
       onClick={aoAlternar}
-      className={cn("rounded-md", favorita ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-superficie")}
+      whileTap={{ scale: 0.85 }}
+      className={cn(
+        "grid size-10 place-items-center rounded-full border border-borda bg-fundo/70 backdrop-blur-sm transition-colors hover:bg-fundo/90",
+        favorita ? "text-primaria" : "text-texto",
+      )}
     >
-      {favorita ? "Tirar dos favoritos" : "Favoritar"}
-    </Button>
+      <motion.span key={String(favorita)} initial={{ scale: favorita ? 0.4 : 1 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 12 }} className="grid">
+        <Heart aria-hidden className={cn("size-5", favorita && "fill-current")} />
+      </motion.span>
+    </motion.button>
   );
 }
 

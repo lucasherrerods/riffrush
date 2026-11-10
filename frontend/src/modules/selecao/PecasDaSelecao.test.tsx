@@ -11,9 +11,16 @@ it("os chips de mods ligam pelo id", async () => {
   expect(aoAlternar).toHaveBeenCalledWith("DT");
 });
 
-it("favoritar troca o rótulo", () => {
+it("favoritar é um coração só de ícone, que troca o rótulo", () => {
   render(<BotaoDeFavoritar favorita aoAlternar={() => {}} />);
-  expect(screen.getByRole("button", { name: "Tirar dos favoritos" })).toHaveAttribute("aria-pressed", "true");
+  const coracao = screen.getByRole("button", { name: "Tirar dos favoritos" });
+  expect(coracao).toHaveAttribute("aria-pressed", "true");
+  expect(coracao).toHaveTextContent("");
+});
+
+it("o título põe o favoritar no canto de cima da capa", () => {
+  render(<TituloDaSelecao titulo="Riff" subtitulo="Banda" faixa={<img alt="" />} favoritar={<BotaoDeFavoritar favorita={false} aoAlternar={() => {}} />} />);
+  expect(screen.getByRole("button", { name: "Favoritar" }).parentElement).toHaveClass("absolute", "top-2", "right-2");
 });
 
 it("tocar e treinar", async () => {

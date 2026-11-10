@@ -372,7 +372,7 @@ export function TelaDeSelecaoMania({
                 "Importado · sem XP nem ranking"
               }
               faixa={<CapaDoConjunto conjunto={conjunto} />}
-              acao={
+              favoritar={
                 <BotaoDeFavoritar
                   favorita={favorita}
                   aoAlternar={alternarFavoritaAtual}
