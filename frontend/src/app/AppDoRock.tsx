@@ -525,6 +525,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                   setTela("selecao");
                 }}
                 aoMultiplayerLocal={estreita ? undefined : () => setTela("telaDividida")}
+                naSala={!!conexao.sala}
                 // Com conta, as configurações ficam no menu da conta; sem ela, não há esse menu.
                 aoConfigurar={contasLigadas && conta ? undefined : abrirConfiguracoes}
                 aoMultijogador={() => setTela("multijogador")}

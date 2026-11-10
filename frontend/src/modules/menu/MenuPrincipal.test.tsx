@@ -85,6 +85,16 @@ describe("MenuPrincipal", () => {
     expect(aoMultijogador).not.toHaveBeenCalled();
   });
 
+  it("já numa sala, Multiplayer volta direto para ela sem perguntar se é local ou online", async () => {
+    const aoMultiplayerLocal = vi.fn();
+    const aoMultijogador = vi.fn();
+    render(<MenuPrincipal volumeDosEfeitos={0} naSala aoJogar={vi.fn()} aoMultijogador={aoMultijogador} aoPersonagem={vi.fn()} aoBuscarMusicas={vi.fn()} aoAbrirDocumento={vi.fn()} aoMultiplayerLocal={aoMultiplayerLocal} />);
+    await userEvent.click(screen.getByRole("button", { name: "Multiplayer" }));
+    expect(screen.queryByRole("dialog", { name: "Multiplayer" })).toBeNull();
+    expect(aoMultijogador).toHaveBeenCalled();
+    expect(aoMultiplayerLocal).not.toHaveBeenCalled();
+  });
+
   it("na escolha do multiplayer, Online abre as salas online", async () => {
     const aoMultijogador = vi.fn();
     render(<MenuPrincipal volumeDosEfeitos={0} aoJogar={vi.fn()} aoMultijogador={aoMultijogador} aoPersonagem={vi.fn()} aoBuscarMusicas={vi.fn()} aoAbrirDocumento={vi.fn()} aoMultiplayerLocal={vi.fn()} />);
