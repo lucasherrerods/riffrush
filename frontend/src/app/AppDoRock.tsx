@@ -562,7 +562,6 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 indice={indice}
                 dificuldade={dificuldadeDaSelecao}
                 instrumento={instrumentoDaSelecao}
-                personagem={personagemEmJogo}
                 volumeDosEfeitos={audio.volumeDosEfeitos}
                 velocidadeDaMusica={configuracoes.velocidadeDaMusica}
                 aoVelocidadeDaMusica={(velocidadeDaMusica) => mudarConfiguracoes({ ...configuracoes, velocidadeDaMusica })}

@@ -296,7 +296,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
 
   if (tela.nome === "menu")
     return (
-      <main data-parte={PARTE_DA_TELA_DO_MODO} className={cn("relative flex h-dvh w-screen flex-col overflow-hidden text-texto", !palco && "bg-fundo")}>
+      <main data-parte={PARTE_DA_TELA_DO_MODO} className={cn("dark relative flex h-dvh w-screen flex-col overflow-hidden text-texto", !palco && "bg-fundo")}>
         {!palco && <FundoDoMania />}
         {cabecalho}
         <div className="relative min-h-0 flex-1">
@@ -330,7 +330,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
 
   if (tela.nome === "espectador")
     return (
-      <main className="relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
+      <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
         <TelaDeEspectadorMania
           pessoa={tela.pessoa}
           conjuntos={conjuntos ?? []}
@@ -346,7 +346,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
 
   if (tela.nome === "leaderboard" || tela.nome === "perfil" || tela.nome === "online" || tela.nome === "configuracoes")
     return (
-      <main className="relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
+      <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
         <FundoDoMania />
         {cabecalho}
         <div className="relative min-h-0 flex-1">
@@ -383,7 +383,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     );
 
   return (
-    <main className="relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
+    <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
       {/* Na seleção o fundo é a capa do mapa, borrada, que a própria tela desenha. */}
       {tela.nome !== "selecao" && <FundoDoMania />}
       {cabecalho}

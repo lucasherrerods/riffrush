@@ -15,7 +15,8 @@ export function RankingDaSelecao({ jeitoInicial, ...painel }: Props) {
   const [jeito, setJeito] = useState(jeitoInicial);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
-      <GrupoDeOpcoes titulo="Jeito de jogar" opcoes={OPCOES_DOS_JEITOS} valor={jeito} aoEscolher={setJeito} />
+      {/* Pequeno, no canto: a lista do ranking começa mais acima. */}
+      <GrupoDeOpcoes className="self-end [&_button]:px-2 [&_button]:py-0.5 [&_button]:text-xs" titulo="Jeito de jogar" tituloEscondido opcoes={OPCOES_DOS_JEITOS} valor={jeito} aoEscolher={setJeito} />
       <PainelDeRanking {...painel} jeito={jeito} />
     </div>
   );

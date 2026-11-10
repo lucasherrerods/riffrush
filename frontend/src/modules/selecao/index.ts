@@ -7,3 +7,4 @@ export { AvisoDaLista, BotaoDeFavoritar, BotaoDeTocar, ChipsDeMods, FiltrosDaBib
 export { BotaoDeAleatoria } from "./BotaoDeAleatoria";
 export { FundoDaSelecao } from "./FundoDaSelecao";
 export { MenuDeApagar } from "./MenuDeApagar";
+export { BotaoDeModificadores } from "./BotaoDeModificadores";

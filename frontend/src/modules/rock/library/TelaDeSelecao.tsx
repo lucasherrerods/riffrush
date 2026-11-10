@@ -1,7 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { FileAudio, Flame, Info, ListOrdered, RotateCcw, Search, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
-import type { Personagem } from "@/modules/rock/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
 import { rotuloDaVelocidade, velocidadesDaMusica } from "@/modules/rock/gameplay";
 import { recordeDe, useRecordes } from "@/modules/rock/results";
@@ -20,6 +19,7 @@ import {
   BotaoDaSelecao,
   BotaoDeAleatoria,
   BotaoDeFavoritar,
+  BotaoDeModificadores,
   BotaoDeTocar,
   Carrossel,
   ChipsDeMods,
@@ -34,7 +34,6 @@ import {
   salvarFavoritas,
   selecaoNoFiltro,
 } from "@/modules/selecao";
-import { AvatarPalhetando } from "./componentes/AvatarPalhetando";
 import { Capa } from "./componentes/Capa";
 import { CHAVE_DAS_FAVORITAS } from "./favoritas";
 import { filtrarMusicas, type OrdemDaSelecao } from "./filtroDaSelecao";
@@ -46,7 +45,6 @@ interface Props {
   dificuldade: Dificuldade;
   /** O instrumento escolhido; a música que não o tem mostra o primeiro que tiver. */
   instrumento: Instrumento;
-  personagem: Personagem;
   volumeDosEfeitos: number;
   aoSelecionar: (indice: number) => void;
   aoDificuldade: (dificuldade: Dificuldade) => void;
@@ -86,7 +84,7 @@ const TIPOS_IMPORTAVEIS = "audio/*,video/*,.sng";
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 export function TelaDeSelecao(props: Props) {
-  const { musicas, indice, dificuldade, personagem, volumeDosEfeitos, aoSelecionar, aoDificuldade, aoInstrumento, aoJogar, aoVoltar, aoImportar, aoRemover, ranking, velocidadeDaMusica, aoVelocidadeDaMusica } = props;
+  const { musicas, indice, dificuldade, volumeDosEfeitos, aoSelecionar, aoDificuldade, aoInstrumento, aoJogar, aoVoltar, aoImportar, aoRemover, ranking, velocidadeDaMusica, aoVelocidadeDaMusica } = props;
   const recordes = useRecordes();
   const musica = musicas[indice];
   const instrumentos = instrumentosDaMusica(musica);
@@ -202,6 +200,7 @@ export function TelaDeSelecao(props: Props) {
     <div className="flex min-w-0 gap-2">
       {musica.bpm > 0 && <Dado rotulo="BPM" className="flex-1">{musica.bpm}</Dado>}
       <Dado rotulo="Gênero" className="flex-1">{musica.genero}</Dado>
+      <Dado rotulo="Dificuldade" className="flex-1">{rotuloDaDificuldade}</Dado>
       <Dado rotulo="Intensidade" className="flex-1 max-md:hidden">
         <span className="flex gap-1 py-1" aria-label={`Intensidade ${musica.intensidade} de 5`}>
           {Array.from({ length: 5 }, (_, k) => (
@@ -212,23 +211,18 @@ export function TelaDeSelecao(props: Props) {
     </div>
   );
 
-  const detalhes = (
-    <div className="placa flex min-h-0 items-end gap-4 p-4">
-      <AvatarPalhetando personagem={personagem} bpm={musica.bpm || 120} className="h-40 w-auto shrink-0 max-md:hidden [@media(max-height:680px)]:h-24" />
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <Dado rotulo="Dificuldade">{rotuloDaDificuldade}</Dado>
-        {recordeAtual && (
-          <p className="flex items-center gap-2 px-4 text-base text-texto-suave">
-            <Trophy className="size-4 text-ouro opacity-70" /> Recorde:
-            <span className="font-mono font-bold text-texto">{formatar(recordeAtual.pontos)}</span>
-            {recordeAtual.precisao !== undefined && <SeloDaNota precisao={recordeAtual.precisao} />}
-          </p>
-        )}
-      </div>
-    </div>
+  const detalhes = recordeAtual && (
+    <p className="flex items-center gap-2 px-4 text-base text-texto-suave">
+      <Trophy className="size-4 text-ouro opacity-70" /> Recorde:
+      <span className="font-mono font-bold text-texto">{formatar(recordeAtual.pontos)}</span>
+      {recordeAtual.precisao !== undefined && <SeloDaNota precisao={recordeAtual.precisao} />}
+    </p>
   );
 
   const favoritar = <BotaoDeFavoritar favorita={favorita} aoAlternar={alternarFavoritaAtual} />;
+  const escolhaDoInstrumento = instrumentos.length > 1 && (
+    <GrupoDeOpcoes titulo="Instrumento" tituloEscondido opcoes={instrumentos.map((i) => ({ id: i.id, rotulo: i.rotulo }))} valor={instrumento} aoEscolher={escolherInstrumento} />
+  );
 
   const tocar = precisaReimportar ? (
     <div className="flex flex-col gap-2">
@@ -255,12 +249,14 @@ export function TelaDeSelecao(props: Props) {
   );
 
   const mods = (
+    <BotaoDeModificadores ligados={velocidadeDaMusica === 1 ? 0 : 1}>
     <ChipsDeMods
       mods={velocidadesDaMusica()
         .filter((v) => v !== 1)
         .map((v) => ({ id: String(v), sigla: rotuloDaVelocidade(v), nome: `Velocidade ${rotuloDaVelocidade(v)}`, ligado: v === velocidadeDaMusica }))}
       aoAlternar={(id) => aoVelocidadeDaMusica(Number(id) === velocidadeDaMusica ? 1 : Number(id))}
     />
+    </BotaoDeModificadores>
   );
 
   const filtros = (
@@ -327,7 +323,8 @@ export function TelaDeSelecao(props: Props) {
   );
 
   const cabecalho = (
-    <BarraDaSelecao titulo="Selecione a música" aoVoltar={voltar} abaixo={mods}>
+    <BarraDaSelecao titulo="Selecione a música" aoVoltar={voltar}>
+      {mods}
       <BotaoDaSelecao asChild>
         <label className="">
           <FileAudio className="opacity-70" />
@@ -406,22 +403,24 @@ export function TelaDeSelecao(props: Props) {
             <div className="flex-1" />
           ) : (
             <>
-            {/* Tudo cabe sem rolagem: capa pequena ao lado do título e os dados numa linha só. */}
+            {/* A capa em faixa no topo, com o título embaixo e o instrumento ao lado do Favoritar. */}
             <TituloDaSelecao
               titulo={musica.titulo}
               subtitulo={musica.artista}
-              capa={<Capa musica={musica} girando className="size-16 shrink-0 rounded-md border border-borda max-md:hidden" />}
-              acao={favoritar}
+              faixa={
+                // A capa do álbum é quadrada: aparece inteira no meio, com ela mesma borrada preenchendo os lados.
+                <div className="relative flex size-full justify-center overflow-hidden">
+                  <Capa musica={musica} decorativa className="absolute inset-0 size-full scale-110 blur-md" />
+                  <Capa musica={musica} girando className="relative aspect-square h-full" />
+                </div>
+              }
+              acao={
+                <div className="flex items-center gap-3">
+                  {escolhaDoInstrumento}
+                  {favoritar}
+                </div>
+              }
             />
-
-            {instrumentos.length > 1 && (
-              <GrupoDeOpcoes
-                titulo="Instrumento"
-                opcoes={instrumentos.map((i) => ({ id: i.id, rotulo: i.rotulo }))}
-                valor={instrumento}
-                aoEscolher={escolherInstrumento}
-              />
-            )}
 
             {ranking ? (
               // Como no osu!: o ranking da música ao lado da roda, e os detalhes numa aba vizinha.
@@ -455,7 +454,7 @@ export function TelaDeSelecao(props: Props) {
           {tocar}
         </section>
 
-        <div className="col-span-7 flex min-h-0 min-w-0 flex-col gap-4 max-md:col-span-1">
+        <div className="col-span-6 col-start-7 flex min-h-0 min-w-0 flex-col gap-4 max-md:col-span-1 max-md:col-start-auto">
           {filtros}
           {lista}
         </div>

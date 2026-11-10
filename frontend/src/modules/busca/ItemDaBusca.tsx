@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Check, Disc3, Download, Play } from "lucide-react";
 import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
 import { Button } from "@/shared/ui/button";
@@ -74,13 +75,24 @@ export function AcaoDaBusca({ nome, estado }: { nome: string; estado: EstadoDaAc
   );
 }
 
-/** O fim da lista, quando há mais resultados para pedir. */
+/** O fim da lista, quando há mais resultados para pedir: ao rolar até ele, a próxima página é pedida sozinha. */
 export function CarregarMais({ carregando, aoCarregar }: { carregando: boolean; aoCarregar: () => void }) {
+  const fim = useRef<HTMLLIElement>(null);
+  const pedir = useRef(aoCarregar);
+  pedir.current = aoCarregar;
+  // Recriado quando a página chega: se o fim ainda estiver à vista (página curta), a próxima é pedida também.
+  useEffect(() => {
+    const alvo = fim.current;
+    if (!alvo || carregando) return;
+    const observador = new IntersectionObserver((entradas) => {
+      if (entradas.some((e) => e.isIntersecting)) pedir.current();
+    }, { rootMargin: "200px" });
+    observador.observe(alvo);
+    return () => observador.disconnect();
+  }, [carregando]);
   return (
-    <li className="flex justify-center py-2">
-      <Button variant="secondary" disabled={carregando} onClick={aoCarregar}>
-        {carregando ? "Carregando…" : "Carregar mais"}
-      </Button>
+    <li ref={fim} data-parte="fim-da-lista" className="col-span-full flex justify-center py-2 text-sm text-texto-suave">
+      {carregando && "Carregando…"}
     </li>
   );
 }

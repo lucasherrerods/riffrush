@@ -51,7 +51,7 @@ export function TituloDaSelecao({ titulo, subtitulo, aviso, capa, faixa, acao }:
   );
   return (
     <div className="chapa overflow-hidden bg-superficie-elevada/95">
-      {faixa && <div className="h-36 w-full bordas-esfumadas max-md:hidden">{faixa}</div>}
+      {faixa && <div className="h-[172px] w-full bordas-esfumadas max-md:hidden">{faixa}</div>}
       {linha}
     </div>
   );

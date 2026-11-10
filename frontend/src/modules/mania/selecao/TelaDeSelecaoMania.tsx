@@ -6,6 +6,7 @@ import {
   BotaoDaSelecao,
   BotaoDeAleatoria,
   BotaoDeFavoritar,
+  BotaoDeModificadores,
   BotaoDeTocar,
   Carrossel,
   FiltrosDaBiblioteca,
@@ -76,6 +77,9 @@ const COMANDOS = [
   { teclas: "F", rotulo: "Favoritar" },
   { teclas: "Esc", rotulo: "Voltar" },
 ]
+
+/** Quantos bits de mod estão ligados, para o número no botão. */
+const contarMods = (mods: number) => mods.toString(2).split("1").length - 1
 
 const ehOsz = (arquivo: File) => arquivo.name.toLowerCase().endsWith(".osz")
 
@@ -331,10 +335,10 @@ export function TelaDeSelecaoMania({
       </FundoDaSelecao>
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:p-4">
         <aside className="col-span-5 flex min-h-0 flex-col gap-4 max-md:col-span-1">
-          <BarraDaSelecao
-            aoVoltar={aoVoltar}
-            abaixo={<SeletorDeMods mods={mods} aoMudar={aoMudarMods} />}
-          >
+          <BarraDaSelecao aoVoltar={aoVoltar}>
+            <BotaoDeModificadores ligados={contarMods(mods)}>
+              <SeletorDeMods mods={mods} aoMudar={aoMudarMods} />
+            </BotaoDeModificadores>
             <BotaoDaSelecao onClick={() => seletor.current?.click()}>
               <Upload aria-hidden />
               <span className="max-md:sr-only">Importar .osz</span>
@@ -420,7 +424,7 @@ export function TelaDeSelecaoMania({
           />
         </aside>
 
-        <div className="col-span-7 flex min-h-0 flex-col gap-4 max-md:col-span-1">
+        <div className="col-span-6 col-start-7 flex min-h-0 flex-col gap-4 max-md:col-span-1 max-md:col-start-auto">
           {!!todos.length && (
             <FiltrosDaBiblioteca
               texto={texto}
