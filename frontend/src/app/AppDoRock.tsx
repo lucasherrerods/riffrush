@@ -340,11 +340,6 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
     return () => playerDeMusica.definirNavegacao(null);
   }, [tela, musicas.length]);
 
-  // Termina o login que voltou do Google ou retoma a sessão guardada.
-  useEffect(() => {
-    if (contasLigadas) sessaoDaConta.iniciar().catch((erro) => avisar.error(erro instanceof Error ? erro.message : String(erro)));
-  }, []);
-
   const mudarConfiguracoes = (novas: Configuracoes) => {
     setConfiguracoes(novas);
     salvarConfiguracoes(novas);

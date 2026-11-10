@@ -1,5 +1,6 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
+import { contasLigadas, sessaoDaConta } from "@/modules/conta";
 import { FundoDoMania, IDENTIDADE_DO_MANIA, TelaDoMania, carregarTelaDoMania } from "@/modules/mania";
 import { AlavancaDeModo, PARTE_DA_TELA_DO_MODO } from "@/modules/menu";
 import { chatGlobal, presenca } from "@/modules/presenca";
@@ -7,6 +8,7 @@ import { FundoDoRock, IDENTIDADE_DO_ROCK } from "@/modules/rock";
 import { definirTema } from "@/shared/styles/tema";
 import { TEMAS } from "@/shared/styles/tokens";
 import { TelaCarregando } from "@/shared/ui/TelaCarregando";
+import { avisar } from "@/shared/ui/avisos";
 import { CapaDaVolvelle, Volvelle, type FotoDaTela, type LadoDaVolvelle } from "@/shared/ui/volvelle/Volvelle";
 import { AppDoRock } from "./AppDoRock";
 import { trocarModo, useModo, type Modo } from "./modo";
@@ -56,6 +58,10 @@ export function App() {
     presenca.definirModo(modo);
     chatGlobal.definirModo(modo);
   }, [modo]);
+  // Termina o login que voltou do Google ou retoma a sessão guardada, em qualquer modo que o app abrir.
+  useEffect(() => {
+    if (contasLigadas) sessaoDaConta.iniciar().catch((erro) => avisar.error(erro instanceof Error ? erro.message : String(erro)));
+  }, []);
   const semMovimento = useReducedMotion() ?? false;
   const { giro, pedir } = useTrocaDeModo(modo, { trocar: trocarModo, preCarregar, semMovimento });
   // A foto da tela que sai, tirada no clique, antes de o modo trocar.
