@@ -124,6 +124,12 @@ export class SessaoDaConta {
     return this.ambiente.api.perfil(token, sinal);
   }
 
+  async perfilDoAmigo(contaId: string, sinal?: AbortSignal) {
+    const token = this.token();
+    if (!token) throw new Error("Entre com o Google para ver o perfil.");
+    return this.ambiente.api.perfilDoAmigo(token, contaId, sinal);
+  }
+
   /** Envia a foto ou a capa (já reduzida) e devolve o endereço dela. A foto nova aparece na hora em todo o app. */
   async trocarImagem(tipo: TipoDeImagem, imagem: Blob) {
     const token = this.token();

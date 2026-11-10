@@ -18,6 +18,8 @@ interface Props {
   aoMultijogador: () => void;
   /** Só no computador: vários jogadores na mesma tela. Com ele, o Multiplayer pergunta antes se é local ou online. */
   aoMultiplayerLocal?: () => void;
+  /** Já numa sala: o Multiplayer volta para ela sem perguntar se é local ou online. */
+  naSala?: boolean;
   aoPersonagem: () => void;
   /** O visual da pista e das caçapas. */
   aoCustomizar?: () => void;
@@ -43,7 +45,7 @@ type Item = OpcaoDaTelaInicial;
 const URL_DO_PROJETO = "https://github.com/lucasherrerods/riffrush";
 const URL_DA_LANDING = "https://playriffrush.vercel.app";
 
-export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoMultiplayerLocal, aoPersonagem, aoCustomizar, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca, troca, estatica }: Props) {
+export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoMultiplayerLocal, naSala = false, aoPersonagem, aoCustomizar, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca, troca, estatica }: Props) {
   const [escolhendoMultiplayer, setEscolhendoMultiplayer] = useState(false);
   const [vendoTutoriais, setVendoTutoriais] = useState(false);
   const buscar: Item = { rotulo: "Buscar músicas", icone: Search, acao: aoBuscarMusicas };
@@ -55,11 +57,12 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
     { rotulo: "Tutoriais", icone: GraduationCap, acao: () => setVendoTutoriais(true) },
     ...(aoConfigurar ? [{ rotulo: "Configurações", icone: Settings2, acao: aoConfigurar }] : []),
   ];
+  const perguntar = !!aoMultiplayerLocal && !naSala;
   const itens: Item[] = noCelular
     ? [{ rotulo: "Entrar na sala", icone: Users, acao: aoMultijogador }, { rotulo: "Jogar sozinho", icone: Play, acao: aoJogar }, buscar, ...comuns]
     : [
         { rotulo: "Jogar", icone: Play, acao: aoJogar },
-        { rotulo: "Multiplayer", icone: Users, acao: aoMultiplayerLocal ? () => setEscolhendoMultiplayer(true) : aoMultijogador },
+        { rotulo: "Multiplayer", icone: Users, acao: perguntar ? () => setEscolhendoMultiplayer(true) : aoMultijogador },
         buscar,
         ...comuns,
       ];

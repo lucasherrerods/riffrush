@@ -66,10 +66,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         conta: conta.clone(),
         catalogo: catalogo.clone(),
     };
+    // Os amigos valem para o perfil (só amigos se veem) e para a lista de amigos.
+    let amizades = Arc::new(AmizadesPostgres(banco.clone()));
     let perfil = ServicosDoPerfil {
         repositorio: Arc::new(PerfilPostgres(banco.clone())),
         conta: conta.clone(),
         catalogo: catalogo.clone(),
+        amizades: amizades.clone(),
         url_publica: config.url_publica.clone(),
     };
     let segredo_do_relay = config.segredo_do_relay.as_ref().map(|s| Arc::new(s.clone().into_bytes()));
@@ -117,7 +120,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     mania::iniciar_trabalhador(servicos_do_mania.clone());
     let amizade = ServicosDeAmizade {
-        repositorio: Arc::new(AmizadesPostgres(banco.clone())),
+        repositorio: amizades.clone(),
         conta: conta.clone(),
         janelas: Default::default(),
     };

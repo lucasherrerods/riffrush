@@ -99,6 +99,15 @@ describe("TelaDePerfil em outro modo", () => {
     });
     const arquivo = () => new File(["x"], "eu.png", { type: "image/png" });
 
+    it("sem editor (o perfil de um amigo), mostra a capa sem nenhum botão de trocar ou remover", async () => {
+      render(<TelaDePerfil aoVoltar={() => {}} tituloDaMusica={tituloDaMusica} carregar={async () => ({ ...perfil, capa: "http://api/capa" })} editor={null} />);
+      await screen.findByRole("heading", { name: "Lucas" });
+      expect(screen.getByAltText("Capa do perfil")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /capa/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Trocar foto" })).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Arquivo da foto")).not.toBeInTheDocument();
+    });
+
     it("adiciona uma capa e mostra a nova no topo", async () => {
       const e = editor();
       render(<TelaDePerfil aoVoltar={() => {}} tituloDaMusica={tituloDaMusica} carregar={async () => perfil} editor={e} />);

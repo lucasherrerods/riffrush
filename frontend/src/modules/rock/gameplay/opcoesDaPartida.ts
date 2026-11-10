@@ -73,3 +73,15 @@ export interface JogadorLocal {
   opcoes: OpcoesDaPartida;
   aceitaEvento: (evento: Event) => boolean;
 }
+
+/** Opções que só mudam o que aparece em volta da pista: trocá-las no meio da partida não a recomeça. */
+const SO_DA_TELA: ReadonlySet<keyof OpcoesDaPartida> = new Set(["modoCompetitivo"]);
+
+const iguais = (a: unknown, b: unknown) =>
+  Object.is(a, b) || (Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((item, i) => Object.is(item, b[i])));
+
+/** Se a troca de `antes` para `depois` muda algo que a partida usa, e ela precisa recomeçar. */
+export function reiniciaAPartida(antes: OpcoesDaPartida, depois: OpcoesDaPartida) {
+  const chaves = new Set([...Object.keys(antes), ...Object.keys(depois)]) as Set<keyof OpcoesDaPartida>;
+  return [...chaves].some((chave) => !SO_DA_TELA.has(chave) && !iguais(antes[chave], depois[chave]));
+}

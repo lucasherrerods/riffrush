@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { PARTE_DA_TELA_DO_MODO, type PalcoCompartilhado } from "@/modules/menu";
-import { CartaoDaConta, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
+import { CartaoDaConta, PerfilDoAmigo, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { BotaoDeAmigos, PainelDeAmigos, useIdsDosAmigos } from "@/modules/amigos";
 import {
   ChatGlobal,
@@ -44,7 +44,7 @@ import { criarPlayerDoMania, faixasDaBiblioteca, playerDoMania } from "./player/
 import { FundoDoMania } from "./menu/FundoDoMania";
 import { MenuDoMania } from "./menu/MenuDoMania";
 
-type Tela = { nome: "menu" } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil" } | { nome: "online" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido };
+type Tela = { nome: "menu" } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil"; amigo?: string } | { nome: "online" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido };
 
 /** Um replay do ranking aberto para assistir: as entradas, os mods e a semente da partida, e de quem ela é. */
 type ReplayAssistido = ReplayDoMania & { nome: string };
@@ -99,7 +99,14 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
           transition={{ duration: 0.15 }}
           className="absolute inset-y-0 right-0 z-30 p-4 max-md:inset-x-0 max-md:p-2"
         >
-          <PainelDeAmigos aoFechar={() => setAmigosAbertos(false)} aoConvidar={(contaId, codigo) => presenca.convidar(contaId, codigo)} />
+          <PainelDeAmigos
+            aoFechar={() => setAmigosAbertos(false)}
+            aoConvidar={(contaId, codigo) => presenca.convidar(contaId, codigo)}
+            aoVerPerfil={(amigo) => {
+              setAmigosAbertos(false);
+              setTela({ nome: "perfil", amigo: amigo.conta_id });
+            }}
+          />
         </motion.div>
       )}
     </AnimatePresence>
@@ -354,6 +361,8 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
               rotuloDasMusicas="Mapas"
               abaDasMusicas={<AbaDosMapasMaisJogados nomeNaBiblioteca={nomeNaBiblioteca} />}
             />
+          ) : tela.nome === "perfil" && tela.amigo ? (
+            <PerfilDoAmigo contaId={tela.amigo} aoVoltar={() => setTela({ nome: "menu" })} tituloDaMusica={() => undefined} />
           ) : (
             <TelaDePerfil mod={souDaModeracao} aoVoltar={() => setTela({ nome: "menu" })} tituloDaMusica={() => undefined} estatisticas={<EstatisticasDoMania />} />
           )}

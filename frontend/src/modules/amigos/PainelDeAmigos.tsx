@@ -23,6 +23,8 @@ interface Props {
   aoConvidar: (contaId: string, codigo: string) => void;
   /** Abre a partida ao vivo do amigo, como na tela Online. */
   aoAssistir?: (pessoa: PessoaOnline) => void;
+  /** Abre o perfil do amigo. */
+  aoVerPerfil?: (amigo: PessoaDaAmizade) => void;
 }
 
 export function useAmigos() {
@@ -47,7 +49,7 @@ function agir(acao: (api: ApiDosAmigos, token: string) => Promise<unknown>, suce
 }
 
 /** A lista de amigos ao lado da tela: quem está online, pedidos e sugestões. */
-export function PainelDeAmigos({ aoFechar, salaParaConvidar, aoConvidar, aoAssistir }: Props) {
+export function PainelDeAmigos({ aoFechar, salaParaConvidar, aoConvidar, aoAssistir, aoVerPerfil }: Props) {
   const { listas, sugestoes } = useAmigos();
   const [aba, setAba] = useState("amigos");
   const [adicionando, setAdicionando] = useState(false);
@@ -83,7 +85,7 @@ export function PainelDeAmigos({ aoFechar, salaParaConvidar, aoConvidar, aoAssis
           <TabsTrigger value="sugestoes">Sugestões</TabsTrigger>
         </TabsList>
         <TabsContent value="amigos" className="flex min-h-0 flex-col gap-4">
-          {listas ? <AbaDeAmigos amigos={listas.amigos} salaParaConvidar={salaParaConvidar} aoConvidar={aoConvidar} aoAssistir={aoAssistir} /> : <Carregando />}
+          {listas ? <AbaDeAmigos amigos={listas.amigos} salaParaConvidar={salaParaConvidar} aoConvidar={aoConvidar} aoAssistir={aoAssistir} aoVerPerfil={aoVerPerfil} /> : <Carregando />}
         </TabsContent>
         <TabsContent value="solicitacoes" className="flex min-h-0 flex-col gap-4">
           {listas ? <AbaDePedidos recebidos={listas.recebidos} enviados={listas.enviados} bloqueados={listas.bloqueados} /> : <Carregando />}
@@ -113,7 +115,7 @@ export function Contador({ valor }: { valor: number }) {
 
 const Carregando = () => <p className="m-auto text-base text-texto-suave">Carregando...</p>;
 
-function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar, aoAssistir }: { amigos: PessoaDaAmizade[] } & Pick<Props, "salaParaConvidar" | "aoConvidar" | "aoAssistir">) {
+function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar, aoAssistir, aoVerPerfil }: { amigos: PessoaDaAmizade[] } & Pick<Props, "salaParaConvidar" | "aoConvidar" | "aoAssistir" | "aoVerPerfil">) {
   const presenca = usePresenca();
   const [busca, setBusca] = useState("");
   const [agora] = useState(() => new Date());
@@ -153,7 +155,7 @@ function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar, aoAssistir }: { ami
                 </Button>
               )}
               {conversar(amigo)}
-              <MenuDoAmigo pessoa={amigo} />
+              <MenuDoAmigo pessoa={amigo} aoVerPerfil={aoVerPerfil} />
             </LinhaDeAmigo>
           ))}
         </Secao>
@@ -161,7 +163,7 @@ function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar, aoAssistir }: { ami
           {offline.map((amigo) => (
             <LinhaDeAmigo key={amigo.conta_id} pessoa={amigo} modo={amigo.ultimo_modo} detalhe={vistoHa(amigo.visto_em, agora)}>
               {conversar(amigo)}
-              <MenuDoAmigo pessoa={amigo} />
+              <MenuDoAmigo pessoa={amigo} aoVerPerfil={aoVerPerfil} />
             </LinhaDeAmigo>
           ))}
         </Secao>
@@ -307,7 +309,7 @@ function BotaoDeCopiar({ texto }: { texto: string }) {
   );
 }
 
-function MenuDoAmigo({ pessoa }: { pessoa: PessoaDaAmizade }) {
+function MenuDoAmigo({ pessoa, aoVerPerfil }: { pessoa: PessoaDaAmizade; aoVerPerfil?: (amigo: PessoaDaAmizade) => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -316,6 +318,7 @@ function MenuDoAmigo({ pessoa }: { pessoa: PessoaDaAmizade }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        {aoVerPerfil && <DropdownMenuItem onSelect={() => aoVerPerfil(pessoa)}>Ver perfil</DropdownMenuItem>}
         <DropdownMenuItem onSelect={() => void agir((api, t) => api.desfazer(t, pessoa.conta_id), `${pessoa.nome} saiu da sua lista.`)}>Remover amigo</DropdownMenuItem>
         <DropdownMenuItem variant="perigo" onSelect={() => void agir((api, t) => api.bloquear(t, pessoa.conta_id), `${pessoa.nome} foi bloqueado.`)}>
           Bloquear
