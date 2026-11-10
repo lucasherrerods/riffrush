@@ -191,6 +191,11 @@ describe("App", () => {
     expect(opcoesRecebidas.at(-1)).toBe(antes);
   });
 
+  it("abre com a cortina de carregando por cima, até o perfil e a música ficarem prontos", () => {
+    abrir();
+    expect(screen.getByRole("status", { name: "Abrindo o jogo" })).toBeInTheDocument();
+  });
+
   it("na primeira partida, enquanto o código da tela de jogo chega, a entrada continua na tela em vez do spinner", async () => {
     carregandoAPartida.promessa = new Promise(() => {});
     try {

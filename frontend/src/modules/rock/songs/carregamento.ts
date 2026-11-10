@@ -108,15 +108,28 @@ async function carregarSng(musica: Musica, dificuldade: Dificuldade, instrumento
 
 const decodificados = criarCacheLimitado<Promise<AudioBuffer>>(MUSICAS_NA_MEMORIA);
 
-/** Áudio comum, importado ou embutido no jogo: decodifica uma vez e gera o chart pelos ataques do som. */
-async function carregarAudio(musica: Musica, bytes: () => Promise<ArrayBuffer>, dificuldade: Dificuldade): Promise<MusicaCarregada> {
+/** Áudio comum, importado ou embutido no jogo: decodifica uma vez só. */
+function decodificar(musica: Musica, bytes: () => Promise<ArrayBuffer>) {
   let decodificado = decodificados.ler(musica.id);
   if (!decodificado) {
     decodificado = bytes().then((lidos) => obterContextoDeAudio().decodeAudioData(lidos));
     decodificados.guardar(musica.id, decodificado);
     decodificado.catch(() => decodificados.apagar(musica.id));
   }
-  const audio = await decodificado;
+  return decodificado;
+}
+
+/** De onde vêm os bytes do áudio comum: o arquivo importado ou o embutido no jogo. */
+function bytesDoAudio(musica: Musica): () => Promise<ArrayBuffer> {
+  const { arquivo, audioEmbutido } = musica;
+  if (arquivo) return () => arquivo.arrayBuffer();
+  if (!audioEmbutido) throw new Error(`${musica.titulo} não tem áudio.`);
+  return async () => (await (await fetch(audioEmbutido)).blob()).arrayBuffer();
+}
+
+/** Gera o chart pelos ataques do som. */
+async function carregarAudio(musica: Musica, dificuldade: Dificuldade): Promise<MusicaCarregada> {
+  const audio = await decodificar(musica, bytesDoAudio(musica));
   return {
     audio,
     notas: chartDoAudio(audio.getChannelData(0), audio.sampleRate, dificuldade),
@@ -126,10 +139,14 @@ async function carregarAudio(musica: Musica, bytes: () => Promise<ArrayBuffer>, 
 }
 
 export function carregarMusica(musica: Musica, dificuldade: Dificuldade, instrumento: Instrumento = "guitarra") {
-  const { arquivo, audioEmbutido } = musica;
-  if (arquivo) return musica.sng ? carregarSng(musica, dificuldade, instrumento) : carregarAudio(musica, () => arquivo.arrayBuffer(), dificuldade);
-  if (!audioEmbutido) throw new Error(`${musica.titulo} não tem áudio.`);
-  return carregarAudio(musica, async () => (await (await fetch(audioEmbutido)).blob()).arrayBuffer(), dificuldade);
+  if (musica.arquivo && musica.sng) return carregarSng(musica, dificuldade, instrumento);
+  return carregarAudio(musica, dificuldade);
+}
+
+/** Só o áudio, para o player dos menus: gerar o chart da música inteira a cada troca de mapa seria trabalho jogado fora. */
+export async function carregarAudioDaMusica(musica: Musica): Promise<AudioBuffer> {
+  if (musica.arquivo && musica.sng) return (await abrirSng(musica)).audio;
+  return decodificar(musica, bytesDoAudio(musica));
 }
 
 function musicaDoNome(arquivo: File): Musica {

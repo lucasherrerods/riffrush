@@ -60,6 +60,19 @@ describe("carregarMusica (embutidas)", () => {
     expect(expert.audio).toBe(facil.audio);
     expect(buscar).toHaveBeenCalledTimes(1);
   });
+
+  it("para o player dos menus, devolve só o áudio, sem gerar o chart, e o mesmo da partida", async () => {
+    vi.stubGlobal("fetch", buscarAudio());
+    vi.doMock("./chartAutomatico", () => ({ chartDoAudio: vi.fn(() => []) }));
+    const { carregarAudioDaMusica, carregarMusica } = await importar();
+    const { chartDoAudio } = await import("./chartAutomatico");
+    const { MUSICAS_EMBUTIDAS } = await import("./catalogo");
+    const audio = await carregarAudioDaMusica(MUSICAS_EMBUTIDAS[0]);
+    expect(audio.duration).toBeCloseTo(2);
+    expect(chartDoAudio).not.toHaveBeenCalled();
+    expect((await carregarMusica(MUSICAS_EMBUTIDAS[0], "facil")).audio).toBe(audio);
+    vi.doUnmock("./chartAutomatico");
+  });
 });
 
 describe("importarArquivo", () => {
