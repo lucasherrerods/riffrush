@@ -2,6 +2,14 @@ import { render } from "@testing-library/react";
 import { Fundo } from "./Fundo";
 
 describe("Fundo", () => {
+  it("com a capa da música que toca, mostra a capa no lugar do palco e deixa só a grade do chão", () => {
+    const { container, getByTestId } = render(<Fundo capa={{ chave: "m", imagem: <img data-testid="capa" alt="" /> }} />);
+    expect(getByTestId("capa")).toBeInTheDocument();
+    expect(container.querySelectorAll("[data-parte='holofote']")).toHaveLength(0);
+    expect(container.querySelectorAll("[data-parte='particula']")).toHaveLength(0);
+    expect(container.querySelector("[data-parte='grade']")).toBeInTheDocument();
+  });
+
   it("anima partículas nos menus", () => {
     const { container } = render(<Fundo />);
     expect(container.querySelectorAll("[data-parte='particula']").length).toBeGreaterThan(0);
