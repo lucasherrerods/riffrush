@@ -1,3 +1,4 @@
+import { guardarPreferenciasDeAudio, lerPreferenciasDeAudio } from "./armazenamento";
 import { obterContextoDeAudio } from "./contexto";
 
 const PASSO = 0.05;
@@ -16,7 +17,8 @@ export interface EstadoDoVolume {
   peloAtalho: number;
 }
 
-let estadoAtual: EstadoDoVolume = { volume: 1, peloAtalho: 0 };
+// Ao abrir, o volume já é o salvo, seja qual for o modo que abriu primeiro.
+let estadoAtual: EstadoDoVolume = { volume: lerPreferenciasDeAudio().volumeGeral, peloAtalho: 0 };
 const ouvintes = new Set<() => void>();
 let mestre: GainNode | null = null;
 let contextoDoMestre: AudioContext | null = null;
@@ -34,6 +36,7 @@ export const volumeGeral = {
 
 function mudar(volume: number, peloAtalho: boolean) {
   estadoAtual = { volume, peloAtalho: estadoAtual.peloAtalho + (peloAtalho ? 1 : 0) };
+  guardarPreferenciasDeAudio({ volumeGeral: volume });
   if (mestre && contextoDoMestre) mestre.gain.setTargetAtTime(volume, contextoDoMestre.currentTime, SUAVIZACAO);
   for (const ouvinte of ouvintes) ouvinte();
 }

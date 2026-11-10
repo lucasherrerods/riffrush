@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
-import { Ellipsis, FileAudio, Flame, Info, ListOrdered, RotateCcw, Search, Trash2, Trophy } from "lucide-react";
+import { FileAudio, Flame, Info, ListOrdered, RotateCcw, Search, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import type { Personagem } from "@/modules/rock/character";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
@@ -10,10 +10,9 @@ import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { cn } from "@/shared/lib/utils";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu";
 import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/shared/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/shared/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import {
   AvisoDaLista,
@@ -26,6 +25,7 @@ import {
   ChipsDeMods,
   FiltrosDaBiblioteca,
   FundoDaSelecao,
+  MenuDeApagar,
   RodapeDeComandos,
   TituloDaSelecao,
   alternarFavorita,
@@ -158,20 +158,21 @@ export function TelaDeSelecao(props: Props) {
   const [removendo, setRemovendo] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
   const podeRemover = ehImportada(musica);
-  const confirmarRemocao = () => {
-    setRemovendo(false);
-    aoRemover(musica);
-  };
 
   const estreita = useTelaEstreita();
   // No celular, Detalhes e Ranking abrem em janelas em vez de abas.
   const [janela, setJanela] = useState<"detalhes" | "ranking" | null>(null);
 
+  const voltar = () => {
+    efeito("voltar");
+    aoVoltar();
+  };
+
   useTeclado((evento) => {
     // Com o modal ou o menu de opções aberto, as teclas são dele: Esc o fecha, sem voltar ao menu.
     if (removendo || menuAberto || janela) return;
     // Com o foco na busca, as letras são dela.
-    if (evento.target instanceof HTMLInputElement && evento.code !== "ArrowDown" && evento.code !== "ArrowUp" && evento.code !== "Enter" && evento.code !== "Escape") return;
+    if (evento.target instanceof HTMLInputElement && evento.code !== "ArrowDown" && evento.code !== "ArrowUp" && evento.code !== "Enter") return;
     if (evento.code === "Delete" && podeRemover) return setRemovendo(true);
     if (vazia && (evento.code === "KeyF" || evento.code === "Enter")) return;
     if (evento.code === "KeyF") return alternarFavoritaAtual();
@@ -192,9 +193,8 @@ export function TelaDeSelecao(props: Props) {
     } else if (evento.code === "Enter") {
       evento.preventDefault();
       jogar();
-    } else if (evento.code === "Escape" || evento.code === "Backspace") {
-      efeito("voltar");
-      aoVoltar();
+    } else if (evento.code === "Backspace" && !(evento.target instanceof HTMLInputElement)) {
+      voltar();
     }
   });
 
@@ -307,18 +307,16 @@ export function TelaDeSelecao(props: Props) {
       aoGirar={andar}
       menuDaSelecionada={
         podeRemover && (
-          <DropdownMenu open={menuAberto} onOpenChange={setMenuAberto}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label={`Opções de ${musica.titulo}`}>
-                <Ellipsis />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem variant="perigo" onSelect={() => setRemovendo(true)}>
-                <Trash2 /> Apagar música
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <MenuDeApagar
+            nome={musica.titulo}
+            rotuloDoItem="Apagar música"
+            descricao="A música e o arquivo salvo serão apagados deste aparelho. Os recordes continuam guardados. Isso não pode ser desfeito."
+            menuAberto={menuAberto}
+            aoMudarMenu={setMenuAberto}
+            confirmando={removendo}
+            aoMudarConfirmando={setRemovendo}
+            aoConfirmar={() => aoRemover(musica)}
+          />
         )
       }
     />
@@ -328,27 +326,8 @@ export function TelaDeSelecao(props: Props) {
     </AvisoDaLista>
   );
 
-  const modais = (
-    <>
-      <Dialog open={removendo} onOpenChange={setRemovendo}>
-        <DialogContent>
-          <DialogTitle>Remover {musica.titulo}?</DialogTitle>
-          <DialogDescription>A música e o arquivo salvo serão apagados deste aparelho. Os recordes continuam guardados. Isso não pode ser desfeito.</DialogDescription>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="ghost">Cancelar</Button>
-            </DialogClose>
-            <Button variant="destructive" onClick={confirmarRemocao}>
-              <Trash2 className="opacity-70" /> Remover
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-
   const cabecalho = (
-    <BarraDaSelecao titulo="Selecione a música" aoVoltar={aoVoltar} abaixo={mods}>
+    <BarraDaSelecao titulo="Selecione a música" aoVoltar={voltar} abaixo={mods}>
       <BotaoDaSelecao asChild>
         <label className="">
           <FileAudio className="opacity-70" />
@@ -395,7 +374,6 @@ export function TelaDeSelecao(props: Props) {
           {lista}
         </div>
         <footer className="flex flex-col bg-superficie p-3">{tocar}</footer>
-        {modais}
         <Dialog open={janela !== null} onOpenChange={(aberto) => !aberto && setJanela(null)}>
           {/* O Esc só fecha a janela: sem passar adiante, a tela não volta ao menu. */}
           <DialogContent aria-describedby={undefined} onEscapeKeyDown={(evento) => evento.stopPropagation()}>
@@ -418,7 +396,7 @@ export function TelaDeSelecao(props: Props) {
     <div className="relative isolate flex h-full flex-col">
       {/* A capa da música, borrada, pinta o fundo da tela e troca junto com a seleção. */}
       <FundoDaSelecao chave={vazia ? undefined : musica.id}>
-        <Capa musica={musica} decorativa className="size-full scale-110 blur-3xl" />
+        <Capa musica={musica} decorativa className="size-full scale-105 blur-md" />
       </FundoDaSelecao>
 
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:gap-4 max-md:p-4">
@@ -493,7 +471,6 @@ export function TelaDeSelecao(props: Props) {
           { teclas: rotuloDoComando("voltar", dispositivo), rotulo: "Voltar" },
         ]}
       />
-      {modais}
     </div>
   );
 }

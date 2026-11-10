@@ -1,5 +1,4 @@
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/shared/ui/button";
+import { BotaoVoltar } from "@/shared/ui/BotaoVoltar";
 
 interface PropsDaBarra {
   /** Só para leitores de tela. */
@@ -16,11 +15,7 @@ export function BarraDaSelecao({ titulo, aoVoltar, abaixo, children }: PropsDaBa
   return (
     <header className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        {aoVoltar && (
-          <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar" className="shrink-0">
-            <ArrowLeft aria-hidden />
-          </Button>
-        )}
+        {aoVoltar && <BotaoVoltar aoVoltar={aoVoltar} />}
         {titulo && <h1 className="sr-only">{titulo}</h1>}
         <div className="flex min-w-0 items-center justify-end gap-2">{children}</div>
       </div>
@@ -35,14 +30,16 @@ interface PropsDoTitulo {
   /** Uma linha menor abaixo (ex.: "Importado · sem XP nem ranking"). */
   aviso?: React.ReactNode;
   capa?: React.ReactNode;
+  /** Uma imagem larga acima do título, na largura do cartão (ex.: o fundo do mapa no Mania). */
+  faixa?: React.ReactNode;
   /** À direita do título (ex.: favoritar). */
   acao?: React.ReactNode;
 }
 
 /** O cartão com o nome do que está selecionado. */
-export function TituloDaSelecao({ titulo, subtitulo, aviso, capa, acao }: PropsDoTitulo) {
-  return (
-    <div className="chapa flex items-center gap-4 bg-superficie-elevada/95 px-4 py-3">
+export function TituloDaSelecao({ titulo, subtitulo, aviso, capa, faixa, acao }: PropsDoTitulo) {
+  const linha = (
+    <div className="flex items-center gap-4 px-4 py-3">
       {capa}
       <div className="min-w-0 flex-1">
         <h2 className="truncate font-titulo text-3xl tracking-wide uppercase max-md:text-2xl">{titulo}</h2>
@@ -50,6 +47,12 @@ export function TituloDaSelecao({ titulo, subtitulo, aviso, capa, acao }: PropsD
         {aviso && <p className="text-sm text-texto-suave">{aviso}</p>}
       </div>
       {acao}
+    </div>
+  );
+  return (
+    <div className="chapa overflow-hidden bg-superficie-elevada/95">
+      {faixa && <div className="h-36 w-full bordas-esfumadas max-md:hidden">{faixa}</div>}
+      {linha}
     </div>
   );
 }

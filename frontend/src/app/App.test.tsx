@@ -8,7 +8,7 @@ import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { iniciarControle } from "@/modules/gamepad";
 import { MUSICAS_EMBUTIDAS } from "@/modules/rock/songs";
-import { useSeguirMusica } from "@/modules/rock/player";
+import { playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
 import { sessaoDaConta } from "@/modules/conta";
 import { avisar } from "@/shared/ui/avisos";
 import { definirVolumeGeral, lerVolumeGeral } from "@/modules/audio";
@@ -92,9 +92,10 @@ vi.mock("@/modules/player", async (original) => ({
   CabecalhoDoPlayerDeMusica: ({ children }: { children?: ReactNode }) => <>{children}</>,
   indiceVizinho: vi.fn(),
 }));
-vi.mock("@/modules/rock/player", () => ({
+vi.mock("@/modules/rock/player", async (original) => ({
+  musicaDeAbertura: (await original<typeof import("@/modules/rock/player/musicaDeAbertura")>()).musicaDeAbertura,
   useSeguirMusica: vi.fn(),
-  playerDeMusica: { definirFila: vi.fn(), definirNavegacao: vi.fn(), seguir: vi.fn(), definirVolume: vi.fn(), suspender: vi.fn(), estado: () => ({ musica: null }) },
+  playerDeMusica: { definirFila: vi.fn(), definirNavegacao: vi.fn(), seguir: vi.fn(), seguirMapa: vi.fn(), sortearInicio: vi.fn(), definirVolume: vi.fn(), suspender: vi.fn(), estado: () => ({ musica: null }) },
 }));
 
 vi.stubGlobal("AudioContext", AudioContextFalso);
@@ -109,6 +110,7 @@ beforeEach(() => {
   definirRecordes([]);
   vi.mocked(sessaoDaConta.token).mockReturnValue(null);
   biblioteca.salvas = [];
+  vi.mocked(playerDeMusica.seguirMapa).mockClear();
   biblioteca.guardar.mockClear();
   // Os avisos do sonner ficam num estado global e passariam de um teste para o outro.
   avisar.dismiss();
@@ -117,14 +119,11 @@ beforeEach(() => {
 });
 
 describe("App", () => {
-  it("o volume geral mudado de qualquer lugar (atalho ou cabeçalho) fica salvo e volta ao abrir de novo", () => {
-    const { unmount } = render(<App />);
-    act(() => definirVolumeGeral(0.35));
-    expect(JSON.parse(localStorage.getItem("riffrush.configuracoes")!).volumeGeral).toBe(0.35);
-    unmount();
-    act(() => definirVolumeGeral(1));
+  it("o volume geral mudado de qualquer lugar (atalho ou cabeçalho) fica salvo no áudio global, o mesmo dos dois modos", () => {
     render(<App />);
+    act(() => definirVolumeGeral(0.35));
     expect(lerVolumeGeral()).toBe(0.35);
+    expect(JSON.parse(localStorage.getItem("riffrush.audio")!).volumeGeral).toBe(0.35);
   });
 
   it("começa no menu principal", () => {
@@ -146,6 +145,14 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { name: "Selecione a música" })).toBeInTheDocument();
     await usuario.keyboard("{Escape}");
     expect(await screen.findByRole("heading", { name: "Riff Rush Rock" })).toBeInTheDocument();
+  });
+
+  it("na seleção, a capa borrada é o fundo inteiro, sem os desenhos do menu por trás", async () => {
+    const usuario = abrir();
+    expect(document.querySelector("[data-parte='holofote']")).not.toBeNull();
+    await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+    await screen.findByRole("heading", { name: "Selecione a música" });
+    expect(document.querySelector("[data-parte='holofote']")).toBeNull();
   });
 
   it("Buscar músicas abre a tela de busca e Esc volta ao menu", async () => {
@@ -249,6 +256,18 @@ describe("App", () => {
     const usuario = abrir();
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     expect(await screen.findByRole("button", { name: /Salva de Ontem/ })).toBeInTheDocument();
+  });
+
+  it("com músicas baixadas, o menu abre tocando uma delas, não a do jogo", async () => {
+    biblioteca.salvas = [{ ...MUSICAS_EMBUTIDAS[0], id: "arquivo:salva", titulo: "Salva de Ontem", arquivo: new File(["x"], "salva.wav") }];
+    abrir();
+    await waitFor(() => expect(playerDeMusica.seguirMapa).toHaveBeenCalledWith(expect.objectContaining({ id: "arquivo:salva" })));
+    expect(playerDeMusica.seguirMapa).toHaveBeenCalledTimes(1);
+  });
+
+  it("sem músicas baixadas, o menu abre tocando a música do jogo", async () => {
+    abrir();
+    await waitFor(() => expect(playerDeMusica.seguirMapa).toHaveBeenCalledWith(expect.objectContaining({ id: MUSICAS_EMBUTIDAS[0].id })));
   });
 
   it("a música importada fica salva na biblioteca", async () => {

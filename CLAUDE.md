@@ -48,10 +48,15 @@ Valem para o frontend e para o backend.
 - Se o problema tiver a ver com a mudança em andamento, ele é parte dela: corrija no mesmo PR e não anote.
 - Quando um item de `pontos-instaveis-para-verificar-depois.md` for resolvido apague o item do arquivo na mesma correção do PR.
 
+### Sessões
+- Pedido sem relação com o trabalho da sessão atual: sugira abrir uma sessão nova para ele em vez de fazer na mesma.
+
 ### Git
 - Commits convencionais, curtos e em português: `feat: adiciona sustain nas notas`, `fix: corrige atraso do input`, `test: cobre parser de .chart`.
 - Nunca adicione co-autor nos commits nem assinatura nas descrições de PR.
 - Um PR por funcionalidade ou pedido, sem misturar contextos. Abra o PR ao terminar.
+- Ajustes pedidos em sequência (tamanho, cor, posição...) ficam só no código local. Commit e PR só depois que quem pediu aprovar o resultado, num commit só, e não um commit por mensagem.
+- Ao terminar um conjunto de mudanças relevante (uma funcionalidade, uma correção ou um passo completo do pedido), sugira criar um commit. Pequenos ajustes, como tamanho, cor ou posição, não pedem essa sugestão.
 - A descrição do PR é escrita para quem vai revisar o código, não como resposta para quem pediu. Escreva como um engenheiro sênior explicando a mudança de forma simples: o problema, o que mudou e por quê, como foi testado e o que precisa no deploy. Nada de falar com o leitor ("você", "se você já rodou..."), recados da conversa ou instruções pessoais.
 - Nada que comprometa a segurança entra em commit, mensagem de commit, título ou descrição de PR: segredos, tokens, chaves, senhas, valores de `.env`, fichas ou assinaturas reais, e-mails e ids de contas reais, endereços internos ou o passo a passo de uma falha ainda não corrigida. Em exemplos, use valores fictícios (`'...'`, `alguem@exemplo.com`). O repositório é público, e o que entra no histórico do git não sai mais.
 - Cada PR parte da `main` atualizada.

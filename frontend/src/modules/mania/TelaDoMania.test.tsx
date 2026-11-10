@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { obterContextoDeAudio } from "@/modules/audio";
+import { obterContextoDeAudio, preferenciasDeAudio } from "@/modules/audio";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { osu, pacote } from "@/test/beatmaps";
 import type { BibliotecaDoMania, ConjuntoSalvo } from "./beatmaps/biblioteca";
@@ -92,6 +92,24 @@ describe("TelaDoMania", () => {
     expect(await screen.findByRole("region", { name: "Seleção de mapas" })).toBeInTheDocument();
   });
 
+  // Bug: voltar da partida abria a seleção no primeiro conjunto, e a trilha trocava de música.
+  it("depois da partida, a seleção volta no mesmo conjunto", async () => {
+    const { usuario } = await abrir();
+    await screen.findByText(/Nenhum mapa ainda/);
+    const outro = new File([new Uint8Array(pacote({ "b.osu": osu({ titulo: "Outra", tituloUnicode: "Outra", conjuntoId: 8, beatmapId: 12 }), "audio.mp3": new Uint8Array([1]) }))], "outra.osz");
+    await usuario.upload(screen.getByLabelText("Arquivos .osz"), [arquivoOsz(), outro]);
+    await screen.findByRole("heading", { level: 2 });
+    const tituloAntes = screen.getByRole("heading", { level: 2 }).textContent;
+    fireEvent.keyDown(window, { code: "ArrowDown" });
+    const escolhido = screen.getByRole("heading", { level: 2 }).textContent;
+    expect(escolhido).not.toBe(tituloAntes);
+    await usuario.click(screen.getByRole("button", { name: /TOCAR/ }));
+    expect(await screen.findByLabelText("Pista do Mania")).toBeInTheDocument();
+    fireEvent.keyDown(window, { code: "Escape" });
+    expect(await screen.findByRole("region", { name: "Seleção de mapas" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(escolhido);
+  });
+
   it("Treinar abre o mapa na escolha das partes, sem jogar o mapa inteiro", async () => {
     const { usuario } = await abrir();
     await screen.findByText(/Nenhum mapa ainda/);
@@ -163,6 +181,21 @@ describe("TelaDoMania", () => {
     expect(screen.getByRole("button", { name: "alavanca" })).toBeInTheDocument();
     await usuario.click(screen.getByRole("button", { name: "Buscar mapas" }));
     expect(await screen.findByRole("heading", { name: "Buscar mapas" })).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Voltar" }));
+    expect(screen.getByRole("navigation", { name: "Menu do Mania" })).toBeInTheDocument();
+  });
+
+  it("as configurações abrem numa tela própria, e o áudio mudado nela é o global, o mesmo do Rock", async () => {
+    const biblioteca = bibliotecaNaMemoria();
+    render(<TelaDoMania alavanca={<button type="button">alavanca</button>} abrirBiblioteca={async () => biblioteca} />);
+    const usuario = userEvent.setup();
+    await usuario.click(screen.getByRole("button", { name: "Configurações" }));
+    expect(screen.getByRole("heading", { name: "Configurações" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Menu do Mania" })).not.toBeInTheDocument();
+    await usuario.click(screen.getByRole("tab", { name: /Áudio/ }));
+    const antes = preferenciasDeAudio.estado().volumeDosEfeitos;
+    fireEvent.keyDown(screen.getByRole("slider", { name: "Volume dos efeitos" }), { key: "ArrowLeft" });
+    expect(preferenciasDeAudio.estado().volumeDosEfeitos).toBeCloseTo(antes - 0.05);
     await usuario.click(screen.getByRole("button", { name: "Voltar" }));
     expect(screen.getByRole("navigation", { name: "Menu do Mania" })).toBeInTheDocument();
   });

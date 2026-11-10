@@ -101,3 +101,38 @@ it("a Aleatória sorteia com as teclas do filtro e a seleção vai para o mapa q
   rerender(<TelaDeSelecaoMania {...props} selecionado="c" />);
   expect(titulo()).toBe("Gama");
 });
+
+// Bug: o Esc não voltava ao menu na seleção do Mania.
+it("o Esc volta para a tela anterior", () => {
+  const aoVoltar = vi.fn();
+  render(<TelaDeSelecaoMania conjuntos={conjuntos} mods={0} aoMudarMods={vi.fn()} aoImportar={vi.fn()} aoJogar={vi.fn()} aoVoltar={aoVoltar} />);
+  fireEvent.keyDown(window, { code: "Escape" });
+  expect(aoVoltar).toHaveBeenCalledOnce();
+});
+
+it("avisa o conjunto selecionado a cada troca, para o player tocar a música dele", () => {
+  const aoMudarSelecao = vi.fn();
+  render(<TelaDeSelecaoMania conjuntos={conjuntos} mods={0} aoMudarMods={vi.fn()} aoImportar={vi.fn()} aoJogar={vi.fn()} aoMudarSelecao={aoMudarSelecao} />);
+  expect(aoMudarSelecao).toHaveBeenLastCalledWith("a");
+  fireEvent.keyDown(window, { code: "ArrowDown" });
+  expect(aoMudarSelecao).toHaveBeenLastCalledWith("b");
+});
+
+it("o menu de opções apaga o mapa selecionado depois de confirmar", async () => {
+  const aoRemover = vi.fn();
+  const usuario = userEvent.setup();
+  render(<TelaDeSelecaoMania conjuntos={conjuntos} mods={0} aoMudarMods={vi.fn()} aoImportar={vi.fn()} aoJogar={vi.fn()} aoRemover={aoRemover} />);
+  await usuario.click(screen.getByRole("button", { name: "Opções de Alfa" }));
+  await usuario.click(screen.getByRole("menuitem", { name: /Apagar mapa/ }));
+  await usuario.click(screen.getByRole("button", { name: "Remover" }));
+  expect(aoRemover).toHaveBeenCalledWith(expect.objectContaining({ id: "a" }));
+});
+
+it("com a confirmação aberta, o Enter não joga o mapa", async () => {
+  const aoJogar = vi.fn();
+  const usuario = userEvent.setup();
+  render(<TelaDeSelecaoMania conjuntos={conjuntos} mods={0} aoMudarMods={vi.fn()} aoImportar={vi.fn()} aoJogar={aoJogar} aoRemover={vi.fn()} />);
+  await usuario.click(screen.getByRole("button", { name: "Opções de Alfa" }));
+  fireEvent.keyDown(window, { code: "Enter" });
+  expect(aoJogar).not.toHaveBeenCalled();
+});

@@ -4,7 +4,7 @@ use std::time::Duration;
 use riffrush_api::modules::amizade::{AmizadesPostgres, ServicosDeAmizade};
 use riffrush_api::modules::catalogo::{CatalogoPostgres, Encore, ServicosDoCatalogo};
 use riffrush_api::modules::conta::{ContasPostgres, CredenciaisDoGoogle, GeradorAleatorio, Google, RelogioDoSistema, ServicosDaConta};
-use riffrush_api::modules::conversa::{ConversasPostgres, EntregaPeloRelay, ServicosDeConversa};
+use riffrush_api::modules::conversa::{CifraDasMensagens, ConversasPostgres, EntregaPeloRelay, ServicosDeConversa};
 use riffrush_api::modules::mania::{self, CredenciaisDoOsu, ManiaPostgres, Osu, ServicosDoMania};
 use riffrush_api::modules::moderacao::{ModeracaoPostgres, RelayHttp, ServicosDeModeracao};
 use riffrush_api::modules::perfil::{PerfilPostgres, ServicosDoPerfil};
@@ -124,8 +124,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         conta: conta.clone(),
         janelas: Default::default(),
     };
+    let cifra = Arc::new(CifraDasMensagens::da_chave(&config.chave_das_mensagens)?);
+    let conversas = Arc::new(ConversasPostgres::nova(banco.clone(), cifra));
+    // As mensagens guardadas antes da cifra são cifradas aqui, uma vez só.
+    let cifradas = conversas.cifrar_as_antigas().await.map_err(|e| e.0)?;
+    if cifradas > 0 {
+        tracing::info!(cifradas, "mensagens privadas antigas cifradas");
+    }
     let conversa = ServicosDeConversa {
-        repositorio: Arc::new(ConversasPostgres(banco.clone())),
+        repositorio: conversas,
         amizades: amizade.repositorio.clone(),
         entrega: Arc::new(EntregaPeloRelay(relay)),
         conta: conta.clone(),

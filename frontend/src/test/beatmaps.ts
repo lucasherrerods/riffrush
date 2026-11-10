@@ -1,7 +1,7 @@
 import { strToU8, zipSync } from "fflate";
 
 /** Um .osu do modo mania pequeno, com uma nota simples e uma longa. */
-export function osu({ dificuldade = "Hard", teclas = 4, modo = 3, audio = "audio.mp3", fundo = "fundo.jpg", beatmapId = 11 } = {}) {
+export function osu({ dificuldade = "Hard", teclas = 4, modo = 3, audio = "audio.mp3", fundo = "fundo.jpg", beatmapId = 11, titulo = "Musica", tituloUnicode = "Música", conjuntoId = 7 } = {}) {
   return `osu file format v14
 
 [General]
@@ -10,14 +10,14 @@ PreviewTime: 5000
 Mode: ${modo}
 
 [Metadata]
-Title:Musica
-TitleUnicode:Música
+Title:${titulo}
+TitleUnicode:${tituloUnicode}
 Artist:Banda
 ArtistUnicode:Banda
 Creator:Mapper
 Version:${dificuldade}
 BeatmapID:${beatmapId}
-BeatmapSetID:7
+BeatmapSetID:${conjuntoId}
 
 [Difficulty]
 HPDrainRate:7
