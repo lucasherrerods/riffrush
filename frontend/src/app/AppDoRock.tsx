@@ -7,7 +7,7 @@ import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 import { EntradaDaPartida, TelaDeJogo, type JogadorLocal, type Resultado, desempacotarReplay, type Replay, type OpcoesDaPartida } from "@/modules/rock/gameplay";
 import { ProgressoDaImportacao, SoltarParaImportar, TelaDeSelecao, juntarMusicas, semAudio, useBiblioteca, useImportacao } from "@/modules/rock/library";
 import { Fundo, MenuPrincipal, PARTE_DA_TELA_DO_MODO, type PalcoCompartilhado } from "@/modules/menu";
-import { CartaoDaConta, ExcluirConta, GanhoDeXp, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
+import { CartaoDaConta, ExcluirConta, GanhoDeXp, PerfilDoAmigo, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { CabecalhoDoPlayerDeMusica, indiceVizinho, type FaixaDoPlayer, type PlayerDeMusica } from "@/modules/player";
 import { playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
 import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa, estaEmTelaCheia, modoDoF11 } from "@/modules/platform";
@@ -92,6 +92,8 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
   const [emRede, setEmRede] = useState<PartidaEmRede | null>(null);
   const [voltarDoPersonagemPara, setVoltarDoPersonagemPara] = useState<Tela>("menu");
   const [voltarDoPerfilPara, setVoltarDoPerfilPara] = useState<Tela>("menu");
+  /** Com ele, a tela de perfil mostra a desse amigo em vez da própria. */
+  const [amigoNoPerfil, setAmigoNoPerfil] = useState<string | null>(null);
   const [voltarDasConfiguracoesPara, setVoltarDasConfiguracoesPara] = useState<Tela>("menu");
   const [voltarDaBuscaPara, setVoltarDaBuscaPara] = useState<Tela>("menu");
   const [espectando, setEspectando] = useState<PessoaOnline | null>(null);
@@ -503,6 +505,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
               mod={souDaModeracao}
               aoConfigurar={abrirConfiguracoes}
               aoVerPerfil={() => {
+                setAmigoNoPerfil(null);
                 if (tela === "perfil") return;
                 setVoltarDoPerfilPara(tela);
                 setTela("perfil");
@@ -686,7 +689,10 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 }}
               />
             )}
-            {tela === "perfil" && (
+            {tela === "perfil" && amigoNoPerfil && (
+              <PerfilDoAmigo contaId={amigoNoPerfil} aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />
+            )}
+            {tela === "perfil" && !amigoNoPerfil && (
               <TelaDePerfil mod={souDaModeracao} aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />
             )}
             {tela === "configuracoes" && (
@@ -809,6 +815,12 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 aoConvidar={(contaId, codigo) => presenca.convidar(contaId, codigo)}
                 // Dentro de uma sala, assistir tiraria a pessoa dela.
                 aoAssistir={conexao.sala ? undefined : assistir}
+                aoVerPerfil={(amigo) => {
+                  setAmigosAbertos(false);
+                  setAmigoNoPerfil(amigo.conta_id);
+                  if (tela !== "perfil") setVoltarDoPerfilPara(tela);
+                  setTela("perfil");
+                }}
               />
             </motion.div>
           )}

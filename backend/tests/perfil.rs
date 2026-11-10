@@ -142,6 +142,15 @@ async fn a_rota_esta_no_openapi() {
     let (app, _) = app().await;
     let (_, corpo) = chamar(&app, "/openapi.json", None).await;
     assert!(corpo["paths"]["/eu/perfil"]["get"].is_object());
+    assert!(corpo["paths"]["/amigos/{conta_id}/perfil"]["get"].is_object());
+}
+
+#[tokio::test]
+async fn perfil_de_quem_nao_e_amigo_e_proibido_e_sem_token_e_401() {
+    let (app, token) = app().await;
+    let caminho = format!("/amigos/{}/perfil", uuid::Uuid::new_v4());
+    assert_eq!(chamar(&app, &caminho, Some(&token)).await.0, StatusCode::FORBIDDEN);
+    assert_eq!(chamar(&app, &caminho, None).await.0, StatusCode::UNAUTHORIZED);
 }
 
 #[tokio::test]

@@ -102,6 +102,21 @@ describe("PainelDeAmigos", () => {
     expect(conversasFalsas.enviar).toHaveBeenCalledWith("r", "joga depois?");
   });
 
+  it("no menu do amigo, Ver perfil abre o perfil dele", async () => {
+    const aoVerPerfil = vi.fn();
+    const { usuario } = abrir({ aoVerPerfil });
+    await usuario.click(await screen.findByRole("button", { name: "Mais opções de RafaBass" }));
+    await usuario.click(await screen.findByRole("menuitem", { name: "Ver perfil" }));
+    expect(aoVerPerfil).toHaveBeenCalledWith(expect.objectContaining({ conta_id: "r", nome: "RafaBass" }));
+  });
+
+  it("sem quem abra o perfil, o menu do amigo não oferece Ver perfil", async () => {
+    const { usuario } = abrir();
+    await usuario.click(await screen.findByRole("button", { name: "Mais opções de RafaBass" }));
+    await screen.findByRole("menuitem", { name: "Remover amigo" });
+    expect(screen.queryByRole("menuitem", { name: "Ver perfil" })).not.toBeInTheDocument();
+  });
+
   it("a busca filtra pelo nome", async () => {
     const { usuario } = abrir();
     await usuario.type(await screen.findByRole("textbox", { name: "Buscar amigos" }), "rafa");

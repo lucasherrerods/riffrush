@@ -13,7 +13,7 @@ class Memoria {
 
 function montar(api: Partial<ApiDaConta> = {}, busca = "") {
   const ambiente: Ambiente = {
-    api: { entrar: vi.fn(async () => ({ token: "tok", conta })), eu: vi.fn(async () => conta), sair: vi.fn(async () => {}), excluirConta: vi.fn(async () => {}), registrarPartida: vi.fn(), situacaoDaPartida: vi.fn(), registrarPartidaDoMania: vi.fn(), situacaoDaPartidaDoMania: vi.fn(), perfil: vi.fn(), recordes: vi.fn(async () => []), trocarImagem: vi.fn(), removerImagem: vi.fn(), ...api },
+    api: { entrar: vi.fn(async () => ({ token: "tok", conta })), eu: vi.fn(async () => conta), sair: vi.fn(async () => {}), excluirConta: vi.fn(async () => {}), registrarPartida: vi.fn(), situacaoDaPartida: vi.fn(), registrarPartidaDoMania: vi.fn(), situacaoDaPartidaDoMania: vi.fn(), perfil: vi.fn(), perfilDoAmigo: vi.fn(), recordes: vi.fn(async () => []), trocarImagem: vi.fn(), removerImagem: vi.fn(), ...api },
     clientId: "id",
     local: new Memoria(),
     temporario: new Memoria(),
@@ -233,6 +233,17 @@ describe("SessaoDaConta", () => {
     const { sessao, ambiente } = montar();
     await expect(sessao.perfil()).rejects.toThrow();
     expect(ambiente.api.perfil).not.toHaveBeenCalled();
+  });
+
+  it("o perfil do amigo vai para a API com o token e a conta do amigo; sem conta, nem pergunta", async () => {
+    const perfilDoAmigo = vi.fn(async () => ({ nome: "Ana" }) as never);
+    const { sessao, ambiente } = montar({ perfilDoAmigo });
+    await expect(sessao.perfilDoAmigo("ana")).rejects.toThrow();
+    expect(perfilDoAmigo).not.toHaveBeenCalled();
+    ambiente.local.setItem("riffrush:token", "tok");
+    await sessao.iniciar();
+    await sessao.perfilDoAmigo("ana");
+    expect(perfilDoAmigo).toHaveBeenCalledWith("tok", "ana", undefined);
   });
 
   it("sair apaga o token e avisa a API", async () => {

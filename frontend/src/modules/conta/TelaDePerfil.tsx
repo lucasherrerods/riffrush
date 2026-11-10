@@ -22,8 +22,8 @@ interface Props {
   carregar?: (sinal: AbortSignal) => Promise<PerfilDaApi>;
   /** Os números de outro modo no lugar dos do Rock. O cartão da conta, com nível e XP, é o mesmo nos dois. */
   estatisticas?: ReactNode;
-  /** Troca a foto e a capa. Por padrão, as de quem está logado. */
-  editor?: EditorDeImagens;
+  /** Troca a foto e a capa. Por padrão, as de quem está logado; `null` deixa o perfil só para ver (o de um amigo). */
+  editor?: EditorDeImagens | null;
 }
 
 const formatar = (n: number) => n.toLocaleString("pt-BR");
@@ -55,6 +55,11 @@ export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar =
   );
 }
 
+/** O perfil de um amigo: o mesmo do próprio, só para ver. */
+export function PerfilDoAmigo({ contaId, aoVoltar, tituloDaMusica }: { contaId: string } & Pick<Props, "aoVoltar" | "tituloDaMusica">) {
+  return <TelaDePerfil key={contaId} aoVoltar={aoVoltar} tituloDaMusica={tituloDaMusica} carregar={(sinal) => sessaoDaConta.perfilDoAmigo(contaId, sinal)} editor={null} />;
+}
+
 function Conteudo({
   perfil,
   tituloDaMusica,
@@ -66,7 +71,7 @@ function Conteudo({
   tituloDaMusica: Props["tituloDaMusica"];
   mod: boolean;
   estatisticas?: ReactNode;
-  editor: EditorDeImagens;
+  editor: EditorDeImagens | null;
 }) {
   const { nivel, xp_no_nivel, xp_para_o_proximo } = perfil.nivel;
 
