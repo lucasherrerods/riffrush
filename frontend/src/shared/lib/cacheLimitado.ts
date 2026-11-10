@@ -15,6 +15,9 @@ export function criarCacheLimitado<V>(limite: number) {
       valores.set(chave, valor);
       if (valores.size > limite) valores.delete(valores.keys().next().value!);
     },
+    tem(chave: string) {
+      return valores.has(chave);
+    },
     apagar(chave: string) {
       valores.delete(chave);
     },

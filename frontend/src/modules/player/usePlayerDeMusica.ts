@@ -1,9 +1,11 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-import type { FaixaDoPlayer, PlayerDeMusica } from "./playerDeMusica";
+import { primeiraMusica, type FaixaDoPlayer, type PlayerDeMusica } from "./playerDeMusica";
 
 export function usePlayerDeMusica<F extends FaixaDoPlayer>(player: PlayerDeMusica<F>) {
   return useSyncExternalStore(player.inscrever, player.estado);
 }
+
+export const usePrimeiraMusicaPronta = () => useSyncExternalStore(primeiraMusica.inscrever, primeiraMusica.pronta);
 
 /** O tempo e a barra do cabeçalho: 4 vezes por segundo basta, e não re-renderiza o cabeçalho a cada quadro nos menus. */
 export const INTERVALO_DA_POSICAO_MS = 250;

@@ -1,15 +1,18 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
-import { contasLigadas, sessaoDaConta } from "@/modules/conta";
+import { contasLigadas, sessaoDaConta, useConta } from "@/modules/conta";
 import { FundoDoMania, IDENTIDADE_DO_MANIA, TelaDoMania, carregarTelaDoMania } from "@/modules/mania";
 import { AlavancaDeModo, PARTE_DA_TELA_DO_MODO } from "@/modules/menu";
+import { usePrimeiraMusicaPronta } from "@/modules/player";
 import { chatGlobal, presenca } from "@/modules/presenca";
 import { FundoDoRock, IDENTIDADE_DO_ROCK } from "@/modules/rock";
 import { definirTema } from "@/shared/styles/tema";
 import { TEMAS } from "@/shared/styles/tokens";
+import { CortinaDeAbertura } from "@/shared/ui/CortinaDeAbertura";
 import { TelaCarregando } from "@/shared/ui/TelaCarregando";
 import { avisar } from "@/shared/ui/avisos";
 import { CapaDaVolvelle, Volvelle, type FotoDaTela, type LadoDaVolvelle } from "@/shared/ui/volvelle/Volvelle";
+import { LIMITE_DA_ABERTURA_MS, aberturaPronta } from "./abertura";
 import { AppDoRock } from "./AppDoRock";
 import { trocarModo, useModo, type Modo } from "./modo";
 import { useTrocaDeModo } from "./useTrocaDeModo";
@@ -59,9 +62,28 @@ export function App() {
     chatGlobal.definirModo(modo);
   }, [modo]);
   // Termina o login que voltou do Google ou retoma a sessão guardada, em qualquer modo que o app abrir.
+  const [contaIniciada, setContaIniciada] = useState(false);
   useEffect(() => {
-    if (contasLigadas) sessaoDaConta.iniciar().catch((erro) => avisar.error(erro instanceof Error ? erro.message : String(erro)));
+    if (!contasLigadas) return;
+    sessaoDaConta
+      .iniciar()
+      .catch((erro) => avisar.error(erro instanceof Error ? erro.message : String(erro)))
+      .finally(() => setContaIniciada(true));
   }, []);
+  // A cortina da abertura espera o perfil e a primeira música (que traz a capa do fundo), até o tempo limite.
+  const contaCarregando = useConta().carregando;
+  const trilhaPronta = usePrimeiraMusicaPronta();
+  const [esgotou, setEsgotou] = useState(false);
+  useEffect(() => {
+    const limite = setTimeout(() => setEsgotou(true), LIMITE_DA_ABERTURA_MS);
+    return () => clearTimeout(limite);
+  }, []);
+  const [aberto, setAberto] = useState(false);
+  const pronto = aberto || aberturaPronta({ contasLigadas, contaIniciada, contaCarregando, trilhaPronta, esgotou });
+  // Depois de aberta, a cortina não volta: um login no meio do uso não cobre a tela.
+  useEffect(() => {
+    if (pronto) setAberto(true);
+  }, [pronto]);
   const semMovimento = useReducedMotion() ?? false;
   const { giro, pedir } = useTrocaDeModo(modo, { trocar: trocarModo, preCarregar, semMovimento });
   // A foto da tela que sai, tirada no clique, antes de o modo trocar.
@@ -93,6 +115,7 @@ export function App() {
       )}
       {/* Por cima da tela nova: a metade do modo que saiu, com a foto da tela dele, girando para fora. */}
       {mostrarDisco && <CapaDaVolvelle saindo={saindo} virada={virada} />}
+      <CortinaDeAbertura pronto={pronto} />
     </>
   );
 }
