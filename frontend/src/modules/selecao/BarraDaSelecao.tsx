@@ -51,7 +51,7 @@ export function TituloDaSelecao({ titulo, subtitulo, aviso, capa, faixa, acao }:
   );
   return (
     <div className="chapa overflow-hidden bg-superficie-elevada/95">
-      {faixa && <div className="aspect-[16/5] w-full max-md:hidden">{faixa}</div>}
+      {faixa && <div className="h-24 w-full [mask-composite:intersect] [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent),linear-gradient(to_bottom,transparent,black_25%,black_75%,transparent)] max-md:hidden">{faixa}</div>}
       {linha}
     </div>
   );
