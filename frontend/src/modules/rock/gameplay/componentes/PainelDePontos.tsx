@@ -14,7 +14,7 @@ interface Props {
   estrelaAtiva: boolean;
   /** Celular: uma linha só, no topo. */
   compacto?: boolean;
-  /** O PERFEITO / ÓTIMO / BOM do último acerto, logo acima da precisão. */
+  /** O julgamento do último acerto, logo acima da precisão. */
   aviso?: ReactNode;
   /** No modo compacto, o que fica à direita de combo e precisão (ex.: o medidor de rock). */
   lateral?: ReactNode;

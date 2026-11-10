@@ -5,7 +5,7 @@
  */
 export function quantizar(tempo: number): number;
 /**
- * 0 é perfeito, 1 ótimo e 2 bom.
+ * O código de `codigo_do_julgamento`.
  */
 export function julgar(distancia: number): number;
 export function janela_de_acerto(): number;
@@ -17,8 +17,8 @@ export class MotorDaPartida {
   free(): void;
   /**
    * O que mudou desde a última chamada, na ordem:
-   * - 22 números do estado: tempo (NaN antes de começar), pontos, sequência, maior sequência, acertos,
-   *   perfeitos, ótimos, bons, valor dos acertos, erros, vida, compassos de star power, barra de star power (0 a 1),
+   * - 24 números do estado: tempo (NaN antes de começar), pontos, sequência, maior sequência, acertos,
+   *   quantos MAX, 300, 200, 100 e 50, valor dos acertos, erros, vida, compassos de star power, barra de star power (0 a 1),
    *   star power ativo, derrota, fantasma, a primeira nota que ainda importa, o multiplicador, a precisão,
    *   toques em vão, bônus de solo e full combo;
    * - quantas notas mudaram e, para cada uma, índice, bandeiras e até onde o sustain rendeu;

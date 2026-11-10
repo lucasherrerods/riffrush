@@ -4,6 +4,7 @@ export { CORES_DAS_PISTAS, CORES_DO_MULTIPLICADOR, COR_DA_ABERTA, COR_DA_ESTRELA
 export {
   JANELA_DE_ACERTO,
   JEITOS_DE_JOGAR,
+  JULGAMENTOS,
   ativarEstrela,
   avancar,
   criarPartida,
@@ -15,10 +16,12 @@ export {
   tocar,
   type Evento,
   type JeitoDeJogar,
+  type Julgamento,
   type NotaEmJogo,
   type Partida,
 } from "./partida";
 export { desenharPista, type Cena, type Sprites } from "./pista/desenhar";
+export { estiloDoJulgamento } from "./pista/efeitos";
 export { layoutDaPista, type LayoutDaPista } from "./pista/geometria";
 export { resultadoDaPartida, valorDosAcertos, type Resultado } from "./resultado";
 export { codigoDaEntrada, desempacotarReplay, emTicks, entradaDoCodigo, hashDoChart, type EntradaDoReplay, type EventoDaTransmissao, type Replay } from "./replay";

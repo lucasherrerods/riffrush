@@ -55,9 +55,9 @@ describe("progressoDoMultiplicador", () => {
 
 describe("estiloDoJulgamento", () => {
   it("cada julgamento tem o seu texto e uma cor diferente", () => {
-    const estilos = (["perfeito", "otimo", "bom"] as const).map(estiloDoJulgamento);
-    expect(estilos.map((e) => e.texto)).toEqual(["PERFEITO", "ÓTIMO", "BOM"]);
-    expect(new Set(estilos.map((e) => e.cor)).size).toBe(3);
+    const estilos = (["max", "j300", "j200", "j100", "j50"] as const).map(estiloDoJulgamento);
+    expect(estilos.map((e) => e.texto)).toEqual(["MAX", "300", "200", "100", "50"]);
+    expect(new Set(estilos.map((e) => e.cor)).size).toBe(5);
   });
 });
 

@@ -95,9 +95,9 @@ const RECENTES: &str = "
     FROM partidas WHERE conta_id = $1
     ORDER BY jogada_em DESC LIMIT $2";
 
-/// Partidas de apps antigos não têm o valor dos acertos: cada acerto conta como perfeito.
-fn valor_do_perfeito() -> i32 {
-    i32::try_from(Julgamento::Perfeito.valor()).unwrap_or(i32::MAX)
+/// Partidas de apps antigos não têm o valor dos acertos: cada acerto conta como 300.
+fn valor_do_300() -> i32 {
+    i32::try_from(Julgamento::Max.valor()).unwrap_or(i32::MAX)
 }
 
 fn falha(erro: sqlx::Error) -> FalhaExterna {
@@ -139,7 +139,7 @@ impl RepositorioDoPerfil for PerfilPostgres {
         };
         let por_dificuldade = sqlx::query_as::<_, LinhaDaDificuldade>(POR_DIFICULDADE)
             .bind(conta_id)
-            .bind(valor_do_perfeito())
+            .bind(valor_do_300())
             .fetch_all(&self.0)
             .await
             .map_err(falha)?
@@ -184,7 +184,7 @@ impl RepositorioDoPerfil for PerfilPostgres {
         let recentes = sqlx::query_as::<_, LinhaDaPartida>(RECENTES)
             .bind(conta_id)
             .bind(i64::from(recentes))
-            .bind(valor_do_perfeito())
+            .bind(valor_do_300())
             .fetch_all(&self.0)
             .await
             .map_err(falha)?

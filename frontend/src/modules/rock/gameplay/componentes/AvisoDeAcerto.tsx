@@ -9,7 +9,7 @@ interface Props {
 }
 
 /**
- * O "PERFEITO / ÓTIMO / BOM" do último acerto, no letreiro do jogo. O tamanho vem de quem o coloca.
+ * O julgamento (MAX, 300, 200, 100 ou 50) do último acerto, no letreiro do jogo. O tamanho vem de quem o coloca.
  * Animação em CSS (`aviso-de-acerto`), reiniciada pela `key`: em trechos rápidos são mais de dez por segundo,
  * e montar uma animação do framer-motion a cada nota pesa no meio da música.
  */

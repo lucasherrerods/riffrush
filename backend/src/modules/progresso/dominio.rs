@@ -153,7 +153,7 @@ impl ResumoDaPartida {
         if self.maior_sequencia.is_some_and(|s| s > self.acertos) {
             return Err(PartidaInvalida::SequenciaDemais);
         }
-        let faixa = self.acertos * Julgamento::Bom.valor()..=self.acertos * Julgamento::Perfeito.valor();
+        let faixa = self.acertos * Julgamento::J50.valor()..=self.acertos * Julgamento::Max.valor();
         if self.valor_dos_acertos.is_some_and(|v| !faixa.contains(&v)) {
             return Err(PartidaInvalida::ValorDosAcertosForaDaFaixa);
         }
@@ -165,9 +165,9 @@ impl ResumoDaPartida {
         precisao_pelo_valor(u64::from(self.valor_dos_acertos()), u64::from(self.total))
     }
 
-    /// Sem o valor (apps antigos), cada acerto conta como perfeito.
+    /// Sem o valor (apps antigos), cada acerto conta como 300.
     pub fn valor_dos_acertos(&self) -> u32 {
-        self.valor_dos_acertos.unwrap_or(self.acertos * Julgamento::Perfeito.valor())
+        self.valor_dos_acertos.unwrap_or(self.acertos * Julgamento::Max.valor())
     }
 }
 
@@ -176,7 +176,7 @@ pub fn precisao_pelo_valor(valor_dos_acertos: u64, notas: u64) -> f64 {
     if notas == 0 {
         return 0.0;
     }
-    valor_dos_acertos as f64 / (notas as f64 * f64::from(Julgamento::Perfeito.valor()))
+    valor_dos_acertos as f64 / (notas as f64 * f64::from(Julgamento::Max.valor()))
 }
 
 /// Abaixo disso de precisão a partida não rende XP: passar a música sem tocar não conta.
@@ -361,21 +361,21 @@ mod tests {
             valor_dos_acertos: Some(v),
             ..partida(Dificuldade::Medio, 8, 10)
         };
-        // Oito acertos valem de 8 BONS (800) a 8 PERFEITOS (2400).
+        // Oito acertos valem de oito 50 (400) a oito 300 ou MAX (2400).
         assert_eq!(com_valor(2401).validar(), Err(PartidaInvalida::ValorDosAcertosForaDaFaixa));
-        assert_eq!(com_valor(799).validar(), Err(PartidaInvalida::ValorDosAcertosForaDaFaixa));
-        assert!(com_valor(800).validar().is_ok());
+        assert_eq!(com_valor(399).validar(), Err(PartidaInvalida::ValorDosAcertosForaDaFaixa));
+        assert!(com_valor(400).validar().is_ok());
         assert!(com_valor(2400).validar().is_ok());
     }
 
     #[test]
     fn precisao_pesa_o_julgamento_de_cada_nota_como_no_jogo() {
-        let so_otimos = ResumoDaPartida {
+        let so_200 = ResumoDaPartida {
             valor_dos_acertos: Some(10 * 200),
             ..partida(Dificuldade::Medio, 10, 10)
         };
-        assert!((so_otimos.precisao() - 2.0 / 3.0).abs() < 1e-9);
-        // Apps antigos não mandam o valor: cada acerto conta como perfeito, o cálculo de antes.
+        assert!((so_200.precisao() - 2.0 / 3.0).abs() < 1e-9);
+        // Apps antigos não mandam o valor: cada acerto conta como 300, o cálculo de antes.
         assert!((partida(Dificuldade::Medio, 5, 10).precisao() - 0.5).abs() < 1e-9);
     }
 

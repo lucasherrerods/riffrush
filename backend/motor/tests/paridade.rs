@@ -13,7 +13,9 @@ struct Caso {
     fantasma: bool,
     replay: String,
     fim: f64,
-    esperado: Esperado,
+    /// Fica de fora ao regravar, quando o formato antigo pode não ler mais.
+    #[serde(default)]
+    esperado: Option<Esperado>,
 }
 
 #[derive(Deserialize)]
@@ -42,12 +44,8 @@ struct Esperado {
     fantasma: bool,
 }
 
-#[derive(Deserialize)]
-struct Julgamentos {
-    perfeito: u32,
-    otimo: u32,
-    bom: u32,
-}
+/// De MAX a 50.
+type Julgamentos = [u32; 5];
 
 /// Com `REGRAVAR_PARIDADE=1`, reescreve o resultado esperado de cada caso com o motor de agora (para quando a regra muda
 /// de propósito). O app confere o mesmo arquivo, então os dois lados continuam presos ao mesmo resultado.
@@ -59,13 +57,15 @@ fn regravar_os_casos_quando_pedido() {
     let caminho = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/paridade.json");
     let mut casos: Vec<serde_json::Value> = serde_json::from_str(&std::fs::read_to_string(caminho).unwrap()).unwrap();
     for caso in &mut casos {
-        let tipado: Caso = serde_json::from_value(caso.clone()).unwrap();
+        let mut sem_esperado = caso.clone();
+        sem_esperado.as_object_mut().unwrap().remove("esperado");
+        let tipado: Caso = serde_json::from_value(sem_esperado).unwrap();
         let partida = jogar(&tipado);
         caso["esperado"] = serde_json::json!({
             "pontos": partida.pontos,
             "acertos": partida.acertos,
             "erros": partida.erros,
-            "julgamentos": { "perfeito": partida.perfeitos, "otimo": partida.otimos, "bom": partida.bons },
+            "julgamentos": partida.contagem,
             "valorDosAcertos": partida.valor_dos_acertos,
             "sequencia": partida.sequencia,
             "maiorSequencia": partida.maior_sequencia,
@@ -134,24 +134,10 @@ fn o_replay_da_o_mesmo_resultado_que_no_app() {
         aplicar_entradas(&mut partida, &replay.entradas);
         avancar(&mut partida, caso.fim);
 
-        let e = &caso.esperado;
+        let e = caso.esperado.as_ref().unwrap();
         assert_eq!(
-            (
-                partida.acertos,
-                partida.erros,
-                partida.perfeitos,
-                partida.otimos,
-                partida.bons,
-                partida.valor_dos_acertos
-            ),
-            (
-                e.acertos,
-                e.erros,
-                e.julgamentos.perfeito,
-                e.julgamentos.otimo,
-                e.julgamentos.bom,
-                e.valor_dos_acertos
-            ),
+            (partida.acertos, partida.erros, partida.contagem, partida.valor_dos_acertos),
+            (e.acertos, e.erros, e.julgamentos, e.valor_dos_acertos),
             "caso {i}"
         );
         assert_eq!((partida.sequencia, partida.maior_sequencia), (e.sequencia, e.maior_sequencia), "caso {i}");

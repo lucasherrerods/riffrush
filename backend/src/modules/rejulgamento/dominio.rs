@@ -10,9 +10,8 @@ pub use motor::ChartGuardado;
 pub struct Rejulgada {
     pub resumo: ResumoDaPartida,
     pub pontos: u64,
-    pub perfeitos: u32,
-    pub otimos: u32,
-    pub bons: u32,
+    /// Quantos acertos de cada julgamento, de MAX a 50.
+    pub contagem: [u32; 5],
     /// De 0 a 1, pelo valor de cada nota do chart.
     pub precisao: f64,
     /// Jogou com o modificador sem falha: a vida não acaba, então a partida não vale para o ranking.
@@ -106,9 +105,7 @@ pub fn rejulgar(chart: &ChartGuardado, instrumento: Instrumento, dificuldade: Di
         // Arredonda como o app (`Math.round`); os pontos nunca são negativos.
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         pontos: (partida.pontos + 0.5).floor() as u64,
-        perfeitos: partida.perfeitos,
-        otimos: partida.otimos,
-        bons: partida.bons,
+        contagem: partida.contagem,
         precisao: precisao_pelo_valor(u64::from(partida.valor_dos_acertos), u64::from(total)),
         velocidade: replay.velocidade,
         sem_falha: replay.sem_falha,
@@ -215,7 +212,8 @@ mod tests {
         )
         .unwrap();
         assert_eq!((rejulgada.resumo.acertos, rejulgada.resumo.total), (3, 4));
-        assert_eq!((rejulgada.perfeitos, rejulgada.otimos, rejulgada.bons), (1, 1, 1));
+        // MAX, 200 e 100.
+        assert_eq!(rejulgada.contagem, [1, 0, 1, 1, 0]);
         assert_eq!(rejulgada.resumo.maior_sequencia, Some(3));
         assert_eq!(rejulgada.resumo.valor_dos_acertos, Some(600));
         assert!((rejulgada.precisao - 600.0 / 1200.0).abs() < 1e-9);

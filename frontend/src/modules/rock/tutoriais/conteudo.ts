@@ -158,7 +158,7 @@ export const TUTORIAIS: Tutorial[] = [
     resumo: "Você tem 110 ms antes e 110 ms depois da linha para acertar cada nota.",
     texto: [
       "A nota vale se for tocada até 110 milésimos de segundo antes ou depois de passar pela linha. Fora disso, ela passa como erro.",
-      "O retorno na tela diz quão perto você chegou: Perfeito, Ótimo ou Bom. Para os pontos e a porcentagem, todo acerto vale igual.",
+      "O retorno na tela diz quão perto você chegou: MAX, 300, 200, 100 ou 50, como no osu!mania. Os pontos valem igual para todo acerto; a precisão pesa cada julgamento.",
     ],
     demo: {
       duracao: 5,

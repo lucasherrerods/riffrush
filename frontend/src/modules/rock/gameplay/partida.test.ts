@@ -1,5 +1,5 @@
 import { PISTA_ABERTA, type Nota } from "@/modules/rock/songs";
-import { JANELA_DE_ACERTO, acertar, ativarEstrela, janelaDoMotor, avancar, criarPartida, julgar, multiplicador, precisao, retirarEventos, soltar, tocar } from "./partida";
+import { JANELAS, JANELA_DE_ACERTO, VALOR_DO_JULGAMENTO, acertar, ativarEstrela, janelaDoMotor, avancar, criarPartida, julgar, multiplicador, precisao, retirarEventos, soltar, tocar } from "./partida";
 
 const nota = (tempo: number, pista = 0, extra: Partial<Nota> = {}): Nota => ({ tempo, pista, frase: -1, duracao: 0, ...extra });
 
@@ -270,13 +270,20 @@ describe("pontuação", () => {
 });
 
 describe("julgar", () => {
-  it("dá o julgamento pela distância até a batida", () => {
-    expect(julgar(0)).toBe("perfeito");
-    expect(julgar(0.035)).toBe("perfeito");
-    expect(julgar(-0.036)).toBe("otimo");
-    expect(julgar(0.07)).toBe("otimo");
-    expect(julgar(0.071)).toBe("bom");
-    expect(julgar(-0.11)).toBe("bom");
+  it("dá o julgamento pela distância até a batida, como no mania", () => {
+    expect(julgar(0)).toBe("max");
+    expect(julgar(0.016)).toBe("max");
+    expect(julgar(-0.017)).toBe("j300");
+    expect(julgar(0.04)).toBe("j300");
+    expect(julgar(0.073)).toBe("j200");
+    expect(julgar(-0.103)).toBe("j100");
+    expect(julgar(0.104)).toBe("j50");
+    expect(julgar(-0.11)).toBe("j50");
+  });
+
+  it("as janelas e os pesos (ScoreV1) batem com o motor", () => {
+    expect(JANELAS).toEqual({ max: 0.016, j300: 0.04, j200: 0.073, j100: 0.103, j50: 0.11 });
+    expect(VALOR_DO_JULGAMENTO).toEqual({ max: 300, j300: 300, j200: 200, j100: 100, j50: 50 });
   });
 
   it("a janela de acerto é de 110 ms para cada lado, a mesma do motor", () => {
@@ -293,25 +300,26 @@ describe("precisao", () => {
   it("conta os julgamentos de cada acerto", () => {
     const partida = criarPartida([nota(1), nota(2), nota(3)]);
     tocar(partida, 0, 1.01);
-    tocar(partida, 0, 2.05);
+    tocar(partida, 0, 2.03);
     tocar(partida, 0, 2.91);
-    expect(partida.julgamentos).toEqual({ perfeito: 1, otimo: 1, bom: 1 });
+    expect(partida.julgamentos).toEqual({ max: 1, j300: 1, j200: 0, j100: 1, j50: 0 });
   });
 
   it("pesa cada acerto pelo julgamento, sobre as notas que já passaram", () => {
     const partida = criarPartida([nota(1), nota(2), nota(3), nota(4)]);
     tocar(partida, 0, 1);
-    tocar(partida, 0, 2.05);
+    tocar(partida, 0, 2.03);
     tocar(partida, 0, 3.06);
     avancar(partida, 5);
     expect(partida.erros).toBe(1);
-    expect(precisao(partida)).toBeCloseTo(700 / 1200);
+    // MAX e 300 valem o mesmo; o 200 vale dois terços.
+    expect(precisao(partida)).toBeCloseTo(800 / 1200);
   });
 
   it("avisa o julgamento junto do acerto", () => {
     const partida = criarPartida([nota(1)]);
     tocar(partida, 0, 1.05);
-    expect(retirarEventos(partida)).toContainEqual(expect.objectContaining({ tipo: "acerto", julgamento: "otimo" }));
+    expect(retirarEventos(partida)).toContainEqual(expect.objectContaining({ tipo: "acerto", julgamento: "j200" }));
   });
 });
 

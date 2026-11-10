@@ -63,12 +63,14 @@ describe("TelaDeResultado", () => {
   });
 
   it("usa a precisão de cada julgamento, com duas casas, e mostra quantos de cada", () => {
-    abrir({ resultado: { ...resultado, precisao: 0.8535, julgamentos: { perfeito: 80, otimo: 7, bom: 3 } } });
+    abrir({ resultado: { ...resultado, precisao: 0.8535, julgamentos: { max: 60, j300: 20, j200: 5, j100: 3, j50: 2 } } });
     expect(screen.getByLabelText("Precisão")).toHaveTextContent("85,35%");
-    expect(screen.getByText("Perfeito").nextSibling).toHaveTextContent("80");
-    expect(screen.getByText("Ótimo").nextSibling).toHaveTextContent("7");
-    expect(screen.getByText("Bom").nextSibling).toHaveTextContent("3");
-    expect(screen.getByText("Erro").nextSibling).toHaveTextContent("10");
+    expect(screen.getByText("MAX").nextSibling).toHaveTextContent("60");
+    expect(screen.getByText("300").nextSibling).toHaveTextContent("20");
+    expect(screen.getByText("200").nextSibling).toHaveTextContent("5");
+    expect(screen.getByText("100").nextSibling).toHaveTextContent("3");
+    expect(screen.getByText("50").nextSibling).toHaveTextContent("2");
+    expect(screen.getByText("Miss").nextSibling).toHaveTextContent("10");
   });
 
   it("mostra as estatísticas da partida", () => {

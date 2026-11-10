@@ -4,7 +4,7 @@ import { animate, motion } from "framer-motion";
 import { ListMusic, RotateCcw, Star, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
-import { corDaPrecisao, type Resultado } from "@/modules/rock/gameplay";
+import { corDaPrecisao, estiloDoJulgamento, JULGAMENTOS, type Resultado } from "@/modules/rock/gameplay";
 import { DIFICULDADES } from "@/modules/rock/songs";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { CartaoDeResultado } from "@/modules/resultado";
@@ -64,10 +64,8 @@ export function TelaDeResultado(props: Props) {
 
   const dificuldade = DIFICULDADES.find((d) => d.id === resultado.dificuldade)?.rotulo ?? "";
   const julgamentos = resultado.julgamentos && [
-    { rotulo: "Perfeito", valor: resultado.julgamentos.perfeito },
-    { rotulo: "Ótimo", valor: resultado.julgamentos.otimo },
-    { rotulo: "Bom", valor: resultado.julgamentos.bom },
-    { rotulo: "Erro", valor: resultado.total - resultado.acertos },
+    ...JULGAMENTOS.map((j) => ({ rotulo: estiloDoJulgamento(j).texto, valor: resultado.julgamentos?.[j] ?? 0 })),
+    { rotulo: "Miss", valor: resultado.total - resultado.acertos },
   ];
 
   return (

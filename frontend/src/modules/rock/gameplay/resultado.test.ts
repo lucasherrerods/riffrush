@@ -24,7 +24,7 @@ describe("resultadoDaPartida", () => {
       pontos: 100,
       acertos: 2,
       total: 3,
-      julgamentos: { perfeito: 2, otimo: 0, bom: 0 },
+      julgamentos: { max: 2, j300: 0, j200: 0, j100: 0, j50: 0 },
       precisao: 2 / 3,
       fullCombo: false,
       maiorSequencia: 2,
@@ -48,6 +48,6 @@ describe("resultadoDaPartida", () => {
 
 describe("valorDosAcertos", () => {
   it("soma o valor de cada acerto pelo julgamento, como a precisão do jogo", () => {
-    expect(valorDosAcertos({ perfeito: 2, otimo: 1, bom: 1 })).toBe(2 * 300 + 200 + 100);
+    expect(valorDosAcertos({ max: 1, j300: 1, j200: 1, j100: 1, j50: 1 })).toBe(300 + 300 + 200 + 100 + 50);
   });
 });

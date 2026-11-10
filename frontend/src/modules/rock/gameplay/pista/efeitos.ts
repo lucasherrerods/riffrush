@@ -6,11 +6,17 @@ import type { Evento, Julgamento } from "../partida";
 /** Quanto tempo o julgamento do último acerto fica escrito acima da nota. */
 export const DURACAO_DO_JULGAMENTO = 0.45;
 
-/** Texto e cor de cada julgamento, nas mesmas cores da precisão no HUD: verde, ouro e apagado. */
+const ESTILOS_DOS_JULGAMENTOS: Record<Julgamento, { texto: string; cor: string }> = {
+  max: { texto: "MAX", cor: cores.ouro },
+  j300: { texto: "300", cor: cores.sucesso },
+  j200: { texto: "200", cor: cores.primaria },
+  j100: { texto: "100", cor: cores.destaque },
+  j50: { texto: "50", cor: cores.textoSuave },
+};
+
+/** Texto e cor de cada julgamento, com os nomes do osu!mania. */
 export function estiloDoJulgamento(julgamento: Julgamento) {
-  if (julgamento === "perfeito") return { texto: "PERFEITO", cor: cores.sucesso };
-  if (julgamento === "otimo") return { texto: "ÓTIMO", cor: cores.ouro };
-  return { texto: "BOM", cor: cores.textoSuave };
+  return ESTILOS_DOS_JULGAMENTOS[julgamento];
 }
 
 /** O raio só cai quando o star power fica pronto para usar; força 3 é o trovão mais forte. */

@@ -19,7 +19,7 @@ pub fn status_vale_xp(status: &str) -> bool {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Rejulgada {
     pub pontuacao: u32,
-    /// De 0 a 1, com o MAX valendo 305.
+    /// De 0 a 1, pelo ScoreV1: o MAX vale o mesmo que o 300.
     pub precisao: f64,
     /// De MAX a Miss.
     pub contagem: [u32; 6],

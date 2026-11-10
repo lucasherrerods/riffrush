@@ -53,7 +53,7 @@ export interface PartidaParaAApi {
   derrota: boolean;
   fantasma: boolean;
   maior_sequencia: number;
-  /** Soma do valor de cada acerto pelo julgamento (300, 100 ou 50), para o perfil ter a precisão do jogo. */
+  /** Soma do valor de cada acerto pelo julgamento (300 no MAX e no 300, 200, 100 ou 50), para o perfil ter a precisão do jogo. */
   valor_dos_acertos?: number;
   /** As entradas da partida comprimidas, em base64. */
   replay?: string;
