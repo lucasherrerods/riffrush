@@ -15,11 +15,10 @@ pub enum Julgamento {
 }
 
 impl Julgamento {
-    /// Peso na precisão: o MAX vale um pouco mais que o 300.
+    /// Peso na precisão, como no ScoreV1 do osu!mania: o MAX vale o mesmo que o 300.
     pub fn peso(self) -> u32 {
         match self {
-            Julgamento::Max => 305,
-            Julgamento::J300 => 300,
+            Julgamento::Max | Julgamento::J300 => 300,
             Julgamento::J200 => 200,
             Julgamento::J100 => 100,
             Julgamento::J50 => 50,
@@ -36,7 +35,7 @@ const JULGAMENTOS: [Julgamento; 6] = [
     Julgamento::J50,
     Julgamento::Miss,
 ];
-const PESO_MAXIMO: u32 = 305;
+const PESO_MAXIMO: u32 = 300;
 
 /// Metade da largura de cada janela, em ms, em volta do tempo da nota. A do Miss é a de antecedência: um toque mais
 /// cedo que ela é ignorado; entre ela e a do 50, o toque conta como Miss.
@@ -695,10 +694,20 @@ mod tests {
         let mut p = partida(&[(0, 1000, None), (1, 1000, None)]);
         tocar(&mut p, 0, 1000);
         tocar(&mut p, 1, 1100);
-        // (305 + 100) / 610.
-        assert!((precisao(&p) - 405.0 / 610.0).abs() < 1e-12);
+        // ScoreV1: MAX e 300 valem o mesmo. (300 + 100) / 600.
+        assert!((precisao(&p) - 400.0 / 600.0).abs() < 1e-12);
         assert_eq!(classificacao(precisao(&p)), Classificacao::D);
-        assert_eq!(pontuacao(&p), (1_000_000.0_f64 * (0.99 * 405.0 / 610.0 + 0.01)).round() as u32);
+        assert_eq!(pontuacao(&p), (1_000_000.0_f64 * (0.99 * 400.0 / 600.0 + 0.01)).round() as u32);
+    }
+
+    #[test]
+    fn no_score_v1_o_300_vale_tanto_quanto_o_max() {
+        let mut p = partida(&[(0, 1000, None), (1, 1000, None)]);
+        tocar(&mut p, 0, 1000);
+        tocar(&mut p, 1, 1030);
+        assert_eq!((p.contagem[0], p.contagem[1]), (1, 1));
+        assert!((precisao(&p) - 1.0).abs() < 1e-12);
+        assert_eq!(classificacao(precisao(&p)), Classificacao::SS);
     }
 
     #[test]
