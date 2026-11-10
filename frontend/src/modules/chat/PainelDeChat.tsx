@@ -101,7 +101,7 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
         inert={minimizado || undefined}
         className={cn("flex min-h-0 flex-col overflow-hidden", !minimizar && "flex-1")}
       >
-        <div className={cn("flex min-h-0 flex-1 flex-col gap-2 pt-2", minimizar && "h-64 max-md:h-[55vh]")}>
+        <div className={cn("flex min-h-0 flex-1 flex-col gap-2 pt-2", minimizar && "h-96 max-md:h-[55vh]")}>
           <ol ref={lista} role="log" aria-label={titulo} className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto text-sm max-md:text-xs">
             {mensagens.length === 0 && !bloqueado && <li className="text-texto-suave">Nenhuma mensagem ainda.</li>}
             {mensagens.map((m) => (

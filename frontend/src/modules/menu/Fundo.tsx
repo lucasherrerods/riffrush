@@ -1,5 +1,6 @@
 import type React from "react";
 import { CORES_DAS_PISTAS } from "@/modules/rock/gameplay";
+import { FundoDaSelecao } from "@/modules/selecao";
 import { cn } from "@/shared/lib/utils";
 
 const PARTICULAS = 24;
@@ -20,47 +21,55 @@ const RAIO = "M58 0 L22 52 L44 50 L8 100 L78 38 L54 40 L86 0 Z";
  * as cinco pistas coloridas convergindo e faíscas subindo.
  * Durante a música as animações param, para a GPU ficar livre para a pista.
  */
-export function Fundo({ tocando = false }: { tocando?: boolean }) {
+export function Fundo({ tocando = false, capa }: { tocando?: boolean; capa?: { chave: string; imagem: React.ReactNode } }) {
+  // Com a capa da música que toca, o palco desenhado sai e fica só a grade do chão.
+  const palco = !capa;
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden bg-fundo">
-      <div className={cn("absolute inset-0 transition-opacity duration-700", tocando ? "opacity-30" : "opacity-100")}>
-        {HOLOFOTES.map((h) => (
-          <div
-            key={h.esquerda}
-            data-parte="holofote"
-            className={cn("holofote", tocando && "holofote-parado")}
-            style={
-              {
-                left: h.esquerda,
-                "--de": h.de,
-                "--ate": h.ate,
-                animationDuration: `${h.duracao}s`,
-                background: `linear-gradient(to bottom, color-mix(in srgb, var(${h.cor}) 38%, transparent), transparent 78%)`,
-              } as React.CSSProperties
-            }
-          />
-        ))}
-        {/* Luz batendo no chão do palco. */}
-        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-[radial-gradient(ellipse_at_bottom,color-mix(in_srgb,var(--cor-primaria)_22%,transparent),transparent_70%)]" />
-      </div>
-      <div className={cn("absolute inset-0 transition-opacity duration-700", tocando ? "opacity-20" : "opacity-100")}>
-        <div className="desgastado absolute top-[10%] left-1/2 size-[440px] -translate-x-1/2 rounded-full border-[28px] border-texto/25 max-md:size-[300px] max-md:border-[18px]" />
-        <svg viewBox="0 0 100 100" className="desgastado absolute top-[8%] left-[calc(50%-340px)] size-56 -rotate-12 fill-primaria/80 max-md:left-[2%] max-md:size-32">
-          <path d={RAIO} />
-        </svg>
-        <svg viewBox="0 0 100 100" className="desgastado absolute top-[4%] left-[calc(50%+130px)] size-64 rotate-6 -scale-x-100 fill-primaria/80 max-md:right-[2%] max-md:left-auto max-md:size-36">
-          <path d={RAIO} />
-        </svg>
-        <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="desgastado absolute inset-x-0 bottom-0 h-[32%] w-full opacity-40">
-          {CORES_DAS_PISTAS.map((cor, i) => (
-            <path key={cor} d={`M${48 + i} 0 L${i * 22 - 4} 40 L${i * 22 + 10} 40 Z`} fill={cor} />
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 isolate overflow-hidden bg-fundo">
+      <FundoDaSelecao chave={capa?.chave}>{capa?.imagem}</FundoDaSelecao>
+      {palco && (
+        <div className={cn("absolute inset-0 transition-opacity duration-700", tocando ? "opacity-30" : "opacity-100")}>
+          {HOLOFOTES.map((h) => (
+            <div
+              key={h.esquerda}
+              data-parte="holofote"
+              className={cn("holofote", tocando && "holofote-parado")}
+              style={
+                {
+                  left: h.esquerda,
+                  "--de": h.de,
+                  "--ate": h.ate,
+                  animationDuration: `${h.duracao}s`,
+                  background: `linear-gradient(to bottom, color-mix(in srgb, var(${h.cor}) 38%, transparent), transparent 78%)`,
+                } as React.CSSProperties
+              }
+            />
           ))}
-        </svg>
-      </div>
-      <div className="grade-perspectiva absolute inset-x-0 bottom-0 h-[55%]">
+          {/* Luz batendo no chão do palco. */}
+          <div className="absolute inset-x-0 bottom-0 h-1/3 bg-[radial-gradient(ellipse_at_bottom,color-mix(in_srgb,var(--cor-primaria)_22%,transparent),transparent_70%)]" />
+        </div>
+      )}
+      {palco && (
+        <div className={cn("absolute inset-0 transition-opacity duration-700", tocando ? "opacity-20" : "opacity-100")}>
+          <div className="desgastado absolute top-[10%] left-1/2 size-[440px] -translate-x-1/2 rounded-full border-[28px] border-texto/25 max-md:size-[300px] max-md:border-[18px]" />
+          <svg viewBox="0 0 100 100" className="desgastado absolute top-[8%] left-[calc(50%-340px)] size-56 -rotate-12 fill-primaria/80 max-md:left-[2%] max-md:size-32">
+            <path d={RAIO} />
+          </svg>
+          <svg viewBox="0 0 100 100" className="desgastado absolute top-[4%] left-[calc(50%+130px)] size-64 rotate-6 -scale-x-100 fill-primaria/80 max-md:right-[2%] max-md:left-auto max-md:size-36">
+            <path d={RAIO} />
+          </svg>
+          <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="desgastado absolute inset-x-0 bottom-0 h-[32%] w-full opacity-40">
+            {CORES_DAS_PISTAS.map((cor, i) => (
+              <path key={cor} d={`M${48 + i} 0 L${i * 22 - 4} 40 L${i * 22 + 10} 40 Z`} fill={cor} />
+            ))}
+          </svg>
+        </div>
+      )}
+      <div className={cn("grade-perspectiva absolute inset-x-0 bottom-0 h-[55%]", !palco && "opacity-40")}>
         <div data-parte="grade" className={cn("grade-chao", tocando && "grade-parada")} />
       </div>
-      {!tocando &&
+      {palco &&
+        !tocando &&
         Array.from({ length: PARTICULAS }, (_, i) => (
           <span
             key={i}

@@ -43,17 +43,21 @@ vi.mock("@/modules/platform", () => ({
 
 // A partida de verdade é testada no módulo de gameplay; aqui só importa a ligação entre as telas.
 const opcoesRecebidas: unknown[] = [];
+// Quando preenchida, a tela de jogo suspende como na primeira vez, enquanto o código dela chega.
+const carregandoAPartida: { promessa: Promise<void> | null } = { promessa: null };
 vi.mock("@/modules/rock/gameplay", async (original) => ({
   ...(await original<typeof import("@/modules/rock/gameplay")>()),
   // A entrada com trovão abre na hora: os testes do App olham a partida, não a animação.
-  EntradaDaPartida: ({ aoAbrir, aoTerminar }: { aoAbrir: () => void; aoTerminar: () => void }) => {
+  EntradaDaPartida: ({ titulo, aoAbrir, aoTerminar }: { titulo: string; aoAbrir: () => void; aoTerminar: () => void }) => {
     useEffect(() => {
       aoAbrir();
-      aoTerminar();
+      if (!carregandoAPartida.promessa) aoTerminar();
     }, []);
-    return null;
+    return carregandoAPartida.promessa ? <p>Entrada de {titulo}</p> : null;
   },
-  TelaDeJogo: ({ musica, dificuldade, recorde, rede, opcoes, aoTerminar, aoSair }: { musica: { id: string; titulo: string }; dificuldade: string; recorde?: number; rede?: { adversarios?: React.ReactNode }; opcoes: unknown; aoTerminar: (r: unknown) => void; aoSair: () => void }) => (
+  TelaDeJogo: ({ musica, dificuldade, recorde, rede, opcoes, aoTerminar, aoSair }: { musica: { id: string; titulo: string }; dificuldade: string; recorde?: number; rede?: { adversarios?: React.ReactNode }; opcoes: unknown; aoTerminar: (r: unknown) => void; aoSair: () => void }) => {
+    if (carregandoAPartida.promessa) throw carregandoAPartida.promessa;
+    return (
     opcoesRecebidas.push(opcoes),
     <div>
       <h1>Jogando {musica.titulo}{rede ? " em rede" : ""}</h1>
@@ -62,7 +66,8 @@ vi.mock("@/modules/rock/gameplay", async (original) => ({
       <button onClick={() => aoTerminar({ musicaId: musica.id, dificuldade, pontos: 777, acertos: 9, total: 10, maiorSequencia: 9, derrota: false })}>terminar</button>
       <button onClick={aoSair}>sair</button>
     </div>
-  ),
+    );
+  },
 }));
 
 vi.mock("@/modules/gamepad", async (original) => ({ ...(await original<typeof import("@/modules/gamepad")>()), iniciarControle: vi.fn(() => () => {}) }));
@@ -95,7 +100,7 @@ vi.mock("@/modules/player", async (original) => ({
 vi.mock("@/modules/rock/player", async (original) => ({
   musicaDeAbertura: (await original<typeof import("@/modules/rock/player/musicaDeAbertura")>()).musicaDeAbertura,
   useSeguirMusica: vi.fn(),
-  playerDeMusica: { definirFila: vi.fn(), definirNavegacao: vi.fn(), seguir: vi.fn(), seguirMapa: vi.fn(), sortearInicio: vi.fn(), definirVolume: vi.fn(), suspender: vi.fn(), estado: () => ({ musica: null }) },
+  playerDeMusica: { inscrever: () => () => {}, definirFila: vi.fn(), definirNavegacao: vi.fn(), seguir: vi.fn(), seguirMapa: vi.fn(), sortearInicio: vi.fn(), definirVolume: vi.fn(), suspender: vi.fn(), estado: ((parado) => () => parado)({ musica: null }) },
 }));
 
 vi.stubGlobal("AudioContext", AudioContextFalso);
@@ -184,6 +189,19 @@ describe("App", () => {
     const antes = opcoesRecebidas.at(-1);
     act(() => definirVolumeGeral(0.4));
     expect(opcoesRecebidas.at(-1)).toBe(antes);
+  });
+
+  it("na primeira partida, enquanto o código da tela de jogo chega, a entrada continua na tela em vez do spinner", async () => {
+    carregandoAPartida.promessa = new Promise(() => {});
+    try {
+      const usuario = abrir();
+      await usuario.click(screen.getByRole("button", { name: "Jogar" }));
+      await usuario.click(await screen.findByRole("button", { name: /TOCAR/ }));
+      expect(await screen.findByText(/^Entrada de /)).toBeInTheDocument();
+      expect(screen.queryByRole("status", { name: "Carregando" })).not.toBeInTheDocument();
+    } finally {
+      carregandoAPartida.promessa = null;
+    }
   });
 
   it("toca a música escolhida e mostra o resultado, anotando o recorde da conta", async () => {

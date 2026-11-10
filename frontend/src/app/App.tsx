@@ -1,9 +1,9 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import { FundoDoMania, IDENTIDADE_DO_MANIA, TelaDoMania, carregarTelaDoMania } from "@/modules/mania";
-import { AlavancaDeModo, Fundo, PARTE_DA_TELA_DO_MODO } from "@/modules/menu";
+import { AlavancaDeModo, PARTE_DA_TELA_DO_MODO } from "@/modules/menu";
 import { chatGlobal, presenca } from "@/modules/presenca";
-import { IDENTIDADE_DO_ROCK } from "@/modules/rock";
+import { FundoDoRock, IDENTIDADE_DO_ROCK } from "@/modules/rock";
 import { definirTema } from "@/shared/styles/tema";
 import { TEMAS } from "@/shared/styles/tokens";
 import { TelaCarregando } from "@/shared/ui/TelaCarregando";
@@ -16,7 +16,7 @@ const IDENTIDADES = { rock: IDENTIDADE_DO_ROCK, mania: IDENTIDADE_DO_MANIA };
 
 /** O cenário de cada modo no disco da troca: o mesmo fundo da tela inicial, com o tema dele. */
 const CENAS: Record<Modo, LadoDaVolvelle> = {
-  rock: { cena: <Fundo />, tema: TEMAS[IDENTIDADE_DO_ROCK.tema] },
+  rock: { cena: <FundoDoRock />, tema: TEMAS[IDENTIDADE_DO_ROCK.tema] },
   mania: { cena: <FundoDoMania />, tema: TEMAS[IDENTIDADE_DO_MANIA.tema] },
 };
 
