@@ -354,7 +354,7 @@ export function TelaDeSelecao(props: Props) {
         <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
           {cabecalho}
           <section aria-label="Informações da música" className="flex flex-col gap-3">
-            {!vazia && <TituloDaSelecao titulo={musica.titulo} subtitulo={musica.artista} acao={favoritar} />}
+            {!vazia && <TituloDaSelecao titulo={musica.titulo} subtitulo={musica.artista} favoritar={favoritar} />}
             <div className="flex flex-wrap gap-2 [&_button]:h-9 [&_button]:gap-1.5 [&_button]:px-3 [&_button]:text-xs">
               <Button variant="outline" size="sm" disabled={vazia} onClick={() => setJanela("detalhes")}>
                 <Info className="opacity-70" /> Detalhes
@@ -403,7 +403,7 @@ export function TelaDeSelecao(props: Props) {
             <div className="flex-1" />
           ) : (
             <>
-            {/* A capa em faixa no topo, com o título embaixo e o instrumento ao lado do Favoritar. */}
+            {/* A capa em faixa no topo, com o coração no canto, o título embaixo e o instrumento ao lado dele. */}
             <TituloDaSelecao
               titulo={musica.titulo}
               subtitulo={musica.artista}
@@ -414,12 +414,8 @@ export function TelaDeSelecao(props: Props) {
                   <Capa musica={musica} girando className="relative aspect-square h-full" />
                 </div>
               }
-              acao={
-                <div className="flex items-center gap-3">
-                  {escolhaDoInstrumento}
-                  {favoritar}
-                </div>
-              }
+              acao={escolhaDoInstrumento}
+              favoritar={favoritar}
             />
 
             {ranking ? (
