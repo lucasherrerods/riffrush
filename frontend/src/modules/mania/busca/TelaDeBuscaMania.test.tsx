@@ -1,3 +1,4 @@
+import { rolarAteOFim } from "@/test/intersecao";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { MapaDaBusca } from "./api";
@@ -60,18 +61,20 @@ it("carrega a próxima página no fim da lista, sem repetir mapas, até acabar",
   const buscar = vi.fn(async ({ pagina = 0 }: { pagina?: number }) => (pagina === 0 ? { mapas: [mapa], temMais: true } : { mapas: [mapa, outro], temMais: false }));
   render(<TelaDeBuscaMania baixados={new Set()} aoBaixar={vi.fn()} buscar={buscar} />);
 
-  await userEvent.click(await screen.findByRole("button", { name: "Carregar mais" }));
+  await screen.findByText("Música");
+  rolarAteOFim();
 
   expect(await screen.findByText("Outra")).toBeInTheDocument();
   expect(buscar).toHaveBeenLastCalledWith({ texto: "", status: "ranked", teclas: [], pagina: 1 });
   expect(screen.getAllByText("Música")).toHaveLength(1);
-  expect(screen.queryByRole("button", { name: "Carregar mais" })).not.toBeInTheDocument();
+  expect(document.querySelector("[data-parte='fim-da-lista']")).toBeNull();
 });
 
 it("mudar o filtro volta para a primeira página", async () => {
   const buscar = vi.fn(async ({ pagina = 0 }: { pagina?: number }) => ({ mapas: [{ ...mapa, beatmapsetId: pagina + 1 }], temMais: true }));
   render(<TelaDeBuscaMania baixados={new Set()} aoBaixar={vi.fn()} buscar={buscar} />);
-  await userEvent.click(await screen.findByRole("button", { name: "Carregar mais" }));
+  await screen.findByText("Música");
+  rolarAteOFim();
   await waitFor(() => expect(screen.getAllByText("Música")).toHaveLength(2));
 
   await userEvent.click(screen.getByRole("radio", { name: "Loved" }));

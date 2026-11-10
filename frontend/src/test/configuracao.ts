@@ -3,6 +3,7 @@ import { cleanup, configure } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach } from "vitest";
+import { IntersectionObserverFalso } from "./intersecao";
 import { iniciarMotorComBytes } from "@/modules/rock/gameplay/partida";
 import { iniciarMotorDoManiaComBytes } from "@/modules/mania/gameplay/motor";
 
@@ -17,6 +18,9 @@ globalThis.ResizeObserver ??= class {
   unobserve() {}
   disconnect() {}
 };
+
+// Nem IntersectionObserver, que a busca usa para pedir a próxima página no fim da lista.
+globalThis.IntersectionObserver ??= IntersectionObserverFalso as unknown as typeof IntersectionObserver;
 
 // O motor da partida é WASM: no app ele carrega por fetch; aqui, direto do arquivo.
 iniciarMotorComBytes(readFileSync(resolve(process.cwd(), "src/modules/rock/gameplay/wasm/motor_bg.wasm")));
