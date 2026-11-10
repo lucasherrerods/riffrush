@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { JeitoDeJogar } from "@/modules/rock/gameplay";
-import { ArrowLeft, Download, Music, Play } from "lucide-react";
+import { BotaoVoltar } from "@/shared/ui/BotaoVoltar";
+import { Download, Music, Play } from "lucide-react";
 import { DIFICULDADES, INSTRUMENTOS, type Dificuldade, type Instrumento } from "@/modules/rock/songs";
 import { Button } from "@/shared/ui/button";
 import { CampoDeSelecao } from "@/shared/ui/CampoDeSelecao";
@@ -37,9 +38,7 @@ export function PainelDaMusica({ musica, nome, aoVoltar, aoBaixar, aoOuvir, aoAb
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 max-md:gap-2">
       <header className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar às músicas">
-          <ArrowLeft />
-        </Button>
+        <BotaoVoltar aoVoltar={aoVoltar} rotulo="Voltar às músicas" />
         {musica.capa ? <img src={musica.capa} alt="" referrerPolicy="no-referrer" className="size-12 shrink-0 rounded-sm max-md:size-9" /> : <Music className="size-12 shrink-0 text-texto-suave opacity-70" aria-hidden />}
         <h2 className="min-w-0 flex-1 truncate font-titulo text-2xl max-md:text-lg">{nome}</h2>
         {aoOuvir && (

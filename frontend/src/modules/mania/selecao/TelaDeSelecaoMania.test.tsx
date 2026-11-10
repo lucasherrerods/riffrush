@@ -101,3 +101,11 @@ it("a Aleatória sorteia com as teclas do filtro e a seleção vai para o mapa q
   rerender(<TelaDeSelecaoMania {...props} selecionado="c" />);
   expect(titulo()).toBe("Gama");
 });
+
+// Bug: o Esc não voltava ao menu na seleção do Mania.
+it("o Esc volta para a tela anterior", () => {
+  const aoVoltar = vi.fn();
+  render(<TelaDeSelecaoMania conjuntos={conjuntos} mods={0} aoMudarMods={vi.fn()} aoImportar={vi.fn()} aoJogar={vi.fn()} aoVoltar={aoVoltar} />);
+  fireEvent.keyDown(window, { code: "Escape" });
+  expect(aoVoltar).toHaveBeenCalledOnce();
+});
