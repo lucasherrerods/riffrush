@@ -730,6 +730,8 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
               />
             )}
             {tela === "jogo" && !entrada?.segurando && (
+              // Na primeira partida o código da pista ainda está chegando: a entrada fica na frente em vez do spinner da tela inteira.
+              <Suspense fallback={null}>
               <TelaDeJogo
                 musica={musica}
                 dificuldade={dificuldadeDaPartida}
@@ -755,6 +757,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 treino={treinando}
                 aoMarcarPontoDaMusica={marcarPontoDaTrilha}
               />
+              </Suspense>
             )}
             {tela === "telaDividida" && (
               <EscolhaDeDispositivos
