@@ -441,7 +441,6 @@ describe("App em rede", () => {
     it("Esc na busca volta para a sala, não para o menu", async () => {
       const usuario = abrir();
       await usuario.click(screen.getByRole("button", { name: "Multiplayer" }));
-      await usuario.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Online/ }));
       await usuario.click(await screen.findByRole("button", { name: /Baixar músicas/ }));
       expect(await screen.findByRole("heading", { name: "Buscar músicas" })).toBeInTheDocument();
       await usuario.keyboard("{Escape}");
@@ -451,7 +450,6 @@ describe("App em rede", () => {
     it("jogar a música baixada volta para a sala com ela escolhida", async () => {
       const usuario = abrir();
       await usuario.click(screen.getByRole("button", { name: "Multiplayer" }));
-      await usuario.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Online/ }));
       await usuario.click(await screen.findByRole("button", { name: /Baixar músicas/ }));
       await usuario.click(await screen.findByRole("button", { name: "Baixar Do Encore" }));
       await usuario.click(await screen.findByRole("button", { name: "Jogar Do Encore" }));
