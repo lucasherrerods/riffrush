@@ -35,7 +35,7 @@ export function resultadoDaPartida(partida: Partida, musicaId: string, dificulda
     acertos: partida.acertos,
     total: partida.notas.length,
     julgamentos: { ...partida.julgamentos },
-    precisao: partida.notas.length ? partida.valorDosAcertos / (partida.notas.length * VALOR_DO_JULGAMENTO.perfeito) : 0,
+    precisao: partida.notas.length ? partida.valorDosAcertos / (partida.notas.length * VALOR_DO_JULGAMENTO.max) : 0,
     fullCombo: partida.fullCombo,
     maiorSequencia: partida.maiorSequencia,
     derrota: partida.derrota,

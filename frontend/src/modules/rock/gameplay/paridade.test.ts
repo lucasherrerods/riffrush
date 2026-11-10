@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Nota } from "@/modules/rock/songs";
-import { avancar, criarPartida } from "./partida";
+import { JULGAMENTOS, avancar, criarPartida } from "./partida";
 import { aplicarEntradas, desempacotarReplay } from "./replay";
 
 /** Os mesmos casos que o motor em Rust da API confere em `backend/motor/tests/paridade.rs`. */
@@ -13,7 +13,9 @@ describe("paridade com o motor da API", () => {
     const partida = criarPartida(caso.notas, { semFalha: replay.semFalha, fantasma: replay.fantasma, velocidade: replay.velocidade, semAberta: replay.semAberta, jeito: replay.jeito });
     aplicarEntradas(partida, replay.entradas, 0, Infinity, []);
     avancar(partida, caso.fim);
-    const { pontos, acertos, erros, julgamentos, valorDosAcertos, sequencia, maiorSequencia, vida, estrelaEmCompassos, estrelaAtiva, derrota, fantasma } = partida;
+    // O motor grava a contagem como lista, de MAX a 50.
+    const julgamentos = JULGAMENTOS.map((j) => partida.julgamentos[j]);
+    const { pontos, acertos, erros, valorDosAcertos, sequencia, maiorSequencia, vida, estrelaEmCompassos, estrelaAtiva, derrota, fantasma } = partida;
     expect({ pontos, acertos, erros, julgamentos, valorDosAcertos, sequencia, maiorSequencia, vida, estrelaEmCompassos, estrelaAtiva, derrota, fantasma }).toEqual(caso.esperado);
   }));
 });

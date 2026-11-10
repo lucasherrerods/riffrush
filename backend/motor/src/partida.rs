@@ -5,9 +5,11 @@ use std::collections::{HashMap, HashSet};
 
 /// Até onde, em segundos de cada lado da batida, o toque acerta a nota (220 ms no total).
 pub const JANELA_DE_ACERTO: f64 = 0.11;
-/// Faixas de cada julgamento, que dão o peso do acerto na precisão.
-const JANELA_DO_PERFEITO: f64 = 0.035;
-const JANELA_DO_OTIMO: f64 = 0.07;
+/// Faixas de cada julgamento, as do osu!mania com OD 8; o 50 vai até a janela de acerto.
+const JANELA_DO_MAX: f64 = 0.016;
+const JANELA_DO_300: f64 = 0.04;
+const JANELA_DO_200: f64 = 0.073;
+const JANELA_DO_100: f64 = 0.103;
 /// Depois de palhetar, quanto tempo os trastes ainda podem chegar ao acorde antes de virar palhetada em vão.
 const FOLGA_DA_PALHETADA: f64 = 0.05;
 /// Depois de acertar um HOPO ou tap, uma palhetada logo em seguida é engolida, sem punir.
@@ -49,32 +51,46 @@ pub fn quantizar(tempo: f64) -> f64 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Julgamento {
-    Perfeito,
-    Otimo,
-    Bom,
+    Max,
+    J300,
+    J200,
+    J100,
+    J50,
 }
 
+/// Na ordem da `contagem` da partida.
+pub const JULGAMENTOS: [Julgamento; 5] = [Julgamento::Max, Julgamento::J300, Julgamento::J200, Julgamento::J100, Julgamento::J50];
+
 impl Julgamento {
-    /// Quanto o acerto vale na precisão da partida.
+    /// Quanto o acerto vale na precisão, como no ScoreV1 do osu!mania: o MAX vale o mesmo que o 300.
     pub fn valor(self) -> u32 {
         match self {
-            Self::Perfeito => 300,
-            Self::Otimo => 200,
-            Self::Bom => 100,
+            Self::Max | Self::J300 => 300,
+            Self::J200 => 200,
+            Self::J100 => 100,
+            Self::J50 => 50,
         }
+    }
+
+    /// A posição na `contagem` da partida.
+    pub fn indice(self) -> usize {
+        self as usize
     }
 }
 
 /// O julgamento de um toque a `distancia` segundos da batida, para qualquer lado. Compara em ticks.
 pub fn julgar(distancia: f64) -> Julgamento {
     let ticks = arredondar(distancia * TICKS_POR_SEGUNDO).abs();
-    if ticks <= JANELA_DO_PERFEITO * TICKS_POR_SEGUNDO {
-        Julgamento::Perfeito
-    } else if ticks <= JANELA_DO_OTIMO * TICKS_POR_SEGUNDO {
-        Julgamento::Otimo
-    } else {
-        Julgamento::Bom
-    }
+    let faixas = [
+        (JANELA_DO_MAX, Julgamento::Max),
+        (JANELA_DO_300, Julgamento::J300),
+        (JANELA_DO_200, Julgamento::J200),
+        (JANELA_DO_100, Julgamento::J100),
+    ];
+    faixas
+        .into_iter()
+        .find(|(janela, _)| ticks <= arredondar(janela * TICKS_POR_SEGUNDO))
+        .map_or(Julgamento::J50, |(_, julgamento)| julgamento)
 }
 
 /// Como a nota se toca, como no Clone Hero.
@@ -245,9 +261,8 @@ pub struct Partida {
     pub sequencia: u32,
     pub maior_sequencia: u32,
     pub acertos: u32,
-    pub perfeitos: u32,
-    pub otimos: u32,
-    pub bons: u32,
+    /// Quantos acertos de cada julgamento, de MAX a 50. As notas perdidas (o Miss) ficam em `erros`.
+    pub contagem: [u32; 5],
     /// Soma do valor de cada acerto, para a precisão.
     pub valor_dos_acertos: u32,
     /// Notas que passaram sem ser tocadas.
@@ -343,9 +358,7 @@ pub fn criar_partida_com_ritmo(notas: &[Nota], ritmo: &Ritmo, opcoes: OpcoesDaPa
         sequencia: 0,
         maior_sequencia: 0,
         acertos: 0,
-        perfeitos: 0,
-        otimos: 0,
-        bons: 0,
+        contagem: [0; 5],
         valor_dos_acertos: 0,
         erros: 0,
         toques_em_vazio: 0,
@@ -393,13 +406,13 @@ pub fn multiplicador(partida: &Partida) -> f64 {
     f64::from(base * if partida.estrela_ativa { 2 } else { 1 })
 }
 
-/// O valor dos acertos sobre o máximo das notas que já passaram (0 a 1): só PERFEITO em todas dá 100%.
+/// O valor dos acertos sobre o máximo das notas que já passaram (0 a 1): MAX ou 300 em todas dá 100%.
 pub fn precisao(partida: &Partida) -> f64 {
     let tocadas = partida.acertos + partida.erros;
     if tocadas == 0 {
         return 1.0;
     }
-    f64::from(partida.valor_dos_acertos) / (f64::from(tocadas) * f64::from(Julgamento::Perfeito.valor()))
+    f64::from(partida.valor_dos_acertos) / (f64::from(tocadas) * f64::from(Julgamento::Max.valor()))
 }
 
 /// Full combo: todas as notas acertadas sem nenhuma palhetada ou toque em vão.
@@ -477,11 +490,7 @@ pub fn acertar(partida: &mut Partida, indice: usize, tempo: f64) {
     nota.segurou_ate = nota.tempo.max(tempo);
     let (frase, solo) = (nota.frase, nota.solo);
     partida.acertos += 1;
-    match julgamento {
-        Julgamento::Perfeito => partida.perfeitos += 1,
-        Julgamento::Otimo => partida.otimos += 1,
-        Julgamento::Bom => partida.bons += 1,
-    }
+    partida.contagem[julgamento.indice()] += 1;
     partida.valor_dos_acertos += julgamento.valor();
     partida.pontos_das_notas += PONTOS_POR_NOTA * multiplicador(partida);
     atualizar_pontos(partida);
@@ -1015,7 +1024,8 @@ mod tests {
         assert!(tocar(&mut partida, 0, 1.05));
         avancar(&mut partida, 3.0);
         assert_eq!((partida.acertos, partida.erros), (1, 1));
-        // Um ótimo (200) e uma nota perdida, sobre o máximo de dois perfeitos (600).
+        assert_eq!(partida.contagem, [0, 0, 1, 0, 0]);
+        // Um 200 e uma nota perdida, sobre o máximo de dois 300 (600).
         assert!((precisao(&partida) - 200.0 / 600.0).abs() < 1e-9);
     }
 
@@ -1422,10 +1432,20 @@ mod tests {
     }
 
     #[test]
-    fn julga_pela_distancia_ate_a_batida() {
-        assert_eq!(julgar(0.035), Julgamento::Perfeito);
-        assert_eq!(julgar(-0.05), Julgamento::Otimo);
-        assert_eq!(julgar(0.11), Julgamento::Bom);
+    fn julga_pela_distancia_ate_a_batida_como_no_mania() {
+        assert_eq!(julgar(0.016), Julgamento::Max);
+        assert_eq!(julgar(-0.017), Julgamento::J300);
+        assert_eq!(julgar(0.04), Julgamento::J300);
+        assert_eq!(julgar(-0.073), Julgamento::J200);
+        assert_eq!(julgar(0.103), Julgamento::J100);
+        assert_eq!(julgar(0.104), Julgamento::J50);
+        assert_eq!(julgar(-0.11), Julgamento::J50);
+    }
+
+    #[test]
+    fn os_pesos_sao_os_do_score_v1() {
+        let pesos = [Julgamento::Max, Julgamento::J300, Julgamento::J200, Julgamento::J100, Julgamento::J50].map(Julgamento::valor);
+        assert_eq!(pesos, [300, 300, 200, 100, 50]);
     }
 
     #[test]
