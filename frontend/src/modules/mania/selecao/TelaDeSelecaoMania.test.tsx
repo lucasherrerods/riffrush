@@ -92,14 +92,22 @@ it("tem o botão de tocar e o rodapé com os atalhos, como no Rock", () => {
   expect(screen.getByText("Confirmar")).toBeInTheDocument();
 });
 
-it("a Aleatória sorteia com as teclas do filtro e a seleção vai para o mapa que chega", async () => {
+it("a Aleatória sorteia com o filtro dela, que fica guardado, e a seleção vai para o mapa que chega", async () => {
+  localStorage.clear();
   const sortearMapa = vi.fn(async () => {});
   const props = { conjuntos, mods: 0, aoMudarMods: vi.fn(), aoImportar: vi.fn(), aoJogar: vi.fn(), sortearMapa };
-  const { rerender } = render(<TelaDeSelecaoMania {...props} />);
+  const { rerender, unmount } = render(<TelaDeSelecaoMania {...props} />);
+  await userEvent.click(screen.getByRole("button", { name: "Filtro da Aleatória" }));
+  await userEvent.click(screen.getByRole("button", { name: "6K" }));
+  await userEvent.click(screen.getByRole("button", { name: "Hard" }));
   await userEvent.click(screen.getByRole("button", { name: "Aleatória" }));
-  expect(sortearMapa).toHaveBeenCalledWith("todas");
+  expect(sortearMapa).toHaveBeenCalledWith({ teclas: [6], faixas: ["Hard"] });
   rerender(<TelaDeSelecaoMania {...props} selecionado="c" />);
   expect(titulo()).toBe("Gama");
+  unmount();
+  render(<TelaDeSelecaoMania {...props} />);
+  await userEvent.click(screen.getByRole("button", { name: "Aleatória" }));
+  expect(sortearMapa).toHaveBeenLastCalledWith({ teclas: [6], faixas: ["Hard"] });
 });
 
 // Bug: o Esc não voltava ao menu na seleção do Mania.

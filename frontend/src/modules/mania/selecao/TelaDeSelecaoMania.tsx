@@ -41,6 +41,12 @@ import {
 } from "./filtroDaSelecao"
 import { CapaDoConjunto } from "./CapaDoConjunto"
 import { SeletorDeMods } from "./SeletorDeMods"
+import type { FiltroDoSorteio } from "../busca/sortear"
+import {
+  carregarFiltroDaAleatoria,
+  FiltroDaAleatoria,
+  salvarFiltroDaAleatoria,
+} from "./FiltroDaAleatoria"
 
 interface Props {
   /** O conjunto que abre selecionado (ex.: o que acabou de ser baixado na busca). */
@@ -58,8 +64,8 @@ interface Props {
   aoRemover?: (conjunto: ConjuntoSalvo) => void
   /** Abre o mapa no treino; sem ele o botão não aparece. */
   aoTreinar?: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void
-  /** Baixa um mapa ranked sorteado, com as teclas do filtro, e o abre selecionado; sem ele o botão não aparece. */
-  sortearMapa?: (teclas: number | "todas") => Promise<unknown>
+  /** Baixa um mapa ranked sorteado, dentro do filtro da Aleatória, e o abre selecionado; sem ele o botão não aparece. */
+  sortearMapa?: (filtro: FiltroDoSorteio) => Promise<unknown>
   /** Assistir ao replay de uma partida do ranking da dificuldade escolhida. */
   aoAssistir?: (
     conjunto: ConjuntoSalvo,
@@ -159,6 +165,13 @@ export function TelaDeSelecaoMania({
     carregarFavoritas(CHAVE_DAS_FAVORITAS),
   )
   const [soFavoritas, setSoFavoritas] = useState(false)
+  const [filtroDaAleatoria, setFiltroDaAleatoria] = useState(
+    carregarFiltroDaAleatoria,
+  )
+  const mudarFiltroDaAleatoria = (filtro: FiltroDoSorteio) => {
+    setFiltroDaAleatoria(filtro)
+    salvarFiltroDaAleatoria(filtro)
+  }
   const seletor = useRef<HTMLInputElement>(null)
   const [menuAberto, setMenuAberto] = useState(false)
   const [removendo, setRemovendo] = useState(false)
@@ -344,7 +357,20 @@ export function TelaDeSelecaoMania({
               <span className="max-md:sr-only">Importar .osz</span>
             </BotaoDaSelecao>
             {sortearMapa && (
-              <BotaoDeAleatoria aoSortear={() => sortearMapa(teclas)} />
+              <BotaoDeAleatoria
+                aoSortear={() => sortearMapa(filtroDaAleatoria)}
+                filtro={{
+                  ativos:
+                    filtroDaAleatoria.teclas.length +
+                    filtroDaAleatoria.faixas.length,
+                  conteudo: (
+                    <FiltroDaAleatoria
+                      filtro={filtroDaAleatoria}
+                      aoMudar={mudarFiltroDaAleatoria}
+                    />
+                  ),
+                }}
+              />
             )}
             {aoBuscarMapas && (
               <BotaoDaSelecao onClick={aoBuscarMapas}>

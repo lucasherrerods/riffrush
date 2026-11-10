@@ -35,7 +35,7 @@ import { TelaDeSelecaoMania } from "./selecao/TelaDeSelecaoMania";
 import { carregarConfiguracoesDoMania, salvarConfiguracoesDoMania, type ConfiguracoesDoMania } from "./settings/configuracoesMania";
 import { TelaDeConfiguracoesMania } from "./settings/TelaDeConfiguracoesMania";
 import { baixarOsz, buscarMapas, type FiltrosDaBusca, type MapaDaBusca, type PaginaDaBusca } from "./busca/api";
-import { sortearMapa } from "./busca/sortear";
+import { sortearMapa, type FiltroDoSorteio } from "./busca/sortear";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
 import { definirVolumeGeral, usePreferenciasDeAudio } from "@/modules/audio";
@@ -214,8 +214,8 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   };
   const baixados = new Set((conjuntos ?? []).flatMap((c) => (c.origem === "osu" && c.beatmapsetId ? [c.beatmapsetId] : [])));
   /** Como a Aleatória do Rock: baixa um mapa ranked novo e o deixa selecionado. */
-  const sortearMapaNovo = async (teclas: number | "todas") => {
-    const mapa = await sortearMapa(teclas, { buscar: buscar ?? buscarMapas, baixados });
+  const sortearMapaNovo = async (filtro: FiltroDoSorteio) => {
+    const mapa = await sortearMapa(filtro, { buscar: buscar ?? buscarMapas, baixados });
     const osz = await (baixar ?? baixarOsz)(mapa.beatmapsetId);
     await guardarDaBusca(osz, mapa);
     setTela({ nome: "selecao", conjuntoId: `osu:${mapa.beatmapsetId}` });
