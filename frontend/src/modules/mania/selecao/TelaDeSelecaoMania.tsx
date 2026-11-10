@@ -235,7 +235,7 @@ export function TelaDeSelecaoMania({ selecionado, aoVoltar, aoBuscarMapas, conju
             titulo={conjunto.tituloUnicode || conjunto.titulo}
             subtitulo={`${conjunto.artistaUnicode || conjunto.artista} · mapa de ${conjunto.mapper}`}
             aviso={conjunto.origem === "importado" && "Importado · sem XP nem ranking"}
-            faixa={<CapaDoConjunto conjunto={conjunto} />}
+            faixa={<CapaDoConjunto conjunto={conjunto} className="object-top" />}
             acao={<BotaoDeFavoritar favorita={favorita} aoAlternar={alternarFavoritaAtual} />}
           />
         )}
