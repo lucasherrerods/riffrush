@@ -3,6 +3,7 @@
 
 mod casos_de_uso;
 mod dominio;
+mod estimativa;
 mod portas;
 mod postgres;
 
@@ -10,7 +11,11 @@ use std::time::Duration;
 
 pub use casos_de_uso::{Desfecho, ServicosDoRejulgamento};
 pub use dominio::{cabe_mais_um, espera_da_tentativa, inicio_da_janela, rejulgar, ChartGuardado, Recusa, Rejulgada, JANELA_DO_ENCORE, PEDIDOS_AO_ENCORE};
-pub use portas::{CacheDeCharts, ChartBaixado, FilaDoRejulgamento, FonteDeCharts, LimiteDePedidos, PartidaAntiga, PartidaPendente, PartidasAntigas};
+pub use estimativa::{estimar_valor_no_score_v1, pesos_da_partida, PesosAntigos};
+pub use portas::{
+    CacheDeCharts, ChartBaixado, FilaDoRejulgamento, FonteDeCharts, LimiteDePedidos, NoScoreV1, PartidaAntiga, PartidaDoJulgamentoAntigo, PartidaPendente,
+    PartidasAntigas, PartidasDoJulgamentoAntigo,
+};
 pub use postgres::RejulgamentoPostgres;
 
 /// Sem nada na fila, espera um pouco antes de olhar de novo.
@@ -24,7 +29,15 @@ pub fn iniciar_trabalhador(servicos: ServicosDoRejulgamento) -> tokio::task::Joi
             match servicos.processar_lote().await {
                 // Com a fila vazia, aproveita para rejulgar as partidas das regras antigas.
                 Ok(desfechos) if desfechos.is_empty() => match servicos.rejulgar_antigas().await {
-                    Ok(0) => tokio::time::sleep(PAUSA_COM_A_FILA_VAZIA).await,
+                    // Depois, passa as partidas de antes do ScoreV1 para ele, refazendo o XP.
+                    Ok(0) => match servicos.passar_para_o_score_v1().await {
+                        Ok(0) => tokio::time::sleep(PAUSA_COM_A_FILA_VAZIA).await,
+                        Ok(_) => {}
+                        Err(falha) => {
+                            tracing::warn!(%falha, "a passagem das partidas para o ScoreV1 falhou");
+                            tokio::time::sleep(PAUSA_DEPOIS_DE_FALHA).await;
+                        }
+                    },
                     Ok(_) => {}
                     Err(falha) => {
                         tracing::warn!(%falha, "o rejulgamento das partidas antigas falhou");

@@ -3,8 +3,9 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use super::dominio::{ChartGuardado, Rejulgada};
+use super::estimativa::PesosAntigos;
 use crate::modules::conta::FalhaExterna;
-use crate::modules::progresso::{Dificuldade, Instrumento};
+use crate::modules::progresso::{Dificuldade, Instrumento, ResumoDaPartida};
 
 /// Uma partida que saiu da fila para ser rejulgada.
 #[derive(Debug, Clone, PartialEq)]
@@ -50,6 +51,39 @@ pub trait PartidasAntigas: Send + Sync {
     async fn atualizar(&self, id: Uuid, rejulgada: &Rejulgada) -> Result<(), FalhaExterna>;
     /// Não há como rejulgar: a partida fica com as regras antigas, fora do ranking.
     async fn sem_como_rejulgar(&self, id: Uuid) -> Result<(), FalhaExterna>;
+}
+
+/// Uma partida do Encore julgada antes do ScoreV1, para passar para ele.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PartidaDoJulgamentoAntigo {
+    pub id: Uuid,
+    pub conta_id: Uuid,
+    pub md5: String,
+    pub dificuldade: Dificuldade,
+    pub instrumento: Instrumento,
+    /// Só os recordes guardam o replay; sem ele, a precisão é estimada.
+    pub replay: Option<Vec<u8>>,
+    pub resumo: ResumoDaPartida,
+    pub pesos: PesosAntigos,
+    /// Desistência que nunca rendeu XP (o app não manda o replay dela) continua sem.
+    pub rendia_xp: bool,
+    /// Quantas vezes a conta jogou o mesmo chart nas 24 horas antes desta, como no XP de hoje.
+    pub repeticoes: u32,
+}
+
+/// A partida no ScoreV1: rejulgada pelo replay ou estimada pelo valor guardado.
+#[derive(Debug, Clone, PartialEq)]
+pub enum NoScoreV1 {
+    Rejulgada(Rejulgada),
+    Estimada { valor_dos_acertos: u32, precisao: f64 },
+}
+
+#[async_trait]
+pub trait PartidasDoJulgamentoAntigo: Send + Sync {
+    /// Até `limite` partidas ainda julgadas antes do ScoreV1, das mais velhas para as mais novas.
+    async fn pegar_do_julgamento_antigo(&self, limite: u32) -> Result<Vec<PartidaDoJulgamentoAntigo>, FalhaExterna>;
+    /// Grava a partida no ScoreV1 com o XP refeito e soma de novo o XP da conta pelas partidas dela.
+    async fn gravar_no_score_v1(&self, partida: &PartidaDoJulgamentoAntigo, nova: &NoScoreV1, xp_ganho: u64) -> Result<(), FalhaExterna>;
 }
 
 #[async_trait]

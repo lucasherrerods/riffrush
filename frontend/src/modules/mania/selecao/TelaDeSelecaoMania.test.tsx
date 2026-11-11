@@ -146,3 +146,35 @@ it("os mods ficam num popover aberto pelo botão Modificadores", async () => {
   await usuario.click(screen.getByRole("button", { name: "HR" }));
   expect(aoMudarMods).toHaveBeenCalled();
 });
+
+describe("no celular", () => {
+  beforeEach(() => Object.defineProperty(window, "innerWidth", { value: 375, configurable: true }));
+  afterEach(() => Object.defineProperty(window, "innerWidth", { value: 1024, configurable: true }));
+
+  // No celular só se joga até 5K: o Gama (só 7K) some, o Alfa fica só com o 4K, e o filtro não oferece 7K.
+  it("esconde as dificuldades de 6K para cima e os filtros delas", async () => {
+    montar();
+    expect(screen.queryByText("Gama")).not.toBeInTheDocument();
+    expect(screen.queryByText("Hard")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Filtros/ }));
+    expect(screen.queryByRole("button", { name: "7K" })).not.toBeInTheDocument();
+  });
+
+  // Bug: detalhes, ranking e filtros empilhados deixavam a roda minúscula no celular.
+  it("a roda fica com a tela: filtros recolhidos e detalhes na gaveta do rodapé", async () => {
+    const aoJogar = montar();
+    expect(screen.getByRole("list", { name: "Mapas" })).toBeInTheDocument();
+    expect(screen.queryByRole("searchbox", { name: "Filtrar mapas" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Notas longas")).not.toBeInTheDocument();
+    const usuario = userEvent.setup();
+
+    await usuario.click(screen.getByRole("button", { name: /Filtros/ }));
+    expect(screen.getByRole("searchbox", { name: "Filtrar mapas" })).toBeInTheDocument();
+
+    await usuario.click(screen.getByRole("button", { name: /Alfa/, expanded: false }));
+    expect(screen.getByText("Notas longas")).toBeInTheDocument();
+
+    await usuario.click(screen.getByRole("button", { name: /TOCAR/ }));
+    expect(aoJogar).toHaveBeenCalled();
+  });
+});

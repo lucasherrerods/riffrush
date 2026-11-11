@@ -8,7 +8,7 @@ import { EscolhaDoTreino } from "@/shared/ui/EscolhaDoTreino";
 import { MotorDoMania, iniciarMotorDoMania, velocidadeDosMods } from "./motor";
 import { aplicarEventos, desenharPista, type QuadroDaPista } from "./desenhar";
 import { MODS } from "./mods";
-import { geometriaDaPista, type GeometriaDaPista } from "./pista";
+import { colunaDoToque, geometriaDaPista, type GeometriaDaPista } from "./pista";
 import { colunaDaTecla, teclasDoMapa } from "./teclas";
 import { mapaDoTrecho, trechosDoMapa } from "./treino";
 
@@ -239,24 +239,46 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
         const coluna = colunaDaTecla(teclas, evento.code);
         if (coluna < 0 || replay) return;
         evento.preventDefault();
-        if (evento.repeat || apertadas[coluna]) return;
+        if (evento.repeat) return;
+        tocarColuna(coluna, evento);
+      };
+      const aoSoltar = (evento: KeyboardEvent) => soltarColuna(colunaDaTecla(teclas, evento.code), evento);
+      // Teclado e dedo entram pelo mesmo caminho: o motor e o replay não sabem de onde veio a nota.
+      function tocarColuna(coluna: number, evento: Event) {
+        if (apertadas[coluna]) return;
         apertadas[coluna] = true;
         const tempo = emMs(momentoDoEvento(contexto, evento));
         motor.tocar(coluna, tempo);
         entradas.push([tempo, coluna, 1]);
         lerEventos();
-      };
-      const aoSoltar = (evento: KeyboardEvent) => {
-        const coluna = colunaDaTecla(teclas, evento.code);
+      }
+      function soltarColuna(coluna: number, evento: Event) {
         if (coluna < 0 || replay || !apertadas[coluna]) return;
         apertadas[coluna] = false;
         const tempo = emMs(momentoDoEvento(contexto, evento));
         motor.soltar(coluna, tempo);
         entradas.push([tempo, coluna, 0]);
         lerEventos();
-      };
+      }
       window.addEventListener("keydown", aoApertar);
       window.addEventListener("keyup", aoSoltar);
+
+      // No celular cada dedo aperta a coluna onde encostou e solta ao sair da tela (as notas longas seguram junto).
+      const dedos = new Map<number, number>();
+      const aoEncostar = (evento: PointerEvent) => {
+        if (evento.pointerType === "mouse" || replay || !geometria || !tela) return;
+        evento.preventDefault();
+        const coluna = colunaDoToque(evento.clientX - tela.getBoundingClientRect().left, geometria);
+        dedos.set(evento.pointerId, coluna);
+        tocarColuna(coluna, evento);
+      };
+      const aoTirarODedo = (evento: PointerEvent) => {
+        const coluna = dedos.get(evento.pointerId);
+        if (coluna === undefined) return;
+        dedos.delete(evento.pointerId);
+        // Outro dedo ainda na mesma coluna a mantém apertada.
+        if (![...dedos.values()].includes(coluna)) soltarColuna(coluna, evento);
+      };
 
       // O tamanho vem do ResizeObserver e a geometria só muda com ele: ler clientWidth todo quadro força um layout.
       const tela = canvas.current;
@@ -276,6 +298,9 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
       medir();
       const observador = tela && typeof ResizeObserver !== "undefined" ? new ResizeObserver(medir) : null;
       if (tela) observador?.observe(tela);
+      tela?.addEventListener("pointerdown", aoEncostar);
+      tela?.addEventListener("pointerup", aoTirarODedo);
+      tela?.addEventListener("pointercancel", aoTirarODedo);
 
       // No replay, cada entrada gravada entra no motor quando a música chega no tempo dela, como se fosse tocada agora.
       let proximaDoReplay = 0;
@@ -328,6 +353,9 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
         observador?.disconnect();
         window.removeEventListener("keydown", aoApertar);
         window.removeEventListener("keyup", aoSoltar);
+        tela?.removeEventListener("pointerdown", aoEncostar);
+        tela?.removeEventListener("pointerup", aoTirarODedo);
+        tela?.removeEventListener("pointercancel", aoTirarODedo);
         try {
           fonte.stop();
         } catch {
@@ -374,7 +402,7 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
           <p className="text-texto-suave">{mapa.dificuldade}</p>
         </div>
       </header>
-      <canvas ref={canvas} aria-label="Pista do Mania" className="h-full w-full" />
+      <canvas ref={canvas} aria-label="Pista do Mania" className="h-full w-full touch-none select-none" />
       {falta > 0 && (
         <p role="timer" className="pointer-events-none absolute inset-0 grid place-items-center font-titulo text-8xl">
           {falta}

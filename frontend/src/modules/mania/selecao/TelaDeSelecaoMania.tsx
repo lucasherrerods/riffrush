@@ -13,6 +13,7 @@ import {
   FundoDaSelecao,
   MenuDeApagar,
   RodapeDeComandos,
+  SelecaoNoCelular,
   TituloDaSelecao,
   alternarFavorita,
   carregarFavoritas,
@@ -23,6 +24,7 @@ import {
   type ItemDoCarrossel,
 } from "@/modules/selecao"
 import { useTeclado } from "@/shared/hooks/useTeclado"
+import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita"
 import { cn } from "@/shared/lib/utils"
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes"
 import { NumeroDestacado } from "@/shared/ui/NumeroDestacado"
@@ -39,6 +41,7 @@ import {
   teclasDaBiblioteca,
   type OrdemDaSelecao,
 } from "./filtroDaSelecao"
+import { soOQueCabeNoCelular } from "../beatmaps/celular"
 import { CapaDoConjunto } from "./CapaDoConjunto"
 import { SeletorDeMods } from "./SeletorDeMods"
 
@@ -163,17 +166,22 @@ export function TelaDeSelecaoMania({
   const [menuAberto, setMenuAberto] = useState(false)
   const [removendo, setRemovendo] = useState(false)
 
-  const todos = conjuntos ?? []
+  const estreita = useTelaEstreita()
+  // No celular só aparece o que dá para tocar com o dedo (até 5K), e o filtro de teclas só oferece essas.
+  const todos = useMemo(
+    () => (estreita ? soOQueCabeNoCelular(conjuntos ?? []) : (conjuntos ?? [])),
+    [conjuntos, estreita],
+  )
   const lista = useMemo(
     () =>
-      filtrarConjuntos(conjuntos ?? [], {
+      filtrarConjuntos(todos, {
         texto,
         teclas,
         ordem,
         favoritas,
         soFavoritas,
       }),
-    [conjuntos, texto, teclas, ordem, favoritas, soFavoritas],
+    [todos, texto, teclas, ordem, favoritas, soFavoritas],
   )
   const opcoesDeTeclas = teclasDaBiblioteca(todos)
   const indice = Math.max(
@@ -312,6 +320,131 @@ export function TelaDeSelecaoMania({
     />
   )
 
+  const fundo = (
+    // Como no Rock: a capa do mapa, borrada, pinta o fundo e troca junto com a seleção.
+    <FundoDaSelecao chave={conjunto?.id}>
+      {conjunto && (
+        <CapaDoConjunto conjunto={conjunto} className="scale-105 blur-md" />
+      )}
+    </FundoDaSelecao>
+  )
+  const cabecalho = (
+    <>
+      <BarraDaSelecao aoVoltar={aoVoltar}>
+        <BotaoDeModificadores ligados={contarMods(mods)}>
+          <SeletorDeMods mods={mods} aoMudar={aoMudarMods} />
+        </BotaoDeModificadores>
+        <BotaoDaSelecao onClick={() => seletor.current?.click()}>
+          <Upload aria-hidden />
+          <span className="max-md:sr-only">Importar .osz</span>
+        </BotaoDaSelecao>
+        {sortearMapa && (
+          <BotaoDeAleatoria aoSortear={() => sortearMapa(teclas)} />
+        )}
+        {aoBuscarMapas && (
+          <BotaoDaSelecao onClick={aoBuscarMapas}>
+            <Search aria-hidden />
+            <span className="max-md:sr-only">Buscar mapas</span>
+          </BotaoDaSelecao>
+        )}
+      </BarraDaSelecao>
+      <input
+        ref={seletor}
+        type="file"
+        accept=".osz"
+        multiple
+        aria-label="Arquivos .osz"
+        className="sr-only"
+        onChange={(e) => receber(e.target.files)}
+      />
+    </>
+  )
+  const tocar = (
+    <BotaoDeTocar
+      aoTocar={jogar}
+      aoTreinar={
+        aoTreinar &&
+        (() => conjunto && dificuldade && aoTreinar(conjunto, dificuldade))
+      }
+      desabilitado={!dificuldade}
+    />
+  )
+  const filtros = !!todos.length && (
+    <FiltrosDaBiblioteca
+      texto={texto}
+      aoMudarTexto={setTexto}
+      placeholder="Buscar na biblioteca"
+      rotuloDoCampo="Filtrar mapas"
+      ordens={ORDENS}
+      ordem={ordem}
+      aoMudarOrdem={setOrdem}
+      soFavoritas={soFavoritas}
+      aoAlternarFavoritas={() => setSoFavoritas((ligado) => !ligado)}
+      contagem={`${lista.length ? `${indice + 1} de ${lista.length} ${lista.length === 1 ? "mapa" : "mapas"}` : ""}${lista.length < todos.length && lista.length ? ` · ${todos.length} na biblioteca` : ""}`}
+    >
+      {opcoesDeTeclas.length > 1 && (
+        <GrupoDeOpcoes
+          titulo="Teclas"
+          opcoes={[
+            { id: "todas", rotulo: "Todas" },
+            ...opcoesDeTeclas.map((t) => ({
+              id: String(t),
+              rotulo: `${t}K`,
+            })),
+          ]}
+          valor={String(teclas)}
+          aoEscolher={(valor) =>
+            setTeclas(valor === "todas" ? "todas" : Number(valor))
+          }
+        />
+      )}
+    </FiltrosDaBiblioteca>
+  )
+  const roda = (
+    <>
+      {conjuntos === null && (
+        <p className="text-texto-suave">Abrindo a biblioteca…</p>
+      )}
+      {conjuntos?.length === 0 && (
+        <AvisoDaLista>
+          Nenhum mapa ainda. Arraste um .osz para cá ou use o botão de
+          importar.
+        </AvisoDaLista>
+      )}
+      {!!todos.length && !lista.length && (
+        <AvisoDaLista>Nenhum mapa com esse filtro.</AvisoDaLista>
+      )}
+      {!!lista.length && (
+        <Carrossel
+          className="flex-1"
+          rotulo="Mapas"
+          itens={itens}
+          indice={indice}
+          dificuldade={dificuldade?.hash ?? ""}
+          dificuldades={dificuldades}
+          aoEscolherItem={escolher}
+          aoEscolherDificuldade={setHash}
+          aoJogar={jogar}
+          menuDaSelecionada={
+            aoRemover &&
+            conjunto && (
+              <MenuDeApagar
+                nome={conjunto.tituloUnicode || conjunto.titulo}
+                rotuloDoItem="Apagar mapa"
+                descricao="O mapa e os arquivos salvos serão apagados deste aparelho. Isso não pode ser desfeito."
+                menuAberto={menuAberto}
+                aoMudarMenu={setMenuAberto}
+                confirmando={removendo}
+                aoMudarConfirmando={setRemovendo}
+                aoConfirmar={() => aoRemover(conjunto)}
+              />
+            )
+          }
+        />
+      )}
+    </>
+  )
+
   return (
     <section
       aria-label="Seleção de mapas"
@@ -327,180 +460,101 @@ export function TelaDeSelecaoMania({
           "outline-2 outline-dashed outline-primaria -outline-offset-8",
       )}
     >
-      {/* Como no Rock: a capa do mapa, borrada, pinta o fundo e troca junto com a seleção. */}
-      <FundoDaSelecao chave={conjunto?.id}>
-        {conjunto && (
-          <CapaDoConjunto conjunto={conjunto} className="scale-105 blur-md" />
-        )}
-      </FundoDaSelecao>
-      <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 p-6 max-md:grid-cols-1 max-md:p-4">
-        <aside className="col-span-5 flex min-h-0 flex-col gap-4 max-md:col-span-1">
-          <BarraDaSelecao aoVoltar={aoVoltar}>
-            <BotaoDeModificadores ligados={contarMods(mods)}>
-              <SeletorDeMods mods={mods} aoMudar={aoMudarMods} />
-            </BotaoDeModificadores>
-            <BotaoDaSelecao onClick={() => seletor.current?.click()}>
-              <Upload aria-hidden />
-              <span className="max-md:sr-only">Importar .osz</span>
-            </BotaoDaSelecao>
-            {sortearMapa && (
-              <BotaoDeAleatoria aoSortear={() => sortearMapa(teclas)} />
-            )}
-            {aoBuscarMapas && (
-              <BotaoDaSelecao onClick={aoBuscarMapas}>
-                <Search aria-hidden />
-                <span className="max-md:sr-only">Buscar mapas</span>
-              </BotaoDaSelecao>
-            )}
-          </BarraDaSelecao>
-          <input
-            ref={seletor}
-            type="file"
-            accept=".osz"
-            multiple
-            aria-label="Arquivos .osz"
-            className="sr-only"
-            onChange={(e) => receber(e.target.files)}
-          />
+      {estreita ? (
+        <SelecaoNoCelular
+          fundo={fundo}
+          cabecalho={cabecalho}
+          filtros={filtros}
+          lista={roda}
+          titulo={conjunto ? conjunto.tituloUnicode || conjunto.titulo : undefined}
+          subtitulo={
+            conjunto &&
+            `${conjunto.artistaUnicode || conjunto.artista} · mapa de ${conjunto.mapper}`
+          }
+          capa={conjunto && <CapaDoConjunto conjunto={conjunto} />}
+          favoritar={
+            conjunto && (
+              <BotaoDeFavoritar
+                favorita={favorita}
+                aoAlternar={alternarFavoritaAtual}
+              />
+            )
+          }
+          detalhes={detalhes}
+          ranking={ranking || undefined}
+          tocar={tocar}
+        />
+      ) : (
+        <>
+          {fundo}
+          <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 p-6">
+            <aside className="col-span-5 flex min-h-0 flex-col gap-4">
+              {cabecalho}
 
-          {conjunto && (
-            <TituloDaSelecao
-              titulo={conjunto.tituloUnicode || conjunto.titulo}
-              subtitulo={`${conjunto.artistaUnicode || conjunto.artista} · mapa de ${conjunto.mapper}`}
-              aviso={
-                conjunto.origem === "importado" &&
-                "Importado · sem XP nem ranking"
-              }
-              faixa={<CapaDoConjunto conjunto={conjunto} />}
-              favoritar={
-                <BotaoDeFavoritar
-                  favorita={favorita}
-                  aoAlternar={alternarFavoritaAtual}
-                />
-              }
-            />
-          )}
-
-          {conjunto && (
-            // Como no Rock: o ranking ao lado da roda e os números da dificuldade na aba vizinha.
-            <Tabs
-              key={ranking ? "com-ranking" : "sem-ranking"}
-              defaultValue={ranking ? "ranking" : "detalhes"}
-              className="min-h-0 flex-1"
-            >
-              <TabsList className="w-full">
-                <TabsTrigger value="detalhes">
-                  <Info className="opacity-70" /> Detalhes
-                </TabsTrigger>
-                <TabsTrigger value="ranking">
-                  <ListOrdered className="opacity-70" /> Ranking
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="detalhes" className="min-h-0 overflow-y-auto">
-                {detalhes}
-              </TabsContent>
-              <TabsContent
-                value="ranking"
-                className="flex min-h-0 flex-col overflow-y-auto"
-              >
-                {ranking || (
-                  <p className="chapa bg-superficie-elevada/90 p-4 text-texto-suave">
-                    Só os mapas baixados pela busca do osu! têm ranking.
-                  </p>
-                )}
-              </TabsContent>
-            </Tabs>
-          )}
-          {!conjunto && <div className="flex-1" />}
-
-          <BotaoDeTocar
-            aoTocar={jogar}
-            aoTreinar={
-              aoTreinar &&
-              (() =>
-                conjunto && dificuldade && aoTreinar(conjunto, dificuldade))
-            }
-            desabilitado={!dificuldade}
-          />
-        </aside>
-
-        <div className="col-span-6 col-start-7 flex min-h-0 flex-col gap-4 max-md:col-span-1 max-md:col-start-auto">
-          {!!todos.length && (
-            <FiltrosDaBiblioteca
-              texto={texto}
-              aoMudarTexto={setTexto}
-              placeholder="Buscar na biblioteca"
-              rotuloDoCampo="Filtrar mapas"
-              ordens={ORDENS}
-              ordem={ordem}
-              aoMudarOrdem={setOrdem}
-              soFavoritas={soFavoritas}
-              aoAlternarFavoritas={() => setSoFavoritas((ligado) => !ligado)}
-              contagem={`${lista.length ? `${indice + 1} de ${lista.length} ${lista.length === 1 ? "mapa" : "mapas"}` : ""}${lista.length < todos.length && lista.length ? ` · ${todos.length} na biblioteca` : ""}`}
-            >
-              {opcoesDeTeclas.length > 1 && (
-                <GrupoDeOpcoes
-                  titulo="Teclas"
-                  opcoes={[
-                    { id: "todas", rotulo: "Todas" },
-                    ...opcoesDeTeclas.map((t) => ({
-                      id: String(t),
-                      rotulo: `${t}K`,
-                    })),
-                  ]}
-                  valor={String(teclas)}
-                  aoEscolher={(valor) =>
-                    setTeclas(valor === "todas" ? "todas" : Number(valor))
+              {conjunto && (
+                <TituloDaSelecao
+                  titulo={conjunto.tituloUnicode || conjunto.titulo}
+                  subtitulo={`${conjunto.artistaUnicode || conjunto.artista} · mapa de ${conjunto.mapper}`}
+                  aviso={
+                    conjunto.origem === "importado" &&
+                    "Importado · sem XP nem ranking"
+                  }
+                  faixa={<CapaDoConjunto conjunto={conjunto} />}
+                  favoritar={
+                    <BotaoDeFavoritar
+                      favorita={favorita}
+                      aoAlternar={alternarFavoritaAtual}
+                    />
                   }
                 />
               )}
-            </FiltrosDaBiblioteca>
-          )}
 
-          {conjuntos === null && (
-            <p className="text-texto-suave">Abrindo a biblioteca…</p>
-          )}
-          {conjuntos?.length === 0 && (
-            <AvisoDaLista>
-              Nenhum mapa ainda. Arraste um .osz para cá ou use o botão de
-              importar.
-            </AvisoDaLista>
-          )}
-          {!!todos.length && !lista.length && (
-            <AvisoDaLista>Nenhum mapa com esse filtro.</AvisoDaLista>
-          )}
-          {!!lista.length && (
-            <Carrossel
-              className="flex-1"
-              rotulo="Mapas"
-              itens={itens}
-              indice={indice}
-              dificuldade={dificuldade?.hash ?? ""}
-              dificuldades={dificuldades}
-              aoEscolherItem={escolher}
-              aoEscolherDificuldade={setHash}
-              aoJogar={jogar}
-              aoGirar={andar}
-              menuDaSelecionada={
-                aoRemover &&
-                conjunto && (
-                  <MenuDeApagar
-                    nome={conjunto.tituloUnicode || conjunto.titulo}
-                    rotuloDoItem="Apagar mapa"
-                    descricao="O mapa e os arquivos salvos serão apagados deste aparelho. Isso não pode ser desfeito."
-                    menuAberto={menuAberto}
-                    aoMudarMenu={setMenuAberto}
-                    confirmando={removendo}
-                    aoMudarConfirmando={setRemovendo}
-                    aoConfirmar={() => aoRemover(conjunto)}
-                  />
-                )
-              }
-            />
-          )}
-        </div>
-      </div>
-      <RodapeDeComandos comandos={COMANDOS} />
+              {conjunto && (
+                // Como no Rock: o ranking ao lado da roda e os números da dificuldade na aba vizinha.
+                <Tabs
+                  key={ranking ? "com-ranking" : "sem-ranking"}
+                  defaultValue={ranking ? "ranking" : "detalhes"}
+                  className="min-h-0 flex-1"
+                >
+                  <TabsList className="w-full">
+                    <TabsTrigger value="detalhes">
+                      <Info className="opacity-70" /> Detalhes
+                    </TabsTrigger>
+                    <TabsTrigger value="ranking">
+                      <ListOrdered className="opacity-70" /> Ranking
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent
+                    value="detalhes"
+                    className="min-h-0 overflow-y-auto"
+                  >
+                    {detalhes}
+                  </TabsContent>
+                  <TabsContent
+                    value="ranking"
+                    className="flex min-h-0 flex-col overflow-y-auto"
+                  >
+                    {ranking || (
+                      <p className="chapa bg-superficie-elevada/90 p-4 text-texto-suave">
+                        Só os mapas baixados pela busca do osu! têm ranking.
+                      </p>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              )}
+              {!conjunto && <div className="flex-1" />}
+
+              {tocar}
+            </aside>
+
+            <div className="col-span-6 col-start-7 flex min-h-0 flex-col gap-4">
+              {filtros}
+              {roda}
+            </div>
+          </div>
+          <RodapeDeComandos comandos={COMANDOS} />
+        </>
+      )}
     </section>
   )
 }

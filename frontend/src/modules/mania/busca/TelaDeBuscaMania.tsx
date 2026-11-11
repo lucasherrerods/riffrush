@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AcaoDaBusca, CarregarMais, Chip, GrupoDeChips, ItemDaBusca, TelaDeBusca, type EstadoDaBusca } from "@/modules/busca";
+import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
+import { cabeNoCelular, teclasDaBuscaNoCelular } from "../beatmaps/celular";
 import { faixaDasEstrelas } from "../beatmaps/dificuldades";
 import { baixarOsz, buscarMapas, type FiltrosDaBusca, type MapaDaBusca, type PaginaDaBusca, type StatusDaBusca } from "./api";
 
@@ -36,13 +38,18 @@ export function TelaDeBuscaMania({ aoVoltar, baixados, aoBaixar, aoJogar, buscar
   const [erro, setErro] = useState<string | null>(null);
   const [baixando, setBaixando] = useState<Record<number, number>>({});
   const pedido = useRef(0);
+  // No celular só se joga até 5K: a busca nem oferece nem traz mapas que só têm 6K para cima.
+  const estreita = useTelaEstreita();
+  const teclasDoFiltro = estreita ? TECLAS.filter(cabeNoCelular) : TECLAS;
+  const teclasPedidas = estreita ? teclasDaBuscaNoCelular(teclas, TECLAS) : teclas;
+  const chaveDasTeclas = teclasPedidas.join(",");
 
   useEffect(() => {
     const numero = ++pedido.current;
     const espera = setTimeout(() => {
       setErro(null);
       setPagina(0);
-      buscar({ texto, status, teclas })
+      buscar({ texto, status, teclas: teclasPedidas })
         .then((resultado) => {
           if (numero !== pedido.current) return;
           setMapas(resultado.mapas);
@@ -51,14 +58,14 @@ export function TelaDeBuscaMania({ aoVoltar, baixados, aoBaixar, aoJogar, buscar
         .catch((e: unknown) => numero === pedido.current && setErro(e instanceof Error ? e.message : String(e)));
     }, ESPERA_DA_DIGITACAO_MS);
     return () => clearTimeout(espera);
-  }, [texto, status, teclas, buscar]);
+  }, [texto, status, chaveDasTeclas, buscar]);
 
   const carregarMais = async () => {
     const numero = pedido.current;
     const proxima = pagina + 1;
     setCarregandoMais(true);
     try {
-      const resultado = await buscar({ texto, status, teclas, pagina: proxima });
+      const resultado = await buscar({ texto, status, teclas: teclasPedidas, pagina: proxima });
       if (numero !== pedido.current) return;
       // Um conjunto novo no osu! empurra a lista: o mesmo mapa pode reaparecer na página seguinte.
       setMapas((atuais) => {
@@ -102,7 +109,7 @@ export function TelaDeBuscaMania({ aoVoltar, baixados, aoBaixar, aoJogar, buscar
         <>
           <GrupoDeChips rotulo="Status" opcoes={STATUS} valor={status} aoMudar={setStatus} />
           <div role="group" aria-label="Teclas" className="flex flex-wrap gap-2">
-            {TECLAS.map((k) => (
+            {teclasDoFiltro.map((k) => (
               <Chip key={k} rotulo={`${k}K`} ligado={teclas.includes(k)} aoMudar={() => alternarTecla(k)} />
             ))}
           </div>
@@ -114,6 +121,9 @@ export function TelaDeBuscaMania({ aoVoltar, baixados, aoBaixar, aoJogar, buscar
       fonte="Mapas da comunidade do osu!, servidos por catboy.best e osu.direct."
     >
       {mapas?.map((mapa) => {
+        const dificuldades = estreita ? mapa.dificuldades.filter((d) => cabeNoCelular(d.teclas)) : mapa.dificuldades;
+        // Garantia além do filtro da busca: no celular, conjunto sem nada até 5K nem aparece para baixar.
+        if (estreita && !dificuldades.length) return null;
         const progresso = baixando[mapa.beatmapsetId];
         return (
           <ItemDaBusca
@@ -122,7 +132,7 @@ export function TelaDeBuscaMania({ aoVoltar, baixados, aoBaixar, aoJogar, buscar
             capa={mapa.capa}
             linhas={[
               `${mapa.artistaUnicode} · mapa de ${mapa.mapper} · ${mapa.status}`,
-              mapa.dificuldades.map((d) => `${d.teclas}K ${d.estrelas.toFixed(1).replace(".", ",")}★ ${faixaDasEstrelas(d.estrelas)}`).join(" · "),
+              dificuldades.map((d) => `${d.teclas}K ${d.estrelas.toFixed(1).replace(".", ",")}★ ${faixaDasEstrelas(d.estrelas)}`).join(" · "),
             ]}
             progresso={progresso}
             acao={
