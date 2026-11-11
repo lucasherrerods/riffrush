@@ -1,4 +1,4 @@
-import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, RAIO_DA_CURVA, centroDoGrupoAberto, centroDoGrupoNaTela, passosDaRoda, passosDoArraste, indiceDandoAVolta, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "./geometriaDoCarrossel";
+import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, RAIO_DA_CURVA, centroDoGrupoAberto, centroDoGrupoNaTela, limitar, limitesDoDeslocamento, passoDaInercia, VELOCIDADE_PARADA, indiceDandoAVolta, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "./geometriaDoCarrossel";
 
 describe("posicoesNoCarrossel", () => {
   it("põe a selecionada no zero, as de cima antes e as de baixo depois", () => {
@@ -65,24 +65,54 @@ describe("recuoNaCurva", () => {
   });
 });
 
-describe("passosDaRoda", () => {
-  it("cada volta inteira da roda do mouse anda uma música e guarda o resto", () => {
-    expect(passosDaRoda(130)).toEqual({ passos: 1, resto: 30 });
-    expect(passosDaRoda(-250)).toEqual({ passos: -2, resto: -50 });
+describe("limitesDoDeslocamento", () => {
+  it("vai da primeira até a última música no centro da tela", () => {
+    const posicoes = posicoesNoCarrossel(5, 2, 0);
+    const centro = centroDoGrupoAberto(0);
+    expect(limitesDoDeslocamento(posicoes, centro)).toEqual({ min: posicoes[0], max: posicoes[4] });
   });
 
-  it("um toque leve no touchpad não anda nada ainda", () => {
-    expect(passosDaRoda(40)).toEqual({ passos: 0, resto: 40 });
+  it("sem músicas não anda", () => {
+    expect(limitesDoDeslocamento([], 40)).toEqual({ min: 0, max: 0 });
+  });
+
+  // Bug: com uma música só e 12 dificuldades, não dava para rolar até as últimas.
+  it("deixa descer até a última dificuldade aberta, mesmo sem músicas embaixo", () => {
+    const centro = centroDoGrupoAberto(12);
+    const ultima = ALTURA_DA_MUSICA + ESPACO + 11 * (ALTURA_DA_DIFICULDADE + ESPACO) + ALTURA_DA_DIFICULDADE / 2;
+    expect(limitesDoDeslocamento([0], centro, 12).max).toBe(ultima - centro);
+  });
+
+  it("limitar segura o arraste nas bordas", () => {
+    expect(limitar(-500, { min: -100, max: 100 })).toBe(-100);
+    expect(limitar(500, { min: -100, max: 100 })).toBe(100);
+    expect(limitar(30, { min: -100, max: 100 })).toBe(30);
   });
 });
 
-describe("passosDoArraste", () => {
-  it("arrastar o dedo para cima a altura de uma música anda uma para frente", () => {
-    expect(passosDoArraste(ALTURA_DA_MUSICA)).toEqual({ passos: 1, resto: 0 });
+describe("passoDaInercia", () => {
+  it("continua andando no sentido do arraste e vai freando", () => {
+    const um = passoDaInercia(1, 16);
+    expect(um.andou).toBeGreaterThan(0);
+    expect(um.velocidade).toBeLessThan(1);
+    const dois = passoDaInercia(um.velocidade, 16);
+    expect(dois.andou).toBeLessThan(um.andou);
   });
 
-  it("arrastar para baixo volta, e o que não completa uma música fica guardado", () => {
-    expect(passosDoArraste(-ALTURA_DA_MUSICA * 2 - 10)).toEqual({ passos: -2, resto: -10 });
+  it("para de vez quando fica lenta demais", () => {
+    expect(passoDaInercia(VELOCIDADE_PARADA, 16).velocidade).toBe(0);
+  });
+
+  it("a distância total é finita, não roda para sempre", () => {
+    let v = 2;
+    let total = 0;
+    for (let i = 0; i < 1000 && v; i++) {
+      const passo = passoDaInercia(v, 16);
+      total += passo.andou;
+      v = passo.velocidade;
+    }
+    expect(v).toBe(0);
+    expect(total).toBeLessThan(2 * 325 + 1);
   });
 });
 

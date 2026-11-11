@@ -4,8 +4,6 @@ export const ALTURA_DA_DIFICULDADE = 48;
 export const ESPACO = 8;
 /** Raio da roda imaginária em que as músicas giram: quanto menor, mais curvo. */
 export const RAIO_DA_CURVA = 1200;
-/** Quanto a roda do mouse precisa girar para andar uma música (um "clique" comum vale 100). */
-const GIRO_POR_MUSICA = 100;
 
 /**
  * Distância do topo de cada música até o topo da selecionada.
@@ -38,16 +36,27 @@ export function recuoNaCurva(distancia: number) {
   return RAIO_DA_CURVA - Math.sqrt(RAIO_DA_CURVA ** 2 - d ** 2);
 }
 
-/** Transforma o giro acumulado da roda do mouse em músicas a andar, guardando o que sobrou. */
-export function passosDaRoda(acumulado: number) {
-  const passos = Math.trunc(acumulado / GIRO_POR_MUSICA);
-  return { passos, resto: acumulado - passos * GIRO_POR_MUSICA };
+/** Até onde a lista pode ser arrastada: a primeira música, ou a última música ou dificuldade aberta, no centro da tela. */
+export function limitesDoDeslocamento(posicoes: number[], centro: number, dificuldadesAbertas = 0) {
+  if (!posicoes.length) return { min: 0, max: 0 };
+  const meioDa = (p: number) => p + ALTURA_DA_MUSICA / 2 - centro;
+  // A selecionada fica no zero; a última dificuldade dela termina no fim do grupo aberto.
+  const ultimaDificuldade = dificuldadesAbertas ? centroDoGrupoAberto(dificuldadesAbertas) * 2 - ALTURA_DA_DIFICULDADE / 2 - centro : 0;
+  return { min: Math.min(0, meioDa(posicoes[0])), max: Math.max(0, meioDa(posicoes[posicoes.length - 1]), ultimaDificuldade) };
 }
 
-/** Arraste do dedo (em px, para cima positivo) em músicas a andar: uma música por altura de música arrastada. */
-export function passosDoArraste(acumulado: number) {
-  const passos = Math.trunc(acumulado / ALTURA_DA_MUSICA);
-  return { passos, resto: acumulado - passos * ALTURA_DA_MUSICA };
+export const limitar = (valor: number, { min, max }: { min: number; max: number }) => Math.min(Math.max(valor, min), max);
+
+/** Em quantos ms a inércia perde ~63% da velocidade depois de soltar o arraste. */
+const FREIO_DA_INERCIA = 325;
+/** Abaixo disso (px/ms) a lista já parou. */
+export const VELOCIDADE_PARADA = 0.02;
+
+/** Um quadro da inércia: quanto a lista anda em `ms` e a velocidade que sobra, freando como numa rolagem de celular. */
+export function passoDaInercia(velocidade: number, ms: number) {
+  const restante = velocidade * Math.exp(-ms / FREIO_DA_INERCIA);
+  const andou = (velocidade - restante) * FREIO_DA_INERCIA;
+  return { andou, velocidade: Math.abs(restante) < VELOCIDADE_PARADA ? 0 : restante };
 }
 
 /** O índice depois de andar pela roda: passa da última para a primeira e vice-versa, como o teclado e a roda do mouse fazem. */

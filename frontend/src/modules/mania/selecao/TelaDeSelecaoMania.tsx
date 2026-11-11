@@ -480,7 +480,6 @@ export function TelaDeSelecaoMania({
               aoEscolherItem={escolher}
               aoEscolherDificuldade={setHash}
               aoJogar={jogar}
-              aoGirar={andar}
               menuDaSelecionada={
                 aoRemover &&
                 conjunto && (
