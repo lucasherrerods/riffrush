@@ -60,3 +60,9 @@ Problemas encontrados de passagem, fora do escopo da mudança que estava sendo f
 - O que se viu: falhou uma vez na suíte inteira (não achou o título "Riff Rush Mania" em 5 s) e passou sozinho logo depois. Os testes embutidos de `rock/songs/carregamento.test.ts` falharam na mesma rodada e também passaram sozinhos.
 - Suspeita: o carregamento preguiçoso do modo demora mais que o `timeout` quando a máquina está carregada.
 - Próximo passo: medir o tempo do import do Mania no teste e subir o limite ou carregar o módulo antes.
+
+## `TelaDeBuscaMania.test.tsx` › "mudar o filtro volta para a primeira página"
+- Onde: CI do PR que fixa a data no teste do modo (job "Testes e build web").
+- O que se viu: falhou uma vez no CI, levando 3,3 s, ao esperar 2 títulos (`h2`) e achar 1; o arquivo não foi mexido nesse PR.
+- Suspeita: espera curta pela segunda página/resultado com o runner do CI carregado.
+- Próximo passo: rodar o arquivo várias vezes e trocar a contagem imediata por um `findAllBy` com espera.
