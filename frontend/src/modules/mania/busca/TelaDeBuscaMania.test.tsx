@@ -1,5 +1,5 @@
 import { rolarAteOFim } from "@/test/intersecao";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { MapaDaBusca } from "./api";
 import { TelaDeBuscaMania } from "./TelaDeBuscaMania";
@@ -81,4 +81,21 @@ it("mudar o filtro volta para a primeira página", async () => {
 
   await waitFor(() => expect(buscar).toHaveBeenLastCalledWith({ texto: "", status: "loved", teclas: [] }));
   await waitFor(() => expect(screen.getAllByText("Música")).toHaveLength(1));
+});
+
+describe("no celular", () => {
+  beforeEach(() => Object.defineProperty(window, "innerWidth", { value: 375, configurable: true }));
+  afterEach(() => Object.defineProperty(window, "innerWidth", { value: 1024, configurable: true }));
+
+  // No celular só se joga até 5K: nem o filtro nem os resultados oferecem 6K para cima.
+  it("só oferece 4K e 5K, pede só eles e não mostra para baixar o conjunto que só tem 6K+", async () => {
+    const so7k = { ...mapa, beatmapsetId: 8, titulo: "Sete", dificuldades: [{ ...mapa.dificuldades[0], teclas: 7 }] };
+    const buscar = vi.fn(async () => ({ mapas: [mapa, so7k], temMais: false }));
+    render(<TelaDeBuscaMania baixados={new Set()} aoBaixar={vi.fn()} buscar={buscar} />);
+    const grupo = screen.getByRole("group", { name: "Teclas" });
+    expect(within(grupo).getAllByRole("button").map((b) => b.textContent)).toEqual(["4K", "5K"]);
+    await waitFor(() => expect(buscar).toHaveBeenLastCalledWith({ texto: "", status: "ranked", teclas: [4, 5] }));
+    expect(await screen.findByRole("button", { name: "Baixar Musica" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Baixar Sete" })).not.toBeInTheDocument();
+  });
 });

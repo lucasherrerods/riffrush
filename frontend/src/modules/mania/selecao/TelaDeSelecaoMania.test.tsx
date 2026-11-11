@@ -151,6 +151,15 @@ describe("no celular", () => {
   beforeEach(() => Object.defineProperty(window, "innerWidth", { value: 375, configurable: true }));
   afterEach(() => Object.defineProperty(window, "innerWidth", { value: 1024, configurable: true }));
 
+  // No celular só se joga até 5K: o Gama (só 7K) some, o Alfa fica só com o 4K, e o filtro não oferece 7K.
+  it("esconde as dificuldades de 6K para cima e os filtros delas", async () => {
+    montar();
+    expect(screen.queryByText("Gama")).not.toBeInTheDocument();
+    expect(screen.queryByText("Hard")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Filtros/ }));
+    expect(screen.queryByRole("button", { name: "7K" })).not.toBeInTheDocument();
+  });
+
   // Bug: detalhes, ranking e filtros empilhados deixavam a roda minúscula no celular.
   it("a roda fica com a tela: filtros recolhidos e detalhes na gaveta do rodapé", async () => {
     const aoJogar = montar();
