@@ -5,6 +5,7 @@ import { FundoDoMania, IDENTIDADE_DO_MANIA, TelaDoMania, carregarTelaDoMania } f
 import { AlavancaDeModo, PARTE_DA_TELA_DO_MODO } from "@/modules/menu";
 import { usePrimeiraMusicaPronta } from "@/modules/player";
 import { chatGlobal, presenca } from "@/modules/presenca";
+import { DecoracaoDoEvento, eventoAtual } from "@/shared/eventos";
 import { FundoDoRock, IDENTIDADE_DO_ROCK } from "@/modules/rock";
 import { definirTema } from "@/shared/styles/tema";
 import { TEMAS } from "@/shared/styles/tokens";
@@ -19,10 +20,13 @@ import { useTrocaDeModo } from "./useTrocaDeModo";
 
 const IDENTIDADES = { rock: IDENTIDADE_DO_ROCK, mania: IDENTIDADE_DO_MANIA };
 
+/** Em época de evento (Natal...), o tema dele substitui o de cada modo. */
+const temaDoModo = (modo: Modo) => eventoAtual?.temas[modo] ?? TEMAS[IDENTIDADES[modo].tema];
+
 /** O cenário de cada modo no disco da troca: o mesmo fundo da tela inicial, com o tema dele. */
 const CENAS: Record<Modo, LadoDaVolvelle> = {
-  rock: { cena: <FundoDoRock />, tema: TEMAS[IDENTIDADE_DO_ROCK.tema] },
-  mania: { cena: <FundoDoMania />, tema: TEMAS[IDENTIDADE_DO_MANIA.tema] },
+  rock: { cena: <FundoDoRock />, tema: temaDoModo("rock") },
+  mania: { cena: <FundoDoMania />, tema: temaDoModo("mania") },
 };
 
 const preCarregar = (modo: Modo) => {
@@ -51,9 +55,10 @@ export function App() {
   const modo = useModo();
   const identidade = IDENTIDADES[modo];
   useEffect(() => {
-    definirTema(TEMAS[identidade.tema]);
+    definirTema(temaDoModo(modo));
     // O cursor e outros detalhes de CSS de cada modo leem este atributo.
     document.documentElement.dataset.modo = modo;
+    if (eventoAtual) document.documentElement.dataset.evento = eventoAtual.id;
     document.title = identidade.nome;
   }, [identidade, modo]);
   // Os amigos veem em que modo a pessoa está, e cada mensagem do chat leva a etiqueta dele.
@@ -115,6 +120,8 @@ export function App() {
       )}
       {/* Por cima da tela nova: a metade do modo que saiu, com a foto da tela dele, girando para fora. */}
       {mostrarDisco && <CapaDaVolvelle saindo={saindo} virada={virada} />}
+      {/* Os enfeites do evento só nos menus da tela inicial, para não atrapalhar a leitura da pista. */}
+      {naTelaInicial && !giro && <DecoracaoDoEvento evento={eventoAtual} />}
       <CortinaDeAbertura pronto={pronto} />
     </>
   );
