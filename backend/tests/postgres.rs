@@ -13,7 +13,8 @@ use riffrush_api::modules::perfil::{FormatoDaImagem, Imagem, PerfilPostgres, Rep
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar, ResumoDaPartida};
 use riffrush_api::modules::ranking::{MusicaPopular, Ordem, RankingPostgres, RepositorioDoRanking};
 use riffrush_api::modules::rejulgamento::{
-    CacheDeCharts, ChartGuardado, FilaDoRejulgamento, LimiteDePedidos, PartidasAntigas, RejulgamentoPostgres, PEDIDOS_AO_ENCORE,
+    CacheDeCharts, ChartGuardado, FilaDoRejulgamento, LimiteDePedidos, NoScoreV1, PartidasAntigas, PartidasDoJulgamentoAntigo, PesosAntigos,
+    RejulgamentoPostgres, PEDIDOS_AO_ENCORE,
 };
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -1209,4 +1210,82 @@ async fn conversas_guardam_o_texto_cifrado_e_cifram_as_antigas() {
         ["segredo antigo", "segredo novo"]
     );
     assert_eq!(conversas.cifrar_as_antigas().await.unwrap(), 0);
+}
+
+#[tokio::test]
+async fn partidas_do_julgamento_antigo_passam_para_o_score_v1_e_o_xp_da_conta_vira_a_soma() {
+    let Some(banco) = banco().await else { return };
+    let rejulgamento = RejulgamentoPostgres(banco.0.clone());
+    let conta = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+    let agora = Utc::now();
+    let musica = format!("encore:{}", Uuid::new_v4().simple());
+    let inserir = |id: Uuid, jogada_em: chrono::DateTime<Utc>, xp: i64| {
+        let pool = banco.0.clone();
+        let musica = musica.clone();
+        async move {
+            sqlx::query(
+                "INSERT INTO partidas (id, conta_id, musica_id, dificuldade, pontos, acertos, total, derrota, fantasma, xp_ganho, jogada_em,
+                                       valor_dos_acertos, regras, julgamento)
+                 VALUES ($1, $2, $3, 'expert', 1000, 100, 100, false, false, $4, $5, 25000, 1, 1)",
+            )
+            .bind(id)
+            .bind(conta)
+            .bind(musica)
+            .bind(xp)
+            .bind(jogada_em)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+    };
+    let (primeira, segunda) = (Uuid::new_v4(), Uuid::new_v4());
+    inserir(primeira, agora - Duration::hours(2), 40).await;
+    inserir(segunda, agora - Duration::hours(1), 30).await;
+    // O XP guardado na conta não bate com as partidas: o recálculo acerta.
+    sqlx::query("UPDATE contas SET xp_total = 999 WHERE id = $1")
+        .bind(conta)
+        .execute(&banco.0)
+        .await
+        .unwrap();
+
+    let antigas: Vec<_> = rejulgamento
+        .pegar_do_julgamento_antigo(1000)
+        .await
+        .unwrap()
+        .into_iter()
+        .filter(|p| p.conta_id == conta)
+        .collect();
+    assert_eq!(antigas.iter().map(|p| (p.id, p.repeticoes)).collect::<Vec<_>>(), [(primeira, 0), (segunda, 1)]);
+    assert!(antigas[0].replay.is_none());
+    assert!(antigas[0].rendia_xp);
+    assert_eq!(antigas[0].pesos, PesosAntigos::Segundos);
+    assert_eq!(antigas[0].resumo.valor_dos_acertos, Some(25_000));
+
+    let estimada = NoScoreV1::Estimada {
+        valor_dos_acertos: 26_000,
+        precisao: 0.86,
+    };
+    rejulgamento.gravar_no_score_v1(&antigas[0], &estimada, 55).await.unwrap();
+
+    let (valor, xp, julgamento, estimada): (Option<i32>, i64, i16, bool) =
+        sqlx::query_as("SELECT valor_dos_acertos, xp_ganho, julgamento, precisao_estimada FROM partidas WHERE id = $1")
+            .bind(primeira)
+            .fetch_one(&banco.0)
+            .await
+            .unwrap();
+    assert_eq!((valor, xp, julgamento, estimada), (Some(26_000), 55, 2, true));
+    let (xp_total,): (i64,) = sqlx::query_as("SELECT xp_total FROM contas WHERE id = $1")
+        .bind(conta)
+        .fetch_one(&banco.0)
+        .await
+        .unwrap();
+    assert_eq!(xp_total, 55 + 30);
+    let restantes: Vec<_> = rejulgamento
+        .pegar_do_julgamento_antigo(1000)
+        .await
+        .unwrap()
+        .into_iter()
+        .filter(|p| p.conta_id == conta)
+        .collect();
+    assert_eq!(restantes.iter().map(|p| p.id).collect::<Vec<_>>(), [segunda]);
 }
