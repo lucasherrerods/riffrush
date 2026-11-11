@@ -146,3 +146,26 @@ it("os mods ficam num popover aberto pelo botão Modificadores", async () => {
   await usuario.click(screen.getByRole("button", { name: "HR" }));
   expect(aoMudarMods).toHaveBeenCalled();
 });
+
+describe("no celular", () => {
+  beforeEach(() => Object.defineProperty(window, "innerWidth", { value: 375, configurable: true }));
+  afterEach(() => Object.defineProperty(window, "innerWidth", { value: 1024, configurable: true }));
+
+  // Bug: detalhes, ranking e filtros empilhados deixavam a roda minúscula no celular.
+  it("a roda fica com a tela: filtros recolhidos e detalhes na gaveta do rodapé", async () => {
+    const aoJogar = montar();
+    expect(screen.getByRole("list", { name: "Mapas" })).toBeInTheDocument();
+    expect(screen.queryByRole("searchbox", { name: "Filtrar mapas" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Notas longas")).not.toBeInTheDocument();
+    const usuario = userEvent.setup();
+
+    await usuario.click(screen.getByRole("button", { name: /Filtros/ }));
+    expect(screen.getByRole("searchbox", { name: "Filtrar mapas" })).toBeInTheDocument();
+
+    await usuario.click(screen.getByRole("button", { name: /Alfa/, expanded: false }));
+    expect(screen.getByText("Notas longas")).toBeInTheDocument();
+
+    await usuario.click(screen.getByRole("button", { name: /TOCAR/ }));
+    expect(aoJogar).toHaveBeenCalled();
+  });
+});
