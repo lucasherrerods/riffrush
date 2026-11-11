@@ -20,6 +20,18 @@ export function posicoesNoCarrossel(quantidade: number, selecionada: number, dif
 /** O meio do grupo aberto (a selecionada e suas dificuldades), medido do topo da selecionada. É ele que fica no centro da tela. */
 export const centroDoGrupoAberto = (dificuldadesAbertas: number) => (ALTURA_DA_MUSICA + dificuldadesAbertas * (ALTURA_DA_DIFICULDADE + ESPACO)) / 2;
 
+/**
+ * O ponto do grupo aberto que fica no centro da tela. Cabendo, é o meio dele.
+ * Se não cabe, começa mostrando o topo e desce só o necessário para a dificuldade escolhida aparecer.
+ */
+export function centroDoGrupoNaTela(dificuldadesAbertas: number, escolhida: number, alturaVisivel: number) {
+  const meio = centroDoGrupoAberto(dificuldadesAbertas);
+  const altura = meio * 2;
+  if (alturaVisivel <= 0 || altura <= alturaVisivel) return meio;
+  const fimDaEscolhida = escolhida >= 0 ? ALTURA_DA_MUSICA + ESPACO + escolhida * (ALTURA_DA_DIFICULDADE + ESPACO) + ALTURA_DA_DIFICULDADE + ESPACO : 0;
+  return Math.min(Math.max(alturaVisivel / 2, fimDaEscolhida - alturaVisivel / 2), altura - alturaVisivel / 2);
+}
+
 /** Quanto a música vai para a direita por estar longe do centro, seguindo a borda de uma roda (como no osu!). */
 export function recuoNaCurva(distancia: number) {
   const d = Math.min(Math.abs(distancia), RAIO_DA_CURVA);

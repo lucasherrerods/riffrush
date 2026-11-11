@@ -1,10 +1,10 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Heart, Star } from "lucide-react";
 import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
-import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, centroDoGrupoAberto, passosDaRoda, passosDoArraste, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "./geometriaDoCarrossel";
+import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, centroDoGrupoNaTela, passosDaRoda, passosDoArraste, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "./geometriaDoCarrossel";
 
 /** Uma música (Rock) ou um conjunto de mapas (Mania) na roda. */
 export interface ItemDoCarrossel {
@@ -70,15 +70,27 @@ export function Carrossel({ itens, indice, dificuldade, dificuldades, aoEscolher
   const arrastou = useRef(false);
   const momentoDoToque = useRef(0);
   const posicoes = posicoesNoCarrossel(itens.length, indice, dificuldades.length);
-  const centro = centroDoGrupoAberto(dificuldades.length);
   // No celular a roda inteira encolhe, para caberem mais músicas e dar para ver que a lista continua.
   const estreita = useTelaEstreita();
   const escala = estreita ? ESCALA_NO_CELULAR : 1;
   // No toque as músicas ficam um pouco mais afastadas, sem crescer, para o dedo não acertar a vizinha.
   const passo = escala * (estreita ? AFASTAMENTO_NO_CELULAR : 1);
+  // Com muitas dificuldades o grupo aberto passa da tela: aí ele mostra do topo e segue a escolhida.
+  const lista = useRef<HTMLUListElement>(null);
+  const [alturaVisivel, setAlturaVisivel] = useState(0);
+  useEffect(() => {
+    const el = lista.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observador = new ResizeObserver(() => setAlturaVisivel(el.clientHeight));
+    observador.observe(el);
+    setAlturaVisivel(el.clientHeight);
+    return () => observador.disconnect();
+  }, []);
+  const centro = centroDoGrupoNaTela(dificuldades.length, dificuldades.findIndex((d) => d.id === dificuldade), alturaVisivel / passo);
 
   return (
     <ul
+      ref={lista}
       aria-label={rotulo}
       onWheel={(evento) => {
         const { passos, resto } = passosDaRoda(giro.current + evento.deltaY);

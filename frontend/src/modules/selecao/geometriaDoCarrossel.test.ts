@@ -1,4 +1,4 @@
-import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, RAIO_DA_CURVA, centroDoGrupoAberto, passosDaRoda, passosDoArraste, indiceDandoAVolta, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "./geometriaDoCarrossel";
+import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, RAIO_DA_CURVA, centroDoGrupoAberto, centroDoGrupoNaTela, passosDaRoda, passosDoArraste, indiceDandoAVolta, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "./geometriaDoCarrossel";
 
 describe("posicoesNoCarrossel", () => {
   it("põe a selecionada no zero, as de cima antes e as de baixo depois", () => {
@@ -21,6 +21,31 @@ describe("centroDoGrupoAberto", () => {
   it("é o meio da música selecionada somada às dificuldades abertas embaixo dela", () => {
     expect(centroDoGrupoAberto(0)).toBe(ALTURA_DA_MUSICA / 2);
     expect(centroDoGrupoAberto(4)).toBe((ALTURA_DA_MUSICA + 4 * (ALTURA_DA_DIFICULDADE + ESPACO)) / 2);
+  });
+});
+
+describe("centroDoGrupoNaTela", () => {
+  const passoDif = ALTURA_DA_DIFICULDADE + ESPACO;
+  const topoDa = (i: number) => ALTURA_DA_MUSICA + ESPACO + i * passoDif;
+  const visivel = 400;
+
+  it("se o grupo cabe na tela, fica no meio dele", () => {
+    expect(centroDoGrupoNaTela(4, 3, 2000)).toBe(centroDoGrupoAberto(4));
+  });
+
+  it("sem saber a altura da tela, fica no meio", () => {
+    expect(centroDoGrupoNaTela(12, 11, 0)).toBe(centroDoGrupoAberto(12));
+  });
+
+  // Bug: com 12 dificuldades (4K a 9K) o grupo centralizado cortava a música no topo e as últimas embaixo.
+  it("se não cabe, mostra do topo para baixo, com a música aparecendo", () => {
+    expect(centroDoGrupoNaTela(12, 0, visivel)).toBe(visivel / 2);
+  });
+
+  it("descendo pelo teclado, a dificuldade escolhida continua na tela", () => {
+    const centro = centroDoGrupoNaTela(12, 11, visivel);
+    expect(topoDa(11) - centro).toBeGreaterThanOrEqual(-visivel / 2);
+    expect(topoDa(11) + ALTURA_DA_DIFICULDADE - centro).toBeLessThanOrEqual(visivel / 2);
   });
 });
 
