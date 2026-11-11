@@ -6,6 +6,8 @@ type Musica = ReturnType<typeof musica>;
 const fila = [musica("a"), musica("b"), musica("c")];
 const buffer = (duracao = 100) => new AudioBufferFalso([new Float32Array(duracao)], 1) as unknown as AudioBuffer;
 const esperar = () => new Promise((r) => setTimeout(r));
+/** Quantas vezes a música foi carregada: as vizinhas também carregam, de antemão. */
+const vezes = (carregar: unknown, id: string) => vi.mocked(carregar as (m: Musica) => Promise<AudioBuffer>).mock.calls.filter(([m]) => m.id === id).length;
 type Fonte = FonteFalsa & { onended?: () => void };
 
 function montar(carregar: (m: Musica) => Promise<AudioBuffer> = vi.fn(async () => buffer()), sortear = () => 0.5) {
@@ -31,7 +33,7 @@ describe("PlayerDeMusica", () => {
     player.seguir(fila[0]);
     await esperar();
     player.seguir(fila[0]);
-    expect(carregar).toHaveBeenCalledTimes(1);
+    expect(vezes(carregar, "a")).toBe(1);
   });
 
   it("ouvir a música que já está pausada continua de onde parou; outra música começa do início", async () => {
@@ -41,7 +43,7 @@ describe("PlayerDeMusica", () => {
     player.alternar();
     player.ouvir(fila[0]);
     expect(player.estado()).toMatchObject({ musica: fila[0], tocando: true });
-    expect(carregar).toHaveBeenCalledTimes(1);
+    expect(vezes(carregar, "a")).toBe(1);
     player.ouvir(fila[1]);
     await esperar();
     expect(player.estado()).toMatchObject({ musica: fila[1], tocando: true });
@@ -158,7 +160,7 @@ describe("PlayerDeMusica", () => {
     player.seguir(fila[0]);
     await esperar();
     player.seguirMapa(fila[0]);
-    expect(carregar).toHaveBeenCalledTimes(1);
+    expect(vezes(carregar, "a")).toBe(1);
   });
 
   it("depois da partida, continua a música dela de onde o jogador saiu", async () => {
@@ -166,7 +168,7 @@ describe("PlayerDeMusica", () => {
     player.seguirMapa(fila[0]);
     await esperar();
     player.suspender(true);
-    player.voltarDaPartida(fila[0], { tipo: "saiu", segundos: 72 });
+    player.voltarDaPartida(fila[0], 72);
     player.suspender(false);
     expect(player.estado().tocando).toBe(true);
     expect(ultimaFonte().deslocamento).toBe(72);
@@ -177,21 +179,11 @@ describe("PlayerDeMusica", () => {
     player.seguir(fila[0]);
     await esperar();
     player.suspender(true);
-    player.voltarDaPartida(fila[2], { tipo: "saiu", segundos: 15 });
+    player.voltarDaPartida(fila[2], 15);
     await esperar();
     player.suspender(false);
     expect(player.estado()).toMatchObject({ musica: fila[2], tocando: true });
     expect(ultimaFonte().deslocamento).toBe(15);
-  });
-
-  it("depois de uma falha, a música da partida volta num ponto sorteado", async () => {
-    const { player, ultimaFonte } = montar(undefined, () => 0);
-    player.seguir(fila[0]);
-    await esperar();
-    player.suspender(true);
-    player.voltarDaPartida(fila[0], { tipo: "falhou" });
-    player.suspender(false);
-    expect(ultimaFonte().deslocamento).toBe(30);
   });
 
   it("se a música não carrega, para de carregar sem tocar", async () => {
@@ -210,7 +202,7 @@ describe("PlayerDeMusica", () => {
   });
 
   it("com uma navegação definida, avançar e voltar ficam com a tela", async () => {
-    const { player, carregar } = montar();
+    const { player } = montar();
     const navegar = vi.fn();
     player.seguir(fila[0]);
     await esperar();
@@ -218,9 +210,52 @@ describe("PlayerDeMusica", () => {
     player.proxima();
     player.anterior();
     expect(navegar.mock.calls).toEqual([[1], [-1]]);
-    expect(carregar).toHaveBeenCalledTimes(1);
+    expect(player.estado().musica).toBe(fila[0]);
     player.definirNavegacao(null);
     player.proxima();
     expect(player.estado().musica).toBe(fila[1]);
+  });
+
+  it("depois de tocar, deixa as vizinhas da fila prontas: trocar para elas não carrega de novo", async () => {
+    const { player, carregar } = montar();
+    player.seguir(fila[0]);
+    await esperar();
+    await esperar();
+    await esperar();
+    expect(vi.mocked(carregar).mock.calls.map(([m]) => m.id)).toEqual(["a", "b", "c"]);
+    expect(player.naMemoria(fila[1])).toBe(true);
+    player.seguir(fila[1]);
+    expect(player.estado()).toMatchObject({ musica: fila[1] });
+    await esperar();
+    expect(player.estado()).toMatchObject({ tocando: true });
+    expect(carregar).toHaveBeenCalledTimes(3);
+  });
+
+  it("pré-carregar uma música que falha não quebra nada e tenta de novo quando pedida", async () => {
+    const carregar = vi.fn(async (m: Musica) => {
+      if (m.id === "b" && carregar.mock.calls.filter(([x]) => x.id === "b").length === 1) throw new Error("falhou");
+      return buffer();
+    });
+    const { player } = montar(carregar);
+    player.seguir(fila[0]);
+    for (let i = 0; i < 4; i++) await esperar();
+    expect(player.naMemoria(fila[1])).toBe(false);
+    player.seguir(fila[1]);
+    await esperar();
+    expect(player.estado()).toMatchObject({ musica: fila[1], tocando: true });
+  });
+});
+
+describe("primeira música", () => {
+  it("avisa quando a primeira música de um player termina de abrir, mesmo que falhe", async () => {
+    const { primeiraMusica } = await import("./playerDeMusica");
+    primeiraMusica.reiniciar();
+    const { player } = montar(async () => {
+      throw new Error("sem áudio");
+    });
+    expect(primeiraMusica.pronta()).toBe(false);
+    player.seguir(fila[0]);
+    await esperar();
+    expect(primeiraMusica.pronta()).toBe(true);
   });
 });

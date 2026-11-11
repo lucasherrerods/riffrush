@@ -1,4 +1,4 @@
-import { LIMITE_PARA_REINICIAR, acaoDeVoltar, formatarTempo, indiceSorteado, indiceVizinho, pontoAleatorioDeInicio, pontoDaPartida, pontoDeRetomada, pontoDeVolta, posicaoNaMusica } from "./fila";
+import { vizinhasParaPreCarregar, LIMITE_PARA_REINICIAR, acaoDeVoltar, formatarTempo, indiceSorteado, indiceVizinho, pontoAleatorioDeInicio, pontoDaPartida, pontoDeRetomada, posicaoNaMusica } from "./fila";
 
 describe("indiceVizinho", () => {
   it("dá a volta nas pontas da fila", () => {
@@ -91,12 +91,17 @@ describe("indiceSorteado", () => {
   });
 });
 
-describe("pontoDeVolta", () => {
-  it("saindo por conta própria, continua de onde o jogador saiu", () => {
-    expect(pontoDeVolta({ tipo: "saiu", segundos: 42 }, 180, 0.5)).toBe(42);
+describe("vizinhasParaPreCarregar", () => {
+  it("pega as vizinhas mais perto primeiro, dando a volta nas pontas", () => {
+    expect(vizinhasParaPreCarregar(5, 0, 2)).toEqual([1, 4, 2, 3]);
   });
 
-  it("depois de uma falha, é como entrar pela seleção: um ponto sorteado do meio", () => {
-    expect(pontoDeVolta({ tipo: "falhou" }, 100, 0.5)).toBe(50);
+  it("não repete a atual nem a mesma vizinha em fila curta", () => {
+    expect(vizinhasParaPreCarregar(2, 0, 2)).toEqual([1]);
+    expect(vizinhasParaPreCarregar(1, 0, 2)).toEqual([]);
+  });
+
+  it("fora da fila não há vizinhas", () => {
+    expect(vizinhasParaPreCarregar(5, -1, 2)).toEqual([]);
   });
 });

@@ -23,3 +23,7 @@ frontend/assets-fonte/
 
 backend/relay/.wrangler/
 frontend/release/
+
+# Saída do tsc para o vite.config: o Vite leria o .js antigo no lugar do .ts.
+frontend/vite.config.js
+frontend/vite.config.d.ts

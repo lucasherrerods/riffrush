@@ -1,12 +1,17 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
-use sqlx::PgPool;
+use sqlx::postgres::PgArguments;
+use sqlx::{PgPool, Postgres};
 use uuid::Uuid;
 
 use super::dominio::{cabe_mais_um, inicio_da_janela, ChartGuardado, Rejulgada};
-use super::portas::{CacheDeCharts, FilaDoRejulgamento, LimiteDePedidos, PartidaAntiga, PartidaPendente, PartidasAntigas};
+use super::estimativa::pesos_da_partida;
+use super::portas::{
+    CacheDeCharts, FilaDoRejulgamento, LimiteDePedidos, NoScoreV1, PartidaAntiga, PartidaDoJulgamentoAntigo, PartidaPendente, PartidasAntigas,
+    PartidasDoJulgamentoAntigo,
+};
 use crate::modules::conta::{FalhaExterna, FilaDePartidas, PartidaNaFila};
-use crate::modules::progresso::{Dificuldade, Instrumento};
+use crate::modules::progresso::{Dificuldade, Instrumento, ResumoDaPartida};
 
 /// Quanto tempo uma partida reservada fica fora da vez. Cobre com folga o download de um .sng.
 const RESERVA: Duration = Duration::minutes(10);
@@ -69,6 +74,28 @@ impl FilaDePartidas for RejulgamentoPostgres {
     }
 }
 
+/// Os números de uma partida rejulgada, de `$2` a `$11`; `$1` é o id.
+const NUMEROS_DA_REJULGADA: &str = "pontos = $2, acertos = $3, total = $4, derrota = $5, fantasma = $6, maior_sequencia = $7,
+    valor_dos_acertos = $8, precisao = $9, velocidade = $10, jeito_de_jogar = $11, regras = 2,
+    replay = CASE WHEN $9::DOUBLE PRECISION IS NULL THEN NULL ELSE replay END";
+
+fn com_os_numeros<'q>(sql: &'q str, id: Uuid, rejulgada: &Rejulgada) -> sqlx::query::Query<'q, Postgres, PgArguments> {
+    let resumo = &rejulgada.resumo;
+    let vale_ranking = !resumo.derrota && !resumo.fantasma && !rejulgada.sem_falha;
+    sqlx::query(sql)
+        .bind(id)
+        .bind(i64::try_from(rejulgada.pontos).unwrap_or(i64::MAX))
+        .bind(i32::try_from(resumo.acertos).unwrap_or(i32::MAX))
+        .bind(i32::try_from(resumo.total).unwrap_or(i32::MAX))
+        .bind(resumo.derrota)
+        .bind(resumo.fantasma)
+        .bind(resumo.maior_sequencia.map(|s| i32::try_from(s).unwrap_or(i32::MAX)))
+        .bind(resumo.valor_dos_acertos.map(|v| i32::try_from(v).unwrap_or(i32::MAX)))
+        .bind(vale_ranking.then_some(rejulgada.precisao))
+        .bind(rejulgada.velocidade)
+        .bind(rejulgada.jeito_de_jogar.como_texto())
+}
+
 #[derive(sqlx::FromRow)]
 struct LinhaAntiga {
     id: Uuid,
@@ -107,29 +134,8 @@ impl PartidasAntigas for RejulgamentoPostgres {
     }
 
     async fn atualizar(&self, id: Uuid, rejulgada: &Rejulgada) -> Result<(), FalhaExterna> {
-        let resumo = &rejulgada.resumo;
-        let vale_ranking = !resumo.derrota && !resumo.fantasma && !rejulgada.sem_falha;
-        sqlx::query(
-            "UPDATE partidas SET pontos = $2, acertos = $3, total = $4, derrota = $5, fantasma = $6, maior_sequencia = $7,
-                    valor_dos_acertos = $8, precisao = $9, velocidade = $10, jeito_de_jogar = $11, regras = 2,
-                    replay = CASE WHEN $9::DOUBLE PRECISION IS NULL THEN NULL ELSE replay END
-             WHERE id = $1",
-        )
-        .bind(id)
-        .bind(i64::try_from(rejulgada.pontos).unwrap_or(i64::MAX))
-        .bind(i32::try_from(resumo.acertos).unwrap_or(i32::MAX))
-        .bind(i32::try_from(resumo.total).unwrap_or(i32::MAX))
-        .bind(resumo.derrota)
-        .bind(resumo.fantasma)
-        .bind(resumo.maior_sequencia.map(|s| i32::try_from(s).unwrap_or(i32::MAX)))
-        .bind(resumo.valor_dos_acertos.map(|v| i32::try_from(v).unwrap_or(i32::MAX)))
-        .bind(vale_ranking.then_some(rejulgada.precisao))
-        .bind(rejulgada.velocidade)
-        .bind(rejulgada.jeito_de_jogar.como_texto())
-        .execute(&self.0)
-        .await
-        .map(|_| ())
-        .map_err(falha)
+        let sql = format!("UPDATE partidas SET {NUMEROS_DA_REJULGADA} WHERE id = $1");
+        com_os_numeros(&sql, id, rejulgada).execute(&self.0).await.map(|_| ()).map_err(falha)
     }
 
     async fn sem_como_rejulgar(&self, id: Uuid) -> Result<(), FalhaExterna> {
@@ -264,5 +270,137 @@ impl LimiteDePedidos for RejulgamentoPostgres {
         }
         transacao.commit().await.map_err(falha)?;
         Ok(cabe)
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct LinhaDoJulgamentoAntigo {
+    id: Uuid,
+    conta_id: Uuid,
+    md5: String,
+    dificuldade: String,
+    instrumento: String,
+    replay: Option<Vec<u8>>,
+    acertos: i32,
+    total: i32,
+    derrota: bool,
+    fantasma: bool,
+    maior_sequencia: Option<i32>,
+    valor_dos_acertos: Option<i32>,
+    rejulgada_no_clone_hero: bool,
+    jogada_em: DateTime<Utc>,
+    rendia_xp: bool,
+    repeticoes: i64,
+}
+
+fn sem_sinal(valor: i32) -> u32 {
+    u32::try_from(valor).unwrap_or(0)
+}
+
+impl LinhaDoJulgamentoAntigo {
+    fn em_partida(self) -> Option<PartidaDoJulgamentoAntigo> {
+        let dificuldade = Dificuldade::do_texto(&self.dificuldade)?;
+        Some(PartidaDoJulgamentoAntigo {
+            id: self.id,
+            conta_id: self.conta_id,
+            md5: self.md5,
+            dificuldade,
+            instrumento: Instrumento::do_texto(&self.instrumento)?,
+            replay: self.replay,
+            resumo: ResumoDaPartida {
+                dificuldade,
+                acertos: sem_sinal(self.acertos),
+                total: sem_sinal(self.total),
+                derrota: self.derrota,
+                fantasma: self.fantasma,
+                maior_sequencia: self.maior_sequencia.map(sem_sinal),
+                valor_dos_acertos: self.valor_dos_acertos.map(sem_sinal),
+            },
+            pesos: pesos_da_partida(self.rejulgada_no_clone_hero, self.jogada_em),
+            rendia_xp: self.rendia_xp,
+            repeticoes: u32::try_from(self.repeticoes).unwrap_or(u32::MAX),
+        })
+    }
+}
+
+/// As que esperam o rejulgamento das regras do Clone Hero (`regras` nulo) ficam para depois dele.
+/// As repetições contam como o XP de hoje: o mesmo chart nas 24 horas antes da partida.
+/// Rendia XP quem o servidor conferiu (tem o jeito de jogar) ou quem ganhou algum na época.
+const PEGAR_DO_JULGAMENTO_ANTIGO: &str = "
+    SELECT p.id, p.conta_id, substring(p.musica_id FROM 8) AS md5, p.dificuldade, p.instrumento, p.replay,
+           p.acertos, p.total, p.derrota, p.fantasma, p.maior_sequencia, p.valor_dos_acertos,
+           (p.regras = 2) AS rejulgada_no_clone_hero, p.jogada_em,
+           (p.jeito_de_jogar IS NOT NULL OR p.xp_ganho > 0) AS rendia_xp,
+           (SELECT count(*) FROM partidas o
+             WHERE o.conta_id = p.conta_id AND o.musica_id = p.musica_id
+               AND o.jogada_em >= p.jogada_em - INTERVAL '24 hours' AND o.jogada_em < p.jogada_em) AS repeticoes
+    FROM partidas p
+    WHERE p.julgamento = 1 AND p.regras IS NOT NULL
+    ORDER BY p.jogada_em LIMIT $1";
+
+const GRAVAR_ESTIMADA: &str = "UPDATE partidas SET valor_dos_acertos = $2, precisao = CASE WHEN precisao IS NULL THEN NULL ELSE $3 END,
+    precisao_estimada = true, xp_ganho = $4, julgamento = 2 WHERE id = $1";
+
+/// O XP da conta volta a ser a soma do que cada partida rendeu, no Rock e no Mania.
+const SOMAR_O_XP_DA_CONTA: &str = "UPDATE contas SET xp_total =
+    (SELECT COALESCE(SUM(xp_ganho), 0) FROM partidas WHERE conta_id = $1)
+  + (SELECT COALESCE(SUM(xp_ganho), 0) FROM partidas_do_mania WHERE conta_id = $1)
+  WHERE id = $1";
+
+#[async_trait]
+impl PartidasDoJulgamentoAntigo for RejulgamentoPostgres {
+    async fn pegar_do_julgamento_antigo(&self, limite: u32) -> Result<Vec<PartidaDoJulgamentoAntigo>, FalhaExterna> {
+        let linhas = sqlx::query_as::<_, LinhaDoJulgamentoAntigo>(PEGAR_DO_JULGAMENTO_ANTIGO)
+            .bind(i64::from(limite))
+            .fetch_all(&self.0)
+            .await
+            .map_err(falha)?;
+        let mut partidas = Vec::with_capacity(linhas.len());
+        for linha in linhas {
+            let id = linha.id;
+            match linha.em_partida() {
+                Some(partida) => partidas.push(partida),
+                // Sem dificuldade ou instrumento que se leia, não há o que refazer.
+                None => {
+                    sqlx::query("UPDATE partidas SET julgamento = 2 WHERE id = $1")
+                        .bind(id)
+                        .execute(&self.0)
+                        .await
+                        .map_err(falha)?;
+                }
+            }
+        }
+        Ok(partidas)
+    }
+
+    async fn gravar_no_score_v1(&self, partida: &PartidaDoJulgamentoAntigo, nova: &NoScoreV1, xp_ganho: u64) -> Result<(), FalhaExterna> {
+        let xp = i64::try_from(xp_ganho).unwrap_or(i64::MAX);
+        let mut transacao = self.0.begin().await.map_err(falha)?;
+        match nova {
+            NoScoreV1::Rejulgada(rejulgada) => {
+                let sql = format!("UPDATE partidas SET {NUMEROS_DA_REJULGADA}, xp_ganho = $12, julgamento = 2, precisao_estimada = false WHERE id = $1");
+                com_os_numeros(&sql, partida.id, rejulgada)
+                    .bind(xp)
+                    .execute(&mut *transacao)
+                    .await
+                    .map_err(falha)?;
+            }
+            NoScoreV1::Estimada { valor_dos_acertos, precisao } => {
+                sqlx::query(GRAVAR_ESTIMADA)
+                    .bind(partida.id)
+                    .bind(i32::try_from(*valor_dos_acertos).unwrap_or(i32::MAX))
+                    .bind(*precisao)
+                    .bind(xp)
+                    .execute(&mut *transacao)
+                    .await
+                    .map_err(falha)?;
+            }
+        }
+        sqlx::query(SOMAR_O_XP_DA_CONTA)
+            .bind(partida.conta_id)
+            .execute(&mut *transacao)
+            .await
+            .map_err(falha)?;
+        transacao.commit().await.map_err(falha)
     }
 }

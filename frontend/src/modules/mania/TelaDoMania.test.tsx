@@ -5,6 +5,7 @@ import { AudioContextFalso } from "@/test/audioFalso";
 import { osu, pacote } from "@/test/beatmaps";
 import type { BibliotecaDoMania, ConjuntoSalvo } from "./beatmaps/biblioteca";
 import { lerOsz } from "./beatmaps/osz";
+import { PlayerDeMusica } from "@/modules/player";
 import { TelaDoMania } from "./TelaDoMania";
 
 const conta = vi.hoisted(() => ({
@@ -115,6 +116,31 @@ describe("TelaDoMania", () => {
     expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(escolhido);
   });
 
+  // Bug: a seleção reabria no mapa de quando ela abriu antes, e o player trocava de música, perdendo o ponto da partida.
+  it("saindo da partida, a trilha continua na música do mapa jogado, sem passar por outra", async () => {
+    const seguirMapa = vi.spyOn(PlayerDeMusica.prototype, "seguirMapa");
+    const { usuario } = await abrir();
+    await screen.findByText(/Nenhum mapa ainda/);
+    const outro = new File([new Uint8Array(pacote({ "b.osu": osu({ titulo: "Outra", tituloUnicode: "Outra", conjuntoId: 8, beatmapId: 12 }), "audio.mp3": new Uint8Array([1]) }))], "outra.osz");
+    await usuario.upload(screen.getByLabelText("Arquivos .osz"), [arquivoOsz(), outro]);
+    await screen.findByRole("heading", { level: 2 });
+    // Reabrir a seleção com o player já tocando guarda o mapa em que ela abriu.
+    fireEvent.keyDown(window, { code: "Escape" });
+    await usuario.click(await screen.findByRole("button", { name: "Jogar" }));
+    await screen.findByRole("heading", { level: 2 });
+    fireEvent.keyDown(window, { code: "ArrowDown" });
+    const escolhido = screen.getByRole("heading", { level: 2 }).textContent;
+    await usuario.click(screen.getByRole("button", { name: /TOCAR/ }));
+    expect(await screen.findByLabelText("Pista do Mania")).toBeInTheDocument();
+    seguirMapa.mockClear();
+    fireEvent.keyDown(window, { code: "Escape" });
+    expect(await screen.findByRole("region", { name: "Seleção de mapas" })).toBeInTheDocument();
+    await act(async () => new Promise((r) => setTimeout(r, 400)));
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(escolhido);
+    expect(seguirMapa).not.toHaveBeenCalled();
+    seguirMapa.mockRestore();
+  });
+
   it("Treinar abre o mapa na escolha das partes, sem jogar o mapa inteiro", async () => {
     const { usuario } = await abrir();
     await screen.findByText(/Nenhum mapa ainda/);
@@ -209,7 +235,7 @@ describe("TelaDoMania", () => {
     const { usuario } = await abrir();
     expect(screen.queryByRole("navigation", { name: "Telas do Mania" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "alavanca" })).not.toBeInTheDocument();
-    await usuario.click(await screen.findByRole("button", { name: "Buscar mapas" }));
+    await usuario.click(await screen.findByRole("button", { name: "Baixar músicas" }));
     await usuario.click(await screen.findByRole("button", { name: "Voltar" }));
     expect(await screen.findByRole("region", { name: "Seleção de mapas" })).toBeInTheDocument();
   });

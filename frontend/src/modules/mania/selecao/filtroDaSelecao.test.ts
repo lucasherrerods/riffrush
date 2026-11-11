@@ -57,3 +57,8 @@ it("maiorEstrela pega a dificuldade mais difícil, e nada sem estrelas", () => {
 it("teclasDaBiblioteca lista as teclas que existem, em ordem", () => {
   expect(teclasDaBiblioteca(todos)).toEqual([4, 7]);
 });
+
+it("teclasDaBiblioteca só oferece de 4K a 7K, para os filtros caberem numa linha", () => {
+  const largos = conjunto("d", "Largo", "Artista D", [mapa("d1", 1), mapa("d2", 5), mapa("d3", 8), mapa("d4", 10)]);
+  expect(teclasDaBiblioteca([...todos, largos])).toEqual([4, 5, 7]);
+});

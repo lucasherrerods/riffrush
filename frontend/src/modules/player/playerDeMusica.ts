@@ -1,5 +1,6 @@
 import { obterContextoDeAudio, saidaDeAudio } from "@/modules/audio";
-import { acaoDeVoltar, indiceSorteado, indiceVizinho, pontoAleatorioDeInicio, pontoDeVolta, posicaoNaMusica, type SaidaDaPartida } from "./fila";
+import { criarCacheLimitado } from "@/shared/lib/cacheLimitado";
+import { acaoDeVoltar, vizinhasParaPreCarregar, indiceSorteado, indiceVizinho, pontoAleatorioDeInicio, pontoDeRetomada, posicaoNaMusica } from "./fila";
 
 /** O que o player toca: as músicas do Rock ou os mapas da biblioteca do Mania. */
 export interface FaixaDoPlayer {
@@ -8,8 +9,38 @@ export interface FaixaDoPlayer {
   artista?: string;
 }
 
+/** Quantas vizinhas da música que toca ficam carregadas de antemão, de cada lado da fila. */
+export const VIZINHAS_PRE_CARREGADAS = 1;
+/** Uma música decodificada ocupa dezenas de MB: só a atual, as vizinhas e uma de folga ficam na memória. */
+const MUSICAS_NA_MEMORIA = 2 * VIZINHAS_PRE_CARREGADAS + 2;
+
 /** Quanto tempo o volume leva para sumir ou voltar quando o player cala ou retoma (na troca de modo, por exemplo). */
 export const ESMAECER_MS = 600;
+
+/**
+ * Se a primeira música da abertura já abriu, em qualquer player: a cortina da abertura espera por ela,
+ * sem precisar saber qual modo está montado.
+ */
+export const primeiraMusica = (() => {
+  let pronta = false;
+  const ouvintes = new Set<() => void>();
+  return {
+    pronta: () => pronta,
+    inscrever(ouvinte: () => void) {
+      ouvintes.add(ouvinte);
+      return () => void ouvintes.delete(ouvinte);
+    },
+    marcar() {
+      if (pronta) return;
+      pronta = true;
+      for (const ouvinte of ouvintes) ouvinte();
+    },
+    /** Só para os testes. */
+    reiniciar() {
+      pronta = false;
+    },
+  };
+})();
 
 export interface EstadoDoPlayerDeMusica<F extends FaixaDoPlayer = FaixaDoPlayer> {
   musica: F | null;
@@ -39,6 +70,8 @@ export class PlayerDeMusica<F extends FaixaDoPlayer = FaixaDoPlayer> {
   private navegar: ((passos: number) => void) | null = null;
   private tocavaAntesDeSuspender = false;
   private pontoAoCarregar: PontoDeAbertura | null = null;
+  private carregadas = criarCacheLimitado<Promise<AudioBuffer>>(MUSICAS_NA_MEMORIA);
+  private prontas = new Set<string>();
 
   constructor(
     private contexto: () => AudioContext = obterContextoDeAudio,
@@ -58,6 +91,11 @@ export class PlayerDeMusica<F extends FaixaDoPlayer = FaixaDoPlayer> {
   posicao() {
     const { tocando, duracao } = this.estadoAtual;
     return posicaoNaMusica(tocando, this.deslocamento, this.inicio, tocando ? this.contexto().currentTime : 0, duracao);
+  }
+
+  /** A música já está decodificada: trocar para ela é na hora. */
+  naMemoria(musica: F) {
+    return this.prontas.has(musica.id);
   }
 
   definirFila(musicas: F[]) {
@@ -93,9 +131,9 @@ export class PlayerDeMusica<F extends FaixaDoPlayer = FaixaDoPlayer> {
     void this.abrir(musica, (duracao) => pontoAleatorioDeInicio(duracao, this.sortear()));
   }
 
-  /** Depois da partida, a trilha volta para a música dela, no ponto que a saída pede. */
-  voltarDaPartida(musica: F, saida: SaidaDaPartida) {
-    const ponto: PontoDeAbertura = (duracao) => pontoDeVolta(saida, duracao, this.sortear());
+  /** Depois da partida, a trilha volta para a música dela, no ponto em que o jogador saiu ou morreu. */
+  voltarDaPartida(musica: F, segundos: number) {
+    const ponto: PontoDeAbertura = (duracao) => pontoDeRetomada(segundos, duracao);
     if (musica.id !== this.estadoAtual.musica?.id) return void this.abrir(musica, ponto);
     if (this.estadoAtual.carregando) this.pontoAoCarregar = ponto;
     else this.irPara(ponto(this.estadoAtual.duracao));
@@ -192,16 +230,45 @@ export class PlayerDeMusica<F extends FaixaDoPlayer = FaixaDoPlayer> {
     this.deslocamento = 0;
     this.mudar({ musica, tocando: false, carregando: true, duracao: 0 });
     try {
-      const buffer = await this.carregar(musica);
+      const buffer = await this.carregarGuardando(musica);
       if (pedido !== this.pedido) return;
       this.buffer = buffer;
       if (this.pontoAoCarregar) this.deslocamento = Math.min(Math.max(this.pontoAoCarregar(buffer.duration), 0), buffer.duration);
       this.mudar({ carregando: false, duracao: buffer.duration });
+      primeiraMusica.marcar();
       // Música aberta durante a partida fica pronta para tocar quando a partida acabar.
       if (this.suspenso) this.tocavaAntesDeSuspender = true;
       this.continuar();
+      void this.preCarregarVizinhas(musica);
     } catch {
       if (pedido === this.pedido) this.mudar({ carregando: false });
+      primeiraMusica.marcar();
+    }
+  }
+
+  /** Carrega uma vez só: o carrossel volta e vai entre as mesmas músicas. */
+  private carregarGuardando(musica: F) {
+    let carregando = this.carregadas.ler(musica.id);
+    if (!carregando) {
+      carregando = this.carregar(musica);
+      this.carregadas.guardar(musica.id, carregando);
+      carregando.then(
+        () => this.carregadas.ler(musica.id) === carregando && this.prontas.add(musica.id),
+        () => this.carregadas.apagar(musica.id),
+      );
+    }
+    // Só fica marcada como pronta enquanto continua no cache.
+    for (const id of this.prontas) if (!this.carregadas.tem(id)) this.prontas.delete(id);
+    return carregando;
+  }
+
+  /** Uma de cada vez, para não disputar o processador com a música que acabou de abrir. */
+  private async preCarregarVizinhas(musica: F) {
+    const pedido = this.pedido;
+    const atual = this.fila.findIndex((m) => m.id === musica.id);
+    for (const indice of vizinhasParaPreCarregar(this.fila.length, atual, VIZINHAS_PRE_CARREGADAS)) {
+      if (pedido !== this.pedido) return;
+      await this.carregarGuardando(this.fila[indice]).catch(() => undefined);
     }
   }
 

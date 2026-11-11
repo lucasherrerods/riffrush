@@ -225,18 +225,12 @@ describe("TelaDeSelecao com carrossel", () => {
     expect(aoJogar).toHaveBeenCalled();
   });
 
-  it("a roda do mouse anda pelas músicas, dando a volta", () => {
+  // Como no osu!lazer: a roda passeia pela lista e só o clique ou o teclado trocam a música.
+  it("a roda do mouse rola a lista sem trocar de música", () => {
     const { aoSelecionar } = abrir({ indice: 0 });
     const carrossel = screen.getByRole("list", { name: "Músicas" });
     fireEvent.wheel(carrossel, { deltaY: 120 });
-    expect(aoSelecionar).toHaveBeenLastCalledWith(1);
-    fireEvent.wheel(carrossel, { deltaY: -120 });
-    expect(aoSelecionar).toHaveBeenLastCalledWith(MUSICAS_DE_TESTE.length - 1);
-  });
-
-  it("um toque leve na roda não troca de música", () => {
-    const { aoSelecionar } = abrir({ indice: 0 });
-    fireEvent.wheel(screen.getByRole("list", { name: "Músicas" }), { deltaY: 30 });
+    fireEvent.wheel(carrossel, { deltaY: -400 });
     expect(aoSelecionar).not.toHaveBeenCalled();
   });
 });
@@ -464,27 +458,25 @@ describe("no celular", () => {
 
   const acoes = () => ({ aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoInstrumento: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn(), aoVelocidadeDaMusica: vi.fn() });
 
-  it("troca as abas por botões que abrem Detalhes e Ranking em modais", async () => {
+  it("Detalhes e Ranking ficam numa gaveta que abre pelo resumo da música", async () => {
     render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" volumeDosEfeitos={0} velocidadeDaMusica={1} ranking={<p>top da música</p>} {...acoes()} />);
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
     expect(screen.queryByText("top da música")).not.toBeInTheDocument();
     const usuario = userEvent.setup();
 
-    await usuario.click(screen.getByRole("button", { name: /Ranking/ }));
-    expect(within(screen.getByRole("dialog")).getByText("top da música")).toBeInTheDocument();
-    await usuario.keyboard("{Escape}");
-
-    await usuario.click(screen.getByRole("button", { name: /Detalhes/ }));
-    expect(within(screen.getByRole("dialog")).getByText("Médio")).toBeInTheDocument();
+    await usuario.click(within(screen.getByRole("contentinfo")).getByRole("button", { name: new RegExp(MUSICAS_DE_TESTE[0].titulo) }));
+    expect(screen.getByText("top da música")).toBeInTheDocument();
+    await usuario.click(screen.getByRole("tab", { name: /Detalhes/ }));
+    expect(within(screen.getByRole("tabpanel")).getByText("Médio")).toBeInTheDocument();
   });
 
-  it("Esc fecha o modal sem voltar ao menu", async () => {
+  it("Esc fecha a gaveta sem voltar ao menu", async () => {
     const a = acoes();
     render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" volumeDosEfeitos={0} velocidadeDaMusica={1} ranking={<p>top da música</p>} {...a} />);
     const usuario = userEvent.setup();
-    await usuario.click(screen.getByRole("button", { name: /Ranking/ }));
+    await usuario.click(within(screen.getByRole("contentinfo")).getByRole("button", { name: new RegExp(MUSICAS_DE_TESTE[0].titulo) }));
     await usuario.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByText("top da música")).not.toBeInTheDocument();
     expect(a.aoVoltar).not.toHaveBeenCalled();
   });
 
@@ -496,13 +488,13 @@ describe("no celular", () => {
     expect(a.aoJogar).toHaveBeenCalled();
   });
 
-  it("arrastar o dedo na lista troca a música", () => {
+  it("arrastar o dedo rola a lista sem trocar a música", () => {
     const a = acoes();
     render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" volumeDosEfeitos={0} velocidadeDaMusica={1} {...a} />);
     const lista = screen.getByRole("list", { name: "Músicas" });
-    fireEvent.touchStart(lista, { touches: [{ clientY: 300 }] });
-    fireEvent.touchMove(lista, { touches: [{ clientY: 200 }] });
-    expect(a.aoSelecionar).toHaveBeenCalledWith(1);
+    fireEvent.pointerDown(lista, { clientY: 300, pointerType: "touch" });
+    fireEvent.pointerMove(lista, { clientY: 200, pointerType: "touch" });
+    expect(a.aoSelecionar).not.toHaveBeenCalled();
   });
 
   it("o toque que arrastou não vira clique na música onde o dedo começou", () => {
@@ -510,9 +502,9 @@ describe("no celular", () => {
     render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" volumeDosEfeitos={0} velocidadeDaMusica={1} {...a} />);
     const lista = screen.getByRole("list", { name: "Músicas" });
     const botao = lista.querySelector('[data-indice="2"] button')!;
-    fireEvent.touchStart(botao, { touches: [{ clientY: 300 }] });
-    fireEvent.touchMove(botao, { touches: [{ clientY: 290 }] });
-    fireEvent.touchEnd(botao);
+    fireEvent.pointerDown(botao, { clientY: 300, pointerType: "touch" });
+    fireEvent.pointerMove(botao, { clientY: 290, pointerType: "touch" });
+    fireEvent.pointerUp(botao, { pointerType: "touch" });
     fireEvent.click(botao);
     expect(a.aoSelecionar).not.toHaveBeenCalled();
     expect(a.aoJogar).not.toHaveBeenCalled();
@@ -523,9 +515,9 @@ describe("no celular", () => {
     const a = acoes();
     render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" volumeDosEfeitos={0} velocidadeDaMusica={1} {...a} />);
     const botao = screen.getByRole("list", { name: "Músicas" }).querySelector('[data-indice="2"] button')!;
-    fireEvent.touchStart(botao, { touches: [{ clientY: 300 }] });
+    fireEvent.pointerDown(botao, { clientY: 300, pointerType: "touch" });
     act(() => vi.advanceTimersByTime(500));
-    fireEvent.touchEnd(botao);
+    fireEvent.pointerUp(botao, { pointerType: "touch" });
     fireEvent.click(botao);
     vi.useRealTimers();
     expect(a.aoSelecionar).not.toHaveBeenCalled();

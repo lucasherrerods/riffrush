@@ -1,4 +1,4 @@
-import { geometriaDaPista, notasVisiveis, primeiraVisivel, yDaNota } from "./pista";
+import { colunaDoToque, geometriaDaPista, notasVisiveis, primeiraVisivel, yDaNota } from "./pista";
 
 describe("geometriaDaPista", () => {
   it("centraliza as colunas e põe a linha de julgamento perto da base", () => {
@@ -39,4 +39,16 @@ it("primeiraVisivel anda só para a frente e para na primeira nota que ainda apa
   // Começa de onde parou, sem voltar.
   expect(primeiraVisivel(notas, 4000, 200, 2)).toBe(3);
   expect(notasVisiveis(notas, 2000, 500, 200, 2)).toEqual(notasVisiveis(notas, 2000, 500, 200));
+});
+
+describe("colunaDoToque", () => {
+  const g = geometriaDaPista(400, 800, 4);
+  it("acha a coluna pela posição do dedo dentro da pista", () => {
+    expect(colunaDoToque(g.x + 1, g)).toBe(0);
+    expect(colunaDoToque(g.x + g.larguraDaColuna * 2 + 1, g)).toBe(2);
+  });
+  it("fora da pista vale a coluna da ponta mais perto", () => {
+    expect(colunaDoToque(0, g)).toBe(0);
+    expect(colunaDoToque(399, g)).toBe(3);
+  });
 });

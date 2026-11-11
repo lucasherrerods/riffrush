@@ -11,7 +11,6 @@ import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
-import { Dialog, DialogContent, DialogTitle } from "@/shared/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import {
   AvisoDaLista,
@@ -27,6 +26,7 @@ import {
   FundoDaSelecao,
   MenuDeApagar,
   RodapeDeComandos,
+  SelecaoNoCelular,
   TituloDaSelecao,
   alternarFavorita,
   carregarFavoritas,
@@ -158,8 +158,6 @@ export function TelaDeSelecao(props: Props) {
   const podeRemover = ehImportada(musica);
 
   const estreita = useTelaEstreita();
-  // No celular, Detalhes e Ranking abrem em janelas em vez de abas.
-  const [janela, setJanela] = useState<"detalhes" | "ranking" | null>(null);
 
   const voltar = () => {
     efeito("voltar");
@@ -168,7 +166,7 @@ export function TelaDeSelecao(props: Props) {
 
   useTeclado((evento) => {
     // Com o modal ou o menu de opções aberto, as teclas são dele: Esc o fecha, sem voltar ao menu.
-    if (removendo || menuAberto || janela) return;
+    if (removendo || menuAberto) return;
     // Com o foco na busca, as letras são dela.
     if (evento.target instanceof HTMLInputElement && evento.code !== "ArrowDown" && evento.code !== "ArrowUp" && evento.code !== "Enter") return;
     if (evento.code === "Delete" && podeRemover) return setRemovendo(true);
@@ -300,7 +298,6 @@ export function TelaDeSelecao(props: Props) {
       }}
       aoEscolherDificuldade={(id) => escolherDificuldade(id as Dificuldade)}
       aoJogar={jogar}
-      aoGirar={andar}
       menuDaSelecionada={
         podeRemover && (
           <MenuDeApagar
@@ -350,42 +347,26 @@ export function TelaDeSelecao(props: Props) {
 
   if (estreita) {
     return (
-      <div className="relative isolate flex h-full flex-col">
-        <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
-          {cabecalho}
-          <section aria-label="Informações da música" className="flex flex-col gap-3">
-            {!vazia && <TituloDaSelecao titulo={musica.titulo} subtitulo={musica.artista} favoritar={favoritar} />}
-            <div className="flex flex-wrap gap-2 [&_button]:h-9 [&_button]:gap-1.5 [&_button]:px-3 [&_button]:text-xs">
-              <Button variant="outline" size="sm" disabled={vazia} onClick={() => setJanela("detalhes")}>
-                <Info className="opacity-70" /> Detalhes
-              </Button>
-              {ranking && (
-                <Button variant="outline" size="sm" onClick={() => setJanela("ranking")}>
-                  <ListOrdered className="opacity-70" /> Ranking
-                </Button>
-              )}
-              {filtros}
-            </div>
-            {instrumentos.length > 1 && <GrupoDeOpcoes titulo="Instrumento" opcoes={instrumentos.map((i) => ({ id: i.id, rotulo: i.rotulo }))} valor={instrumento} aoEscolher={escolherInstrumento} />}
-          </section>
-          {lista}
-        </div>
-        <footer className="flex flex-col bg-superficie p-3">{tocar}</footer>
-        <Dialog open={janela !== null} onOpenChange={(aberto) => !aberto && setJanela(null)}>
-          {/* O Esc só fecha a janela: sem passar adiante, a tela não volta ao menu. */}
-          <DialogContent aria-describedby={undefined} onEscapeKeyDown={(evento) => evento.stopPropagation()}>
-            <DialogTitle>{janela === "ranking" ? "Ranking" : "Detalhes"}</DialogTitle>
-            {janela === "ranking" ? (
-              <div className="flex max-h-[60vh] min-h-0 flex-col">{ranking}</div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {dados}
-                {detalhes}
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      </div>
+      <SelecaoNoCelular
+        cabecalho={cabecalho}
+        filtros={filtros}
+        extras={instrumentos.length > 1 && <GrupoDeOpcoes titulo="Instrumento" opcoes={instrumentos.map((i) => ({ id: i.id, rotulo: i.rotulo }))} valor={instrumento} aoEscolher={escolherInstrumento} />}
+        lista={lista}
+        titulo={vazia ? undefined : musica.titulo}
+        subtitulo={vazia ? undefined : musica.artista}
+        capa={!vazia && <Capa musica={musica} decorativa className="size-full" />}
+        favoritar={!vazia && favoritar}
+        detalhes={
+          !vazia && (
+            <>
+              {dados}
+              {detalhes}
+            </>
+          )
+        }
+        ranking={ranking}
+        tocar={tocar}
+      />
     );
   }
 

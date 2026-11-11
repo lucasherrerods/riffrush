@@ -12,10 +12,13 @@ export interface ModDoChip {
   ligado: boolean;
 }
 
+const COLUNAS_DOS_MODS = 5;
+
 /** Os mods da partida em chips redondos no topo da seleção. */
 export function ChipsDeMods({ mods, aoAlternar }: { mods: ModDoChip[]; aoAlternar: (id: string) => void }) {
   return (
-    <div role="group" aria-label="Mods" className="flex flex-wrap justify-end gap-2">
+    // Em grade de até 5 colunas: com flex-wrap a caixa ficava larga como uma linha só e sobrava espaço vazio.
+    <div role="group" aria-label="Mods" className="grid w-max gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(mods.length, COLUNAS_DOS_MODS)}, auto)` }}>
       {mods.map((mod) => (
         <button
           key={mod.id}
@@ -116,10 +119,11 @@ interface PropsDosFiltros<O extends string> {
 export function FiltrosDaBiblioteca<O extends string>(props: PropsDosFiltros<O>) {
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-end gap-4 max-md:gap-2">
+      {/* Sem títulos acima dos campos: com eles a linha ficava desalinhada, e os valores já se explicam. */}
+      <div className="flex flex-wrap items-center gap-4 max-md:gap-2">
         <CampoDeBusca placeholder={props.placeholder} aria-label={props.rotuloDoCampo} value={props.texto} onChange={(e) => props.aoMudarTexto(e.target.value)} />
         {props.children}
-        <CampoDeSelecao titulo="Ordem" opcoes={props.ordens} valor={props.ordem} aoEscolher={props.aoMudarOrdem} />
+        <CampoDeSelecao titulo="Ordem" tituloEscondido opcoes={props.ordens} valor={props.ordem} aoEscolher={props.aoMudarOrdem} />
         <Button variant="outline" aria-pressed={props.soFavoritas} onClick={props.aoAlternarFavoritas} className={cn(props.soFavoritas && "border-primaria text-primaria")}>
           <Heart className={cn(props.soFavoritas ? "fill-current" : "opacity-70")} />
           <span className="max-md:sr-only">Favoritos</span>

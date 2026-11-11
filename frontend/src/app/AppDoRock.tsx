@@ -33,7 +33,8 @@ import { TelaDeCustomizacao } from "@/modules/rock/skins";
 import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type Configuracoes } from "@/modules/settings";
 import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { PlacarAoVivo, RankingDaSelecao, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
-import { BotaoDeAmigos, ConvitesDeAmigos, PainelDeAmigos, useIdsDosAmigos } from "@/modules/amigos";
+import { FundoDoRock } from "@/modules/rock";
+import { BotaoDeAmigos, ConvitesDeAmigos, PainelDeAmigos, useIdsDosAmigos, usePainelDeAmigos } from "@/modules/amigos";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -284,10 +285,10 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
             : { tipo: "menu" },
     );
   }, [tela, assistindo, musica, dificuldadeDaPartida, instrumentoDaPartida, transmitindo, conexao]);
-  const [amigosAbertos, setAmigosAbertos] = useState(false);
+  const { aberto: amigosAbertos, alternar: alternarAmigos, abrir: abrirAmigos, fechar: fecharAmigos } = usePainelDeAmigos(tela);
   const idsDosAmigos = useIdsDosAmigos(contasLigadas && !!conta && tela === "online");
   const assistir = useCallback((pessoa: PessoaOnline) => {
-    setAmigosAbertos(false);
+    fecharAmigos();
     // Quem está no Mania é assistido no Mania: o app troca de modo e abre a partida lá.
     assistirNoModoCerto(pessoa, "rock", (p) => {
       setEspectando(p);
@@ -306,7 +307,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
   const entrarNaSalaDoAmigo = useCallback(
     (codigo: string) => {
       entrarNaSalaOnline(codigo, personagemEmJogo);
-      setAmigosAbertos(false);
+      fecharAmigos();
       setTela("multijogador");
     },
     [personagemEmJogo],
@@ -333,7 +334,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
   );
   // Na seleção o player toca a música escolhida, e avançar/voltar mexem no carrossel.
   const escolhida = musicas[indice];
-  useSeguirMusica(tela === "selecao" && escolhida && !semAudio(escolhida) ? escolhida : null);
+  useSeguirMusica(tela === "selecao" && escolhida && !semAudio(escolhida) ? escolhida : null, { ficaNaQueTocaAoEntrar: true });
   useEffect(() => {
     if (tela !== "selecao") return;
     playerDeMusica.definirNavegacao((passos) => setIndice((i) => indiceVizinho(musicas.length, i, passos)));
@@ -473,7 +474,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
       {/* As telas menos usadas chegam só quando abertas: a abertura do jogo baixa menos código. */}
       <Suspense fallback={<TelaCarregando />}>
       {/* Na tela inicial compartilhada, o disco do app faz o papel do fundo; na seleção, a capa borrada da música. */}
-      {!(naPista && configuracoes.modoCompetitivo) && !(palco && tela === "menu") && tela !== "selecao" && <Fundo tocando={naPista} />}
+      {!(naPista && configuracoes.modoCompetitivo) && !(palco && tela === "menu") && tela !== "selecao" && (naPista ? <Fundo tocando /> : <FundoDoRock />)}
       {entrada && tela === "jogo" && (
         <EntradaDaPartida
           key={partida}
@@ -487,7 +488,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
       )}
       {!naPista && (
         <CabecalhoDoPlayerDeMusica player={playerDeMusica as unknown as PlayerDeMusica<FaixaDoPlayer>} volume={audio.volumeGeral} aoMudarVolume={definirVolumeGeral}>
-          {contasLigadas && <BotaoDeAmigos aberto={amigosAbertos} aoAlternar={() => setAmigosAbertos((abertos) => !abertos)} />}
+          {contasLigadas && <BotaoDeAmigos aberto={amigosAbertos} aoAlternar={alternarAmigos} />}
           {contasLigadas && (
             <CartaoDaConta
               mod={souDaModeracao}
@@ -711,7 +712,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 musicas={musicas}
                 volumeDosEfeitos={audio.volumeDosEfeitos}
                 sortearAleatoria={sortearOficial}
-                aoConvidarAmigos={contasLigadas && salaParaConvidar ? () => setAmigosAbertos(true) : undefined}
+                aoConvidarAmigos={contasLigadas && salaParaConvidar ? abrirAmigos : undefined}
                 aoVoltar={() => setTela("menu")}
                 aoEditarPersonagem={() => {
                   setVoltarDoPersonagemPara("multijogador");
@@ -801,13 +802,13 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
               className="absolute inset-y-0 right-0 z-30 p-4 max-md:inset-x-0 max-md:p-2"
             >
               <PainelDeAmigos
-                aoFechar={() => setAmigosAbertos(false)}
+                aoFechar={fecharAmigos}
                 salaParaConvidar={salaParaConvidar}
                 aoConvidar={(contaId, codigo) => presenca.convidar(contaId, codigo)}
                 // Dentro de uma sala, assistir tiraria a pessoa dela.
                 aoAssistir={conexao.sala ? undefined : assistir}
                 aoVerPerfil={(amigo) => {
-                  setAmigosAbertos(false);
+                  fecharAmigos();
                   setAmigoNoPerfil(amigo.conta_id);
                   if (tela !== "perfil") setVoltarDoPerfilPara(tela);
                   setTela("perfil");

@@ -74,3 +74,10 @@ it("o título mostra a faixa acima do nome, quando houver", () => {
   const nome = screen.getByRole("heading", { name: "White Prism" });
   expect(faixa.compareDocumentPosition(nome) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
+
+// Bug: com 10 mods o popover ficava largo como uma linha só e sobrava espaço vazio ao lado dos chips.
+it("os mods ficam numa grade de no máximo 5 colunas, justa no conteúdo", () => {
+  const mods = Array.from({ length: 10 }, (_, i) => ({ id: String(i), sigla: `M${i}`, nome: `Mod ${i}`, ligado: false }));
+  render(<ChipsDeMods mods={mods} aoAlternar={() => {}} />);
+  expect(screen.getByRole("group", { name: "Mods" }).style.gridTemplateColumns).toBe("repeat(5, auto)");
+});

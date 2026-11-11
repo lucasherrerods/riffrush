@@ -31,12 +31,18 @@ export function pontoDeRetomada(segundos: number, duracao: number) {
   return segundos;
 }
 
-/** Como a partida acabou: o jogador saiu por conta própria (ou ela terminou) num ponto, ou ele falhou. */
-export type SaidaDaPartida = { tipo: "saiu"; segundos: number } | { tipo: "falhou" };
-
-/** Saindo por conta própria, a música continua de onde estava; depois de uma falha, é como entrar pela seleção. */
-export const pontoDeVolta = (saida: SaidaDaPartida, duracao: number, sorteio = Math.random()) =>
-  saida.tipo === "falhou" ? pontoAleatorioDeInicio(duracao, sorteio) : pontoDeRetomada(saida.segundos, duracao);
-
 /** Uma posição sorteada da fila; sem músicas, nenhuma. */
 export const indiceSorteado = (total: number, sorteio = Math.random()) => (total === 0 ? -1 : Math.min(Math.floor(sorteio * total), total - 1));
+
+/** As vizinhas da música atual na fila, as mais perto primeiro, alternando próxima e anterior. */
+export function vizinhasParaPreCarregar(tamanho: number, atual: number, raio: number): number[] {
+  if (atual < 0 || atual >= tamanho) return [];
+  const indices: number[] = [];
+  for (let distancia = 1; distancia <= raio; distancia++) {
+    for (const passo of [distancia, -distancia]) {
+      const indice = indiceVizinho(tamanho, atual, passo);
+      if (indice !== atual && !indices.includes(indice)) indices.push(indice);
+    }
+  }
+  return indices;
+}

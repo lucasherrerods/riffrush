@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { PARTE_DA_TELA_DO_MODO, type PalcoCompartilhado } from "@/modules/menu";
 import { CartaoDaConta, PerfilDoAmigo, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
-import { BotaoDeAmigos, PainelDeAmigos, useIdsDosAmigos } from "@/modules/amigos";
+import { BotaoDeAmigos, PainelDeAmigos, useIdsDosAmigos, usePainelDeAmigos } from "@/modules/amigos";
 import {
   ChatGlobal,
   TelaOnline,
@@ -66,7 +66,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   const { conjuntos, importar, guardarBaixado, remover, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
   const [tela, setTela] = useState<Tela>({ nome: "menu" });
   const souDaModeracao = useSouDaModeracao();
-  const [amigosAbertos, setAmigosAbertos] = useState(false);
+  const { aberto: amigosAbertos, alternar: alternarAmigos, fechar: fecharAmigos } = usePainelDeAmigos(tela.nome);
   useAtualizacaoAutomatica(tela.nome === "jogo");
   // A trilha dos menus: as músicas da biblioteca, no mesmo player do cabeçalho do Rock.
   const player = useMemo(() => (decodificar ? criarPlayerDoMania(undefined, decodificar) : playerDoMania), [decodificar]);
@@ -79,11 +79,16 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   // A música acompanha o mapa selecionado e, depois da partida, continua de onde o jogador saiu.
   const [idSelecionado, setIdSelecionado] = useState<string | null>(null);
   const faixaSelecionada = useMemo(() => faixas.find((f) => f.id === idSelecionado) ?? null, [faixas, idSelecionado]);
-  useSeguirMapa(player, tela.nome === "selecao" ? faixaSelecionada : null);
+  useSeguirMapa(player, tela.nome === "selecao" ? faixaSelecionada : null, { ficaNaQueTocaAoEntrar: true });
   const faseDaTrilha = tela.nome === "jogo" ? "jogo" : tela.nome === "resultado" && tela.resultado.derrota ? "falha" : "menu";
   const retomarTrilha = useTrilhaDaPartida(player, faixaSelecionada, faseDaTrilha);
   const [idAoEntrar, setIdAoEntrar] = useState<string | null>(null);
   useMusicaAoEntrar(player, tela.nome === "selecao", setIdAoEntrar);
+  // A seleção reabre no último mapa escolhido: abrir num mapa antigo levaria o player para ele e a partida perderia o ponto.
+  const mudarSelecao = useCallback((id: string) => {
+    setIdSelecionado(id);
+    setIdAoEntrar(id);
+  }, []);
   // Na troca de modo, a trilha do Mania some aos poucos enquanto o disco gira, e volta quando o Mania volta.
   useEffect(() => {
     player.suspender(false, { esmaecer: true });
@@ -95,7 +100,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   const abrirConfiguracoes = () => setTela((atual) => (atual.nome === "configuracoes" ? atual : { nome: "configuracoes", voltarPara: atual }));
   const cabecalho = (
     <CabecalhoDoPlayerDeMusica player={player as unknown as PlayerDeMusica<FaixaDoPlayer>} volume={audio.volumeGeral} aoMudarVolume={definirVolumeGeral}>
-      {contasLigadas && <BotaoDeAmigos aberto={amigosAbertos} aoAlternar={() => setAmigosAbertos((abertos) => !abertos)} />}
+      {contasLigadas && <BotaoDeAmigos aberto={amigosAbertos} aoAlternar={alternarAmigos} />}
       {contasLigadas && <CartaoDaConta mod={souDaModeracao} aoConfigurar={abrirConfiguracoes} aoVerPerfil={() => setTela({ nome: "perfil" })} />}
     </CabecalhoDoPlayerDeMusica>
   );
@@ -110,10 +115,10 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
           className="absolute inset-y-0 right-0 z-30 p-4 max-md:inset-x-0 max-md:p-2"
         >
           <PainelDeAmigos
-            aoFechar={() => setAmigosAbertos(false)}
+            aoFechar={fecharAmigos}
             aoConvidar={(contaId, codigo) => presenca.convidar(contaId, codigo)}
             aoVerPerfil={(amigo) => {
-              setAmigosAbertos(false);
+              fecharAmigos();
               setTela({ nome: "perfil", amigo: amigo.conta_id });
             }}
           />
@@ -164,7 +169,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   const idsDosAmigos = useIdsDosAmigos(contasLigadas && !!conta && tela.nome === "online");
   const estadoDaPresenca = usePresenca();
   const assistir = (pessoa: PessoaOnline) => {
-    setAmigosAbertos(false);
+    fecharAmigos();
     assistirNoModoCerto(pessoa, "mania", (p) => setTela({ nome: "espectador", pessoa: p }));
   };
   // A semente do Random muda a cada partida; o replay a guarda.
@@ -391,7 +396,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         {tela.nome === "busca" ? (
           <TelaDeBuscaMania aoVoltar={() => setTela({ nome: tela.veioDaSelecao ? "selecao" : "menu" })} baixados={baixados} aoBaixar={aoBaixar} aoJogar={(beatmapsetId) => setTela({ nome: "selecao", conjuntoId: `osu:${beatmapsetId}` })} buscar={buscar} baixar={baixar} />
         ) : (
-          <TelaDeSelecaoMania aoMudarSelecao={setIdSelecionado} selecionado={(tela.nome === "selecao" ? tela.conjuntoId : undefined) ?? idAoEntrar ?? undefined} aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", veioDaSelecao: true })} sortearMapa={sortearMapaNovo} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoRemover={(conjunto) => void remover(conjunto.id)} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
+          <TelaDeSelecaoMania aoMudarSelecao={mudarSelecao} selecionado={(tela.nome === "selecao" ? tela.conjuntoId : undefined) ?? idAoEntrar ?? undefined} aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", veioDaSelecao: true })} sortearMapa={sortearMapaNovo} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoRemover={(conjunto) => void remover(conjunto.id)} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
         )}
         {painelDeAmigos}
       </div>
