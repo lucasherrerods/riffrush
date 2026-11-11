@@ -79,7 +79,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   // A música acompanha o mapa selecionado e, depois da partida, continua de onde o jogador saiu.
   const [idSelecionado, setIdSelecionado] = useState<string | null>(null);
   const faixaSelecionada = useMemo(() => faixas.find((f) => f.id === idSelecionado) ?? null, [faixas, idSelecionado]);
-  useSeguirMapa(player, tela.nome === "selecao" ? faixaSelecionada : null);
+  useSeguirMapa(player, tela.nome === "selecao" ? faixaSelecionada : null, { ficaNaQueTocaAoEntrar: true });
   const faseDaTrilha = tela.nome === "jogo" ? "jogo" : tela.nome === "resultado" && tela.resultado.derrota ? "falha" : "menu";
   const retomarTrilha = useTrilhaDaPartida(player, faixaSelecionada, faseDaTrilha);
   const [idAoEntrar, setIdAoEntrar] = useState<string | null>(null);
