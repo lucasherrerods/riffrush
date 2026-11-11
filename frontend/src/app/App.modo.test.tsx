@@ -1,3 +1,9 @@
+// O nome e o tema mudam nos eventos (o Natal começa em novembro), e o evento é escolhido ao importar o app:
+// a data fica fora deles antes dos imports.
+vi.hoisted(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(2026, 5, 15));
+});
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { lerTema } from "@/shared/styles/tema";
@@ -8,6 +14,7 @@ import { trocarModo } from "./modo";
 vi.mock("./AppDoRock", () => ({ AppDoRock: ({ alavanca }: { alavanca?: React.ReactNode }) => <main>jogo do rock{alavanca}</main> }));
 
 afterEach(() => act(() => trocarModo("rock")));
+afterAll(() => vi.useRealTimers());
 
 it("monta o jogo do modo ativo", async () => {
   render(<App />);
