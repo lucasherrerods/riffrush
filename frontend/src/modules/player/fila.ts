@@ -31,13 +31,6 @@ export function pontoDeRetomada(segundos: number, duracao: number) {
   return segundos;
 }
 
-/** Como a partida acabou: o jogador saiu por conta própria (ou ela terminou) num ponto, ou ele falhou. */
-export type SaidaDaPartida = { tipo: "saiu"; segundos: number } | { tipo: "falhou" };
-
-/** Saindo por conta própria, a música continua de onde estava; depois de uma falha, é como entrar pela seleção. */
-export const pontoDeVolta = (saida: SaidaDaPartida, duracao: number, sorteio = Math.random()) =>
-  saida.tipo === "falhou" ? pontoAleatorioDeInicio(duracao, sorteio) : pontoDeRetomada(saida.segundos, duracao);
-
 /** Uma posição sorteada da fila; sem músicas, nenhuma. */
 export const indiceSorteado = (total: number, sorteio = Math.random()) => (total === 0 ? -1 : Math.min(Math.floor(sorteio * total), total - 1));
 

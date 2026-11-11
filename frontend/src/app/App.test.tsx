@@ -138,10 +138,10 @@ describe("App", () => {
 
   it("na seleção o player segue a música escolhida, e fora dela não", async () => {
     const usuario = abrir();
-    expect(vi.mocked(useSeguirMusica)).toHaveBeenLastCalledWith(null);
+    expect(vi.mocked(useSeguirMusica).mock.lastCall?.[0]).toBeNull();
     await usuario.click(screen.getByRole("button", { name: "Jogar" }));
     await screen.findByRole("heading", { name: "Selecione a música" });
-    expect(vi.mocked(useSeguirMusica)).toHaveBeenLastCalledWith(MUSICAS_EMBUTIDAS[0]);
+    expect(vi.mocked(useSeguirMusica).mock.lastCall?.[0]).toBe(MUSICAS_EMBUTIDAS[0]);
   });
 
   it("Jogar abre a seleção e Esc volta ao menu", async () => {

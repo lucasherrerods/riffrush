@@ -168,7 +168,7 @@ describe("PlayerDeMusica", () => {
     player.seguirMapa(fila[0]);
     await esperar();
     player.suspender(true);
-    player.voltarDaPartida(fila[0], { tipo: "saiu", segundos: 72 });
+    player.voltarDaPartida(fila[0], 72);
     player.suspender(false);
     expect(player.estado().tocando).toBe(true);
     expect(ultimaFonte().deslocamento).toBe(72);
@@ -179,21 +179,11 @@ describe("PlayerDeMusica", () => {
     player.seguir(fila[0]);
     await esperar();
     player.suspender(true);
-    player.voltarDaPartida(fila[2], { tipo: "saiu", segundos: 15 });
+    player.voltarDaPartida(fila[2], 15);
     await esperar();
     player.suspender(false);
     expect(player.estado()).toMatchObject({ musica: fila[2], tocando: true });
     expect(ultimaFonte().deslocamento).toBe(15);
-  });
-
-  it("depois de uma falha, a música da partida volta num ponto sorteado", async () => {
-    const { player, ultimaFonte } = montar(undefined, () => 0);
-    player.seguir(fila[0]);
-    await esperar();
-    player.suspender(true);
-    player.voltarDaPartida(fila[0], { tipo: "falhou" });
-    player.suspender(false);
-    expect(ultimaFonte().deslocamento).toBe(30);
   });
 
   it("se a música não carrega, para de carregar sem tocar", async () => {

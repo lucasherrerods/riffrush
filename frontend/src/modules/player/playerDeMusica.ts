@@ -1,6 +1,6 @@
 import { obterContextoDeAudio, saidaDeAudio } from "@/modules/audio";
 import { criarCacheLimitado } from "@/shared/lib/cacheLimitado";
-import { acaoDeVoltar, vizinhasParaPreCarregar, indiceSorteado, indiceVizinho, pontoAleatorioDeInicio, pontoDeVolta, posicaoNaMusica, type SaidaDaPartida } from "./fila";
+import { acaoDeVoltar, vizinhasParaPreCarregar, indiceSorteado, indiceVizinho, pontoAleatorioDeInicio, pontoDeRetomada, posicaoNaMusica } from "./fila";
 
 /** O que o player toca: as músicas do Rock ou os mapas da biblioteca do Mania. */
 export interface FaixaDoPlayer {
@@ -131,9 +131,9 @@ export class PlayerDeMusica<F extends FaixaDoPlayer = FaixaDoPlayer> {
     void this.abrir(musica, (duracao) => pontoAleatorioDeInicio(duracao, this.sortear()));
   }
 
-  /** Depois da partida, a trilha volta para a música dela, no ponto que a saída pede. */
-  voltarDaPartida(musica: F, saida: SaidaDaPartida) {
-    const ponto: PontoDeAbertura = (duracao) => pontoDeVolta(saida, duracao, this.sortear());
+  /** Depois da partida, a trilha volta para a música dela, no ponto em que o jogador saiu ou morreu. */
+  voltarDaPartida(musica: F, segundos: number) {
+    const ponto: PontoDeAbertura = (duracao) => pontoDeRetomada(segundos, duracao);
     if (musica.id !== this.estadoAtual.musica?.id) return void this.abrir(musica, ponto);
     if (this.estadoAtual.carregando) this.pontoAoCarregar = ponto;
     else this.irPara(ponto(this.estadoAtual.duracao));
