@@ -10,6 +10,8 @@ import { aplicarEventos, desenharPista, type QuadroDaPista } from "./desenhar";
 import { MODS } from "./mods";
 import { colunaDoToque, geometriaDaPista, type GeometriaDaPista } from "./pista";
 import { colunaDaTecla, teclasDoMapa } from "./teclas";
+import { comoPorcentagem, registrarEventos, resumoDosDesvios, type Estatisticas } from "./estatisticas";
+import { guardarMarcas, mediaSuavizada } from "./barraDeUr";
 import { mapaDoTrecho, trechosDoMapa } from "./treino";
 
 /** A música começa depois deste respiro, para o jogador se posicionar. */
@@ -47,6 +49,10 @@ export interface ResultadoDoMania {
   semente: number;
   hash: string;
   entradas: EntradaDoMania[];
+  /** Para os gráficos do resultado. */
+  estatisticas: Estatisticas;
+  /** A janela do 50 no tempo real: o limite da barra de desvio. */
+  janelaMs: number;
 }
 
 /** O que a partida manda para quem assiste ao vivo: as entradas novas a cada segundo, com até onde a música chegou. */
@@ -99,6 +105,7 @@ const modsDoTreino = (mods: number) => (mods & ~(MODS.SD | MODS.PF)) | MODS.NF;
 export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_PADRAO_DO_MANIA, aoTerminar, aoSair, treino = false, decodificar = decodificarPadrao, replay, rotuloDoReplay, aoTransmitir, aoVivo, aoMarcarPontoDaMusica }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [precisao, setPrecisao] = useState(1);
   const [pronta, setPronta] = useState(false);
   const [trechos, setTrechos] = useState<Trecho[] | null>(null);
   const [trecho, setTrecho] = useState<Trecho | null>(null);
@@ -183,10 +190,24 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
       transmitir({ tipo: "inicio" });
 
       const emMs = (tempoDoAudio: number) => Math.round((tempoDoAudio - inicio) * 1000 - opcoes.atrasoMs);
-      const quadro: QuadroDaPista = { agoraMs: emMs(agoraNoAudio(contexto)), rolagemMs: opcoes.rolagemMs, notas, estados, apertadas, combo: 0, vida: 1 };
+      const quadro: QuadroDaPista = { agoraMs: emMs(agoraNoAudio(contexto)), rolagemMs: opcoes.rolagemMs, notas, estados, apertadas, combo: 0, vida: 1, ur: { marcas: [], janelas: motor.janelas() } };
+      const estatisticas: Estatisticas = { julgamentos: [], desvios: [] };
       const lerEventos = () => {
-        const julgamento = aplicarEventos(estados, notas, motor.eventos());
-        if (julgamento !== undefined) quadro.julgamento = { codigo: julgamento, emMs: quadro.agoraMs };
+        const eventos = motor.eventos();
+        const desviosAntes = estatisticas.desvios.length;
+        registrarEventos(estatisticas, eventos);
+        if (quadro.ur && estatisticas.desvios.length > desviosAntes) {
+          const novos = estatisticas.desvios.slice(desviosAntes);
+          quadro.ur.marcas = guardarMarcas(quadro.ur.marcas, novos, quadro.agoraMs);
+          quadro.ur.media = mediaSuavizada(quadro.ur.media, novos);
+          quadro.ur.valor = resumoDosDesvios(estatisticas.desvios).ur;
+        }
+        const julgamento = aplicarEventos(estados, notas, eventos);
+        if (julgamento !== undefined) {
+          quadro.julgamento = { codigo: julgamento, emMs: quadro.agoraMs };
+          // Só muda com julgamento novo; o React ignora quando o valor é o mesmo.
+          setPrecisao(motor.precisao());
+        }
       };
 
       /** No treino, o fim da parte começa uma partida nova dela e volta a música para o começo. */
@@ -198,6 +219,7 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
         }
         motor.free();
         motor = new MotorDoMania(textoDaPartida, modsDaPartida, semente);
+        setPrecisao(1);
         quadro.notas = notas = motor.notas();
         quadro.estados = estados = new Uint8Array(notas.length / 3);
         quadro.julgamento = undefined;
@@ -224,6 +246,8 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
           semente,
           hash: mapa.hash,
           entradas,
+          estatisticas,
+          janelaMs: motor.janelas()[4],
         };
         if (enviadas < entradas.length) mandarLote(quadro.agoraMs);
         pararTudo();
@@ -378,7 +402,12 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
   return (
     <main className="relative h-full bg-fundo text-texto">
       <header className="absolute inset-x-0 top-0 flex items-baseline justify-between gap-4 px-6 py-4">
-        <h1 className="font-titulo text-2xl tracking-wide">{mapa.titulo}</h1>
+        <div>
+          <h1 className="font-titulo text-2xl tracking-wide">{mapa.titulo}</h1>
+          <p aria-label="Precisão" className="font-titulo text-xl tabular-nums text-texto-suave">
+            {comoPorcentagem(precisao)}
+          </p>
+        </div>
         {replay && <p className="rounded bg-primaria px-2 font-black">{rotuloDoReplay ?? "REPLAY"}</p>}
         {trecho && (
           <p className="rounded bg-primaria px-2 font-black">{["TREINO", trecho.nome, rotuloDasVoltas(voltas)].filter(Boolean).join(" · ")}</p>

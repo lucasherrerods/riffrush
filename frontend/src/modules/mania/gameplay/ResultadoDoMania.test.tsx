@@ -14,6 +14,8 @@ const resultado: Resultado = {
   semente: 0,
   hash: "abc",
   entradas: [],
+  estatisticas: { julgamentos: [0, 0, 5, 0], desvios: [-6, -2, 4] },
+  janelaMs: 100,
 };
 
 it("mostra nota, pontuação, precisão, combo, julgamentos e mods", async () => {
@@ -45,4 +47,11 @@ it("Enter volta e R joga de novo, como no Rock", async () => {
   expect(aoVoltar).toHaveBeenCalled();
   await userEvent.keyboard("r");
   expect(aoJogarDeNovo).toHaveBeenCalled();
+});
+
+it("mostra a precisão ao longo da música e o desvio dos toques", () => {
+  render(<ResultadoDoMania titulo="Música" dificuldade="Hard" resultado={resultado} aoJogarDeNovo={vi.fn()} aoVoltar={vi.fn()} />);
+  expect(screen.getByRole("img", { name: "Precisão ao longo da música" })).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "Desvio dos toques" })).toBeInTheDocument();
+  expect(screen.getByText("1,3 ms cedo")).toBeInTheDocument();
 });

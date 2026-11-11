@@ -60,3 +60,9 @@ Problemas encontrados de passagem, fora do escopo da mudança que estava sendo f
 - O que se viu: falhou uma vez na suíte inteira (não achou o título "Riff Rush Mania" em 5 s) e passou sozinho logo depois. Os testes embutidos de `rock/songs/carregamento.test.ts` falharam na mesma rodada e também passaram sozinhos.
 - Suspeita: o carregamento preguiçoso do modo demora mais que o `timeout` quando a máquina está carregada.
 - Próximo passo: medir o tempo do import do Mania no teste e subir o limite ou carregar o módulo antes.
+
+## `TelaDeBuscaMania.test.tsx` falha na suíte inteira e passa sozinho
+- Onde: `frontend/src/modules/mania/busca/TelaDeBuscaMania.test.tsx`, "carrega a próxima página no fim da lista, sem repetir mapas, até acabar".
+- O que se viu: falhou uma vez com a suíte inteira rodando e passou logo depois rodando só o arquivo. Em outra rodada, só da pasta do Mania, quem falhou foi "mudar o filtro volta para a primeira página" (achou 1 mapa em vez de 2).
+- Suspeita: o teste depende do tempo do carregamento da página seguinte (rolagem ou espera curta demais com a máquina carregada).
+- Próximo passo: trocar a espera fixa por `findBy`/`waitFor` no fim da lista e rodar a suíte algumas vezes.
