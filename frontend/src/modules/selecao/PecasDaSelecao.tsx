@@ -12,10 +12,13 @@ export interface ModDoChip {
   ligado: boolean;
 }
 
+const COLUNAS_DOS_MODS = 5;
+
 /** Os mods da partida em chips redondos no topo da seleção. */
 export function ChipsDeMods({ mods, aoAlternar }: { mods: ModDoChip[]; aoAlternar: (id: string) => void }) {
   return (
-    <div role="group" aria-label="Mods" className="flex flex-wrap justify-end gap-2">
+    // Em grade de até 5 colunas: com flex-wrap a caixa ficava larga como uma linha só e sobrava espaço vazio.
+    <div role="group" aria-label="Mods" className="grid w-max gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(mods.length, COLUNAS_DOS_MODS)}, auto)` }}>
       {mods.map((mod) => (
         <button
           key={mod.id}

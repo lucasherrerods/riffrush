@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { SlidersHorizontal } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { BotaoDaSelecao } from "./BotaoDaSelecao";
 
@@ -9,12 +9,12 @@ export function BotaoDeModificadores({ ligados, children }: { ligados: number; c
     <Popover>
       <PopoverTrigger asChild>
         <BotaoDaSelecao>
-          <SlidersHorizontal aria-hidden />
+          <Sparkles aria-hidden />
           <span className="max-md:sr-only">Modificadores</span>
           {ligados > 0 && <span className="font-mono text-primaria">{ligados}</span>}
         </BotaoDaSelecao>
       </PopoverTrigger>
-      <PopoverContent className="w-max max-w-[min(20rem,calc(100vw-2rem))]">{children}</PopoverContent>
+      <PopoverContent collisionPadding={16} className="w-max max-w-[calc(100vw-2rem)]">{children}</PopoverContent>
     </Popover>
   );
 }
