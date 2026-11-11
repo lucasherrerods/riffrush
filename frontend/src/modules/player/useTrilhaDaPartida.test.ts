@@ -19,11 +19,11 @@ describe("useTrilhaDaPartida", () => {
     expect(player.suspender).toHaveBeenLastCalledWith(true, { esmaecer: false });
     result.current(42);
     rerender({ fase: "menu" });
-    expect(player.voltarDaPartida).toHaveBeenCalledWith(faixa, { tipo: "saiu", segundos: 42 });
+    expect(player.voltarDaPartida).toHaveBeenCalledWith(faixa, 42);
     expect(player.suspender).toHaveBeenLastCalledWith(false, { esmaecer: true });
   });
 
-  it("na tela de falha continua calado e, no menu, volta num ponto sorteado", () => {
+  it("na tela de falha continua calado e, no menu, volta do ponto em que o jogador morreu", () => {
     const { player, result, rerender } = montar();
     rerender({ fase: "jogo" });
     result.current(42);
@@ -31,7 +31,7 @@ describe("useTrilhaDaPartida", () => {
     expect(player.suspender).toHaveBeenLastCalledWith(true, { esmaecer: false });
     expect(player.voltarDaPartida).not.toHaveBeenCalled();
     rerender({ fase: "menu" });
-    expect(player.voltarDaPartida).toHaveBeenCalledWith(faixa, { tipo: "falhou" });
+    expect(player.voltarDaPartida).toHaveBeenCalledWith(faixa, 42);
   });
 
   it("jogar de novo depois da falha e sair por conta própria mantém o tempo", () => {
@@ -41,7 +41,7 @@ describe("useTrilhaDaPartida", () => {
     rerender({ fase: "jogo" });
     result.current(10);
     rerender({ fase: "menu" });
-    expect(player.voltarDaPartida).toHaveBeenCalledWith(faixa, { tipo: "saiu", segundos: 10 });
+    expect(player.voltarDaPartida).toHaveBeenCalledWith(faixa, 10);
   });
 
   it("sem partida no meio, não mexe na música", () => {

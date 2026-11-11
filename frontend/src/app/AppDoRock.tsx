@@ -334,7 +334,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
   );
   // Na seleção o player toca a música escolhida, e avançar/voltar mexem no carrossel.
   const escolhida = musicas[indice];
-  useSeguirMusica(tela === "selecao" && escolhida && !semAudio(escolhida) ? escolhida : null);
+  useSeguirMusica(tela === "selecao" && escolhida && !semAudio(escolhida) ? escolhida : null, { ficaNaQueTocaAoEntrar: true });
   useEffect(() => {
     if (tela !== "selecao") return;
     playerDeMusica.definirNavegacao((passos) => setIndice((i) => indiceVizinho(musicas.length, i, passos)));
