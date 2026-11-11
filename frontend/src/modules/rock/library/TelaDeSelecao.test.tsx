@@ -458,27 +458,25 @@ describe("no celular", () => {
 
   const acoes = () => ({ aoSelecionar: vi.fn(), aoDificuldade: vi.fn(), aoInstrumento: vi.fn(), aoJogar: vi.fn(), aoVoltar: vi.fn(), aoImportar: vi.fn(), aoRemover: vi.fn(), aoVelocidadeDaMusica: vi.fn() });
 
-  it("troca as abas por botões que abrem Detalhes e Ranking em modais", async () => {
+  it("Detalhes e Ranking ficam numa gaveta que abre pelo resumo da música", async () => {
     render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" volumeDosEfeitos={0} velocidadeDaMusica={1} ranking={<p>top da música</p>} {...acoes()} />);
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
     expect(screen.queryByText("top da música")).not.toBeInTheDocument();
     const usuario = userEvent.setup();
 
-    await usuario.click(screen.getByRole("button", { name: /Ranking/ }));
-    expect(within(screen.getByRole("dialog")).getByText("top da música")).toBeInTheDocument();
-    await usuario.keyboard("{Escape}");
-
-    await usuario.click(screen.getByRole("button", { name: /Detalhes/ }));
-    expect(within(screen.getByRole("dialog")).getByText("Médio")).toBeInTheDocument();
+    await usuario.click(within(screen.getByRole("contentinfo")).getByRole("button", { name: new RegExp(MUSICAS_DE_TESTE[0].titulo) }));
+    expect(screen.getByText("top da música")).toBeInTheDocument();
+    await usuario.click(screen.getByRole("tab", { name: /Detalhes/ }));
+    expect(within(screen.getByRole("tabpanel")).getByText("Médio")).toBeInTheDocument();
   });
 
-  it("Esc fecha o modal sem voltar ao menu", async () => {
+  it("Esc fecha a gaveta sem voltar ao menu", async () => {
     const a = acoes();
     render(<TelaDeSelecao musicas={MUSICAS_DE_TESTE} indice={0} dificuldade="medio" instrumento="guitarra" volumeDosEfeitos={0} velocidadeDaMusica={1} ranking={<p>top da música</p>} {...a} />);
     const usuario = userEvent.setup();
-    await usuario.click(screen.getByRole("button", { name: /Ranking/ }));
+    await usuario.click(within(screen.getByRole("contentinfo")).getByRole("button", { name: new RegExp(MUSICAS_DE_TESTE[0].titulo) }));
     await usuario.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByText("top da música")).not.toBeInTheDocument();
     expect(a.aoVoltar).not.toHaveBeenCalled();
   });
 
