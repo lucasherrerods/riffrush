@@ -1,10 +1,10 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Heart, Star } from "lucide-react";
 import { SeloDaNota } from "@/shared/ui/SeloDaNota";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
-import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, centroDoGrupoAberto, passosDaRoda, passosDoArraste, passosSemDarAVolta, posicoesNoCarrossel, recuoNaCurva } from "./geometriaDoCarrossel";
+import { ALTURA_DA_DIFICULDADE, ALTURA_DA_MUSICA, ESPACO, centroDoGrupoNaTela, limitar, limitesDoDeslocamento, passoDaInercia, posicoesNoCarrossel, recuoNaCurva } from "./geometriaDoCarrossel";
 
 /** Uma música (Rock) ou um conjunto de mapas (Mania) na roda. */
 export interface ItemDoCarrossel {
@@ -38,8 +38,6 @@ interface Props {
   aoEscolherItem: (indice: number) => void;
   aoEscolherDificuldade: (id: string) => void;
   aoJogar: () => void;
-  /** Itens a andar pela roda do mouse (negativo sobe). */
-  aoGirar: (passos: number) => void;
   /** Botão de opções no canto do item selecionado (ex.: apagar o importado). */
   menuDaSelecionada?: ReactNode;
   rotulo?: string;
@@ -61,69 +59,119 @@ const TEMPO_DO_TOQUE = 250;
 const formatar = (n: number) => n.toLocaleString("pt-BR");
 
 /** Lista em roda, como no osu!lazer: a selecionada fica no meio, com as dificuldades abertas embaixo. */
-export function Carrossel({ itens, indice, dificuldade, dificuldades, aoEscolherItem, aoEscolherDificuldade, aoJogar, aoGirar, menuDaSelecionada, rotulo = "Músicas", className }: Props) {
-  const giro = useRef(0);
-  // No celular a roda gira arrastando o dedo: guarda a última altura do toque e o que sobrou do arraste.
-  const toque = useRef<{ y: number; resto: number } | null>(null);
+export function Carrossel({ itens, indice, dificuldade, dificuldades, aoEscolherItem, aoEscolherDificuldade, aoJogar, menuDaSelecionada, rotulo = "Músicas", className }: Props) {
+  // Arraste em andamento (dedo ou mouse): a última altura, quando foi e a velocidade em px/ms.
+  const toque = useRef<{ y: number; momento: number; velocidade: number } | null>(null);
+  const inercia = useRef(0);
   // O toque que arrastou não é clique: sem isso, soltar o dedo escolhe a música onde ele começou.
   const inicioDoToque = useRef(0);
   const arrastou = useRef(false);
   const momentoDoToque = useRef(0);
   const posicoes = posicoesNoCarrossel(itens.length, indice, dificuldades.length);
-  const centro = centroDoGrupoAberto(dificuldades.length);
   // No celular a roda inteira encolhe, para caberem mais músicas e dar para ver que a lista continua.
   const estreita = useTelaEstreita();
   const escala = estreita ? ESCALA_NO_CELULAR : 1;
   // No toque as músicas ficam um pouco mais afastadas, sem crescer, para o dedo não acertar a vizinha.
   const passo = escala * (estreita ? AFASTAMENTO_NO_CELULAR : 1);
+  // Com muitas dificuldades o grupo aberto passa da tela: aí ele mostra do topo e segue a escolhida.
+  const lista = useRef<HTMLUListElement>(null);
+  const [alturaVisivel, setAlturaVisivel] = useState(0);
+  useEffect(() => {
+    const el = lista.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observador = new ResizeObserver(() => setAlturaVisivel(el.clientHeight));
+    observador.observe(el);
+    setAlturaVisivel(el.clientHeight);
+    return () => observador.disconnect();
+  }, []);
+  const centro = centroDoGrupoNaTela(dificuldades.length, dificuldades.findIndex((d) => d.id === dificuldade), alturaVisivel / passo);
+
+  // Arrastar e girar a roda passeiam pela lista sem trocar a música, como no osu!lazer.
+  // Escolher outra música ou dificuldade traz a lista de volta para ela.
+  const [deslocamento, setDeslocamento] = useState(0);
+  const limites = limitesDoDeslocamento(posicoes, centro, dificuldades.length);
+  const limitesAtuais = useRef(limites);
+  limitesAtuais.current = limites;
+  const pararInercia = () => cancelAnimationFrame(inercia.current);
+  useEffect(() => {
+    pararInercia();
+    setDeslocamento(0);
+  }, [indice, dificuldade]);
+  useEffect(() => pararInercia, []);
+  const andar = (px: number) => setDeslocamento((d) => limitar(d + px, limitesAtuais.current));
+  const soltar = (velocidade: number) => {
+    pararInercia();
+    let anterior = performance.now();
+    const quadro = (agora: number) => {
+      const { andou, velocidade: resto } = passoDaInercia(velocidade, agora - anterior);
+      anterior = agora;
+      velocidade = resto;
+      andar(andou);
+      if (velocidade) inercia.current = requestAnimationFrame(quadro);
+    };
+    if (velocidade) inercia.current = requestAnimationFrame(quadro);
+  };
+  const fimDoArraste = () => {
+    if (!toque.current) return;
+    // Parado no fim do arraste, não sai deslizando.
+    const parado = Date.now() - toque.current.momento > 80;
+    soltar(parado ? 0 : toque.current.velocidade);
+    toque.current = null;
+  };
 
   return (
     <ul
+      ref={lista}
       aria-label={rotulo}
       onWheel={(evento) => {
-        const { passos, resto } = passosDaRoda(giro.current + evento.deltaY);
-        giro.current = resto;
-        if (passos) aoGirar(passos);
+        pararInercia();
+        andar(evento.deltaY / passo);
       }}
-      onTouchStart={(evento) => {
-        toque.current = { y: evento.touches[0].clientY, resto: 0 };
-        inicioDoToque.current = evento.touches[0].clientY;
+      onPointerDown={(evento) => {
+        pararInercia();
+        toque.current = { y: evento.clientY, momento: Date.now(), velocidade: 0 };
+        inicioDoToque.current = evento.clientY;
         arrastou.current = false;
         momentoDoToque.current = Date.now();
       }}
-      onTouchMove={(evento) => {
+      onPointerMove={(evento) => {
         if (!toque.current) return;
-        const y = evento.touches[0].clientY;
+        const y = evento.clientY;
         if (Math.abs(y - inicioDoToque.current) > LIMITE_DO_TOQUE) arrastou.current = true;
-        const { passos, resto } = passosDoArraste(toque.current.resto + toque.current.y - y);
-        toque.current = { y, resto };
-        const permitidos = passosSemDarAVolta(indice, passos, itens.length);
-        if (permitidos) aoGirar(permitidos);
+        const agora = Date.now();
+        const px = (toque.current.y - y) / passo;
+        const ms = Math.max(agora - toque.current.momento, 1);
+        // Média com a velocidade anterior, para um tremido no fim do gesto não decidir a inércia.
+        const velocidade = toque.current.velocidade * 0.2 + (px / ms) * 0.8;
+        toque.current = { y, momento: agora, velocidade };
+        andar(px);
       }}
-      onTouchEnd={() => {
-        toque.current = null;
-        // Segurar o dedo é o começo de um arraste, não um clique.
-        if (Date.now() - momentoDoToque.current > TEMPO_DO_TOQUE) arrastou.current = true;
+      onPointerUp={(evento) => {
+        fimDoArraste();
+        // Segurar o dedo é o começo de um arraste, não um clique (no mouse, clique demorado continua clique).
+        if (evento.pointerType !== "mouse" && Date.now() - momentoDoToque.current > TEMPO_DO_TOQUE) arrastou.current = true;
       }}
+      onPointerLeave={fimDoArraste}
+      onPointerCancel={fimDoArraste}
       onClickCapture={(evento) => {
         if (!arrastou.current) return;
         arrastou.current = false;
         evento.preventDefault();
         evento.stopPropagation();
       }}
-      className={cn("relative col-span-7 min-h-0 min-w-0 touch-none overflow-hidden max-md:col-span-1 max-md:min-h-40", className)}
+      className={cn("relative col-span-7 min-h-0 min-w-0 touch-none overflow-hidden select-none max-md:col-span-1 max-md:min-h-40", className)}
     >
       {itens.map((m, i) => {
         const posicao = posicoes[i];
-        if (Math.abs(posicao) > ALCANCE) return null;
+        if (Math.abs(posicao - deslocamento) > ALCANCE) return null;
         const selecionada = i === indice;
-        const x = selecionada ? -AVANCO_DA_SELECIONADA : recuoNaCurva(posicao + ALTURA_DA_MUSICA / 2 - centro);
+        const x = selecionada ? -AVANCO_DA_SELECIONADA : recuoNaCurva(posicao + ALTURA_DA_MUSICA / 2 - centro - deslocamento);
         return (
           <motion.li
             key={m.id}
             data-indice={i}
             initial={false}
-            animate={{ y: (posicao - centro) * passo, x: x * escala }}
+            animate={{ y: (posicao - centro - deslocamento) * passo, x: x * escala }}
             transition={MOLA}
             className="absolute top-1/2 right-0 left-8 max-md:left-4"
           >

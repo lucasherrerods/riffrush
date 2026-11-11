@@ -300,7 +300,6 @@ export function TelaDeSelecao(props: Props) {
       }}
       aoEscolherDificuldade={(id) => escolherDificuldade(id as Dificuldade)}
       aoJogar={jogar}
-      aoGirar={andar}
       menuDaSelecionada={
         podeRemover && (
           <MenuDeApagar
