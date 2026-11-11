@@ -1,8 +1,13 @@
 use std::sync::Arc;
 
 use super::dominio::{espera_da_tentativa, rejulgar, ChartGuardado, MAXIMO_DE_TENTATIVAS};
-use super::portas::{CacheDeCharts, ChartBaixado, FilaDoRejulgamento, FonteDeCharts, PartidaAntiga, PartidaPendente, PartidasAntigas};
+use super::estimativa::estimar_valor_no_score_v1;
+use super::portas::{
+    CacheDeCharts, ChartBaixado, FilaDoRejulgamento, FonteDeCharts, NoScoreV1, PartidaAntiga, PartidaDoJulgamentoAntigo, PartidaPendente, PartidasAntigas,
+    PartidasDoJulgamentoAntigo,
+};
 use crate::modules::conta::{FalhaExterna, PartidaRejulgada, Relogio, ServicosDaConta};
+use crate::modules::progresso::{precisao_pelo_valor, xp_da_partida, ResumoDaPartida};
 
 pub const TAMANHO_DO_LOTE: u32 = 10;
 
@@ -10,6 +15,7 @@ pub const TAMANHO_DO_LOTE: u32 = 10;
 pub struct ServicosDoRejulgamento {
     pub fila: Arc<dyn FilaDoRejulgamento>,
     pub antigas: Arc<dyn PartidasAntigas>,
+    pub julgamento_antigo: Arc<dyn PartidasDoJulgamentoAntigo>,
     pub cache: Arc<dyn CacheDeCharts>,
     pub fonte: Arc<dyn FonteDeCharts>,
     pub conta: ServicosDaConta,
@@ -53,6 +59,58 @@ impl ServicosDoRejulgamento {
             feitas += 1;
         }
         Ok(feitas)
+    }
+
+    /// Passa um lote das partidas julgadas antes do ScoreV1 para ele: com replay, rejulga pelo motor; sem,
+    /// estima pelo valor guardado. O XP de cada uma é refeito e o da conta volta a ser a soma das partidas.
+    /// Devolve quantas passou; com o Encore fora, para e tenta de novo depois.
+    pub async fn passar_para_o_score_v1(&self) -> Result<usize, FalhaExterna> {
+        let lote = self.julgamento_antigo.pegar_do_julgamento_antigo(TAMANHO_DO_LOTE).await?;
+        let mut feitas = 0;
+        for partida in lote {
+            let Some(nova) = self.no_score_v1(&partida).await else {
+                break;
+            };
+            let (resumo, precisao) = match &nova {
+                NoScoreV1::Rejulgada(rejulgada) => (rejulgada.resumo, rejulgada.precisao),
+                NoScoreV1::Estimada { valor_dos_acertos, precisao } => (
+                    ResumoDaPartida {
+                        valor_dos_acertos: Some(*valor_dos_acertos),
+                        ..partida.resumo
+                    },
+                    *precisao,
+                ),
+            };
+            let xp_ganho = if partida.rendia_xp {
+                xp_da_partida(resumo, precisao, partida.repeticoes)
+            } else {
+                0
+            };
+            self.julgamento_antigo.gravar_no_score_v1(&partida, &nova, xp_ganho).await?;
+            feitas += 1;
+        }
+        Ok(feitas)
+    }
+
+    /// `None` quando o chart está indisponível agora.
+    async fn no_score_v1(&self, partida: &PartidaDoJulgamentoAntigo) -> Option<NoScoreV1> {
+        if let Some(replay) = &partida.replay {
+            match self.chart(&partida.md5).await {
+                Ok(chart) => {
+                    if let Ok(rejulgada) = rejulgar(&chart, partida.instrumento, partida.dificuldade, replay) {
+                        return Some(NoScoreV1::Rejulgada(rejulgada));
+                    }
+                }
+                Err(SemChart::Indisponivel) => return None,
+                Err(SemChart::Desistir(_)) => {}
+            }
+        }
+        let resumo = &partida.resumo;
+        let valor_dos_acertos = estimar_valor_no_score_v1(resumo.acertos, resumo.valor_dos_acertos, partida.pesos);
+        Some(NoScoreV1::Estimada {
+            valor_dos_acertos,
+            precisao: precisao_pelo_valor(u64::from(valor_dos_acertos), u64::from(resumo.total)),
+        })
     }
 
     /// `false` quando o chart está indisponível agora.
@@ -247,6 +305,32 @@ mod fakes {
         }
     }
 
+    #[derive(Default)]
+    pub struct JulgamentoAntigoFalso {
+        pub guardadas: Mutex<Vec<PartidaDoJulgamentoAntigo>>,
+        pub gravadas: Mutex<Vec<(Uuid, NoScoreV1, u64)>>,
+    }
+
+    #[async_trait]
+    impl PartidasDoJulgamentoAntigo for JulgamentoAntigoFalso {
+        async fn pegar_do_julgamento_antigo(&self, limite: u32) -> Result<Vec<PartidaDoJulgamentoAntigo>, FalhaExterna> {
+            let feitas: Vec<Uuid> = self.gravadas.lock().unwrap().iter().map(|(id, _, _)| *id).collect();
+            Ok(self
+                .guardadas
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|p| !feitas.contains(&p.id))
+                .take(limite as usize)
+                .cloned()
+                .collect())
+        }
+        async fn gravar_no_score_v1(&self, partida: &PartidaDoJulgamentoAntigo, nova: &NoScoreV1, xp_ganho: u64) -> Result<(), FalhaExterna> {
+            self.gravadas.lock().unwrap().push((partida.id, nova.clone(), xp_ganho));
+            Ok(())
+        }
+    }
+
     /// Responde sempre o mesmo e conta quantas vezes foi chamado.
     pub struct EncoreFalso {
         pub resposta: Result<Option<Vec<u8>>, String>,
@@ -273,11 +357,13 @@ mod tests {
     use chrono::Duration;
     use uuid::Uuid;
 
-    use super::fakes::{AntigasFalsas, CacheFalso, EncoreFalso, FilaFalsa};
+    use super::fakes::{AntigasFalsas, CacheFalso, EncoreFalso, FilaFalsa, JulgamentoAntigoFalso};
     use super::*;
     use crate::modules::conta::fakes::{pedido, servicos_com_fila, Banco};
+    use crate::modules::progresso::ResumoDaPartida;
     use crate::modules::progresso::{Dificuldade, Instrumento};
     use crate::modules::rejulgamento::dominio::testes::{chart, replay};
+    use crate::modules::rejulgamento::estimativa::PesosAntigos;
 
     const MD5: &str = "fb0079d4c2e025d5b8dd70724750a923";
 
@@ -305,6 +391,7 @@ mod tests {
         servicos: ServicosDoRejulgamento,
         fila: Arc<FilaFalsa>,
         antigas: Arc<AntigasFalsas>,
+        julgamento_antigo: Arc<JulgamentoAntigoFalso>,
         cache: Arc<CacheFalso>,
         encore: Arc<EncoreFalso>,
         banco: Arc<Banco>,
@@ -321,9 +408,11 @@ mod tests {
             chamadas: Mutex::new(0),
         });
         let antigas = Arc::new(AntigasFalsas::default());
+        let julgamento_antigo = Arc::new(JulgamentoAntigoFalso::default());
         let servicos = ServicosDoRejulgamento {
             fila: fila.clone(),
             antigas: antigas.clone(),
+            julgamento_antigo: julgamento_antigo.clone(),
             cache: cache.clone(),
             fonte: encore.clone(),
             conta,
@@ -333,6 +422,7 @@ mod tests {
             servicos,
             fila,
             antigas,
+            julgamento_antigo,
             cache,
             encore,
             banco,
@@ -443,5 +533,106 @@ mod tests {
         assert_eq!(atualizadas, [(boa, 1.0)]);
         assert_eq!(*c.antigas.sem_como.lock().unwrap(), [sem_chart]);
         assert_eq!(c.servicos.rejulgar_antigas().await.unwrap(), 0);
+    }
+    fn do_julgamento_antigo(id: u128, replay: Option<Vec<u8>>, rendia_xp: bool) -> PartidaDoJulgamentoAntigo {
+        PartidaDoJulgamentoAntigo {
+            id: Uuid::from_u128(id),
+            conta_id: Uuid::from_u128(99),
+            md5: MD5.into(),
+            dificuldade: Dificuldade::Expert,
+            instrumento: Instrumento::Guitarra,
+            replay,
+            resumo: ResumoDaPartida {
+                dificuldade: Dificuldade::Expert,
+                acertos: 200,
+                total: 200,
+                derrota: false,
+                fantasma: false,
+                maior_sequencia: Some(200),
+                valor_dos_acertos: Some(50_000),
+            },
+            pesos: PesosAntigos::Segundos,
+            rendia_xp,
+            repeticoes: 1,
+        }
+    }
+
+    #[tokio::test]
+    async fn no_score_v1_a_partida_com_replay_e_rejulgada_pelo_motor() {
+        let guardado = chart();
+        let c = cenario(Ok(Some(sng(&guardado)))).await;
+        let com_replay = do_julgamento_antigo(1, Some(replay(&guardado, &[(0, 0.0), (1, 0.0), (2, 0.0)])), true);
+        c.julgamento_antigo.guardadas.lock().unwrap().push(com_replay);
+        assert_eq!(c.servicos.passar_para_o_score_v1().await.unwrap(), 1);
+        let gravadas = c.julgamento_antigo.gravadas.lock().unwrap();
+        assert!(matches!(gravadas[0].1, NoScoreV1::Rejulgada(_)));
+    }
+
+    #[tokio::test]
+    async fn no_score_v1_sem_replay_estima_a_precisao_e_refaz_o_xp_com_ela() {
+        let c = cenario(Ok(None)).await;
+        c.julgamento_antigo.guardadas.lock().unwrap().push(do_julgamento_antigo(1, None, true));
+        assert_eq!(c.servicos.passar_para_o_score_v1().await.unwrap(), 1);
+        let gravadas = c.julgamento_antigo.gravadas.lock().unwrap();
+        let valor = estimar_valor_no_score_v1(200, Some(50_000), PesosAntigos::Segundos);
+        let precisao = precisao_pelo_valor(u64::from(valor), 200);
+        assert_eq!(
+            gravadas[0].1,
+            NoScoreV1::Estimada {
+                valor_dos_acertos: valor,
+                precisao
+            }
+        );
+        let resumo = ResumoDaPartida {
+            valor_dos_acertos: Some(valor),
+            ..do_julgamento_antigo(1, None, true).resumo
+        };
+        assert_eq!(gravadas[0].2, xp_da_partida(resumo, precisao, 1));
+        assert!(gravadas[0].2 > 0);
+        // Sem replay não precisa do Encore.
+        assert_eq!(*c.encore.chamadas.lock().unwrap(), 0);
+    }
+
+    #[tokio::test]
+    async fn no_score_v1_a_desistencia_que_nao_rendia_xp_continua_sem() {
+        let c = cenario(Ok(None)).await;
+        c.julgamento_antigo.guardadas.lock().unwrap().push(do_julgamento_antigo(1, None, false));
+        c.servicos.passar_para_o_score_v1().await.unwrap();
+        assert_eq!(c.julgamento_antigo.gravadas.lock().unwrap()[0].2, 0);
+    }
+
+    #[tokio::test]
+    async fn no_score_v1_o_replay_que_o_motor_recusa_ou_o_chart_que_sumiu_viram_estimativa() {
+        let guardado = chart();
+        let c = cenario(Ok(Some(sng(&guardado)))).await;
+        c.julgamento_antigo
+            .guardadas
+            .lock()
+            .unwrap()
+            .push(do_julgamento_antigo(1, Some(vec![9, 9]), true));
+        c.servicos.passar_para_o_score_v1().await.unwrap();
+        let sumiu = cenario(Ok(None)).await;
+        sumiu
+            .julgamento_antigo
+            .guardadas
+            .lock()
+            .unwrap()
+            .push(do_julgamento_antigo(2, Some(vec![9, 9]), true));
+        sumiu.servicos.passar_para_o_score_v1().await.unwrap();
+        assert!(matches!(c.julgamento_antigo.gravadas.lock().unwrap()[0].1, NoScoreV1::Estimada { .. }));
+        assert!(matches!(sumiu.julgamento_antigo.gravadas.lock().unwrap()[0].1, NoScoreV1::Estimada { .. }));
+    }
+
+    #[tokio::test]
+    async fn no_score_v1_com_o_encore_fora_para_e_tenta_depois() {
+        let guardado = chart();
+        let c = cenario(Err("fora do ar".into())).await;
+        c.julgamento_antigo
+            .guardadas
+            .lock()
+            .unwrap()
+            .push(do_julgamento_antigo(1, Some(replay(&guardado, &[(0, 0.0)])), true));
+        assert_eq!(c.servicos.passar_para_o_score_v1().await.unwrap(), 0);
+        assert!(c.julgamento_antigo.gravadas.lock().unwrap().is_empty());
     }
 }
