@@ -454,3 +454,35 @@ body {
     linear-gradient(to bottom, rgb(0 0 0 / 0.5), black 25%, black 75%, rgb(0 0 0 / 0.5));
   mask-composite: intersect;
 }
+
+/* Decoração das versões de evento (shared/eventos): neve caindo e o varal de luzes piscando. */
+@keyframes evento-neve {
+  to {
+    transform: translate3d(2rem, 105vh, 0);
+  }
+}
+
+@keyframes evento-pisca {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.evento-floco {
+  animation: evento-neve linear infinite;
+}
+
+.evento-luz {
+  animation: evento-pisca 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .evento-floco,
+  .evento-luz {
+    animation: none;
+  }
+
+  .evento-floco {
+    display: none;
+  }
+}
