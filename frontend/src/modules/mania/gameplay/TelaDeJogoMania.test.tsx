@@ -69,6 +69,28 @@ describe("TelaDeJogoMania", () => {
     expect(audio().fontes.at(-1)!.parada).toBe(true);
   });
 
+  // No celular não tem teclado: cada coluna da pista é uma faixa de toque, e segurar o dedo segura a nota longa.
+  it("joga o mapa inteiro com o dedo", async () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(400);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(800);
+    const { aoTerminar } = abrir();
+    await pronta();
+    const pista = screen.getByLabelText("Pista do Mania");
+    // Pista de 4 colunas de 80 px começando em x = 40.
+    const dedo = (tipo: "pointerDown" | "pointerUp", clientX: number) => fireEvent[tipo](pista, { clientX, pointerId: 1, pointerType: "touch" });
+    await irPara(1000);
+    dedo("pointerDown", 50);
+    dedo("pointerUp", 50);
+    await irPara(1500);
+    dedo("pointerDown", 130);
+    await irPara(2000);
+    dedo("pointerUp", 130);
+    await irPara(3300);
+    await waitFor(() => expect(aoTerminar).toHaveBeenCalledTimes(1));
+    expect(aoTerminar.mock.calls[0][0]).toMatchObject({ classificacao: "SS", contagem: [3, 0, 0, 0, 0, 0] });
+    vi.restoreAllMocks();
+  });
+
   it("assistindo um replay, as entradas tocam sozinhas e o teclado não joga", async () => {
     const aoTerminar = vi.fn();
     const replay: [number, number, 0 | 1][] = [

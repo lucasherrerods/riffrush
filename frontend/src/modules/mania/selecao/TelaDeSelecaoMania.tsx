@@ -41,6 +41,7 @@ import {
   teclasDaBiblioteca,
   type OrdemDaSelecao,
 } from "./filtroDaSelecao"
+import { soOQueCabeNoCelular } from "../beatmaps/celular"
 import { CapaDoConjunto } from "./CapaDoConjunto"
 import { SeletorDeMods } from "./SeletorDeMods"
 
@@ -165,17 +166,22 @@ export function TelaDeSelecaoMania({
   const [menuAberto, setMenuAberto] = useState(false)
   const [removendo, setRemovendo] = useState(false)
 
-  const todos = conjuntos ?? []
+  const estreita = useTelaEstreita()
+  // No celular só aparece o que dá para tocar com o dedo (até 5K), e o filtro de teclas só oferece essas.
+  const todos = useMemo(
+    () => (estreita ? soOQueCabeNoCelular(conjuntos ?? []) : (conjuntos ?? [])),
+    [conjuntos, estreita],
+  )
   const lista = useMemo(
     () =>
-      filtrarConjuntos(conjuntos ?? [], {
+      filtrarConjuntos(todos, {
         texto,
         teclas,
         ordem,
         favoritas,
         soFavoritas,
       }),
-    [conjuntos, texto, teclas, ordem, favoritas, soFavoritas],
+    [todos, texto, teclas, ordem, favoritas, soFavoritas],
   )
   const opcoesDeTeclas = teclasDaBiblioteca(todos)
   const indice = Math.max(
@@ -208,8 +214,6 @@ export function TelaDeSelecaoMania({
     setFavoritas(novas)
     salvarFavoritas(CHAVE_DAS_FAVORITAS, novas)
   }
-
-  const estreita = useTelaEstreita()
 
   useTeclado((evento) => {
     if (menuAberto || removendo) return

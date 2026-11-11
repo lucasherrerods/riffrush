@@ -52,3 +52,8 @@ export function notasVisiveis(notas: ArrayLike<number>, agoraMs: number, rolagem
   }
   return visiveis;
 }
+
+/** A coluna que o dedo tocou: a pista divide a tela em faixas, e fora dela vale a coluna da ponta mais perto. */
+export function colunaDoToque(x: number, { x: inicio, larguraDaColuna, teclas }: GeometriaDaPista) {
+  return Math.min(Math.max(Math.floor((x - inicio) / larguraDaColuna), 0), teclas - 1);
+}
