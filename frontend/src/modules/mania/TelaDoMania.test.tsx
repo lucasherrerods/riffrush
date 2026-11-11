@@ -235,7 +235,7 @@ describe("TelaDoMania", () => {
     const { usuario } = await abrir();
     expect(screen.queryByRole("navigation", { name: "Telas do Mania" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "alavanca" })).not.toBeInTheDocument();
-    await usuario.click(await screen.findByRole("button", { name: "Buscar mapas" }));
+    await usuario.click(await screen.findByRole("button", { name: "Baixar músicas" }));
     await usuario.click(await screen.findByRole("button", { name: "Voltar" }));
     expect(await screen.findByRole("region", { name: "Seleção de mapas" })).toBeInTheDocument();
   });

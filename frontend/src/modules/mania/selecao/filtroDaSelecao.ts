@@ -22,8 +22,12 @@ export function maiorEstrela(conjunto: ConjuntoSalvo): number | undefined {
 }
 
 /** As teclas que aparecem em algum mapa da biblioteca, para o filtro só oferecer as que existem. */
+/** As teclas que o filtro oferece: mais opções que essas empurravam os Favoritos para a linha de baixo. */
+const TECLAS_DO_FILTRO = { menor: 4, maior: 7 };
+
 export function teclasDaBiblioteca(conjuntos: ConjuntoSalvo[]): number[] {
-  return [...new Set(conjuntos.flatMap((c) => c.mapas.map((m) => m.teclas)))].sort((a, b) => a - b);
+  const teclas = new Set(conjuntos.flatMap((c) => c.mapas.map((m) => m.teclas)));
+  return [...teclas].filter((t) => t >= TECLAS_DO_FILTRO.menor && t <= TECLAS_DO_FILTRO.maior).sort((a, b) => a - b);
 }
 
 const comparar = (ordem: OrdemDaSelecao) => (a: ConjuntoSalvo, b: ConjuntoSalvo) => {

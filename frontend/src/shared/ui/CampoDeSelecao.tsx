@@ -13,14 +13,16 @@ interface Props<T extends string> {
   valor: T;
   aoEscolher: (valor: T) => void;
   className?: string;
+  /** O título fica só para leitores de tela, quando o valor já se explica (ex.: a ordem da lista). */
+  tituloEscondido?: boolean;
 }
 
 /** Uma escolha numa lista que abre: o select do navegador, que já funciona com teclado e controle. */
-export function CampoDeSelecao<T extends string>({ titulo, opcoes, valor, aoEscolher, className }: Props<T>) {
+export function CampoDeSelecao<T extends string>({ titulo, opcoes, valor, aoEscolher, className, tituloEscondido = false }: Props<T>) {
   const id = useId();
   return (
     <div className={cn("flex flex-col gap-2 max-md:gap-1", className)}>
-      <label htmlFor={id} className="text-base font-semibold text-texto-suave max-md:text-xs">
+      <label htmlFor={id} className={tituloEscondido ? "sr-only" : "text-base font-semibold text-texto-suave max-md:text-xs"}>
         {titulo}
       </label>
       <div className="relative">
