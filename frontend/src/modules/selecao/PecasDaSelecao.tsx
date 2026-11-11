@@ -119,10 +119,11 @@ interface PropsDosFiltros<O extends string> {
 export function FiltrosDaBiblioteca<O extends string>(props: PropsDosFiltros<O>) {
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-end gap-4 max-md:gap-2">
+      {/* Sem títulos acima dos campos: com eles a linha ficava desalinhada, e os valores já se explicam. */}
+      <div className="flex flex-wrap items-center gap-4 max-md:gap-2">
         <CampoDeBusca placeholder={props.placeholder} aria-label={props.rotuloDoCampo} value={props.texto} onChange={(e) => props.aoMudarTexto(e.target.value)} />
         {props.children}
-        <CampoDeSelecao titulo="Ordem" opcoes={props.ordens} valor={props.ordem} aoEscolher={props.aoMudarOrdem} />
+        <CampoDeSelecao titulo="Ordem" tituloEscondido opcoes={props.ordens} valor={props.ordem} aoEscolher={props.aoMudarOrdem} />
         <Button variant="outline" aria-pressed={props.soFavoritas} onClick={props.aoAlternarFavoritas} className={cn(props.soFavoritas && "border-primaria text-primaria")}>
           <Heart className={cn(props.soFavoritas ? "fill-current" : "opacity-70")} />
           <span className="max-md:sr-only">Favoritos</span>

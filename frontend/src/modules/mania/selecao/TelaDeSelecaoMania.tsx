@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react"
-import { Info, ListOrdered, Search, Upload } from "lucide-react"
+import { Download, FileAudio, Info, ListOrdered } from "lucide-react"
 import {
   AvisoDaLista,
   BarraDaSelecao,
@@ -335,7 +335,7 @@ export function TelaDeSelecaoMania({
           <SeletorDeMods mods={mods} aoMudar={aoMudarMods} />
         </BotaoDeModificadores>
         <BotaoDaSelecao onClick={() => seletor.current?.click()}>
-          <Upload aria-hidden />
+          <FileAudio className="opacity-70" aria-hidden />
           <span className="max-md:sr-only">Importar .osz</span>
         </BotaoDaSelecao>
         {sortearMapa && (
@@ -343,8 +343,8 @@ export function TelaDeSelecaoMania({
         )}
         {aoBuscarMapas && (
           <BotaoDaSelecao onClick={aoBuscarMapas}>
-            <Search aria-hidden />
-            <span className="max-md:sr-only">Buscar mapas</span>
+            <Download className="opacity-70" aria-hidden />
+            <span className="max-md:sr-only">Baixar músicas</span>
           </BotaoDaSelecao>
         )}
       </BarraDaSelecao>
@@ -380,11 +380,11 @@ export function TelaDeSelecaoMania({
       aoMudarOrdem={setOrdem}
       soFavoritas={soFavoritas}
       aoAlternarFavoritas={() => setSoFavoritas((ligado) => !ligado)}
-      contagem={`${lista.length ? `${indice + 1} de ${lista.length} ${lista.length === 1 ? "mapa" : "mapas"}` : ""}${lista.length < todos.length && lista.length ? ` · ${todos.length} na biblioteca` : ""}`}
     >
       {opcoesDeTeclas.length > 1 && (
         <GrupoDeOpcoes
           titulo="Teclas"
+          tituloEscondido
           opcoes={[
             { id: "todas", rotulo: "Todas" },
             ...opcoesDeTeclas.map((t) => ({
