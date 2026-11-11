@@ -81,7 +81,7 @@ it("favorita com o botão ou a tecla F, e o filtro de favoritos deixa só elas n
   expect(screen.getByRole("button", { name: "Tirar dos favoritos" })).toHaveAttribute("aria-pressed", "true");
   expect(JSON.parse(localStorage.getItem("riffrush:mania:favoritas") ?? "[]")).toEqual(["a"]);
   await userEvent.click(screen.getByRole("button", { name: "Favoritos" }));
-  expect(screen.getByText("1 de 1 mapa · 3 na biblioteca")).toBeInTheDocument();
+  expect(screen.queryByText(/\d+ de \d+ mapas?/)).not.toBeInTheDocument();
   fireEvent.keyDown(window, { code: "KeyF" });
   expect(screen.getByText("Nenhum mapa com esse filtro.")).toBeInTheDocument();
 });

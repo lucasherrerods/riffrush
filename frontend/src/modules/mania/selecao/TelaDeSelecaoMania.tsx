@@ -380,7 +380,6 @@ export function TelaDeSelecaoMania({
       aoMudarOrdem={setOrdem}
       soFavoritas={soFavoritas}
       aoAlternarFavoritas={() => setSoFavoritas((ligado) => !ligado)}
-      contagem={`${lista.length ? `${indice + 1} de ${lista.length} ${lista.length === 1 ? "mapa" : "mapas"}` : ""}${lista.length < todos.length && lista.length ? ` · ${todos.length} na biblioteca` : ""}`}
     >
       {opcoesDeTeclas.length > 1 && (
         <GrupoDeOpcoes
