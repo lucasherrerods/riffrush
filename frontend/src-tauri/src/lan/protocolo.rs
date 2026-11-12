@@ -20,11 +20,26 @@ pub struct Anuncio {
     pub nome: String,
     pub porta: u16,
     pub jogadores: usize,
+    /// O modo do jogo da sala. Os anúncios das versões antigas não têm: são do Rock.
+    #[serde(default = "modo_padrao")]
+    pub modo: String,
+}
+
+fn modo_padrao() -> String {
+    "rock".into()
+}
+
+/// Só os modos que o jogo conhece; qualquer outra coisa vira Rock.
+pub fn modo_da_sala(modo: Option<&str>) -> String {
+    match modo {
+        Some("mania") => "mania".into(),
+        _ => modo_padrao(),
+    }
 }
 
 impl Anuncio {
-    pub fn novo(nome: &str, jogadores: usize) -> Self {
-        Self { riffrush: VERSAO_DO_ANUNCIO, nome: nome.to_string(), porta: PORTA_DA_SALA, jogadores }
+    pub fn novo(nome: &str, modo: &str, jogadores: usize) -> Self {
+        Self { riffrush: VERSAO_DO_ANUNCIO, nome: nome.to_string(), porta: PORTA_DA_SALA, jogadores, modo: modo.to_string() }
     }
 }
 
@@ -92,20 +107,33 @@ mod testes {
 
     #[test]
     fn anuncio_vai_e_volta_pela_rede() {
-        let anuncio = Anuncio::novo("Lucas", 2);
+        let anuncio = Anuncio::novo("Lucas", "mania", 2);
         let bytes = serde_json::to_vec(&anuncio).unwrap();
         assert_eq!(ler_anuncio(&bytes), Some(anuncio));
     }
 
     #[test]
     fn anuncio_usa_a_porta_da_sala() {
-        assert_eq!(Anuncio::novo("x", 0).porta, PORTA_DA_SALA);
+        assert_eq!(Anuncio::novo("x", "rock", 0).porta, PORTA_DA_SALA);
     }
 
     #[test]
     fn ignora_anuncio_de_outra_versao() {
         let bytes = br#"{"riffrush":2,"nome":"x","porta":7777,"jogadores":1}"#;
         assert_eq!(ler_anuncio(bytes), None);
+    }
+
+    #[test]
+    fn anuncio_antigo_sem_modo_e_do_rock() {
+        let bytes = br#"{"riffrush":1,"nome":"x","porta":7777,"jogadores":1}"#;
+        assert_eq!(ler_anuncio(bytes).map(|a| a.modo), Some("rock".into()));
+    }
+
+    #[test]
+    fn modo_desconhecido_vira_rock() {
+        assert_eq!(modo_da_sala(Some("mania")), "mania");
+        assert_eq!(modo_da_sala(Some("qualquer")), "rock");
+        assert_eq!(modo_da_sala(None), "rock");
     }
 
     #[test]

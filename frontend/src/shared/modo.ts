@@ -10,7 +10,12 @@ export const lerModo = (valor: unknown): Modo | undefined => (valor === "rock" |
 
 export const CHAVE_DO_MODO = "riffrush.modo";
 
+/** O modo pedido no endereço, como no QR code da sala do Mania. */
+export const modoDoEndereco = (busca: string) => lerModo(new URLSearchParams(busca).get("modo"));
+
 export function carregarModo(): Modo {
+  const doEndereco = typeof location === "undefined" ? undefined : modoDoEndereco(location.search);
+  if (doEndereco) return doEndereco;
   let salvo: string | null = null;
   try {
     salvo = localStorage.getItem(CHAVE_DO_MODO);

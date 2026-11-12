@@ -63,6 +63,12 @@ describe("dentroDoLimite", () => {
 });
 
 describe("listarSalas", () => {
+  it("leva o modo da sala, para cada modo do jogo listar só as dele", () => {
+    const agora = 10_000_000;
+    const lista = listarSalas([{ codigo: "AAAAA", nome: "Lu", jogadores: 1, atualizadaEm: agora, modo: "mania" }, { codigo: "BBBBB", nome: "Ana", jogadores: 1, atualizadaEm: agora }], agora);
+    expect(lista).toEqual([{ codigo: "AAAAA", nome: "Lu", jogadores: 1, modo: "mania" }, { codigo: "BBBBB", nome: "Ana", jogadores: 1 }]);
+  });
+
   const agora = 1_000_000;
   const sala = (codigo: string, extra: Partial<EntradaDaSala> = {}): EntradaDaSala => ({ codigo, nome: "Lucas", jogadores: 1, atualizadaEm: agora, ...extra });
 

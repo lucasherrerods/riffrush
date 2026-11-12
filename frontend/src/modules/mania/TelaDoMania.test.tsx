@@ -22,6 +22,35 @@ vi.mock("@/modules/conta", async (original) => {
   };
 });
 
+/** A conexão da sala na memória: o teste muda o estado e a tela reage como se viesse da rede. */
+const rede = vi.hoisted(() => {
+  const ouvintes = new Set<() => void>();
+  let conexao: { sala: unknown; endereco: string } = { sala: null, endereco: "" };
+  return {
+    ler: () => conexao,
+    mudar: (nova: { sala: unknown; endereco: string }) => {
+      conexao = nova;
+      ouvintes.forEach((o) => o());
+    },
+    ouvir: (o: () => void) => {
+      ouvintes.add(o);
+      return () => void ouvintes.delete(o);
+    },
+    enviarEstado: vi.fn(),
+    voltarParaASala: vi.fn(),
+  };
+});
+vi.mock("./multijogador/sala", async (original) => {
+  const { useSyncExternalStore } = await import("react");
+  return {
+    ...(await original<typeof import("./multijogador/sala")>()),
+    useConexao: () => useSyncExternalStore(rede.ouvir, rede.ler),
+    lerConexao: () => rede.ler(),
+    enviarEstado: rede.enviarEstado,
+    voltarParaASala: rede.voltarParaASala,
+  };
+});
+
 vi.stubGlobal("AudioContext", AudioContextFalso);
 const audio = () => obterContextoDeAudio() as unknown as AudioContextFalso;
 
@@ -238,5 +267,42 @@ describe("TelaDoMania", () => {
     await usuario.click(await screen.findByRole("button", { name: "Baixar músicas" }));
     await usuario.click(await screen.findByRole("button", { name: "Voltar" }));
     expect(await screen.findByRole("region", { name: "Seleção de mapas" })).toBeInTheDocument();
+  });
+
+  describe("multiplayer", () => {
+    afterEach(() => rede.mudar({ sala: null, endereco: "" }));
+
+    it("o menu abre a tela de salas", async () => {
+      render(<TelaDoMania abrirBiblioteca={async () => bibliotecaNaMemoria()} decodificar={async () => ({ duration: 10 }) as AudioBuffer} />);
+      await userEvent.click(screen.getByRole("button", { name: "Multiplayer" }));
+      expect(await screen.findByRole("heading", { name: "Multiplayer" })).toBeInTheDocument();
+    });
+
+    it("a largada da sala abre o mapa para todos, manda o placar e o resultado mostra a sala", async () => {
+      const { usuario } = await abrir();
+      await screen.findByText(/Nenhum mapa ainda/);
+      const osz = arquivoOsz();
+      await usuario.upload(screen.getByLabelText("Arquivos .osz"), osz);
+      await screen.findByRole("heading", { name: "Música" });
+      const hash = lerOsz(new Uint8Array(await osz.arrayBuffer())).mapas[0].hash;
+      const mapa = { tipo: "importado", hash, titulo: "Música", artista: "Banda", dificuldade: "Hard", teclas: 4 };
+      const jogadores = [
+        { id: 1, personagem: { nome: "Ana" } },
+        { id: 2, personagem: { nome: "Jogador" } },
+      ];
+      const sala = { status: "jogando", souHost: false, meuId: 2, hostId: 1, jogadores, prontos: [], adversarios: { 1: { pontos: 5, precisao: 0.5, combo: 0, derrota: false, terminou: true } }, partidas: 1, inicio: performance.now() + 2000, chat: [], baldesDoChat: {}, expulsos: [], personagem: { nome: "Jogador" }, mapa, mods: 0 };
+      act(() => rede.mudar({ sala, endereco: "" }));
+      expect(await screen.findByLabelText("Pista do Mania")).toBeInTheDocument();
+      await act(async () => {
+        audio().currentTime += 12;
+        await new Promise((r) => requestAnimationFrame(() => r(null)));
+      });
+      await waitFor(() => expect(rede.enviarEstado).toHaveBeenCalledWith(expect.objectContaining({ terminou: true })));
+      expect(await screen.findByRole("button", { name: "Voltar para a sala" })).toBeInTheDocument();
+      expect(screen.getByText("Ana")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Jogar de novo" })).toBeNull();
+      await usuario.click(screen.getByRole("button", { name: "Voltar para a sala" }));
+      expect(rede.voltarParaASala).toHaveBeenCalled();
+    });
   });
 });

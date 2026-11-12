@@ -1,12 +1,10 @@
-import { ArrowLeft, Download, Loader2, LogOut, UserPlus } from "lucide-react";
-import type { Personagem } from "@/modules/rock/character";
+import { ProcurarSala, TelaDaSala } from "@/modules/multiplayer";
+import { Avatar, type Personagem } from "@/modules/rock/character";
 import type { Dificuldade, Instrumento, Musica } from "@/modules/rock/songs";
-import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
 import { Lobby } from "./componentes/Lobby";
-import { ProcurarSala } from "./componentes/ProcurarSala";
 import { podeTocarOnline } from "./musicaNaRede";
-import { sairDaSala, useConexao } from "./sala";
+import { criarSalaOnline, ehClienteWebDaSala, entrarNaSala, entrarNaSalaOnline, procurarSalasOnline, sairDaSala, temModoOnline, useConexao } from "./sala";
 
 interface Props {
   personagem: Personagem;
@@ -26,48 +24,38 @@ export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVo
   const { sala, info, erro, online, codigo, endereco } = useConexao();
   const musicasDaSala = online ? musicas.filter(podeTocarOnline) : musicas;
 
-  useTeclado((evento) => {
-    if (evento.code === "Escape" && !(evento.target instanceof HTMLInputElement)) aoVoltar();
-  });
-
   return (
-    <div className="respiro-de-tela flex h-full flex-col max-md:rolagem-de-toque">
-      <header className="flex items-center gap-4 max-md:gap-2">
-        <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
-          <ArrowLeft />
-        </Button>
-        <h1 className="titulo-de-tela">Multiplayer</h1>
-        <div className="flex-1" />
-        {sala && online && aoConvidarAmigos && (
-          <Button variant="ghost" aria-label="Convidar amigos" onClick={aoConvidarAmigos}>
-            <UserPlus className="opacity-70" /> <span className="max-md:hidden">Convidar amigos</span>
-          </Button>
-        )}
-        {sala && (
-          <Button variant="ghost" aria-label="Baixar músicas" onClick={aoBuscarMusicas}>
-            <Download className="opacity-70" /> <span className="max-md:hidden">Baixar músicas</span>
-          </Button>
-        )}
-        {sala && (
-          <Button variant="ghost" aria-label="Sair da sala" onClick={() => sairDaSala()}>
-            <LogOut className="opacity-70" /> <span className="max-md:sr-only">Sair da sala</span>
-          </Button>
-        )}
-      </header>
-
-      {erro && !sala && (
-        <p role="alert" className="chapa border-perigo px-4 py-3 text-base">
-          {erro}
-        </p>
-      )}
-
-      {!sala && <ProcurarSala personagem={personagem} volumeDosEfeitos={volumeDosEfeitos} aoEditarPersonagem={aoEditarPersonagem} />}
-      {sala?.status === "conectando" && (
-        <p className="flex flex-1 items-center justify-center gap-2 text-base text-texto-suave">
-          <Loader2 className="animate-spin" aria-hidden /> Conectando na sala...
-        </p>
-      )}
-      {sala && sala.status !== "conectando" && <Lobby sala={sala} info={info} codigo={codigo} endereco={endereco} musicas={musicasDaSala} volumeDosEfeitos={volumeDosEfeitos} sortearAleatoria={sortearAleatoria} />}
-    </div>
+    <TelaDaSala
+      naSala={!!sala}
+      conectando={sala?.status === "conectando"}
+      erro={erro}
+      aoVoltar={aoVoltar}
+      aoSair={() => sairDaSala()}
+      aoBaixar={aoBuscarMusicas}
+      aoConvidarAmigos={online ? aoConvidarAmigos : undefined}
+      busca={
+        <ProcurarSala
+          volumeDosEfeitos={volumeDosEfeitos}
+          retrato={
+            <>
+              <Avatar personagem={personagem} className="h-48 w-auto max-md:hidden" />
+              <p className="text-xl font-black max-md:hidden">{personagem.nome}</p>
+              <Button variant="outline" className="max-md:hidden" onClick={aoEditarPersonagem}>
+                Editar personagem
+              </Button>
+            </>
+          }
+          acoes={{
+            ehClienteWebDaSala: () => ehClienteWebDaSala(),
+            temModoOnline: () => temModoOnline(),
+            procurarSalasOnline: () => procurarSalasOnline(),
+            criarSalaOnline: (publica) => criarSalaOnline(personagem, publica),
+            entrarNaSalaOnline: (texto) => entrarNaSalaOnline(texto, personagem),
+            entrarNaSalaDoCelular: () => entrarNaSala(location.origin, personagem),
+          }}
+        />
+      }
+      lobby={sala && <Lobby sala={sala} info={info} codigo={codigo} endereco={endereco} musicas={musicasDaSala} volumeDosEfeitos={volumeDosEfeitos} sortearAleatoria={sortearAleatoria} />}
+    />
   );
 }

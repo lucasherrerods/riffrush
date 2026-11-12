@@ -55,3 +55,12 @@ it("mostra a precisão ao longo da música e o desvio dos toques", () => {
   expect(screen.getByRole("img", { name: "Desvio dos toques" })).toBeInTheDocument();
   expect(screen.getByText("1,3 ms cedo")).toBeInTheDocument();
 });
+
+it("na sala, mostra o placar de todos e só volta para a sala", async () => {
+  const aoVoltar = vi.fn();
+  render(<ResultadoDoMania titulo="Musica" dificuldade="Hard" resultado={resultado} aoVoltar={aoVoltar} placar={<p>placar da sala</p>} rotuloDeVoltar="Voltar para a sala" />);
+  expect(screen.getByText("placar da sala")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Jogar de novo" })).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Voltar para a sala" }));
+  expect(aoVoltar).toHaveBeenCalled();
+});

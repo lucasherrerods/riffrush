@@ -68,6 +68,7 @@ export function useBibliotecaDoMania(abrir: () => Promise<BibliotecaDoMania> = a
 
   const usar = useCallback(async (id: string) => biblioteca?.usar(id), [biblioteca]);
   const abrirPacote = useCallback(async (id: string) => biblioteca?.abrir(id), [biblioteca]);
+  const lerOsz = useCallback(async (id: string) => biblioteca?.osz?.(id), [biblioteca]);
 
-  return { conjuntos, importar, guardarBaixado, remover, usar, abrirPacote };
+  return { conjuntos, importar, guardarBaixado, remover, usar, abrirPacote, lerOsz };
 }

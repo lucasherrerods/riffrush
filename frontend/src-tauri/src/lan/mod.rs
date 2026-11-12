@@ -36,7 +36,7 @@ use serde::Serialize;
 use tokio::sync::{broadcast, oneshot, RwLock};
 
 use protocolo::{
-    caminho_do_arquivo, dentro_do_limite, embrulhar, expulsa, ler_anuncio, Anuncio, Janela, MAXIMO_DE_JOGADORES, PORTA_DA_SALA,
+    caminho_do_arquivo, dentro_do_limite, embrulhar, expulsa, ler_anuncio, modo_da_sala, Anuncio, Janela, MAXIMO_DE_JOGADORES, PORTA_DA_SALA,
     PORTA_DO_ANUNCIO, TAMANHO_MAXIMO_DA_MENSAGEM,
 };
 
@@ -79,10 +79,12 @@ pub struct SalaEncontrada {
     ip: String,
     porta: u16,
     jogadores: usize,
+    modo: String,
 }
 
+/// `modo` vem do Mania; o Rock não manda, para continuar igual às versões antigas.
 #[tauri::command]
-pub async fn lan_criar_sala(estado: tauri::State<'_, EstadoDaSala>, nome: String) -> Result<InfoDaSala, String> {
+pub async fn lan_criar_sala(estado: tauri::State<'_, EstadoDaSala>, nome: String, modo: Option<String>) -> Result<InfoDaSala, String> {
     if let Some(sala) = estado.sala.lock().unwrap().as_ref() {
         return Ok(sala.info.clone());
     }
@@ -114,7 +116,7 @@ pub async fn lan_criar_sala(estado: tauri::State<'_, EstadoDaSala>, nome: String
     });
 
     let parar_anuncio = Arc::new(AtomicBool::new(false));
-    anunciar(nome, compartilhado.jogadores.clone(), parar_anuncio.clone());
+    anunciar(nome, modo_da_sala(modo.as_deref()), compartilhado.jogadores.clone(), parar_anuncio.clone());
 
     let ip = local_ip_address::local_ip().map(|ip| ip.to_string()).unwrap_or_else(|_| "127.0.0.1".into());
     let info = InfoDaSala { endereco: format!("http://{ip}:{PORTA_DA_SALA}"), ip, porta: PORTA_DA_SALA };
@@ -178,7 +180,7 @@ pub async fn lan_procurar_salas() -> Result<Vec<SalaEncontrada>, String> {
                 ip = local_ip_address::local_ip().map(|i| i.to_string()).unwrap_or(ip);
             }
             if !salas.iter().any(|s| s.ip == ip && s.porta == anuncio.porta) {
-                salas.push(SalaEncontrada { nome: anuncio.nome, ip, porta: anuncio.porta, jogadores: anuncio.jogadores });
+                salas.push(SalaEncontrada { nome: anuncio.nome, ip, porta: anuncio.porta, jogadores: anuncio.jogadores, modo: anuncio.modo });
             }
         }
         Ok(salas)
@@ -187,12 +189,12 @@ pub async fn lan_procurar_salas() -> Result<Vec<SalaEncontrada>, String> {
     .map_err(|e| e.to_string())?
 }
 
-fn anunciar(nome: String, jogadores: Arc<AtomicUsize>, parar: Arc<AtomicBool>) {
+fn anunciar(nome: String, modo: String, jogadores: Arc<AtomicUsize>, parar: Arc<AtomicBool>) {
     std::thread::spawn(move || {
         let Ok(socket) = UdpSocket::bind("0.0.0.0:0") else { return };
         let _ = socket.set_broadcast(true);
         while !parar.load(Ordering::Relaxed) {
-            if let Ok(bytes) = serde_json::to_vec(&Anuncio::novo(&nome, jogadores.load(Ordering::Relaxed))) {
+            if let Ok(bytes) = serde_json::to_vec(&Anuncio::novo(&nome, &modo, jogadores.load(Ordering::Relaxed))) {
                 let _ = socket.send_to(&bytes, ("255.255.255.255", PORTA_DO_ANUNCIO));
                 // Também no loopback, para dois apps na mesma máquina se acharem.
                 let _ = socket.send_to(&bytes, ("127.0.0.1", PORTA_DO_ANUNCIO));

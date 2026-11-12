@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PARTE_DA_TELA_DO_MODO, type PalcoCompartilhado } from "@/modules/menu";
 import { CartaoDaConta, PerfilDoAmigo, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { BotaoDeAmigos, PainelDeAmigos, useIdsDosAmigos, usePainelDeAmigos } from "@/modules/amigos";
@@ -43,8 +43,20 @@ import { CabecalhoDoPlayerDeMusica, useMusicaAoEntrar, useSeguirMapa, useTrilhaD
 import { criarPlayerDoMania, faixasDaBiblioteca, playerDoMania } from "./player/trilhaDoMania";
 import { FundoDoMania } from "./menu/FundoDoMania";
 import { MenuDoMania } from "./menu/MenuDoMania";
+import { ehClienteWebDaSala } from "@/modules/multiplayer";
+import { acharNaBiblioteca } from "./multijogador/mapaNaRede";
+import { PlacarDaSalaMania } from "./multijogador/PlacarDaSalaMania";
+import { enviarEstado, useConexao, voltarParaASala } from "./multijogador/sala";
+import { TelaDeMultijogadorMania } from "./multijogador/TelaDeMultijogadorMania";
 
-type Tela = { nome: "menu" } | { nome: "configuracoes"; voltarPara: Tela } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil"; amigo?: string } | { nome: "online" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido };
+type Tela = { nome: "menu" } | { nome: "configuracoes"; voltarPara: Tela } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil"; amigo?: string } | { nome: "online" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "multijogador" } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido; rede?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido; rede?: boolean };
+
+/** A mesma semente para a sala toda: com o Random, todos jogam as colunas na mesma ordem. */
+function sementeDaRodada(rodada = ""): number {
+  let semente = 2166136261;
+  for (let i = 0; i < rodada.length; i++) semente = Math.imul(semente ^ rodada.charCodeAt(i), 16777619);
+  return semente >>> 0;
+}
 
 /** Um replay do ranking aberto para assistir: as entradas, os mods e a semente da partida, e de quem ela é. */
 type ReplayAssistido = ReplayDoMania & { nome: string };
@@ -63,8 +75,9 @@ interface Props {
 
 /** A raiz do Riff Rush Mania: seleção, partida e resultado. */
 export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBibliotecaDoMania, decodificar, buscar, baixar }: Props) {
-  const { conjuntos, importar, guardarBaixado, remover, usar, abrirPacote } = useBibliotecaDoMania(abrirBiblioteca);
-  const [tela, setTela] = useState<Tela>({ nome: "menu" });
+  const { conjuntos, importar, guardarBaixado, remover, usar, abrirPacote, lerOsz } = useBibliotecaDoMania(abrirBiblioteca);
+  // O celular que abriu a página do host da LAN vai direto para a sala.
+  const [tela, setTela] = useState<Tela>(() => (ehClienteWebDaSala() ? { nome: "multijogador" } : { nome: "menu" }));
   const souDaModeracao = useSouDaModeracao();
   const { aberto: amigosAbertos, alternar: alternarAmigos, fechar: fecharAmigos } = usePainelDeAmigos(tela.nome);
   useAtualizacaoAutomatica(tela.nome === "jogo");
@@ -252,10 +265,40 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     await aoJogar(conjunto, dificuldade, false, { ...replay, nome: linha.nome });
   };
 
+  // A sala deu a largada: todos abrem o mesmo mapa, com os mods do host, no mesmo instante.
+  const conexao = useConexao();
+  const partidasVistas = useRef(0);
+  useEffect(() => {
+    const sala = conexao.sala;
+    if (!sala || sala.partidas === partidasVistas.current || !sala.mapa) return;
+    partidasVistas.current = sala.partidas;
+    const mapaDaSala = sala.mapa;
+    const achado = acharNaBiblioteca(mapaDaSala, conjuntos ?? []);
+    if (!achado) return void avisar.error("Você ainda não tem o mapa da sala.");
+    void carregarMapa(achado.conjunto, achado.dificuldade).then((mapa) => {
+      if (!mapa) return avisar.error("Não foi possível abrir o mapa da sala.");
+      setMods(sala.mods);
+      setSemente(sementeDaRodada(sala.rodada));
+      setTela({ nome: "jogo", rede: true, mapa, aoVivo: { titulo: mapa.titulo, artista: mapaDaSala.artista, dificuldade: mapa.dificuldade, teclas: achado.dificuldade.teclas, hash: mapa.hash } });
+    });
+  }, [conexao, conjuntos, carregarMapa]);
+  // A sala acabou no meio da partida: volta para a tela de salas, com o aviso.
+  const emRede = (tela.nome === "jogo" || tela.nome === "resultado") && !!tela.rede;
+  useEffect(() => {
+    if (conexao.sala || !emRede) return;
+    if (conexao.erro) avisar.error(conexao.erro);
+    setTela({ nome: "multijogador" });
+  }, [conexao, emRede]);
+  const voltarParaSala = () => {
+    voltarParaASala();
+    setTela({ nome: "multijogador" });
+  };
+  const perfil = useMemo(() => ({ nome: conta?.nome?.trim().slice(0, 16) || "Jogador", ...(conta?.nivel?.nivel && { nivel: conta.nivel.nivel }) }), [conta]);
+
   /** Com a conta conectada, o replay vai para a API, que confere a partida e devolve o XP. Fora do ranked ela vai também,
    * sem XP, para aparecer no ranking com todas as partidas. Replay assistido não vale nada. */
-  const aoTerminar = (mapa: MapaParaJogar, aoVivo: MapaAoVivo, resultado: Resultado, replay?: ReplayAssistido) => {
-    setTela({ nome: "resultado", mapa, aoVivo, resultado, replay });
+  const aoTerminar = (mapa: MapaParaJogar, aoVivo: MapaAoVivo, resultado: Resultado, replay?: ReplayAssistido, rede?: boolean) => {
+    setTela({ nome: "resultado", mapa, aoVivo, resultado, replay, rede });
     setXp(undefined);
     if (!conta || replay) return;
     if (!mapa.beatmapId || resultado.mods & MODS.AT) return setXp({ recusada: true });
@@ -279,10 +322,19 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         treino={tela.treino}
         replay={tela.replay?.entradas}
         rotuloDoReplay={tela.replay && `REPLAY · ${tela.replay.nome}`}
-        aoSair={() => setTela({ nome: "selecao" })}
+        aoSair={() => (tela.rede ? voltarParaSala() : setTela({ nome: "selecao" }))}
         aoMarcarPontoDaMusica={retomarTrilha}
         aoTransmitir={canal && transmitir}
-        aoTerminar={(resultado) => aoTerminar(tela.mapa, tela.aoVivo, resultado, tela.replay)}
+        rede={
+          tela.rede && conexao.sala
+            ? {
+                inicio: conexao.sala.inicio,
+                aoAtualizar: enviarEstado,
+                adversarios: <PlacarDaSalaMania aoVivo sala={{ ...conexao.sala, jogadores: conexao.sala.jogadores.filter((j) => j.id !== conexao.sala!.meuId) }} eu={{ pontos: 0, precisao: 1, combo: 0, derrota: false, terminou: false }} />,
+              }
+            : undefined
+        }
+        aoTerminar={(resultado) => aoTerminar(tela.mapa, tela.aoVivo, resultado, tela.replay, tela.rede)}
       />
     );
 
@@ -294,8 +346,18 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         resultado={tela.resultado}
         xp={xp}
         valeXp={tela.mapa.valeXp && !tela.replay}
-        aoJogarDeNovo={() => setTela({ nome: "jogo", mapa: tela.mapa, aoVivo: tela.aoVivo, replay: tela.replay })}
-        aoVoltar={() => setTela({ nome: "selecao" })}
+        aoJogarDeNovo={tela.rede ? undefined : () => setTela({ nome: "jogo", mapa: tela.mapa, aoVivo: tela.aoVivo, replay: tela.replay })}
+        aoVoltar={() => (tela.rede ? voltarParaSala() : setTela({ nome: "selecao" }))}
+        rotuloDeVoltar={tela.rede ? "Voltar para a sala" : undefined}
+        placar={
+          tela.rede &&
+          conexao.sala && (
+            <PlacarDaSalaMania
+              sala={conexao.sala}
+              eu={{ pontos: tela.resultado.pontuacao, precisao: tela.resultado.precisao, combo: tela.resultado.maiorCombo, derrota: tela.resultado.derrota, terminou: true }}
+            />
+          )
+        }
       />
     );
 
@@ -310,6 +372,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
             troca={palco?.troca}
             aoJogar={() => setTela({ nome: "selecao" })}
             aoBuscar={() => setTela({ nome: "busca" })}
+            aoMultijogador={() => setTela({ nome: "multijogador" })}
             aoConfigurar={abrirConfiguracoes}
             aoLeaderboard={contasLigadas ? () => setTela({ nome: "leaderboard" }) : undefined}
             aoOnline={presencaDisponivel && contasLigadas ? () => setTela({ nome: "online" }) : undefined}
@@ -345,6 +408,36 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
           aoSair={() => setTela({ nome: "online" })}
           aoBuscarMapas={() => setTela({ nome: "busca" })}
         />
+        <Avisos />
+      </main>
+    );
+
+  if (tela.nome === "multijogador")
+    return (
+      <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
+        <FundoDoMania />
+        {cabecalho}
+        <div className="relative min-h-0 flex-1">
+          <TelaDeMultijogadorMania
+            perfil={perfil}
+            conjuntos={conjuntos}
+            volumeDosEfeitos={audio.volumeDosEfeitos}
+            lerOsz={lerOsz}
+            dependencias={{
+              baixarOsz: (beatmapsetId) => (baixar ?? baixarOsz)(beatmapsetId),
+              guardarDoOsu: (osz, status) => guardarBaixado(osz, { status: status ?? "", estrelas: {} }),
+              importar: async (osz) => {
+                const { importados, erros } = await importar([new File([osz], "sala.osz")]);
+                if (!importados[0]) throw new Error(erros[0]?.motivo ?? "O mapa do host não abriu.");
+                return importados[0];
+              },
+            }}
+            aoVoltar={() => setTela({ nome: "menu" })}
+            aoBuscarMapas={() => setTela({ nome: "busca" })}
+            aoConvidarAmigos={contasLigadas ? alternarAmigos : undefined}
+          />
+          {painelDeAmigos}
+        </div>
         <Avisos />
       </main>
     );
