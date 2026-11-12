@@ -124,49 +124,6 @@ export const TEMAS = {
     },
     pista: PISTA_CLASSICA,
   },
-  /** Natal do Rock: noite de pinheiro, vermelho de Papai Noel e dourado das luzes. Neutros quentes. */
-  natal: {
-    nome: "Riff Rush Natal",
-    cores: {
-      fundo: "#0f110f",
-      superficie: "#171a17",
-      superficieElevada: "#20241f",
-      borda: "#353a34",
-      texto: "#eef1ec",
-      textoSuave: "#a9aea6",
-      primaria: "#d42a2a",
-      sucesso: "#16a34a",
-      perigo: "#b91c1c",
-      destaque: "#f2c14e",
-      ouro: "#facc15",
-      estrela: "#38bdf8",
-    },
-    pista: {
-      ...PISTA_CLASSICA,
-      trastes: ["#22c55e", "#d42a2a", "#facc15", "#3b9cf0", "#f7931e"],
-      notaDeEstrela: "#fff3c4",
-      trilhoDaEstrela: ["#22c55e", "#166534", "#052e16"],
-    },
-  },
-  /** Natal do Mania: noite gelada azulada, rosa avermelhado e dourado. Neutros frios. */
-  natalMania: {
-    nome: "Riff Rush Mania Natal",
-    cores: {
-      fundo: "#0d1017",
-      superficie: "#151820",
-      superficieElevada: "#1f232b",
-      borda: "#383c44",
-      texto: "#eef1f6",
-      textoSuave: "#adb1b9",
-      primaria: "#e23a5a",
-      sucesso: "#16a34a",
-      perigo: "#b91c1c",
-      destaque: "#f2c14e",
-      ouro: "#facc15",
-      estrela: "#38bdf8",
-    },
-    pista: PISTA_CLASSICA,
-  },
 } satisfies Record<string, Tema>;
 
 /** O tema da abertura e o da landing. O tema da interface muda com o modo de jogo (tema.ts). */
