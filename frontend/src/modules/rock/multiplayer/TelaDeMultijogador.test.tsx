@@ -29,7 +29,7 @@ vi.mock("./sala", () => ({
   enviarChat: vi.fn(() => true),
 }));
 
-vi.mock("./musicaNaRede", () => ({ resolverMusica: vi.fn(async () => ({})) }));
+vi.mock("./musicaNaRede", async (original) => ({ ...(await original<typeof import("./musicaNaRede")>()), resolverMusica: vi.fn(async () => ({})) }));
 
 vi.mock("@/shared/ui/avisos", () => ({ avisar: { error: vi.fn() } }));
 

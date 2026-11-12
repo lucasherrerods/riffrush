@@ -1,50 +1,33 @@
 import { render, screen, within } from "@testing-library/react";
-import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
-import { estadoInicial, type EstadoDaSala } from "../protocolo";
-import { Placar } from "./Placar";
+import { Placar, type LinhaDoPlacar } from "./Placar";
 
-const nomes = ["Lucas", "Vitor", "Ana"];
-const jogada = (pontos: number, terminou = true, derrota = false, fantasma = false) => ({ pontos, vida: 0.5, sequencia: 0, pulso: 0, derrota, terminou, fantasma });
-
-function sala(adversarios: EstadoDaSala["adversarios"]): EstadoDaSala {
-  return {
-    ...estadoInicial(PERSONAGEM_PADRAO, true),
-    meuId: 1,
-    jogadores: nomes.map((nome, i) => ({ id: i + 1, personagem: { ...PERSONAGEM_PADRAO, nome } })),
-    adversarios,
-  };
-}
+const linha = (id: number, nome: string, pontos: number, extra: Partial<LinhaDoPlacar> = {}): LinhaDoPlacar => ({
+  id,
+  nome,
+  pontos,
+  meu: false,
+  derrota: false,
+  fantasma: false,
+  terminou: true,
+  ...extra,
+});
 
 describe("Placar", () => {
-  it("ordena os jogadores por pontos, usando o meu resultado final", () => {
-    render(<Placar sala={sala({ 2: jogada(900), 3: jogada(1500) })} meusPontos={1200} minhaDerrota={false} />);
-    const linhas = screen.getAllByRole("listitem").map((l) => within(l).getByText(/Lucas|Vitor|Ana/).textContent);
-    expect(linhas).toEqual(["Ana", "Lucas", "Vitor"]);
-  });
-
-  it("o fantasma aparece no placar, mas o ranking é só pelos pontos", () => {
-    render(<Placar sala={sala({ 2: jogada(2000, true, false, true), 3: jogada(100) })} meusPontos={1200} minhaDerrota={false} meuFantasma />);
+  it("ordena as linhas por pontos e mostra o avatar que o modo mandou", () => {
+    render(<Placar linhas={[linha(1, "Lucas", 10, { avatar: <span>avatar do Lucas</span> }), linha(2, "Ana", 50)]} />);
     const linhas = screen.getAllByRole("listitem");
-    expect(within(linhas[0]).getByText("Vitor")).toBeInTheDocument();
-    expect(within(linhas[0]).getByLabelText("Virou fantasma")).toBeInTheDocument();
-    expect(within(linhas[1]).getByText("Lucas")).toBeInTheDocument();
-    expect(within(linhas[1]).getByLabelText("Virou fantasma")).toBeInTheDocument();
-    expect(within(linhas[0]).getByLabelText("Vencedor")).toBeInTheDocument();
+    expect(within(linhas[0]).getByText("Ana")).toBeInTheDocument();
+    expect(within(linhas[1]).getByText("avatar do Lucas")).toBeInTheDocument();
   });
 
-  it("enquanto alguém ainda toca, espera e não coroa ninguém", () => {
-    render(<Placar sala={sala({ 2: jogada(900, false), 3: jogada(100) })} meusPontos={1200} minhaDerrota={false} />);
+  it("usa o rótulo de derrota que o modo escolher", () => {
+    render(<Placar linhas={[linha(1, "Lucas", 0, { derrota: true })]} rotuloDaDerrota="Falhou" />);
+    expect(screen.getByText("Falhou")).toBeInTheDocument();
+  });
+
+  it("enquanto alguém ainda joga, espera e não coroa ninguém", () => {
+    render(<Placar linhas={[linha(1, "Lucas", 10), linha(2, "Ana", 5, { terminou: false })]} />);
     expect(screen.getByText(/Esperando os outros terminarem/)).toBeInTheDocument();
     expect(screen.queryByLabelText("Vencedor")).toBeNull();
-  });
-
-  it("quando todos terminam, coroa o primeiro", () => {
-    render(<Placar sala={sala({ 2: jogada(900), 3: jogada(100) })} meusPontos={1200} minhaDerrota={false} />);
-    expect(within(screen.getAllByRole("listitem")[0]).getByLabelText("Vencedor")).toBeInTheDocument();
-  });
-
-  it("marca quem foi vaiado", () => {
-    render(<Placar sala={sala({ 2: jogada(0, true, true), 3: jogada(100) })} meusPontos={10} minhaDerrota={false} />);
-    expect(screen.getByText("Vaiado")).toBeInTheDocument();
   });
 });

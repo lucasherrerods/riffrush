@@ -12,7 +12,7 @@ import { CabecalhoDoPlayerDeMusica, indiceVizinho, useMusicaAoEntrar, useTrilhaD
 import { musicaDeAbertura, playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
 import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa, estaEmTelaCheia, modoDoF11 } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
-import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, entrarNaSalaOnline, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/multiplayer";
+import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, entrarNaSalaOnline, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/rock/multiplayer";
 import {
   ChatGlobal,
   TelaDeEspectador,

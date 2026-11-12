@@ -59,3 +59,6 @@ export async function resolverMusica(
   aoBaixar?.(musica);
   return musica;
 }
+
+/** Pela internet só vão músicas que cada jogador consegue sozinho: as do jogo e as do Encore. */
+export const podeTocarOnline = (musica: Musica) => MUSICAS_EMBUTIDAS.some((m) => m.id === musica.id) || !!musica.urlDoEncore;

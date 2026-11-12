@@ -5,7 +5,7 @@ import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
 import { Lobby } from "./componentes/Lobby";
 import { ProcurarSala } from "./componentes/ProcurarSala";
-import { podeTocarOnline } from "./online";
+import { podeTocarOnline } from "./musicaNaRede";
 import { sairDaSala, useConexao } from "./sala";
 
 interface Props {
