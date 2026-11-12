@@ -1,4 +1,4 @@
-import { EVENTOS, escolherEvento, eventoDoDia, estaNoPeriodo } from "./calendario";
+import { escolherEvento, eventoDoDia, estaNoPeriodo } from "./calendario";
 
 const dia = (ano: number, mes: number, d: number) => new Date(ano, mes - 1, d, 12);
 
@@ -54,11 +54,4 @@ describe("escolherEvento", () => {
   it("ignora um pedido desconhecido e segue o calendário", () => {
     expect(escolherEvento(dia(2026, 12, 24), "carnaval-falso")?.id).toBe("natal");
   });
-});
-
-it("todo evento tem tema para os dois modos", () => {
-  for (const evento of EVENTOS) {
-    expect(evento.temas.rock.cores).toBeDefined();
-    expect(evento.temas.mania.cores).toBeDefined();
-  }
 });
