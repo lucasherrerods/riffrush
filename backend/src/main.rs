@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use riffrush_api::modules::amizade::{AmizadesPostgres, ServicosDeAmizade};
+use riffrush_api::modules::atividades::{AtividadesPostgres, ServicosDeAtividades};
 use riffrush_api::modules::catalogo::{CatalogoPostgres, Encore, ServicosDoCatalogo};
 use riffrush_api::modules::conta::{ContasPostgres, CredenciaisDoGoogle, GeradorAleatorio, Google, RelogioDoSistema, ServicosDaConta};
 use riffrush_api::modules::conversa::{CifraDasMensagens, ConversasPostgres, EntregaPeloRelay, ServicosDeConversa};
@@ -142,6 +143,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let estado = EstadoDoApp {
         amizade,
         conversa,
+        atividades: ServicosDeAtividades {
+            repositorio: Arc::new(AtividadesPostgres(banco.clone())),
+        },
         banco: Arc::new(BancoPostgres(banco)),
         conta,
         ranking,

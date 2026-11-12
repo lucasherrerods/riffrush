@@ -1,4 +1,5 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { TelaDeAtividades } from "@/modules/atividades";
 import { AnimatePresence, motion } from "framer-motion";
 import { IndicadorDeVolume, definirVolumeGeral, usePreferenciasDeAudio } from "@/modules/audio";
 import { TelaDePersonagem, carregarPersonagem, salvarPersonagem, type Personagem } from "@/modules/rock/character";
@@ -42,7 +43,7 @@ import { TelaCarregando } from "@/shared/ui/TelaCarregando";
 import { cn } from "@/shared/lib/utils";
 import { mesmasOpcoes, opcoesDaPartida } from "./opcoes";
 
-type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "customizacao" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "espectador" | "telaDividida" | "resultadoDividido";
+type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "customizacao" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "atividades" | "espectador" | "telaDividida" | "resultadoDividido";
 
 interface PartidaEmRede {
   musica: Musica;
@@ -528,6 +529,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 aoCustomizar={() => setTela("customizacao")}
                 aoLeaderboard={contasLigadas ? () => setTela("leaderboard") : undefined}
                 aoOnline={presencaDisponivel && contasLigadas ? () => setTela("online") : undefined}
+                aoAtividades={contasLigadas ? () => setTela("atividades") : undefined}
                 chat={
                   presencaDisponivel && contasLigadas && configuracoes.chatGlobal !== false && !ehClienteWebDaSala() ? (
                     <ChatGlobal className="w-full" aceito={configuracoes.chatGlobal} aoResponder={(chatGlobal) => mudarConfiguracoes({ ...configuracoes, chatGlobal })} />
@@ -618,6 +620,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
             {tela === "buscaDeMusicas" && (
               <TelaDeBuscaDeMusicas aoVoltar={() => setTela(voltarDaBuscaPara)} aoBaixar={baixarMusica} baixadas={baixadasDoEncore} aoJogar={jogarBaixada} />
             )}
+            {tela === "atividades" && <TelaDeAtividades aoVoltar={() => setTela("menu")} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />}
             {tela === "online" && (
               <TelaOnline
                 logado={!!conta}

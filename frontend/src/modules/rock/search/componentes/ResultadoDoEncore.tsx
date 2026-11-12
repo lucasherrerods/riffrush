@@ -1,6 +1,7 @@
 import { Clapperboard } from "lucide-react";
 import { AcaoDaBusca, ItemDaBusca } from "@/modules/busca";
-import { formatarDuracao, type ResultadoDaBusca } from "../encore";
+import { formatarDuracao } from "@/shared/lib/formatar";
+import { type ResultadoDaBusca } from "../encore";
 
 interface Props {
   resultado: ResultadoDaBusca;

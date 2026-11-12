@@ -25,6 +25,13 @@ describe("MenuDoMania", () => {
     expect(aoConfigurar).toHaveBeenCalledOnce();
   });
 
+  it("com contas, Atividades abre o log", async () => {
+    const aoAtividades = vi.fn();
+    render(<MenuDoMania aoJogar={vi.fn()} aoBuscar={vi.fn()} aoConfigurar={vi.fn()} aoAtividades={aoAtividades} />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Atividades" }));
+    expect(aoAtividades).toHaveBeenCalled();
+  });
+
   it("anda pelas opções com as setas e escolhe com o Enter", async () => {
     const { usuario, aoBuscar } = abrir();
     expect(screen.getByRole("button", { name: "Jogar" })).toHaveAttribute("aria-current", "true");
