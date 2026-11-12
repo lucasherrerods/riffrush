@@ -6,7 +6,7 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Switch } from "@/shared/ui/switch";
-import type { SalaOnline } from "../online";
+import type { SalaOnline } from "@/modules/multiplayer";
 import { MAXIMO_DE_JOGADORES } from "../protocolo";
 import {
   criarSalaOnline,
