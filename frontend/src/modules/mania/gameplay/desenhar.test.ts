@@ -9,8 +9,8 @@ it("os eventos do motor viram o estado das notas e o último julgamento", () => 
   // MAX na nota 0 e 300 na cabeça da nota 1.
   expect(aplicarEventos(estados, notas, [0, 0, 0, 0, 3, 1, 1, 1, 0, 10])).toBe(1);
   expect([...estados]).toEqual([TERMINADA, SEGURANDO]);
-  // A ponta da nota 1.
-  aplicarEventos(estados, notas, [1, 1, 2, 1, 40]);
+  // O fim da nota 1: sem julgamento (-1), então o HUD continua com o último.
+  expect(aplicarEventos(estados, notas, [1, 1, -1, 1, NaN])).toBeUndefined();
   expect(estados[1]).toBe(TERMINADA);
 });
 

@@ -89,7 +89,7 @@ impl Janelas {
     }
 }
 
-/// A ponta da nota longa é julgada ao soltar, com janelas mais largas que as do toque.
+/// Perto da ponta, a janela em que soltar a nota longa já a termina, sem quebrar: mais larga que a do toque.
 pub const FATOR_DA_PONTA: f64 = 1.5;
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -101,16 +101,20 @@ pub struct OpcoesDaPartida {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Evento {
-    /// `nota` é o índice em `Partida::notas`; `ponta` diz se foi o fim de uma nota longa.
+    /// `nota` é o índice em `Partida::notas`. A nota longa só é julgada na cabeça.
     Julgamento {
         nota: usize,
         coluna: u8,
         julgamento: Julgamento,
-        ponta: bool,
         desvio_ms: Option<i32>,
     },
+    /// A nota longa acabou (solta perto da ponta, segurada até depois dela ou largada até ela passar), sem julgamento.
+    Fim {
+        nota: usize,
+        coluna: u8,
+    },
     /// A nota longa foi solta antes da ponta: quebra o combo e tira vida, sem contar como julgamento.
-    /// Ela continua: apertar de novo volta a segurar, mas a ponta fica no máximo 50.
+    /// Ela continua: apertar de novo volta a segurar.
     Quebra {
         nota: usize,
         coluna: u8,
@@ -138,8 +142,6 @@ pub struct Partida {
     recuperacao: f64,
     opcoes: OpcoesDaPartida,
     estados: Vec<Estado>,
-    /// Por nota longa: já foi solta antes da hora uma vez, então a ponta vale no máximo 50.
-    quebradas: Vec<bool>,
     /// Por coluna, os índices das notas em ordem e a próxima ainda não terminada.
     por_coluna: Vec<Vec<usize>>,
     proxima: Vec<usize>,
@@ -178,7 +180,6 @@ pub fn criar_partida(beatmap: &Beatmap, opcoes: OpcoesDaPartida) -> Partida {
     let recuperacao = recuperacao_do_mapa(&notas, beatmap.dificuldade.hp);
     Partida {
         estados: vec![Estado::Esperando; notas.len()],
-        quebradas: vec![false; notas.len()],
         notas,
         teclas,
         janelas: Janelas::do_od(beatmap.dificuldade.od).escaladas(mods.fator_das_janelas() / velocidade),
@@ -197,9 +198,9 @@ pub fn criar_partida(beatmap: &Beatmap, opcoes: OpcoesDaPartida) -> Partida {
     }
 }
 
-/// Total de julgamentos do mapa: um por nota simples e dois por nota longa (cabeça e ponta).
+/// Total de julgamentos do mapa: um por nota, já que a nota longa só é julgada na cabeça.
 pub fn total_de_julgamentos(partida: &Partida) -> u32 {
-    partida.notas.iter().map(|n| if n.fim_ms.is_some() { 2 } else { 1 }).sum()
+    u32::try_from(partida.notas.len()).unwrap_or(u32::MAX)
 }
 
 fn julgados(partida: &Partida) -> u32 {
@@ -262,15 +263,15 @@ fn faixa_da_dificuldade(d: f64, em_0: f64, em_5: f64, em_10: f64) -> f64 {
 }
 
 /// Quanto cada julgamento mexe na vida, com os valores do osu!mania (lazer, que segue o stable). Não há dreno com o
-/// tempo: só os julgamentos mexem na vida. O erro na cabeça ou na ponta de uma nota longa custa metade.
-fn variacao_da_vida(julgamento: Julgamento, hp: f64, recuperacao: f64, nota_longa: bool, mods: Mods) -> f64 {
+/// tempo: só os julgamentos mexem na vida.
+fn variacao_da_vida(julgamento: Julgamento, hp: f64, recuperacao: f64, mods: Mods) -> f64 {
     let variacao = match julgamento {
         Julgamento::Max => recuperacao * (0.0055 - hp * 0.0005),
         Julgamento::J300 => recuperacao * (0.005 - hp * 0.0005),
         Julgamento::J200 => recuperacao * (0.004 - hp * 0.0004),
         Julgamento::J100 => 0.0,
         Julgamento::J50 => -(hp + 1.0) * 0.0016,
-        Julgamento::Miss => -(hp + 1.0) * if nota_longa { 0.00375 } else { 0.0075 },
+        Julgamento::Miss => -(hp + 1.0) * 0.0075,
     };
     if variacao < 0.0 && mods.tem(Mods::EZ) {
         variacao * 0.5
@@ -290,7 +291,7 @@ fn recuperacao_do_mapa(notas: &[Nota], hp: f64) -> f64 {
     let mut multiplicador = 1.0;
     let mut dreno = 0.00025;
     for _ in 0..10_000 {
-        let acerto = |m: f64| variacao_da_vida(Julgamento::Max, hp, m, false, Mods::default());
+        let acerto = |m: f64| variacao_da_vida(Julgamento::Max, hp, m, Mods::default());
         let (mut vida, mut sem_teto) = (1.0_f64, 1.0_f64);
         let mut ultimo = primeira.tempo_ms;
         let mut falhou = false;
@@ -310,11 +311,8 @@ fn recuperacao_do_mapa(notas: &[Nota], hp: f64) -> f64 {
             let reducao = dreno * f64::from(fim - nota.tempo_ms);
             let excesso = (reducao - vida).max(0.0);
             reduzir(&mut vida, &mut sem_teto, reducao);
-            let acertos = if nota.fim_ms.is_some() { 2.0 } else { 1.0 };
-            for _ in 0..acertos as u8 {
-                sem_teto += acerto(multiplicador);
-                vida = (vida + acerto(multiplicador)).clamp(0.0, 1.0);
-            }
+            sem_teto += acerto(multiplicador);
+            vida = (vida + acerto(multiplicador)).clamp(0.0, 1.0);
             if excesso > 0.0 && vida - excesso <= menor_vida {
                 falhou = true;
                 dreno *= 0.96;
@@ -339,7 +337,7 @@ fn recuperacao_do_mapa(notas: &[Nota], hp: f64) -> f64 {
     multiplicador
 }
 
-fn registrar(partida: &mut Partida, nota: usize, julgamento: Julgamento, ponta: bool, desvio_ms: Option<i32>) {
+fn registrar(partida: &mut Partida, nota: usize, julgamento: Julgamento, desvio_ms: Option<i32>) {
     let posicao = JULGAMENTOS.iter().position(|&j| j == julgamento).unwrap_or(5);
     partida.contagem[posicao] += 1;
     if julgamento == Julgamento::Miss {
@@ -348,14 +346,12 @@ fn registrar(partida: &mut Partida, nota: usize, julgamento: Julgamento, ponta: 
         partida.combo += 1;
         partida.maior_combo = partida.maior_combo.max(partida.combo);
     }
-    let nota_longa = partida.notas[nota].fim_ms.is_some();
-    let variacao = variacao_da_vida(julgamento, partida.hp, partida.recuperacao, nota_longa, partida.opcoes.mods);
+    let variacao = variacao_da_vida(julgamento, partida.hp, partida.recuperacao, partida.opcoes.mods);
     let coluna = partida.notas[nota].coluna;
     partida.eventos.push(Evento::Julgamento {
         nota,
         coluna,
         julgamento,
-        ponta,
         desvio_ms,
     });
     let mods = partida.opcoes.mods;
@@ -377,30 +373,19 @@ fn mexer_na_vida(partida: &mut Partida, variacao: f64, falhou_pelo_mod: bool) {
 /// mas não entra na contagem nem na precisão. SD e PF falham na quebra, como num Miss.
 fn quebrar(partida: &mut Partida, nota: usize) {
     partida.combo = 0;
-    partida.quebradas[nota] = true;
     partida.estados[nota] = Estado::Solta;
     let coluna = partida.notas[nota].coluna;
     partida.eventos.push(Evento::Quebra { nota, coluna });
     let mods = partida.opcoes.mods;
-    let variacao = variacao_da_vida(Julgamento::Miss, partida.hp, partida.recuperacao, false, mods);
+    let variacao = variacao_da_vida(Julgamento::Miss, partida.hp, partida.recuperacao, mods);
     mexer_na_vida(partida, variacao, mods.tem(Mods::SD) || mods.tem(Mods::PF));
 }
 
-/// A ponta de uma nota que já quebrou vale no máximo 50.
-fn ponta_possivel(partida: &Partida, nota: usize, julgamento: Julgamento) -> Julgamento {
-    let pior = |a: Julgamento, b: Julgamento| {
-        let posicao = |j| JULGAMENTOS.iter().position(|&x| x == j).unwrap_or(5);
-        if posicao(a) >= posicao(b) {
-            a
-        } else {
-            b
-        }
-    };
-    if partida.quebradas[nota] {
-        pior(julgamento, Julgamento::J50)
-    } else {
-        julgamento
-    }
+/// Termina a nota longa sem julgamento e avisa o app, que para de desenhá-la segurada.
+fn terminar_longa(partida: &mut Partida, nota: usize) {
+    let coluna = partida.notas[nota].coluna;
+    partida.eventos.push(Evento::Fim { nota, coluna });
+    terminar(partida, nota);
 }
 
 fn terminar(partida: &mut Partida, nota: usize) {
@@ -414,8 +399,8 @@ fn terminar(partida: &mut Partida, nota: usize) {
     partida.proxima[coluna] = proxima;
 }
 
-/// Leva a partida até `tempo_ms`: as notas que passaram sem toque viram Miss, e a nota longa segurada até depois da
-/// janela da ponta termina com MAX.
+/// Leva a partida até `tempo_ms`: as notas que passaram sem toque viram Miss, e a nota longa termina quando passa a
+/// janela da ponta.
 pub fn avancar(partida: &mut Partida, tempo_ms: i32) {
     if partida.derrota || tempo_ms <= partida.tempo_ms {
         partida.tempo_ms = partida.tempo_ms.max(tempo_ms);
@@ -433,21 +418,12 @@ pub fn avancar(partida: &mut Partida, tempo_ms: i32) {
             match partida.estados[nota] {
                 Estado::Terminada => {}
                 Estado::Esperando if f64::from(tempo_ms - n.tempo_ms) > partida.janelas.j50 => {
-                    registrar(partida, nota, Julgamento::Miss, false, None);
-                    if n.fim_ms.is_some() {
-                        registrar(partida, nota, Julgamento::Miss, true, None);
-                    }
+                    registrar(partida, nota, Julgamento::Miss, None);
                     terminar(partida, nota);
                 }
-                Estado::Segurando if f64::from(tempo_ms - n.fim_ms.unwrap_or(n.tempo_ms)) > janela_da_ponta => {
-                    let ponta = ponta_possivel(partida, nota, Julgamento::Max);
-                    registrar(partida, nota, ponta, true, None);
-                    terminar(partida, nota);
-                }
-                // Solta e não apertada de novo até a ponta passar: a ponta é Miss.
-                Estado::Solta if f64::from(tempo_ms - n.fim_ms.unwrap_or(n.tempo_ms)) > janela_da_ponta => {
-                    registrar(partida, nota, Julgamento::Miss, true, None);
-                    terminar(partida, nota);
+                // Segurada ou largada: ao passar a ponta, a nota acaba. A quebra já cobrou o que tinha de cobrar.
+                Estado::Segurando | Estado::Solta if f64::from(tempo_ms - n.fim_ms.unwrap_or(n.tempo_ms)) > janela_da_ponta => {
+                    terminar_longa(partida, nota);
                 }
                 // A primeira nota ainda no tempo segura as de trás da coluna.
                 _ => break,
@@ -479,20 +455,17 @@ pub fn tocar(partida: &mut Partida, coluna: u8, tempo_ms: i32) -> Option<Julgame
         return None;
     }
     let julgamento = partida.janelas.julgar(f64::from(desvio)).unwrap_or(Julgamento::Miss);
-    registrar(partida, nota, julgamento, false, Some(desvio));
+    registrar(partida, nota, julgamento, Some(desvio));
     if n.fim_ms.is_some() && julgamento != Julgamento::Miss {
         partida.estados[nota] = Estado::Segurando;
     } else {
-        if n.fim_ms.is_some() {
-            registrar(partida, nota, Julgamento::Miss, true, None);
-        }
         terminar(partida, nota);
     }
     Some(julgamento)
 }
 
-/// Soltar a coluna. Só importa com uma nota longa segurada: dentro da janela da ponta, julga a ponta;
-/// antes dela, quebra a nota longa, que continua esperando ser apertada de novo.
+/// Soltar a coluna. Só importa com uma nota longa segurada: perto da ponta, termina a nota sem julgamento;
+/// antes disso, quebra a nota longa, que continua esperando ser apertada de novo. Nunca devolve julgamento.
 pub fn soltar(partida: &mut Partida, coluna: u8, tempo_ms: i32) -> Option<Julgamento> {
     avancar(partida, tempo_ms);
     if partida.derrota || coluna >= partida.teclas {
@@ -504,14 +477,12 @@ pub fn soltar(partida: &mut Partida, coluna: u8, tempo_ms: i32) -> Option<Julgam
         return None;
     }
     let desvio = tempo_ms - partida.notas[nota].fim_ms.unwrap_or(tempo_ms);
-    let Some(julgamento) = partida.janelas.escaladas(FATOR_DA_PONTA).julgar(f64::from(desvio)) else {
+    if f64::from(-desvio) > partida.janelas.j50 * FATOR_DA_PONTA {
         quebrar(partida, nota);
-        return None;
-    };
-    let julgamento = ponta_possivel(partida, nota, julgamento);
-    registrar(partida, nota, julgamento, true, Some(desvio));
-    terminar(partida, nota);
-    Some(julgamento)
+    } else {
+        terminar_longa(partida, nota);
+    }
+    None
 }
 
 pub fn retirar_eventos(partida: &mut Partida) -> Vec<Evento> {
@@ -613,15 +584,18 @@ mod tests {
     }
 
     #[test]
-    fn nota_longa_julga_cabeca_e_ponta() {
+    fn nota_longa_julga_so_a_cabeca() {
         let mut p = partida(&[(0, 1000, Some(2000))]);
-        assert_eq!(total_de_julgamentos(&p), 2);
+        assert_eq!(total_de_julgamentos(&p), 1);
         assert_eq!(tocar(&mut p, 0, 1000), Some(Julgamento::Max));
         assert!(!terminou(&p));
-        // A ponta tem janelas 1,5 vez mais largas: 60 ms de atraso ainda é 300 (49 × 1,5 = 73,5).
-        assert_eq!(soltar(&mut p, 0, 2060), Some(Julgamento::J300));
+        // Soltar perto da ponta (60 ms depois, dentro de 49 × 1,5 = 73,5) só termina a nota.
+        retirar_eventos(&mut p);
+        assert_eq!(soltar(&mut p, 0, 2060), None);
         assert!(terminou(&p));
-        assert_eq!(p.combo, 2);
+        assert_eq!(p.combo, 1);
+        assert_eq!(p.contagem.iter().sum::<u32>(), 1);
+        assert_eq!(retirar_eventos(&mut p), [Evento::Fim { nota: 0, coluna: 0 }]);
     }
 
     #[test]
@@ -638,28 +612,26 @@ mod tests {
     }
 
     #[test]
-    fn solta_e_nao_apertada_de_novo_a_ponta_e_miss() {
+    fn solta_e_nao_apertada_de_novo_termina_quando_a_ponta_passa_sem_outro_julgamento() {
         let mut p = partida(&[(0, 1000, Some(2000))]);
         tocar(&mut p, 0, 1000);
         soltar(&mut p, 0, 1500);
         avancar(&mut p, 2500);
-        assert_eq!(p.contagem[5], 1);
+        assert_eq!(p.contagem, [1, 0, 0, 0, 0, 0]);
         assert!(terminou(&p));
+        assert!(retirar_eventos(&mut p).contains(&Evento::Fim { nota: 0, coluna: 0 }));
     }
 
     #[test]
-    fn apertar_de_novo_volta_a_segurar_mas_a_ponta_fica_no_maximo_50() {
-        let mut p = partida(&[(0, 1000, Some(2000)), (0, 3000, Some(4000))]);
+    fn apertar_de_novo_volta_a_segurar_e_a_nota_termina_na_ponta() {
+        let mut p = partida(&[(0, 1000, Some(2000))]);
         tocar(&mut p, 0, 1000);
         soltar(&mut p, 0, 1500);
         assert_eq!(tocar(&mut p, 0, 1600), None);
-        assert_eq!(soltar(&mut p, 0, 2000), Some(Julgamento::J50));
-        // Segurada até passar a ponta, também no máximo 50.
-        tocar(&mut p, 0, 3000);
-        soltar(&mut p, 0, 3300);
-        tocar(&mut p, 0, 3400);
-        avancar(&mut p, 4500);
-        assert_eq!(p.contagem[4], 2);
+        assert!(!terminou(&p));
+        assert_eq!(soltar(&mut p, 0, 2000), None);
+        assert!(terminou(&p));
+        assert_eq!(p.contagem, [1, 0, 0, 0, 0, 0]);
     }
 
     #[test]
@@ -672,11 +644,11 @@ mod tests {
     }
 
     #[test]
-    fn segurar_alem_da_ponta_termina_com_max() {
+    fn segurar_alem_da_ponta_termina_sem_outro_julgamento() {
         let mut p = partida(&[(0, 1000, Some(2000))]);
         tocar(&mut p, 0, 1000);
         avancar(&mut p, 2300);
-        assert_eq!(p.contagem[0], 2);
+        assert_eq!(p.contagem, [1, 0, 0, 0, 0, 0]);
         assert!(terminou(&p));
         assert_eq!(soltar(&mut p, 0, 2400), None);
     }
@@ -685,7 +657,7 @@ mod tests {
     fn perder_a_cabeca_perde_a_nota_longa_inteira() {
         let mut p = partida(&[(0, 1000, Some(2000))]);
         avancar(&mut p, 1500);
-        assert_eq!(p.contagem[5], 2);
+        assert_eq!(p.contagem, [0, 0, 0, 0, 0, 1]);
         assert!(terminou(&p));
     }
 
@@ -757,7 +729,6 @@ mod tests {
                 nota: 0,
                 coluna: 3,
                 julgamento: Julgamento::Max,
-                ponta: false,
                 desvio_ms: Some(-10)
             }]
         );
@@ -797,7 +768,7 @@ mod tests {
     }
 
     #[test]
-    fn errar_a_cabeca_e_a_ponta_da_nota_longa_custa_o_mesmo_que_uma_nota_simples() {
+    fn errar_a_cabeca_da_nota_longa_custa_o_mesmo_que_uma_nota_simples() {
         let mut simples = criar_partida(&mapa(5.0, 5.0, &[(0, 1000, None)]), OpcoesDaPartida::default());
         let mut longa = criar_partida(&mapa(5.0, 5.0, &[(0, 1000, Some(1500))]), OpcoesDaPartida::default());
         avancar(&mut simples, 3000);

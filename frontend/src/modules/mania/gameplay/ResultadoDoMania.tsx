@@ -1,12 +1,14 @@
 import { GanhoDeXp, type RegistroDaPartida } from "@/modules/conta";
-import { CartaoDeResultado } from "@/modules/resultado";
+import { BarraDeDesvio, CartaoDeResultado, GraficoDaPrecisao } from "@/modules/resultado";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
 import { NOMES_DOS_JULGAMENTOS } from "./desenhar";
+import { comoPorcentagem, curvaDaPrecisao, histogramaDosDesvios, resumoDosDesvios } from "./estatisticas";
 import { siglasDosMods } from "./mods";
 import type { ResultadoDoMania } from "./TelaDeJogoMania";
 
-const porcentagem = (precisao: number) => `${(precisao * 100).toFixed(2).replace(".", ",")}%`;
+const PONTOS_DA_CURVA = 80;
+const FAIXAS_DO_DESVIO = 41;
 
 interface Props {
   titulo: string;
@@ -21,6 +23,8 @@ interface Props {
 
 export function ResultadoDoMania({ titulo, dificuldade, resultado, aoJogarDeNovo, aoVoltar, xp, valeXp = false }: Props) {
   const mods = siglasDosMods(resultado.mods);
+  const { julgamentos, desvios } = resultado.estatisticas;
+  const { media, ur } = resumoDosDesvios(desvios);
   // Os mesmos atalhos do resultado do Rock.
   useTeclado((evento) => {
     if (evento.code === "Enter" || evento.code === "Escape") {
@@ -36,11 +40,17 @@ export function ResultadoDoMania({ titulo, dificuldade, resultado, aoJogarDeNovo
       destaques={resultado.derrota && <p className="font-bold text-perigo">Você perdeu a música.</p>}
       numeros={[
         { rotulo: "Pontuação", valor: resultado.pontuacao.toLocaleString("pt-BR") },
-        { rotulo: "Precisão", valor: porcentagem(resultado.precisao) },
+        { rotulo: "Precisão", valor: comoPorcentagem(resultado.precisao) },
         { rotulo: "Maior combo", valor: resultado.maiorCombo },
       ]}
       julgamentos={NOMES_DOS_JULGAMENTOS.map((nome, i) => ({ rotulo: nome, valor: resultado.contagem[i] }))}
-      extra={xp && <GanhoDeXp xp={xp} valeXp={valeXp} modo="mania" />}
+      extra={
+        <>
+          <GraficoDaPrecisao curva={curvaDaPrecisao(julgamentos, PONTOS_DA_CURVA)} />
+          <BarraDeDesvio histograma={histogramaDosDesvios(desvios, resultado.janelaMs, FAIXAS_DO_DESVIO)} mediaMs={media} ur={ur} />
+          {xp && <GanhoDeXp xp={xp} valeXp={valeXp} modo="mania" />}
+        </>
+      }
       botoes={
         <>
           <Button variant="secondary" onClick={aoVoltar}>

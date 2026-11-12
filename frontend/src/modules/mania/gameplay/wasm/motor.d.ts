@@ -58,7 +58,8 @@ export class MotorDoMania {
   soltar(coluna: number, tempo_ms: number): number;
   avancar(tempo_ms: number): void;
   /**
-   * Os julgamentos desde a última chamada, em grupos de cinco: [nota, coluna, julgamento, ponta (0/1), desvio (NaN sem toque)].
+   * Os eventos desde a última chamada, em grupos de cinco: [nota, coluna, julgamento, fim (0/1), desvio (NaN sem toque)].
+   * O fim de uma nota longa não tem julgamento: vem com julgamento -1 e fim 1.
    */
   eventos(): Float64Array;
   /**

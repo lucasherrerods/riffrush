@@ -1,5 +1,7 @@
 import { comAlfa } from "@/shared/styles/tokens";
 import { CORES_DA_PISTA, CORES_DOS_JULGAMENTOS, coresDasColunas } from "../tema";
+import { marcasVisiveis, posicaoNaBarra, type MarcaDeToque } from "./barraDeUr";
+import { textoDoUr } from "@/modules/resultado";
 import { primeiraVisivel, yDaNota, type GeometriaDaPista } from "./pista";
 
 /** Estado de cada nota para o desenho, montado a partir dos eventos do motor. */
@@ -14,17 +16,20 @@ const JULGAMENTO_MISS = 5;
 const DURACAO_DO_JULGAMENTO_MS = 400;
 
 /**
- * Aplica os eventos do motor (grupos de cinco: nota, coluna, julgamento, ponta, desvio) no estado das notas.
- * Devolve o último julgamento, para o HUD.
+ * Aplica os eventos do motor (grupos de cinco: nota, coluna, julgamento, fim, desvio) no estado das notas.
+ * O fim de uma nota longa vem sem julgamento (-1). Devolve o último julgamento, para o HUD.
  */
 export function aplicarEventos(estados: Uint8Array, notas: ArrayLike<number>, eventos: ArrayLike<number>): number | undefined {
   let ultimo: number | undefined;
   for (let i = 0; i < eventos.length; i += 5) {
     const nota = eventos[i];
     const julgamento = eventos[i + 2];
-    const ponta = eventos[i + 3] === 1;
+    if (julgamento < 0) {
+      estados[nota] = TERMINADA;
+      continue;
+    }
     const longa = notas[nota * 3 + 2] >= 0;
-    estados[nota] = !ponta && longa && julgamento !== JULGAMENTO_MISS ? SEGURANDO : TERMINADA;
+    estados[nota] = longa && julgamento !== JULGAMENTO_MISS ? SEGURANDO : TERMINADA;
     ultimo = julgamento;
   }
   return ultimo;
@@ -44,6 +49,8 @@ export interface QuadroDaPista {
   escala?: number;
   /** O cursor das notas que ainda aparecem: o desenho anda com ele em vez de percorrer a música toda. */
   primeira?: number;
+  /** A barra de UR: os últimos toques, as janelas no tempo real (de MAX a Miss) e o UR da partida até agora. */
+  ur?: { marcas: MarcaDeToque[]; janelas: ArrayLike<number>; media?: number; valor?: number };
 }
 
 /** Brilho da nota, desenhado uma vez no sprite: `shadowBlur` a cada nota pesa demais no celular. */
@@ -55,6 +62,7 @@ interface Recursos {
   notas: (CanvasImageSource | null)[];
   fonteDoCombo: string;
   fonteDoJulgamento: string;
+  fonteDoUr: string;
 }
 
 /** O que só depende do tamanho da pista, guardado por geometria: a tela troca de geometria só ao redimensionar. */
@@ -69,6 +77,7 @@ function recursos(g: GeometriaDaPista): Recursos {
       notas: Array(g.teclas).fill(null),
       fonteDoCombo: `${Math.round(g.larguraDaColuna * 0.55)}px "Bebas Neue", sans-serif`,
       fonteDoJulgamento: `${Math.round(g.larguraDaColuna * 0.5)}px "Bebas Neue", sans-serif`,
+      fonteDoUr: `${Math.round(g.larguraDaColuna * 0.3)}px "Bebas Neue", sans-serif`,
     };
     recursosPorGeometria.set(g, r);
   }
@@ -180,5 +189,52 @@ export function desenharPista(c: CanvasRenderingContext2D, g: GeometriaDaPista, 
     c.font = r.fonteDoJulgamento;
     c.fillText(NOMES_DOS_JULGAMENTOS[q.julgamento.codigo], centro, altura * 0.5);
     c.globalAlpha = 1;
+  }
+
+  if (q.ur) {
+    const fimDosReceptores = yDoJulgamento + Math.max(6, altaDaNota * 0.6);
+    const yDaBarra = fimDosReceptores + (altura - fimDosReceptores) / 2;
+    desenharBarraDeUr(c, centro, yDaBarra, larguraDaPista * 0.8, q.ur, q.agoraMs);
+    if (q.ur.valor !== undefined) {
+      c.textAlign = "center";
+      c.textBaseline = "top";
+      c.fillStyle = comAlfa(CORES_DA_PISTA.linhaDeJulgamento, 0.85);
+      c.font = r.fonteDoUr;
+      c.fillText(textoDoUr(q.ur.valor), centro, yDaBarra + 14);
+      c.textBaseline = "alphabetic";
+    }
+  }
+}
+
+/** Faixas de cada janela (a do 50 por fora, a do MAX no meio), um risco por toque recente e uma seta na média deles. */
+function desenharBarraDeUr(c: CanvasRenderingContext2D, centro: number, y: number, largura: number, ur: NonNullable<QuadroDaPista["ur"]>, agoraMs: number) {
+  const limite = ur.janelas[4];
+  if (!(limite > 0)) return;
+  const esquerda = centro - largura / 2;
+  const xDe = (desvio: number) => esquerda + posicaoNaBarra(desvio, limite) * largura;
+  c.globalAlpha = 0.4;
+  for (let j = 4; j >= 0; j--) {
+    const meia = (Math.min(ur.janelas[j], limite) / limite) * (largura / 2);
+    c.fillStyle = CORES_DOS_JULGAMENTOS[j];
+    c.fillRect(centro - meia, y - 2, meia * 2, 4);
+  }
+  c.globalAlpha = 1;
+  for (const { desvio, alfa } of marcasVisiveis(ur.marcas, agoraMs)) {
+    const janela = [0, 1, 2, 3, 4].find((j) => Math.abs(desvio) <= ur.janelas[j]) ?? 4;
+    c.globalAlpha = alfa;
+    c.fillStyle = CORES_DOS_JULGAMENTOS[janela];
+    c.fillRect(xDe(desvio) - 1, y - 8, 2, 16);
+  }
+  c.globalAlpha = 1;
+  c.fillStyle = CORES_DA_PISTA.linhaDeJulgamento;
+  c.fillRect(centro - 1, y - 10, 2, 20);
+  if (ur.media !== undefined) {
+    const xm = xDe(ur.media);
+    c.beginPath();
+    c.moveTo(xm, y - 11);
+    c.lineTo(xm - 5, y - 18);
+    c.lineTo(xm + 5, y - 18);
+    c.closePath();
+    c.fill();
   }
 }

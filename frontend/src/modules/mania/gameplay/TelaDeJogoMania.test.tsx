@@ -59,7 +59,7 @@ describe("TelaDeJogoMania", () => {
     await irPara(3300);
     await waitFor(() => expect(aoTerminar).toHaveBeenCalledTimes(1));
     const resultado = aoTerminar.mock.calls[0][0];
-    expect(resultado).toMatchObject({ pontuacao: 1_000_000, classificacao: "SS", contagem: [3, 0, 0, 0, 0, 0], maiorCombo: 3, derrota: false, hash: "abc" });
+    expect(resultado).toMatchObject({ pontuacao: 1_000_000, classificacao: "SS", contagem: [2, 0, 0, 0, 0, 0], maiorCombo: 2, derrota: false, hash: "abc" });
     expect(resultado.entradas.map(([, coluna, toca]: number[]) => [coluna, toca])).toEqual([
       [0, 1],
       [0, 0],
@@ -70,6 +70,15 @@ describe("TelaDeJogoMania", () => {
   });
 
   // No celular não tem teclado: cada coluna da pista é uma faixa de toque, e segurar o dedo segura a nota longa.
+  it("mostra a precisão embaixo do nome da música e atualiza a cada julgamento", async () => {
+    abrir();
+    await pronta();
+    expect(screen.getByLabelText("Precisão")).toHaveTextContent("100,00%");
+    // A primeira nota (em 1 s) passa sem toque e vira Miss.
+    await irPara(1600);
+    await waitFor(() => expect(screen.getByLabelText("Precisão")).toHaveTextContent("0,00%"));
+  });
+
   it("joga o mapa inteiro com o dedo", async () => {
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(400);
     vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(800);
@@ -87,7 +96,7 @@ describe("TelaDeJogoMania", () => {
     dedo("pointerUp", 130);
     await irPara(3300);
     await waitFor(() => expect(aoTerminar).toHaveBeenCalledTimes(1));
-    expect(aoTerminar.mock.calls[0][0]).toMatchObject({ classificacao: "SS", contagem: [3, 0, 0, 0, 0, 0] });
+    expect(aoTerminar.mock.calls[0][0]).toMatchObject({ classificacao: "SS", contagem: [2, 0, 0, 0, 0, 0], estatisticas: { julgamentos: [0, 0] } });
     vi.restoreAllMocks();
   });
 
@@ -108,7 +117,7 @@ describe("TelaDeJogoMania", () => {
     await irPara(2000);
     await irPara(3300);
     await waitFor(() => expect(aoTerminar).toHaveBeenCalledTimes(1));
-    expect(aoTerminar.mock.calls[0][0]).toMatchObject({ pontuacao: 1_000_000, contagem: [3, 0, 0, 0, 0, 0] });
+    expect(aoTerminar.mock.calls[0][0]).toMatchObject({ pontuacao: 1_000_000, contagem: [2, 0, 0, 0, 0, 0] });
   });
 
   it("transmitindo, manda o início, as entradas em lotes e o fim", async () => {
