@@ -245,7 +245,13 @@ impl MotorDoMania {
                     coluna,
                     julgamento,
                     desvio_ms,
-                } => Some([nota as f64, f64::from(coluna), f64::from(codigo(julgamento)), 0.0, desvio_ms.map_or(f64::NAN, f64::from)]),
+                } => Some([
+                    nota as f64,
+                    f64::from(coluna),
+                    f64::from(codigo(julgamento)),
+                    0.0,
+                    desvio_ms.map_or(f64::NAN, f64::from),
+                ]),
                 motor::Evento::Fim { nota, coluna } => Some([nota as f64, f64::from(coluna), -1.0, 1.0, f64::NAN]),
                 motor::Evento::Quebra { .. } | motor::Evento::Derrota => None,
             })
