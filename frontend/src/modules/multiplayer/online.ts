@@ -1,6 +1,3 @@
-import type { EstadoDoJogador } from "@/modules/rock/gameplay";
-import { MUSICAS_EMBUTIDAS, type Musica } from "@/modules/rock/songs";
-
 /** Endereço do relay (relay/ neste repositório). Sem ele, o modo online fica escondido. */
 export const URL_DO_RELAY: string = import.meta.env.VITE_URL_DO_RELAY ?? "";
 
@@ -35,9 +32,7 @@ export function normalizarCodigo(texto: string): string | null {
   return FORMATO_DO_CODIGO.test(codigo) ? codigo : null;
 }
 
-export function deveEnviarEstado(ultimoEnvio: number, agora: number, estado: EstadoDoJogador): boolean {
+export function deveEnviarEstado(ultimoEnvio: number, agora: number, estado: { terminou: boolean; derrota?: boolean }): boolean {
   return estado.terminou || estado.derrota || agora - ultimoEnvio >= INTERVALO_DO_ESTADO_ONLINE_MS;
 }
 
-/** Pela internet só vão músicas que cada jogador consegue sozinho: as do jogo e as do Encore. */
-export const podeTocarOnline = (musica: Musica) => MUSICAS_EMBUTIDAS.some((m) => m.id === musica.id) || !!musica.urlDoEncore;

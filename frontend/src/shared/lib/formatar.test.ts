@@ -1,4 +1,4 @@
-import { haQuantoTempo, porcentagem } from "./formatar";
+import { formatarDuracao, haQuantoTempo, porcentagem } from "./formatar";
 
 describe("haQuantoTempo", () => {
   const agora = new Date("2026-10-24T12:00:00Z");
@@ -24,5 +24,13 @@ describe("porcentagem", () => {
     expect(porcentagem(0.8765)).toBe("87,65%");
     expect(porcentagem(1)).toBe("100,00%");
     expect(porcentagem(10 / 11, 0)).toBe("91%");
+  });
+});
+
+describe("formatarDuracao", () => {
+  it("mostra minutos e segundos", () => {
+    expect(formatarDuracao(263674)).toBe("4:23");
+    expect(formatarDuracao(5000)).toBe("0:05");
+    expect(formatarDuracao(0)).toBe("");
   });
 });

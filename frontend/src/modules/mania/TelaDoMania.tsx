@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { TelaDeAtividades } from "@/modules/atividades";
 import { PARTE_DA_TELA_DO_MODO, type PalcoCompartilhado } from "@/modules/menu";
 import { CartaoDaConta, PerfilDoAmigo, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
 import { BotaoDeAmigos, PainelDeAmigos, useIdsDosAmigos, usePainelDeAmigos } from "@/modules/amigos";
@@ -44,7 +45,7 @@ import { criarPlayerDoMania, faixasDaBiblioteca, playerDoMania } from "./player/
 import { FundoDoMania } from "./menu/FundoDoMania";
 import { MenuDoMania } from "./menu/MenuDoMania";
 
-type Tela = { nome: "menu" } | { nome: "configuracoes"; voltarPara: Tela } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil"; amigo?: string } | { nome: "online" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido };
+type Tela = { nome: "menu" } | { nome: "configuracoes"; voltarPara: Tela } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil"; amigo?: string } | { nome: "online" } | { nome: "atividades" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido };
 
 /** Um replay do ranking aberto para assistir: as entradas, os mods e a semente da partida, e de quem ela é. */
 type ReplayAssistido = ReplayDoMania & { nome: string };
@@ -313,6 +314,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
             aoConfigurar={abrirConfiguracoes}
             aoLeaderboard={contasLigadas ? () => setTela({ nome: "leaderboard" }) : undefined}
             aoOnline={presencaDisponivel && contasLigadas ? () => setTela({ nome: "online" }) : undefined}
+            aoAtividades={contasLigadas ? () => setTela({ nome: "atividades" }) : undefined}
             chat={
               presencaDisponivel && contasLigadas && preferencias.chatGlobal !== false ? (
                 <ChatGlobal className="w-full" aceito={preferencias.chatGlobal} aoResponder={responderAoChat} />
@@ -349,7 +351,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
       </main>
     );
 
-  if (tela.nome === "leaderboard" || tela.nome === "perfil" || tela.nome === "online" || tela.nome === "configuracoes")
+  if (tela.nome === "leaderboard" || tela.nome === "perfil" || tela.nome === "online" || tela.nome === "atividades" || tela.nome === "configuracoes")
     return (
       <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
         <FundoDoMania />
@@ -357,6 +359,8 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         <div className="relative min-h-0 flex-1">
           {tela.nome === "configuracoes" ? (
             <TelaDeConfiguracoesMania opcoes={configuracoes} aoMudar={mudarConfiguracoes} aoVoltar={() => setTela(tela.voltarPara)} />
+          ) : tela.nome === "atividades" ? (
+            <TelaDeAtividades aoVoltar={() => setTela({ nome: "menu" })} nomeDoMapa={nomeNaBiblioteca} />
           ) : tela.nome === "online" ? (
             <TelaOnline
               logado={!!conta}
@@ -374,7 +378,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
               aoVoltar={() => setTela({ nome: "menu" })}
               tituloDaMusica={() => undefined}
               rotuloDasMusicas="Mapas"
-              abaDasMusicas={<AbaDosMapasMaisJogados nomeNaBiblioteca={nomeNaBiblioteca} />}
+              abaDasMusicas={<AbaDosMapasMaisJogados nomeNaBiblioteca={nomeNaBiblioteca} baixados={baixados} aoBaixar={aoBaixar} aoJogar={(beatmapsetId) => setTela({ nome: "selecao", conjuntoId: `osu:${beatmapsetId}` })} baixar={baixar} />}
             />
           ) : tela.nome === "perfil" && tela.amigo ? (
             <PerfilDoAmigo contaId={tela.amigo} aoVoltar={() => setTela({ nome: "menu" })} tituloDaMusica={() => undefined} />

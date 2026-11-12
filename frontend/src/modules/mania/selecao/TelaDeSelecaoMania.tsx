@@ -25,6 +25,7 @@ import {
 } from "@/modules/selecao"
 import { useTeclado } from "@/shared/hooks/useTeclado"
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita"
+import { formatarDuracao } from "@/shared/lib/formatar"
 import { cn } from "@/shared/lib/utils"
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes"
 import { NumeroDestacado } from "@/shared/ui/NumeroDestacado"
@@ -114,10 +115,6 @@ const ORDENS: { id: OrdemDaSelecao; rotulo: string }[] = [
 
 const formatarEstrelas = (estrelas: number) =>
   `${estrelas.toFixed(2).replace(".", ",")}★`
-const formatarDuracao = (ms: number) => {
-  const segundos = Math.round(ms / 1000)
-  return `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, "0")}`
-}
 
 function rotuloDaDificuldade(
   conjunto: ConjuntoSalvo,

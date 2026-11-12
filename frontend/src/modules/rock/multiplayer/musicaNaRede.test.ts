@@ -1,6 +1,6 @@
 import { MUSICAS_EMBUTIDAS, type Musica } from "@/modules/rock/songs";
 import { baixarSng } from "@/modules/rock/search";
-import { paraRede, resolverMusica } from "./musicaNaRede";
+import { paraRede, podeTocarOnline, resolverMusica } from "./musicaNaRede";
 
 vi.mock("@/modules/rock/search", () => ({ baixarSng: vi.fn() }));
 beforeEach(() => vi.mocked(baixarSng).mockClear());
@@ -84,5 +84,18 @@ describe("resolverMusica", () => {
       expect(musica).toBe(doEncore);
       expect(baixarSng).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("podeTocarOnline", () => {
+  const importada: Musica = { ...MUSICAS_EMBUTIDAS[0], id: "arquivo:x.wav:1", arquivo: new File(["x"], "x.wav") };
+
+  it("embutidas e baixadas do Encore podem: todo mundo consegue a mesma música", () => {
+    expect(podeTocarOnline(MUSICAS_EMBUTIDAS[0])).toBe(true);
+    expect(podeTocarOnline({ ...importada, urlDoEncore: "https://files.enchor.us/a.sng" })).toBe(true);
+  });
+
+  it("arquivo importado do PC não pode: ele teria que passar pelo relay", () => {
+    expect(podeTocarOnline(importada)).toBe(false);
   });
 });

@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import userEvent from "@testing-library/user-event";
 import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa } from "@/modules/platform";
 import { anotarRecorde, definirRecordes, recordesAtuais } from "@/modules/rock/results";
-import { escolherNaSala, useConexao, voltarParaASala } from "@/modules/multiplayer";
+import { escolherNaSala, useConexao, voltarParaASala } from "@/modules/rock/multiplayer";
 import { PERSONAGEM_PADRAO } from "@/modules/rock/character";
 import { AudioContextFalso } from "@/test/audioFalso";
 import { iniciarControle } from "@/modules/gamepad";
@@ -73,8 +73,8 @@ vi.mock("@/modules/rock/gameplay", async (original) => ({
 vi.mock("@/modules/gamepad", async (original) => ({ ...(await original<typeof import("@/modules/gamepad")>()), iniciarControle: vi.fn(() => () => {}) }));
 
 // O lobby de verdade é testado no módulo multiplayer; aqui só importa a ligação entre as telas.
-vi.mock("@/modules/multiplayer", async (original) => ({
-  ...(await original<typeof import("@/modules/multiplayer")>()),
+vi.mock("@/modules/rock/multiplayer", async (original) => ({
+  ...(await original<typeof import("@/modules/rock/multiplayer")>()),
   TelaDeMultijogador: ({ aoBuscarMusicas }: { aoBuscarMusicas: () => void }) => (
     <div>
       <h1>Multiplayer</h1>

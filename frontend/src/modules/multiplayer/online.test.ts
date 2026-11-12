@@ -1,5 +1,4 @@
-import { MUSICAS_EMBUTIDAS, type Musica } from "@/modules/rock/songs";
-import { INTERVALO_DO_ESTADO_ONLINE_MS, deveEnviarEstado, lerSalasOnline, normalizarCodigo, podeTocarOnline, urlDasSalas, urlParaCriarSala, urlParaEntrarNaSala } from "./online";
+import { INTERVALO_DO_ESTADO_ONLINE_MS, deveEnviarEstado, lerSalasOnline, normalizarCodigo, urlDasSalas, urlParaCriarSala, urlParaEntrarNaSala } from "./online";
 
 const estado = { pontos: 10, vida: 0.5, sequencia: 1, pulso: 1, derrota: false, terminou: false };
 
@@ -48,18 +47,5 @@ describe("deveEnviarEstado", () => {
   it("o fim da partida sempre vai na hora", () => {
     expect(deveEnviarEstado(0, 1, { ...estado, terminou: true })).toBe(true);
     expect(deveEnviarEstado(0, 1, { ...estado, derrota: true })).toBe(true);
-  });
-});
-
-describe("podeTocarOnline", () => {
-  const importada: Musica = { ...MUSICAS_EMBUTIDAS[0], id: "arquivo:x.wav:1", arquivo: new File(["x"], "x.wav") };
-
-  it("embutidas e baixadas do Encore podem: todo mundo consegue a mesma música", () => {
-    expect(podeTocarOnline(MUSICAS_EMBUTIDAS[0])).toBe(true);
-    expect(podeTocarOnline({ ...importada, urlDoEncore: "https://files.enchor.us/a.sng" })).toBe(true);
-  });
-
-  it("arquivo importado do PC não pode: ele teria que passar pelo relay", () => {
-    expect(podeTocarOnline(importada)).toBe(false);
   });
 });

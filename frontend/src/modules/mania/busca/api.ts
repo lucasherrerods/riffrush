@@ -23,6 +23,11 @@ export interface DificuldadeDaBusca {
   /** md5 do .osu, o mesmo que o motor calcula. */
   hash: string;
   duracaoS: number;
+  /** Os números abaixo só vêm quando o espelho manda. */
+  bpm?: number;
+  od?: number;
+  hp?: number;
+  notas?: number;
 }
 
 export interface MapaDaBusca {
@@ -51,6 +56,7 @@ interface Espelho {
   nome: string;
   urlDaBusca: (filtros: FiltrosDaBusca) => string;
   urlDoDownload: (beatmapsetId: number) => string;
+  urlDoConjunto: (beatmapsetId: number) => string;
 }
 
 export const ESPELHOS: Espelho[] = [
@@ -63,6 +69,7 @@ export const ESPELHOS: Espelho[] = [
     },
     // O "n" pede o pacote sem o vídeo, que o Mania não usa e pesa dezenas de MB.
     urlDoDownload: (id) => `https://catboy.best/d/${id}n`,
+    urlDoConjunto: (id) => `https://catboy.best/api/v2/s/${id}`,
   },
   {
     nome: "osu.direct",
@@ -72,6 +79,7 @@ export const ESPELHOS: Espelho[] = [
       return `https://osu.direct/api/v2/search?${params}`;
     },
     urlDoDownload: (id) => `https://osu.direct/api/d/${id}`,
+    urlDoConjunto: (id) => `https://osu.direct/api/v2/s/${id}`,
   },
 ];
 
@@ -119,14 +127,39 @@ interface ConjuntoDoOsu {
   status: string;
   preview_url?: string;
   covers?: { list?: string; card?: string };
-  beatmaps?: { id: number; mode_int: number; cs: number; difficulty_rating: number; version: string; checksum: string; total_length: number }[];
+  beatmaps?: {
+    id: number;
+    mode_int: number;
+    cs: number;
+    difficulty_rating: number;
+    version: string;
+    checksum: string;
+    total_length: number;
+    bpm?: number;
+    accuracy?: number;
+    drain?: number;
+    count_circles?: number;
+    count_sliders?: number;
+  }[];
 }
 
 /** Do formato do osu! v2 para o nosso. Devolve `null` se o conjunto não tem nenhuma dificuldade mania. */
 export function traduzirConjunto(conjunto: ConjuntoDoOsu): MapaDaBusca | null {
   const dificuldades = (conjunto.beatmaps ?? [])
     .filter((b) => b.mode_int === MODO_MANIA)
-    .map((b) => ({ beatmapId: b.id, nome: b.version, teclas: Math.round(b.cs), estrelas: b.difficulty_rating, hash: b.checksum, duracaoS: b.total_length }))
+    .map((b) => ({
+      beatmapId: b.id,
+      nome: b.version,
+      teclas: Math.round(b.cs),
+      estrelas: b.difficulty_rating,
+      hash: b.checksum,
+      duracaoS: b.total_length,
+      bpm: b.bpm,
+      od: b.accuracy,
+      hp: b.drain,
+      // No mania, "circle" é nota e "slider" é nota longa.
+      notas: b.count_circles !== undefined ? b.count_circles + (b.count_sliders ?? 0) : undefined,
+    }))
     .sort((a, b) => a.estrelas - b.estrelas);
   if (!dificuldades.length) return null;
   const https = (url?: string) => (url?.startsWith("//") ? `https:${url}` : url);
@@ -165,6 +198,16 @@ export async function buscarMapas(filtros: FiltrosDaBusca, cliente: ClienteDosEs
     .filter((m) => !teclas.length || m.dificuldades.some((d) => teclas.includes(d.teclas)));
   // O filtro de teclas roda aqui, então a página pode vir quase vazia mesmo com mais mapas depois dela.
   return { mapas, temMais: conjuntos.length >= POR_PAGINA };
+}
+
+/** Um conjunto pelo id, com os números de cada dificuldade. `null` se não tem dificuldade mania. */
+export async function buscarConjunto(beatmapsetId: number, cliente: ClienteDosEspelhos = padrao(), sinal?: AbortSignal): Promise<MapaDaBusca | null> {
+  const conjunto = await cliente.emCadaEspelho(async (espelho, signal) => {
+    const resposta = await cliente.buscar(espelho.urlDoConjunto(beatmapsetId), { signal: sinal ? AbortSignal.any([sinal, signal]) : signal });
+    if (!resposta.ok) throw new Error(`${espelho.nome}: ${resposta.status}`);
+    return (await resposta.json()) as ConjuntoDoOsu;
+  });
+  return traduzirConjunto(conjunto);
 }
 
 /** Baixa o .osz de um conjunto, com o progresso de 0 a 1 quando o espelho informa o tamanho. */
