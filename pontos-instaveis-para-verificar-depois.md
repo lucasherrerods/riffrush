@@ -61,8 +61,8 @@ Problemas encontrados de passagem, fora do escopo da mudança que estava sendo f
 - Suspeita: o carregamento preguiçoso do modo demora mais que o `timeout` quando a máquina está carregada.
 - Próximo passo: medir o tempo do import do Mania no teste e subir o limite ou carregar o módulo antes.
 
-## `TelaDeBuscaMania.test.tsx` falha na suíte inteira e passa sozinho
-- Onde: `frontend/src/modules/mania/busca/TelaDeBuscaMania.test.tsx`, "carrega a próxima página no fim da lista, sem repetir mapas, até acabar".
-- O que se viu: falhou uma vez com a suíte inteira rodando e passou logo depois rodando só o arquivo. Em outra rodada, só da pasta do Mania, quem falhou foi "mudar o filtro volta para a primeira página" (achou 1 mapa em vez de 2).
-- Suspeita: o teste depende do tempo do carregamento da página seguinte (rolagem ou espera curta demais com a máquina carregada).
-- Próximo passo: trocar a espera fixa por `findBy`/`waitFor` no fim da lista e rodar a suíte algumas vezes.
+## `TelaDeBuscaMania.test.tsx` falha às vezes (paginação e filtro)
+- Onde: `frontend/src/modules/mania/busca/TelaDeBuscaMania.test.tsx`, "mudar o filtro volta para a primeira página" e "carrega a próxima página no fim da lista, sem repetir mapas, até acabar".
+- O que se viu: falhou no CI (3,3 s, esperava 2 títulos `h2` e achou 1) e localmente com a suíte inteira; passa rodando só o arquivo.
+- Suspeita: espera curta pela página seguinte ou pelo resultado com a máquina carregada.
+- Próximo passo: trocar as contagens imediatas e esperas fixas por `findAllBy`/`waitFor` e rodar o arquivo várias vezes.
