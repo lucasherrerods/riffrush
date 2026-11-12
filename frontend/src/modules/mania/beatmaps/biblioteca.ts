@@ -36,6 +36,8 @@ export interface BibliotecaDoMania {
   guardar(conjunto: ConjuntoSalvo, osz: Blob): Promise<void>;
   /** O pacote lido, ou nada se o conjunto não está salvo. */
   abrir(id: string): Promise<OszLido | undefined>;
+  /** O .osz guardado, como veio. */
+  osz?(id: string): Promise<Blob | undefined>;
   usar(id: string): Promise<void>;
   remover(id: string): Promise<void>;
 }
@@ -74,6 +76,10 @@ export async function abrirBibliotecaDoMania({ nome = "riffrush-mania", relogio 
       if (!osz) return undefined;
       await iniciarMotorDoMania();
       return lerOsz(new Uint8Array(await osz.arrayBuffer()));
+    },
+
+    async osz(id) {
+      return banco.get("pacotes", id);
     },
 
     async usar(id) {

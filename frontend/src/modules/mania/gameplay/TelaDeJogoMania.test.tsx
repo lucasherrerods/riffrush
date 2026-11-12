@@ -151,6 +151,33 @@ describe("TelaDeJogoMania", () => {
     vi.restoreAllMocks();
   });
 
+  describe("em rede", () => {
+    it("a música espera a largada da sala, que é igual para todos", async () => {
+      vi.spyOn(performance, "now").mockReturnValue(10_000);
+      render(<TelaDeJogoMania mapa={mapa} aoTerminar={vi.fn()} aoSair={vi.fn()} decodificar={decodificar} rede={{ inicio: 13_000, aoAtualizar: vi.fn() }} />);
+      await pronta();
+      expect(audio().fontes.at(-1)!.inicio).toBeCloseTo(3, 0);
+      vi.restoreAllMocks();
+    });
+
+    it("manda o placar durante a partida e o fim com a pontuação final", async () => {
+      const aoAtualizar = vi.fn();
+      const aoTerminar = vi.fn();
+      render(<TelaDeJogoMania mapa={mapa} aoTerminar={aoTerminar} aoSair={vi.fn()} decodificar={decodificar} rede={{ inicio: performance.now() + 2000, aoAtualizar }} />);
+      await pronta();
+      await irPara(1600);
+      await waitFor(() => expect(aoAtualizar).toHaveBeenCalledWith(expect.objectContaining({ terminou: false, combo: 0 })));
+      await irPara(3300);
+      await waitFor(() => expect(aoTerminar).toHaveBeenCalled());
+      expect(aoAtualizar).toHaveBeenLastCalledWith(expect.objectContaining({ terminou: true, pontos: aoTerminar.mock.calls[0][0].pontuacao }));
+    });
+
+    it("mostra os adversários por cima da pista", () => {
+      render(<TelaDeJogoMania mapa={mapa} aoTerminar={vi.fn()} aoSair={vi.fn()} decodificar={decodificar} rede={{ inicio: 0, aoAtualizar: vi.fn(), adversarios: <p>placar da sala</p> }} />);
+      expect(screen.getByText("placar da sala")).toBeInTheDocument();
+    });
+  });
+
   it("segurar a tecla não toca de novo", async () => {
     const { aoTerminar } = abrir();
     await pronta();

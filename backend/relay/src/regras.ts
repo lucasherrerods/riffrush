@@ -89,6 +89,8 @@ export interface EntradaDaSala {
   nome: string;
   jogadores: number;
   atualizadaEm: number;
+  /** As salas criadas sem modo (o Rock e as versões antigas) ficam sem ele. */
+  modo?: Modo;
 }
 
 export type SalaListada = Omit<EntradaDaSala, "atualizadaEm">;
@@ -100,7 +102,7 @@ export function listarSalas(entradas: EntradaDaSala[], agora: number): SalaLista
   return entradas
     .filter((e) => agora - e.atualizadaEm <= VALIDADE_DA_ENTRADA_MS)
     .sort((a, b) => Number(a.jogadores >= MAXIMO_DE_JOGADORES) - Number(b.jogadores >= MAXIMO_DE_JOGADORES) || b.atualizadaEm - a.atualizadaEm)
-    .map(({ codigo, nome, jogadores }) => ({ codigo, nome, jogadores }));
+    .map(({ codigo, nome, jogadores, modo }) => ({ codigo, nome, jogadores, ...(modo && { modo }) }));
 }
 
 /** O modo de jogo que o app diz estar aberto: só vira etiqueta, então basta o formato. */

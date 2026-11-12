@@ -1,35 +1,36 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Globe, RefreshCw, Users } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
-import { Avatar, type Personagem } from "@/modules/rock/character";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Switch } from "@/shared/ui/switch";
-import type { SalaOnline } from "@/modules/multiplayer";
-import { MAXIMO_DE_JOGADORES } from "../protocolo";
-import {
-  criarSalaOnline,
-  ehClienteWebDaSala,
-  entrarNaSala,
-  entrarNaSalaOnline,
-  procurarSalasOnline,
-  temModoOnline,
-} from "../sala";
+import type { SalaOnline } from "../online";
+import { MAXIMO_DE_JOGADORES } from "../sala/protocolo";
 
 const INTERVALO_DA_BUSCA = 5000;
 
-interface Props {
-  personagem: Personagem;
-  volumeDosEfeitos: number;
-  aoEditarPersonagem: () => void;
+export interface AcoesDaBusca {
+  /** Rodando no navegador do celular que abriu a página do host. */
+  ehClienteWebDaSala: () => boolean;
+  temModoOnline: () => boolean;
+  procurarSalasOnline: () => Promise<SalaOnline[]>;
+  criarSalaOnline: (publica: boolean) => void;
+  entrarNaSalaOnline: (codigo: string) => void;
+  /** O celular que abriu a página do host entra na sala dele. */
+  entrarNaSalaDoCelular: () => void;
 }
 
-export function ProcurarSala({
-  personagem,
-  volumeDosEfeitos,
-  aoEditarPersonagem,
-}: Props) {
+interface Props {
+  /** Quem vai entrar, como o modo mostra (o personagem do Rock, com o botão de editar). */
+  retrato?: ReactNode;
+  acoes: AcoesDaBusca;
+  volumeDosEfeitos: number;
+}
+
+/** Criar uma sala online, achar uma aberta ou entrar pelo código; no celular, entrar na sala de quem serviu a página. */
+export function ProcurarSala({ retrato, acoes, volumeDosEfeitos }: Props) {
+  const { temModoOnline, procurarSalasOnline, ehClienteWebDaSala } = acoes;
   const [procurando, setProcurando] = useState(false);
   const [codigo, setCodigo] = useState("");
   const [publica, setPublica] = useState(true);
@@ -60,18 +61,7 @@ export function ProcurarSala({
     <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:flex max-md:flex-col max-md:gap-2">
       {(noCelular || online) && (
         <section className="col-span-4 flex flex-col items-center gap-4 placa p-6 max-md:order-2 max-md:gap-2 max-md:p-3">
-          <Avatar
-            personagem={personagem}
-            className="h-48 w-auto max-md:hidden"
-          />
-          <p className="text-xl font-black max-md:hidden">{personagem.nome}</p>
-          <Button
-            variant="outline"
-            className="max-md:hidden"
-            onClick={aoEditarPersonagem}
-          >
-            Editar personagem
-          </Button>
+          {retrato}
           <div className="flex-1" />
           {noCelular && (
             <Button
@@ -79,7 +69,7 @@ export function ProcurarSala({
               className="w-full"
               onClick={() => {
                 tocarEfeito("selecionar", volumeDosEfeitos);
-                entrarNaSala(location.origin, personagem);
+                acoes.entrarNaSalaDoCelular();
               }}
             >
               <Users className="opacity-70" /> Entrar na sala
@@ -92,7 +82,7 @@ export function ProcurarSala({
                 className="w-full"
                 onClick={() => {
                   tocarEfeito("selecionar", volumeDosEfeitos);
-                  criarSalaOnline(personagem, publica);
+                  acoes.criarSalaOnline(publica);
                 }}
               >
                 <Globe className="opacity-70" /> Criar sala online
@@ -159,7 +149,7 @@ export function ProcurarSala({
                 jogadores={s.jogadores}
                 aoEntrar={() => {
                   tocarEfeito("selecionar", volumeDosEfeitos);
-                  entrarNaSalaOnline(s.codigo, personagem);
+                  acoes.entrarNaSalaOnline(s.codigo);
                 }}
               />
             ))}
@@ -169,7 +159,7 @@ export function ProcurarSala({
             onSubmit={(e) => {
               e.preventDefault();
               tocarEfeito("selecionar", volumeDosEfeitos);
-              entrarNaSalaOnline(codigo, personagem);
+              acoes.entrarNaSalaOnline(codigo);
             }}
           >
             <div className="flex-1">
