@@ -80,14 +80,14 @@
     "esperado": {
       "contagem": [
         5,
-        2,
         1,
+        0,
         1,
         0,
         1
       ],
-      "pontuacao": 797000,
-      "precisao": 800000,
+      "pontuacao": 790000,
+      "precisao": 791667,
       "maior_combo": 5,
       "derrota": false
     }
@@ -174,13 +174,13 @@
       "contagem": [
         5,
         1,
-        1,
-        1,
+        0,
+        0,
         1,
         1
       ],
-      "pontuacao": 714500,
-      "precisao": 716667,
+      "pontuacao": 769375,
+      "precisao": 770833,
       "maior_combo": 5,
       "derrota": false
     }
@@ -266,15 +266,15 @@
     "esperado": {
       "contagem": [
         5,
-        2,
-        2,
+        1,
+        1,
         0,
         0,
         1
       ],
-      "pontuacao": 207750,
+      "pontuacao": 207813,
       "precisao": 833333,
-      "maior_combo": 6,
+      "maior_combo": 5,
       "derrota": false
     }
   },
@@ -359,14 +359,14 @@
     "esperado": {
       "contagem": [
         5,
-        2,
         1,
+        0,
         1,
         0,
         1
       ],
-      "pontuacao": 797000,
-      "precisao": 800000,
+      "pontuacao": 790000,
+      "precisao": 791667,
       "maior_combo": 5,
       "derrota": false
     }
@@ -458,7 +458,7 @@
         0,
         0
       ],
-      "pontuacao": 200000,
+      "pontuacao": 250000,
       "precisao": 1000000,
       "maior_combo": 2,
       "derrota": true
@@ -594,7 +594,7 @@
     "fim_ms": 5000,
     "esperado": {
       "contagem": [
-        11,
+        8,
         4,
         0,
         0,
@@ -603,7 +603,7 @@
       ],
       "pontuacao": 1000000,
       "precisao": 1000000,
-      "maior_combo": 15,
+      "maior_combo": 12,
       "derrota": false
     }
   },
@@ -741,11 +741,11 @@
         0,
         0,
         3,
-        1,
-        10
+        0,
+        8
       ],
-      "pontuacao": 143667,
-      "precisao": 144444,
+      "pontuacao": 165833,
+      "precisao": 166667,
       "maior_combo": 1,
       "derrota": false
     }
@@ -880,7 +880,7 @@
     "fim_ms": 9000,
     "esperado": {
       "contagem": [
-        11,
+        8,
         4,
         0,
         0,
@@ -889,7 +889,7 @@
       ],
       "pontuacao": 500000,
       "precisao": 1000000,
-      "maior_combo": 15,
+      "maior_combo": 12,
       "derrota": false
     }
   }

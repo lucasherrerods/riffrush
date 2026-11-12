@@ -275,10 +275,10 @@ mod tests {
             ],
         };
         let partida = jogar_replay(&mapa, &replay);
-        assert_eq!(partida.contagem[0], 3);
+        assert_eq!(partida.contagem[0], 2);
         assert_eq!(pontuacao(&partida), 1_000_000);
         // Sem entrada nenhuma, tudo vira Miss até o fim.
         let vazio = jogar_replay(&mapa, &Replay { entradas: vec![], ..replay });
-        assert_eq!(vazio.contagem[5], 3);
+        assert_eq!(vazio.contagem[5], 2);
     }
 }

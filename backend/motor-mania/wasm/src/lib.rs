@@ -234,7 +234,8 @@ impl MotorDoMania {
         motor::avancar(&mut self.partida, tempo_ms);
     }
 
-    /// Os julgamentos desde a última chamada, em grupos de cinco: [nota, coluna, julgamento, ponta (0/1), desvio (NaN sem toque)].
+    /// Os eventos desde a última chamada, em grupos de cinco: [nota, coluna, julgamento, fim (0/1), desvio (NaN sem toque)].
+    /// O fim de uma nota longa não tem julgamento: vem com julgamento -1 e fim 1.
     pub fn eventos(&mut self) -> Vec<f64> {
         motor::retirar_eventos(&mut self.partida)
             .into_iter()
@@ -243,15 +244,9 @@ impl MotorDoMania {
                     nota,
                     coluna,
                     julgamento,
-                    ponta,
                     desvio_ms,
-                } => Some([
-                    nota as f64,
-                    f64::from(coluna),
-                    f64::from(codigo(julgamento)),
-                    f64::from(u8::from(ponta)),
-                    desvio_ms.map_or(f64::NAN, f64::from),
-                ]),
+                } => Some([nota as f64, f64::from(coluna), f64::from(codigo(julgamento)), 0.0, desvio_ms.map_or(f64::NAN, f64::from)]),
+                motor::Evento::Fim { nota, coluna } => Some([nota as f64, f64::from(coluna), -1.0, 1.0, f64::NAN]),
                 motor::Evento::Quebra { .. } | motor::Evento::Derrota => None,
             })
             .flatten()
