@@ -6,9 +6,10 @@ import { porcentagem } from "@/shared/lib/formatar";
 import { Button } from "@/shared/ui/button";
 import { ComCarregamento } from "@/shared/ui/ComCarregamento";
 import { apiDoRanking, type MapaMaisJogado } from "./api";
+import { DetalhesDoMapa, type PropsDoDownload } from "./DetalhesDoMapa";
 import { PainelDoRankingDoMania } from "./PainelDoRankingDoMania";
 
-interface Props {
+interface Props extends PropsDoDownload {
   /** O nome do mapa na biblioteca, para quando o servidor ainda não guardou o .osu dele. */
   nomeNaBiblioteca?: (beatmapId: number) => string | undefined;
   carregar?: (sinal: AbortSignal) => Promise<MapaMaisJogado[]>;
@@ -22,9 +23,16 @@ export function nomeDoMapa(mapa: MapaMaisJogado, nomeNaBiblioteca?: (beatmapId: 
   return nomeNaBiblioteca?.(mapa.beatmap_id) ?? `Mapa ${mapa.beatmap_id}`;
 }
 
+/** Mais jogadores primeiro; no empate, mais partidas. */
+export function ordenarPorJogadores(mapas: MapaMaisJogado[]): MapaMaisJogado[] {
+  return [...mapas]
+    .sort((a, b) => b.jogadores - a.jogadores || b.partidas - a.partidas || a.beatmap_id - b.beatmap_id)
+    .map((m, i) => ({ ...m, posicao: i + 1 }));
+}
+
 /** A segunda aba do leaderboard no Mania: as dificuldades mais jogadas, com o ranking de cada uma ao abrir. */
-export function AbaDosMapasMaisJogados({ nomeNaBiblioteca, carregar = apiDoRanking.mapasMaisJogados }: Props) {
-  const { estado, tentarDeNovo } = useCarregamento(carregar);
+export function AbaDosMapasMaisJogados({ nomeNaBiblioteca, carregar = apiDoRanking.mapasMaisJogados, ...download }: Props) {
+  const { estado, tentarDeNovo } = useCarregamento((sinal) => carregar(sinal).then(ordenarPorJogadores));
   const [aberto, setAberto] = useState<MapaMaisJogado | null>(null);
 
   if (aberto)
@@ -36,6 +44,7 @@ export function AbaDosMapasMaisJogados({ nomeNaBiblioteca, carregar = apiDoRanki
           </Button>
           <h2 className="truncate font-titulo text-2xl tracking-wide">{nomeDoMapa(aberto, nomeNaBiblioteca)}</h2>
         </div>
+        {aberto.beatmapset_id !== null && <DetalhesDoMapa beatmapsetId={aberto.beatmapset_id} beatmapId={aberto.beatmap_id} {...download} />}
         <PainelDoRankingDoMania beatmapId={aberto.beatmap_id} />
       </div>
     );

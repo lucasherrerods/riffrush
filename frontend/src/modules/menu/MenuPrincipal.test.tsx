@@ -126,6 +126,13 @@ describe("MenuPrincipal", () => {
     expect(aoOnline).toHaveBeenCalled();
   });
 
+  it("com contas, Atividades abre o log do que a galera está jogando", async () => {
+    const aoAtividades = vi.fn();
+    render(<MenuPrincipal volumeDosEfeitos={0} aoJogar={vi.fn()} aoMultijogador={vi.fn()} aoPersonagem={vi.fn()} aoBuscarMusicas={vi.fn()} aoAtividades={aoAtividades} aoAbrirDocumento={vi.fn()} />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Atividades" }));
+    expect(aoAtividades).toHaveBeenCalled();
+  });
+
   it("Leaderboard abre o ranking geral", async () => {
     const { aoLeaderboard, usuario } = abrir();
     await usuario.click(screen.getByRole("button", { name: "Leaderboard" }));

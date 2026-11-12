@@ -27,6 +27,7 @@ fn app(banco_ok: bool) -> axum::Router {
             amizade: riffrush_api::modules::amizade::fakes::servicos_de_amizade(conta.clone(), Default::default()).0,
             mania: riffrush_api::modules::mania::fakes::servicos_vazios(conta.clone()),
             conversa: riffrush_api::modules::conversa::fakes::servicos_vazios(conta.clone()),
+            atividades: riffrush_api::modules::atividades::fakes::servicos_de_atividades().0,
             banco: Arc::new(BancoFalso(banco_ok)),
             moderacao: riffrush_api::modules::moderacao::fakes::servicos_de_moderacao(conta.clone(), None).0,
             presenca: riffrush_api::modules::presenca::ServicosDePresenca {

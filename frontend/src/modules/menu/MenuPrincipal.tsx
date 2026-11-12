@@ -1,5 +1,5 @@
 import { Suspense, useState, type ReactNode } from "react";
-import { GraduationCap, Palette, Play, Radio, Search, Settings2, Shirt, Trophy, Users } from "lucide-react";
+import { Activity, GraduationCap, Palette, Play, Radio, Search, Settings2, Shirt, Trophy, Users } from "lucide-react";
 import { ModalDeTutoriais } from "@/modules/rock/tutoriais";
 import { tocarEfeito } from "@/modules/audio";
 import type { Documento } from "@/modules/legal";
@@ -30,6 +30,8 @@ interface Props {
   aoLeaderboard?: () => void;
   /** Sem o relay ou sem contas não há quem está online, e a opção some. */
   aoOnline?: () => void;
+  /** O log do que a galera anda jogando; sem contas ligadas, a opção some. */
+  aoAtividades?: () => void;
   aoAbrirDocumento: (documento: Documento) => void;
   /** O chat global, no canto de baixo à esquerda. */
   chat?: ReactNode;
@@ -45,13 +47,14 @@ type Item = OpcaoDaTelaInicial;
 const URL_DO_PROJETO = "https://github.com/lucasherrerods/riffrush";
 const URL_DA_LANDING = "https://playriffrush.vercel.app";
 
-export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoMultiplayerLocal, naSala = false, aoPersonagem, aoCustomizar, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAbrirDocumento, chat, alavanca, troca, estatica }: Props) {
+export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, aoMultijogador, aoMultiplayerLocal, naSala = false, aoPersonagem, aoCustomizar, aoConfigurar, aoBuscarMusicas, aoLeaderboard, aoOnline, aoAtividades, aoAbrirDocumento, chat, alavanca, troca, estatica }: Props) {
   const [escolhendoMultiplayer, setEscolhendoMultiplayer] = useState(false);
   const [vendoTutoriais, setVendoTutoriais] = useState(false);
   const buscar: Item = { rotulo: "Buscar músicas", icone: Search, acao: aoBuscarMusicas };
   const comuns: Item[] = [
     ...(aoLeaderboard ? [{ rotulo: "Leaderboard", icone: Trophy, acao: aoLeaderboard }] : []),
     ...(aoOnline ? [{ rotulo: "Online", icone: Radio, acao: aoOnline }] : []),
+    ...(aoAtividades ? [{ rotulo: "Atividades", icone: Activity, acao: aoAtividades }] : []),
     { rotulo: "Personagem", icone: Shirt, acao: aoPersonagem },
     ...(aoCustomizar ? [{ rotulo: "Customizar", icone: Palette, acao: aoCustomizar }] : []),
     { rotulo: "Tutoriais", icone: GraduationCap, acao: () => setVendoTutoriais(true) },
