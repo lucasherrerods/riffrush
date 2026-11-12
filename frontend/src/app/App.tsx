@@ -20,8 +20,7 @@ import { useTrocaDeModo } from "./useTrocaDeModo";
 
 const IDENTIDADES = { rock: IDENTIDADE_DO_ROCK, mania: IDENTIDADE_DO_MANIA };
 
-/** Em época de evento (Natal...), o tema dele substitui o de cada modo. */
-const temaDoModo = (modo: Modo) => eventoAtual?.temas[modo] ?? TEMAS[IDENTIDADES[modo].tema];
+const temaDoModo = (modo: Modo) => TEMAS[IDENTIDADES[modo].tema];
 
 /** O cenário de cada modo no disco da troca: o mesmo fundo da tela inicial, com o tema dele. */
 const CENAS: Record<Modo, LadoDaVolvelle> = {

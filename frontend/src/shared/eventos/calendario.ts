@@ -1,5 +1,3 @@
-import type { Modo } from "@/shared/modo";
-import { TEMAS, type Tema } from "@/shared/styles/temas";
 
 export interface DiaDoAno {
   /** 1 a 12. */
@@ -14,14 +12,13 @@ export interface Periodo {
 }
 
 /**
- * Uma versão de evento do Riff Rush: troca o tema dos dois modos e liga a decoração dela por cima das telas.
- * Para criar um evento novo, crie os temas em temas.ts, registre-o em EVENTOS e a decoração em DecoracaoDoEvento.
+ * Uma versão de evento do Riff Rush: liga a decoração dela por cima das telas.
+ * Para criar um evento novo, registre-o em EVENTOS e a decoração em DecoracaoDoEvento.
  */
 export interface Evento {
   id: "natal";
   nome: string;
   periodo: Periodo;
-  temas: Record<Modo, Tema>;
 }
 
 export const EVENTOS: Evento[] = [
@@ -29,7 +26,6 @@ export const EVENTOS: Evento[] = [
     id: "natal",
     nome: "Natal",
     periodo: { inicio: { mes: 11, dia: 1 }, fim: { mes: 1, dia: 1 } },
-    temas: { rock: TEMAS.natal, mania: TEMAS.natalMania },
   },
 ];
 
