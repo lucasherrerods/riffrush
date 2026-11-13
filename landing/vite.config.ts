@@ -13,6 +13,8 @@ export default defineConfig({
     // Os arquivos de frontend/ resolvem o React daqui; no CI o frontend nem tem node_modules.
     dedupe: ["react", "react-dom"],
   },
+  // Cada página é um HTML próprio: /novidades/ funciona sem rota no cliente nem regra na Vercel.
+  build: { rollupOptions: { input: { inicio: path.resolve(__dirname, "index.html"), novidades: path.resolve(__dirname, "novidades/index.html") } } },
   server: { port: 1440, strictPort: true, fs: { allow: [__dirname, jogo] } },
   test: {
     environment: "jsdom",

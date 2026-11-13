@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
-import { Check, Disc3, Download, Play } from "lucide-react";
+import { Check, Disc3, Download, LoaderCircle, Play, Square } from "lucide-react";
 import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
 import { Button } from "@/shared/ui/button";
+import type { EstadoDaPrevia } from "./usePrevia";
 
 interface Props {
   titulo: string;
@@ -15,15 +16,18 @@ interface Props {
   /** Fração baixada, quando este item está baixando. */
   progresso?: number;
   acao?: React.ReactNode;
+  /** Com ela, a capa vira o botão que toca um trecho da música. */
+  previa?: { estado: EstadoDaPrevia; aoAlternar: () => void };
 }
 
-export function ItemDaBusca({ titulo, capa, linhas, selos, lateral, progresso, acao }: Props) {
+const classeDaCapa = "relative flex h-14 w-24 shrink-0 items-center justify-center overflow-hidden rounded-md border border-borda bg-superficie max-md:size-12";
+
+export function ItemDaBusca({ titulo, capa, linhas, selos, lateral, progresso, acao, previa }: Props) {
   const [principal, ...resto] = linhas;
+  const imagem = capa ? <img src={capa} alt="" loading="lazy" className="size-full object-cover" /> : <Disc3 className="size-6 opacity-70" aria-hidden />;
   return (
     <li className="chapa flex items-center gap-4 bg-superficie-elevada/95 p-3 max-md:gap-2 max-md:p-2">
-      <div className="flex h-14 w-24 shrink-0 items-center justify-center overflow-hidden rounded-md border border-borda bg-superficie max-md:size-12">
-        {capa ? <img src={capa} alt="" loading="lazy" className="size-full object-cover" /> : <Disc3 className="size-6 opacity-70" aria-hidden />}
-      </div>
+      {previa ? <CapaComPrevia titulo={titulo} {...previa}>{imagem}</CapaComPrevia> : <div className={classeDaCapa}>{imagem}</div>}
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="truncate font-titulo text-xl tracking-wide uppercase max-md:text-base">{titulo}</h2>
@@ -40,6 +44,28 @@ export function ItemDaBusca({ titulo, capa, linhas, selos, lateral, progresso, a
       {lateral}
       {acao}
     </li>
+  );
+}
+
+function CapaComPrevia({ titulo, estado, aoAlternar, children }: { titulo: string; estado: EstadoDaPrevia; aoAlternar: () => void; children: React.ReactNode }) {
+  const ativa = estado !== "parada";
+  const Icone = estado === "carregando" ? LoaderCircle : estado === "tocando" ? Square : Play;
+  return (
+    <button
+      type="button"
+      onClick={aoAlternar}
+      aria-label={`${ativa ? "Parar" : "Ouvir"} prévia de ${titulo}`}
+      aria-pressed={estado === "tocando"}
+      aria-busy={estado === "carregando"}
+      className={`${classeDaCapa} group cursor-pointer focus-visible:outline-2 focus-visible:outline-primaria`}
+    >
+      {children}
+      <span
+        className={`absolute inset-0 flex items-center justify-center bg-fundo/60 transition-opacity ${ativa ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 max-md:opacity-100 max-md:bg-fundo/40"}`}
+      >
+        <Icone className={`size-6 text-texto ${estado === "carregando" ? "animate-spin" : ""} ${estado === "carregando" ? "" : "fill-current"}`} aria-hidden />
+      </span>
+    </button>
   );
 }
 
