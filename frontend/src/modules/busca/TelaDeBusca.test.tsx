@@ -72,3 +72,21 @@ describe("ItemDaBusca", () => {
     expect(screen.getByRole("button", { name: "Baixar Hit" })).toBeDisabled();
   });
 });
+
+describe("prévia no item da busca", () => {
+  it("toca e para a prévia pela capa", async () => {
+    const aoAlternar = vi.fn();
+    const { rerender } = render(<ItemDaBusca titulo="Hit" linhas={[]} previa={{ estado: "parada", aoAlternar }} />);
+    await userEvent.click(screen.getByRole("button", { name: "Ouvir prévia de Hit" }));
+    expect(aoAlternar).toHaveBeenCalled();
+    rerender(<ItemDaBusca titulo="Hit" linhas={[]} previa={{ estado: "carregando", aoAlternar }} />);
+    expect(screen.getByRole("button", { name: "Parar prévia de Hit" })).toHaveAttribute("aria-busy", "true");
+    rerender(<ItemDaBusca titulo="Hit" linhas={[]} previa={{ estado: "tocando", aoAlternar }} />);
+    expect(screen.getByRole("button", { name: "Parar prévia de Hit" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("sem prévia a capa não é botão", () => {
+    render(<ItemDaBusca titulo="Hit" linhas={[]} />);
+    expect(screen.queryByRole("button", { name: /prévia/ })).not.toBeInTheDocument();
+  });
+});

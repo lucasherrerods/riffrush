@@ -99,3 +99,25 @@ describe("no celular", () => {
     expect(screen.queryByRole("button", { name: "Baixar Sete" })).not.toBeInTheDocument();
   });
 });
+
+describe("prévia na busca do Mania", () => {
+  beforeEach(() => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+  });
+
+  it("toca a prévia que o osu! manda e cala a música de fundo", async () => {
+    const aoMudarPrevia = vi.fn();
+    const buscar = vi.fn(async () => ({ mapas: [{ ...mapa, previa: "https://b.ppy.sh/preview/7.mp3" }], temMais: false }));
+    render(<TelaDeBuscaMania baixados={new Set()} aoBaixar={vi.fn()} buscar={buscar} aoMudarPrevia={aoMudarPrevia} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Ouvir prévia de Música" }));
+    expect(await screen.findByRole("button", { name: "Parar prévia de Música" })).toHaveAttribute("aria-pressed", "true");
+    expect(aoMudarPrevia).toHaveBeenLastCalledWith(true);
+  });
+
+  it("sem prévia no mapa, a capa não toca nada", async () => {
+    render(<TelaDeBuscaMania baixados={new Set()} aoBaixar={vi.fn()} buscar={async () => ({ mapas: [mapa], temMais: false })} />);
+    await screen.findByText("Música");
+    expect(screen.queryByRole("button", { name: /prévia/ })).not.toBeInTheDocument();
+  });
+});

@@ -201,6 +201,14 @@ describe("MenuPrincipal na tela estreita", () => {
     expect(abrirLink).toHaveBeenCalledWith("https://playriffrush.vercel.app");
   });
 
+  it("o rodapé leva para as novidades do jogo, na landing", async () => {
+    const { usuario } = abrir();
+    const link = screen.getByRole("link", { name: "Novidades" });
+    expect(link).toHaveAttribute("href", "https://playriffrush.vercel.app/novidades/");
+    await usuario.click(link);
+    expect(abrirLink).toHaveBeenCalledWith("https://playriffrush.vercel.app/novidades/");
+  });
+
   it("mostra o chat no canto de baixo, à esquerda", () => {
     abrir({ chat: <p>o chat</p> });
     expect(screen.getByRole("complementary", { name: "Chat" })).toHaveTextContent("o chat");

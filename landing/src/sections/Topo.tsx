@@ -4,8 +4,11 @@ import logo from "@jogo/src-tauri/icons/icon.png";
 import { IconeGithub } from "@jogo/src/shared/ui/IconeGithub";
 import { LINKS, SECOES } from "@/links";
 
-/** Some quando a página desce e volta quando sobe, para não tapar o show. */
-export function Topo() {
+/**
+ * Some quando a página desce e volta quando sobe, para não tapar o show.
+ * Fora da página inicial, `inicio` leva as âncoras de volta para ela.
+ */
+export function Topo({ inicio = "" }: { inicio?: string }) {
   const { scrollY } = useScroll();
   const [escondido, setEscondido] = useState(false);
   useMotionValueEvent(scrollY, "change", (y) => setEscondido(y > 160 && y > (scrollY.getPrevious() ?? 0)));
@@ -17,16 +20,19 @@ export function Topo() {
       className="fixed inset-x-0 top-0 z-50 border-b border-borda/60 bg-fundo/80 backdrop-blur-md"
     >
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-4 md:px-6">
-        <a href="#" className="flex items-center gap-3">
+        <a href={inicio || "#"} className="flex items-center gap-3">
           <img src={logo} alt="" className="size-9" />
           <span className="font-letreiro text-2xl">Riff Rush</span>
         </a>
         <div className="hidden items-center gap-8 md:flex">
           {SECOES.map((secao) => (
-            <a key={secao.id} href={`#${secao.id}`} className="text-texto-suave transition-colors hover:text-texto">
+            <a key={secao.id} href={`${inicio}#${secao.id}`} className="text-texto-suave transition-colors hover:text-texto">
               {secao.rotulo}
             </a>
           ))}
+          <a href={LINKS.novidades} className="text-texto-suave transition-colors hover:text-texto">
+            Novidades
+          </a>
         </div>
         <div className="flex items-center gap-4">
           <a href={LINKS.github} aria-label="Riff Rush no GitHub" className="text-texto-suave transition-colors hover:text-texto">

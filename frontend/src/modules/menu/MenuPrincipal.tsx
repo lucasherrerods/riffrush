@@ -125,6 +125,7 @@ export function MenuPrincipal({ volumeDosEfeitos, noCelular = false, aoJogar, ao
           </a>
         ))}
         <LinkExterno url={URL_DA_LANDING}>Sobre</LinkExterno>
+        <LinkExterno url={`${URL_DA_LANDING}/novidades/`}>Novidades</LinkExterno>
         <span>© 2026 Riff Rush</span>
         <LinkExterno url={URL_DO_PROJETO} rotulo="Riff Rush no GitHub">
           <IconeGithub />

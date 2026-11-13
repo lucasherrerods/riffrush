@@ -2,19 +2,6 @@ import { render, screen, within } from "@testing-library/react";
 import { App } from "./App";
 import { LINKS } from "./links";
 
-beforeAll(() => {
-  // O jsdom não tem canvas nem IntersectionObserver; a pista e as animações só precisam existir.
-  HTMLCanvasElement.prototype.getContext = vi.fn(() => null) as never;
-  globalThis.IntersectionObserver = class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-    takeRecords() {
-      return [];
-    }
-  } as never;
-});
-
 describe("App", () => {
   it("leva para jogar no navegador e para baixar o jogo logo no topo", () => {
     render(<App />);
