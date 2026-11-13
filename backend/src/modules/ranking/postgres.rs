@@ -47,12 +47,13 @@ impl From<Linha> for LinhaDoRanking {
     }
 }
 
+/// Tapping e gamepad disputam o mesmo top (`grupo_do_ranking`).
 /// O recorde de cada jogador (a view ordena por pontos e, no empate, por quem chegou primeiro), com o top e a linha de quem pediu.
 const CONSULTA: &str = "
     SELECT r.posicao, r.jogadores, r.conta_id, r.partida_id, c.nome, c.avatar, r.pontos, r.acertos, r.total, r.precisao, r.maior_sequencia, r.jogada_em, r.jeito_de_jogar
     FROM recordes_por_jeito r
     JOIN contas c ON c.id = r.conta_id
-    WHERE r.musica_id = $1 AND r.dificuldade = $2 AND r.instrumento = $3 AND r.jeito_de_jogar = $6 AND r.velocidade = $7 AND (r.posicao <= $4 OR r.conta_id = $5)
+    WHERE r.musica_id = $1 AND r.dificuldade = $2 AND r.instrumento = $3 AND r.grupo = $6 AND r.velocidade = $7 AND (r.posicao <= $4 OR r.conta_id = $5)
     ORDER BY r.posicao";
 
 /// O melhor de cada jogador pela precisão, só das partidas que o servidor conferiu, como no ranking pelos pontos.
@@ -61,7 +62,7 @@ const CONSULTA_POR_PRECISAO: &str = "
     WITH melhores AS (
         SELECT DISTINCT ON (conta_id) id AS partida_id, conta_id, pontos, acertos, total, precisao, maior_sequencia, jogada_em, jeito_de_jogar
         FROM partidas
-        WHERE musica_id = $1 AND dificuldade = $2 AND instrumento = $3 AND jeito_de_jogar = $6 AND velocidade = $7 AND regras = 2
+        WHERE musica_id = $1 AND dificuldade = $2 AND instrumento = $3 AND grupo_do_ranking(jeito_de_jogar) = $6 AND velocidade = $7 AND regras = 2
           AND precisao IS NOT NULL AND NOT derrota AND NOT fantasma
         ORDER BY conta_id, precisao DESC, maior_sequencia DESC NULLS LAST, jogada_em ASC
     ),
@@ -231,7 +232,7 @@ impl RepositorioDoRanking for RankingPostgres {
             .bind(instrumento.como_texto())
             .bind(i64::from(ate))
             .bind(conta)
-            .bind(jeito.como_texto())
+            .bind(jeito.grupo_do_ranking())
             .bind(velocidade)
             .fetch_all(&self.0)
             .await

@@ -146,7 +146,8 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
   // A partida recomeça quando as opções trocam: configurações que ela não usa (como o volume geral do Alt + roda) não podem gerar um objeto novo.
   const opcoesAnteriores = useRef<OpcoesDaPartida | null>(null);
   const opcoes = useMemo(() => {
-    const base = opcoesDaPartida(configuracoes, audio);
+    // Com um controle conectado, a partida usa o jeito escolhido para o controle.
+    const base = opcoesDaPartida(configuracoes, audio, undefined, comControle ? "controle" : "teclado");
     const novas = comControle
       ? { ...base, rotulosDosTrastes: configuracoes.botoesDoControle.map(nomeDoBotao), rotuloDaTeclaDaEstrela: nomeDoBotao(configuracoes.botaoDaEstrela) }
       : base;

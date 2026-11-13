@@ -42,7 +42,14 @@ describe("opcoesDoJogador", () => {
   });
 
   it("no controle mantém o mapeamento das configurações", () => {
-    expect(opcoesDoJogador(OPCOES_PADRAO_DA_PARTIDA, controle(0))).toEqual(OPCOES_PADRAO_DA_PARTIDA);
+    const opcoes = { ...OPCOES_PADRAO_DA_PARTIDA, jeitoDeJogar: "gamepad" as const };
+    expect(opcoesDoJogador(opcoes, controle(0))).toEqual(opcoes);
+  });
+
+  it("cada jogador joga no jeito escolhido para o aparelho dele", () => {
+    const opcoes = { ...OPCOES_PADRAO_DA_PARTIDA, jeitoNoTeclado: "tapping" as const, jeitoNoControle: "palhetada" as const };
+    expect(opcoesDoJogador(opcoes, DIREITA).jeitoDeJogar).toBe("tapping");
+    expect(opcoesDoJogador(opcoes, controle(1)).jeitoDeJogar).toBe("palhetada");
   });
 });
 

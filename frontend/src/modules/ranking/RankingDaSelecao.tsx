@@ -1,9 +1,8 @@
 import { useState, type ComponentProps } from "react";
-import { JEITOS_DE_JOGAR, NOMES_DOS_JEITOS, type JeitoDeJogar } from "@/modules/rock/gameplay";
+import type { JeitoDeJogar } from "@/modules/rock/gameplay";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
+import { OPCOES_DOS_JEITOS, rankingDoJeito } from "./jeitos";
 import { PainelDeRanking } from "./PainelDeRanking";
-
-export const OPCOES_DOS_JEITOS = JEITOS_DE_JOGAR.map((id) => ({ id, rotulo: NOMES_DOS_JEITOS[id] }));
 
 interface Props extends Omit<ComponentProps<typeof PainelDeRanking>, "jeito"> {
   /** O jeito configurado pelo jogador. */
@@ -12,7 +11,7 @@ interface Props extends Omit<ComponentProps<typeof PainelDeRanking>, "jeito"> {
 
 /** O ranking da música na seleção: abre no jeito de quem joga e deixa ver os outros. */
 export function RankingDaSelecao({ jeitoInicial, ...painel }: Props) {
-  const [jeito, setJeito] = useState(jeitoInicial);
+  const [jeito, setJeito] = useState(() => rankingDoJeito(jeitoInicial));
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       {/* Pequeno, no canto: a lista do ranking começa mais acima. */}

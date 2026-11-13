@@ -7,20 +7,22 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { JEITOS, type TeclasDoExemplo } from "../jeitosDeJogar";
 
 interface Props {
+  /** "Jeito de jogar no teclado", por exemplo: também nomeia o grupo para leitores de tela. */
+  titulo: string;
   valor: JeitoDeJogar;
   aoEscolher: (jeito: JeitoDeJogar) => void;
   teclas: TeclasDoExemplo;
 }
 
 /** Os três jeitos de jogar lado a lado: o escolhido fica aceso e os outros apagados. Cada um tem a sua ajuda. */
-export function SeletorDeJeitoDeJogar({ valor, aoEscolher, teclas }: Props) {
+export function SeletorDeJeitoDeJogar({ titulo, valor, aoEscolher, teclas }: Props) {
   const [ajuda, setAjuda] = useState<JeitoDeJogar | null>(null);
   const aberto = JEITOS.find((j) => j.id === ajuda);
 
   return (
     <div className="flex flex-col gap-2 rounded-lg bg-superficie-elevada p-4 max-md:p-3">
-      <p className="text-base font-semibold max-md:text-sm">Jeito de jogar</p>
-      <div role="radiogroup" aria-label="Jeito de jogar" className="grid grid-cols-3 gap-2">
+      <p className="text-base font-semibold max-md:text-sm">{titulo}</p>
+      <div role="radiogroup" aria-label={titulo} className="grid grid-cols-3 gap-2">
         {JEITOS.map((jeito) => {
           const escolhido = jeito.id === valor;
           return (

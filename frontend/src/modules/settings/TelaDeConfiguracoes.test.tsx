@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { capturarBotao, useControleConectado } from "@/modules/gamepad";
 import { definirTelaCheia, ehJanelaNativa } from "@/modules/platform";
@@ -57,29 +57,32 @@ describe("TelaDeConfiguracoes", () => {
     expect(aoVoltar).not.toHaveBeenCalled();
   });
 
-  it("o jeito de jogar fica no topo dos controles, com um só escolhido", async () => {
+  it("o jeito de jogar do teclado e o do controle ficam no topo dos controles, cada um com o seu", async () => {
     const { aoMudar, usuario } = abrir();
-    const grupo = screen.getByRole("radiogroup", { name: "Jeito de jogar" });
-    expect(screen.getByRole("radio", { name: /Gamepad/ })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByRole("radio", { name: /Tapping/ })).toHaveAttribute("aria-checked", "false");
-    expect(grupo.compareDocumentPosition(screen.getByLabelText("Tecla do traste Verde")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    await usuario.click(screen.getByRole("radio", { name: /Palhetada/ }));
-    expect(aoMudar).toHaveBeenCalledWith(expect.objectContaining({ jeitoDeJogar: "palhetada" }));
+    const teclado = within(screen.getByRole("radiogroup", { name: "Jeito de jogar no teclado" }));
+    const controle = within(screen.getByRole("radiogroup", { name: "Jeito de jogar no controle" }));
+    expect(teclado.getByRole("radio", { name: /Tapping/ })).toHaveAttribute("aria-checked", "true");
+    expect(controle.getByRole("radio", { name: /Gamepad/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radiogroup", { name: "Jeito de jogar no controle" }).compareDocumentPosition(screen.getByLabelText("Tecla do traste Verde")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await usuario.click(teclado.getByRole("radio", { name: /Palhetada/ }));
+    expect(aoMudar).toHaveBeenLastCalledWith(expect.objectContaining({ jeitoNoTeclado: "palhetada", jeitoNoControle: "gamepad" }));
+    await usuario.click(controle.getByRole("radio", { name: /Tapping/ }));
+    expect(aoMudar).toHaveBeenLastCalledWith(expect.objectContaining({ jeitoNoControle: "tapping" }));
   });
 
   it("a ajuda de cada jeito abre uma janela explicando como ele funciona", async () => {
     const { usuario } = abrir();
-    await usuario.click(screen.getByRole("button", { name: "Como funciona o Palhetada" }));
+    await usuario.click(screen.getAllByRole("button", { name: "Como funciona o Palhetada" })[0]);
     const janela = screen.getByRole("dialog");
     expect(janela).toHaveTextContent("Palhetada");
     expect(janela).toHaveTextContent("segure A e S e aperte Enter");
   });
 
-  it("a tecla da palheta só aparece na palhetada", () => {
+  it("a tecla da palheta só aparece na palhetada do teclado", () => {
     const { unmount } = render(<TelaDeConfiguracoes configuracoes={CONFIGURACOES_PADRAO} aoMudar={vi.fn()} aoVoltar={vi.fn()} />);
     expect(screen.queryByLabelText("Tecla da palheta")).not.toBeInTheDocument();
     unmount();
-    render(<TelaDeConfiguracoes configuracoes={{ ...CONFIGURACOES_PADRAO, jeitoDeJogar: "palhetada" }} aoMudar={vi.fn()} aoVoltar={vi.fn()} />);
+    render(<TelaDeConfiguracoes configuracoes={{ ...CONFIGURACOES_PADRAO, jeitoNoTeclado: "palhetada" }} aoMudar={vi.fn()} aoVoltar={vi.fn()} />);
     expect(screen.getByLabelText("Tecla da palheta")).toHaveTextContent("Enter");
   });
 
