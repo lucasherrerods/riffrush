@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { CarregarMais, Chip, GrupoDeChips, TelaDeBusca } from "@/modules/busca";
+import { CarregarMais, Chip, GrupoDeChips, TelaDeBusca, usePrevia, type FonteDaPrevia } from "@/modules/busca";
 import { useValorAtrasado } from "@/shared/hooks/useValorAtrasado";
 import { CampoDeSelecao } from "@/shared/ui/CampoDeSelecao";
 import { ConfirmacaoDeTamanho } from "./componentes/ConfirmacaoDeTamanho";
 import { ResultadoDoEncore } from "./componentes/ResultadoDoEncore";
 import { buscarMd5sMaisJogados } from "@/modules/ranking";
+import { fonteDaPreviaDoChart } from "./previa";
 import { useBaixarDoEncore, type AoBaixar } from "./useBaixarDoEncore";
 import {
   FILTROS_PADRAO,
@@ -18,6 +19,7 @@ import {
   type FiltrosDaBusca,
   type Instrumento,
   type RespostaDaBusca,
+  type ResultadoDaBusca,
 } from "./encore";
 
 interface Props {
@@ -30,6 +32,9 @@ interface Props {
   /** md5 dos charts que já estão na biblioteca. */
   baixadas?: ReadonlySet<string>;
   aoJogar?: (md5: string) => void;
+  /** Avisa quando uma prévia começa ou para, para a música de fundo dar lugar a ela. */
+  aoMudarPrevia?: (tocando: boolean) => void;
+  obterPrevia?: (resultado: ResultadoDaBusca, sinal: AbortSignal) => Promise<FonteDaPrevia>;
 }
 
 const OPCOES_DE_INSTRUMENTO: { id: Instrumento | "todos"; rotulo: string }[] = [
@@ -84,7 +89,8 @@ const buscarPadrao: NonNullable<Props["buscar"]> = async (filtros, pagina, { sin
 
 type Estado = { tipo: "carregando" } | { tipo: "pronto"; resposta: RespostaDaBusca } | { tipo: "erro"; mensagem: string };
 
-export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarPadrao, atrasoMs = 500, aoBaixar, baixadas = new Set(), aoJogar }: Props) {
+export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarPadrao, atrasoMs = 500, aoBaixar, baixadas = new Set(), aoJogar, aoMudarPrevia, obterPrevia = fonteDaPreviaDoChart }: Props) {
+  const previa = usePrevia({ aoMudar: aoMudarPrevia });
   const [comVideo, setComVideo] = useState(false);
   const { baixando, pergunta, baixar, responder } = useBaixarDoEncore(aoBaixar, comVideo);
   const [texto, setTexto] = useState(FILTROS_PADRAO.texto);
@@ -151,6 +157,7 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarPadrao, atrasoMs
           </>
         }
         estado={estado.tipo === "pronto" ? { tipo: "pronto", vazio: estado.resposta.resultados.length === 0 } : estado}
+        aviso={previa.erro}
         mensagemDeVazio="Nenhuma música encontrada. Tente outro nome ou tire algum filtro."
         fonte="Charts da comunidade, servidos pelo Chorus Encore (enchor.us)."
       >
@@ -164,6 +171,7 @@ export function TelaDeBuscaDeMusicas({ aoVoltar, buscar = buscarPadrao, atrasoMs
               ocupado={!!baixando}
               aoBaixar={aoBaixar && (() => void baixar(r))}
               aoJogar={() => aoJogar?.(r.md5)}
+              previa={{ estado: previa.estadoDe(r.md5), aoAlternar: () => previa.alternar(r.md5, (sinal) => obterPrevia(r, sinal)) }}
             />
           ))}
         {temMais && <CarregarMais carregando={carregandoMais} aoCarregar={() => setPagina((p) => p + 1)} />}

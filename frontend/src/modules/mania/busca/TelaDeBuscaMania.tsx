@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AcaoDaBusca, CarregarMais, Chip, GrupoDeChips, ItemDaBusca, TelaDeBusca, type EstadoDaBusca } from "@/modules/busca";
+import { AcaoDaBusca, CarregarMais, Chip, GrupoDeChips, ItemDaBusca, TelaDeBusca, usePrevia, type EstadoDaBusca } from "@/modules/busca";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cabeNoCelular, teclasDaBuscaNoCelular } from "../beatmaps/celular";
 import { faixaDasEstrelas } from "../beatmaps/dificuldades";
@@ -25,9 +25,12 @@ interface Props {
   /** Para os testes. */
   buscar?: (filtros: FiltrosDaBusca) => Promise<PaginaDaBusca>;
   baixar?: typeof baixarOsz;
+  /** Avisa quando uma prévia começa ou para, para a música de fundo dar lugar a ela. */
+  aoMudarPrevia?: (tocando: boolean) => void;
 }
 
-export function TelaDeBuscaMania({ aoVoltar, baixados, aoBaixar, aoJogar, buscar = buscarMapas, baixar = baixarOsz }: Props) {
+export function TelaDeBuscaMania({ aoVoltar, baixados, aoBaixar, aoJogar, buscar = buscarMapas, baixar = baixarOsz, aoMudarPrevia }: Props) {
+  const previa = usePrevia({ aoMudar: aoMudarPrevia });
   const [texto, setTexto] = useState("");
   const [status, setStatus] = useState<StatusDaBusca>("ranked");
   const [teclas, setTeclas] = useState<number[]>([]);
@@ -115,7 +118,7 @@ export function TelaDeBuscaMania({ aoVoltar, baixados, aoBaixar, aoJogar, buscar
           </div>
         </>
       }
-      aviso="Só os mapas ranked e loved baixados daqui valem XP e ranking."
+      aviso={previa.erro ?? "Só os mapas ranked e loved baixados daqui valem XP e ranking."}
       estado={estado}
       mensagemDeVazio="Nenhum mapa encontrado."
       fonte="Mapas da comunidade do osu!, servidos por catboy.best e osu.direct."
@@ -135,6 +138,11 @@ export function TelaDeBuscaMania({ aoVoltar, baixados, aoBaixar, aoJogar, buscar
               dificuldades.map((d) => `${d.teclas}K ${d.estrelas.toFixed(1).replace(".", ",")}★ ${faixaDasEstrelas(d.estrelas)}`).join(" · "),
             ]}
             progresso={progresso}
+            previa={
+              mapa.previa
+                ? { estado: previa.estadoDe(String(mapa.beatmapsetId)), aoAlternar: () => previa.alternar(String(mapa.beatmapsetId), async () => ({ url: mapa.previa!, inicioS: 0 })) }
+                : undefined
+            }
             acao={
               <AcaoDaBusca
                 nome={mapa.titulo}

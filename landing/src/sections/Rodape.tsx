@@ -4,7 +4,7 @@ import logo from "@jogo/src-tauri/icons/icon.png";
 import { IconeGithub } from "@jogo/src/shared/ui/IconeGithub";
 import { LINKS, SECOES } from "@/links";
 
-const COLUNAS = [
+const colunas = (inicio: string) => [
   {
     titulo: "Jogar",
     links: [
@@ -12,18 +12,19 @@ const COLUNAS = [
       { rotulo: "Baixar para PC", href: LINKS.baixar },
     ],
   },
-  { titulo: "Página", links: SECOES.map((s) => ({ rotulo: s.rotulo, href: `#${s.id}` })) },
+  { titulo: "Página", links: SECOES.map((s) => ({ rotulo: s.rotulo, href: `${inicio}#${s.id}` })) },
   {
     titulo: "Projeto",
     links: [
+      { rotulo: "Novidades", href: LINKS.novidades },
       { rotulo: "Código no GitHub", href: LINKS.github },
       { rotulo: "Versões", href: LINKS.baixar },
     ],
   },
 ];
 
-/** Rodapé com o nome do jogo gigante subindo do chão do palco. */
-export function Rodape() {
+/** Rodapé com o nome do jogo gigante subindo do chão do palco. `inicio` como no Topo. */
+export function Rodape({ inicio = "" }: { inicio?: string }) {
   const ref = useRef<HTMLElement>(null);
   const parado = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end end"] });
@@ -33,14 +34,14 @@ export function Rodape() {
     <footer ref={ref} className="relative overflow-hidden border-t border-borda">
       <div className="mx-auto grid max-w-6xl gap-12 px-4 pt-16 md:grid-cols-12 md:pt-20 md:px-6">
         <div className="md:col-span-5">
-          <a href="#" className="flex items-center gap-3">
+          <a href={inicio || "#"} className="flex items-center gap-3">
             <img src={logo} alt="" className="size-10" />
             <span className="font-letreiro text-3xl">Riff Rush</span>
           </a>
           <p className="mt-4 max-w-[36ch] text-base text-texto-suave">Jogo de ritmo grátis e de código aberto, feito para tocar em grupo.</p>
         </div>
         <nav aria-label="Rodapé" className="grid grid-cols-2 gap-8 sm:grid-cols-3 md:col-span-7">
-          {COLUNAS.map((coluna) => (
+          {colunas(inicio).map((coluna) => (
             <div key={coluna.titulo}>
               <p className="mb-4 font-titulo text-xl tracking-wide text-texto-suave">{coluna.titulo}</p>
               <ul className="space-y-2">

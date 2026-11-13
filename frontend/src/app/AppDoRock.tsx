@@ -618,7 +618,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
               />
             )}
             {tela === "buscaDeMusicas" && (
-              <TelaDeBuscaDeMusicas aoVoltar={() => setTela(voltarDaBuscaPara)} aoBaixar={baixarMusica} baixadas={baixadasDoEncore} aoJogar={jogarBaixada} />
+              <TelaDeBuscaDeMusicas aoVoltar={() => setTela(voltarDaBuscaPara)} aoBaixar={baixarMusica} baixadas={baixadasDoEncore} aoJogar={jogarBaixada} aoMudarPrevia={(tocando) => playerDeMusica.suspender(tocando, { esmaecer: true })} />
             )}
             {tela === "atividades" && <TelaDeAtividades aoVoltar={() => setTela("menu")} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />}
             {tela === "online" && (
