@@ -17,13 +17,15 @@ export interface SalaOnline {
   codigo: string;
   nome: string;
   jogadores: number;
+  /** As salas das versões antigas não dizem o modo: são do Rock. */
+  modo?: string;
 }
 
 export function lerSalasOnline(json: unknown): SalaOnline[] {
   if (!Array.isArray(json)) return [];
-  return json.filter(
-    (s): s is SalaOnline => typeof s?.codigo === "string" && FORMATO_DO_CODIGO.test(s.codigo) && typeof s.nome === "string" && Number.isInteger(s.jogadores),
-  );
+  return json
+    .filter((s): s is SalaOnline => typeof s?.codigo === "string" && FORMATO_DO_CODIGO.test(s.codigo) && typeof s.nome === "string" && Number.isInteger(s.jogadores))
+    .map(({ codigo, nome, jogadores, modo }) => ({ codigo, nome, jogadores, ...(typeof modo === "string" && { modo }) }));
 }
 export const urlParaEntrarNaSala = (base: string, codigo: string) => `${semBarraNoFim(base)}/sala/${codigo}`;
 

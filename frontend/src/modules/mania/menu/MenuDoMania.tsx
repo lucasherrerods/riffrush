@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Activity, Play, Radio, Search, Settings2, Trophy } from "lucide-react";
+import { Activity, Play, Radio, Search, Settings2, Trophy, Users } from "lucide-react";
 import { LogoDoJogo, TelaInicial, type TrocaDeModo } from "@/modules/menu";
 import { TeclaDoMania } from "./TeclaDoMania";
 
@@ -7,6 +7,8 @@ interface Props {
   aoJogar: () => void;
   aoBuscar: () => void;
   aoConfigurar: () => void;
+  /** As salas na LAN e online, com até 4 jogadores. */
+  aoMultijogador?: () => void;
   /** O leaderboard de XP e dos mapas; sem ele (contas desligadas), a opção não aparece. */
   aoLeaderboard?: () => void;
   /** Quem está online nos dois modos, para assistir; sem relay ou sem contas, a opção não aparece. */
@@ -23,7 +25,7 @@ interface Props {
 }
 
 /** A tela inicial do Mania: a mesma do Rock, com as opções em teclas do mania. */
-export function MenuDoMania({ aoJogar, aoBuscar, aoConfigurar, aoLeaderboard, aoOnline, aoAtividades, chat, alavanca, troca, estatica }: Props) {
+export function MenuDoMania({ aoJogar, aoBuscar, aoConfigurar, aoMultijogador, aoLeaderboard, aoOnline, aoAtividades, chat, alavanca, troca, estatica }: Props) {
   return (
     <TelaInicial
       logo={<LogoDoJogo modo="Mania" fofa />}
@@ -35,6 +37,7 @@ export function MenuDoMania({ aoJogar, aoBuscar, aoConfigurar, aoLeaderboard, ao
       rotuloDoMenu="Menu do Mania"
       opcoes={[
         { rotulo: "Jogar", icone: Play, acao: aoJogar },
+        ...(aoMultijogador ? [{ rotulo: "Multiplayer", icone: Users, acao: aoMultijogador }] : []),
         { rotulo: "Buscar mapas", icone: Search, acao: aoBuscar },
         ...(aoLeaderboard ? [{ rotulo: "Leaderboard", icone: Trophy, acao: aoLeaderboard }] : []),
         ...(aoOnline ? [{ rotulo: "Online", icone: Radio, acao: aoOnline }] : []),

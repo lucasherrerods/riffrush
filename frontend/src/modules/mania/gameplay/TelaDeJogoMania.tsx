@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence } from "framer-motion";
 import { agoraNoAudio, momentoDoEvento, obterContextoDeAudio, saidaDeAudio } from "@/modules/audio";
 import { pontoDaPartida } from "@/modules/player";
@@ -58,6 +58,18 @@ export interface ResultadoDoMania {
 /** O que a partida manda para quem assiste ao vivo: as entradas novas a cada segundo, com até onde a música chegou. */
 export type EventoDoManiaAoVivo = { tipo: "inicio" } | { tipo: "lote"; entradas: EntradaDoMania[]; ate: number } | { tipo: "fim" };
 
+/** O placar que a partida em rede manda para a sala. */
+export interface JogadaEmRede {
+  pontos: number;
+  precisao: number;
+  combo: number;
+  derrota: boolean;
+  terminou: boolean;
+}
+
+/** De quanto em quanto tempo o placar vai para a sala, como no Rock. */
+const PLACAR_MS = 125;
+
 /** De quanto em quanto tempo as entradas vão para quem assiste. */
 const LOTE_MS = 1000;
 
@@ -95,6 +107,8 @@ interface Props {
   aoTransmitir?: (evento: EventoDoManiaAoVivo) => void;
   /** Assistindo ao vivo: o performance.now em que a música começou para quem assiste, que entra no meio dela. */
   aoVivo?: { inicio: number };
+  /** Partida numa sala: a música larga no `inicio` da sala (performance.now), o placar vai para os outros e os deles aparecem na tela. */
+  rede?: { inicio: number; aoAtualizar: (jogada: JogadaEmRede) => void; adversarios?: ReactNode };
 }
 
 const decodificarPadrao = (contexto: AudioContext, bytes: Uint8Array) => contexto.decodeAudioData(bytes.slice().buffer);
@@ -102,7 +116,7 @@ const decodificarPadrao = (contexto: AudioContext, bytes: Uint8Array) => context
 /** No treino ninguém falha, e os mods que derrubam a partida no primeiro erro não fazem sentido. */
 const modsDoTreino = (mods: number) => (mods & ~(MODS.SD | MODS.PF)) | MODS.NF;
 
-export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_PADRAO_DO_MANIA, aoTerminar, aoSair, treino = false, decodificar = decodificarPadrao, replay, rotuloDoReplay, aoTransmitir, aoVivo, aoMarcarPontoDaMusica }: Props) {
+export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_PADRAO_DO_MANIA, aoTerminar, aoSair, treino = false, decodificar = decodificarPadrao, replay, rotuloDoReplay, aoTransmitir, aoVivo, aoMarcarPontoDaMusica, rede }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [precisao, setPrecisao] = useState(1);
@@ -113,10 +127,11 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
   const [voltas, setVoltas] = useState<Voltas>(VOLTAS_INICIAIS);
   /** Segundos que faltam para a música voltar, na contagem do treino. */
   const [falta, setFalta] = useState(0);
-  const retornos = useRef({ aoTerminar, aoSair, aoTransmitir, aoMarcarPontoDaMusica });
-  retornos.current = { aoTerminar, aoSair, aoTransmitir, aoMarcarPontoDaMusica };
+  const aoAtualizar = rede?.aoAtualizar;
+  const retornos = useRef({ aoTerminar, aoSair, aoTransmitir, aoMarcarPontoDaMusica, aoAtualizar });
+  retornos.current = { aoTerminar, aoSair, aoTransmitir, aoMarcarPontoDaMusica, aoAtualizar };
   // Lido só ao montar: quem assiste remonta a tela (pela key) a cada sincronização.
-  const inicioAoVivo = useRef(aoVivo?.inicio);
+  const inicioAoVivo = useRef(aoVivo?.inicio ?? rede?.inicio);
   // Trocar de trecho não decodifica o áudio de novo.
   const decodificado = useRef<{ mapa: MapaParaJogar; buffer: AudioBuffer } | null>(null);
 
@@ -231,6 +246,9 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
         tocar(contagemNoTreino ? CONTAGEM_S : RECOMECO_S, desdeNoTreino);
       };
 
+      const jogada = (terminou: boolean): JogadaEmRede => ({ pontos: motor.pontuacao(), precisao: motor.precisao(), combo: motor.combo, derrota: motor.derrota, terminou });
+      let ultimoPlacarMs = -Infinity;
+
       let terminada = false;
       const terminar = () => {
         if (terminada) return;
@@ -250,6 +268,7 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
           janelaMs: motor.janelas()[4],
         };
         if (enviadas < entradas.length) mandarLote(quadro.agoraMs);
+        retornos.current.aoAtualizar?.(jogada(true));
         pararTudo();
         retornos.current.aoTerminar(resultado);
       };
@@ -353,6 +372,10 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
         lerEventos();
         quadro.combo = motor.combo;
         quadro.vida = motor.vida;
+        if (retornos.current.aoAtualizar && quadro.agoraMs >= 0 && quadro.agoraMs - ultimoPlacarMs >= PLACAR_MS) {
+          ultimoPlacarMs = quadro.agoraMs;
+          retornos.current.aoAtualizar(jogada(false));
+        }
         if (c && geometria) {
           c.setTransform(quadro.escala ?? 1, 0, 0, quadro.escala ?? 1, 0, 0);
           desenharPista(c, geometria, quadro);
@@ -431,6 +454,7 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
           <p className="text-texto-suave">{mapa.dificuldade}</p>
         </div>
       </header>
+      {rede?.adversarios && <div className="pointer-events-none absolute top-20 right-6 z-10 w-72 max-md:right-2 max-md:w-48">{rede.adversarios}</div>}
       <canvas ref={canvas} aria-label="Pista do Mania" className="h-full w-full touch-none select-none" />
       {falta > 0 && (
         <p role="timer" className="pointer-events-none absolute inset-0 grid place-items-center font-titulo text-8xl">

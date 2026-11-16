@@ -1,4 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
+import { BotaoDeSugerir } from "@/modules/amigos";
+import { sugestaoDaMusica } from "./sugestaoDaMusica";
 import { FileAudio, Flame, Info, ListOrdered, RotateCcw, Search, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { rotuloDoComando, useDispositivo } from "@/modules/gamepad";
@@ -218,6 +220,7 @@ export function TelaDeSelecao(props: Props) {
   );
 
   const favoritar = <BotaoDeFavoritar favorita={favorita} aoAlternar={alternarFavoritaAtual} />;
+  const sugerir = !vazia && <BotaoDeSugerir sugestao={sugestaoDaMusica(musica, dificuldade, instrumento)} motivoSemSugestao="Só dá para sugerir músicas baixadas do Encore." />;
   const escolhaDoInstrumento = instrumentos.length > 1 && (
     <GrupoDeOpcoes titulo="Instrumento" tituloEscondido opcoes={instrumentos.map((i) => ({ id: i.id, rotulo: i.rotulo }))} valor={instrumento} aoEscolher={escolherInstrumento} />
   );
@@ -356,6 +359,7 @@ export function TelaDeSelecao(props: Props) {
         subtitulo={vazia ? undefined : musica.artista}
         capa={!vazia && <Capa musica={musica} decorativa className="size-full" />}
         favoritar={!vazia && favoritar}
+        sugerir={sugerir}
         detalhes={
           !vazia && (
             <>
@@ -397,6 +401,7 @@ export function TelaDeSelecao(props: Props) {
               }
               acao={escolhaDoInstrumento}
               favoritar={favoritar}
+              sugerir={sugerir}
             />
 
             {ranking ? (

@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use super::casos_de_uso::ErroDaConversa;
-use super::dominio::{MensagemPrivada, NaoLidas};
+use super::dominio::{MensagemPrivada, ModoDaSugestao, NaoLidas, SugestaoDeMusica};
 use crate::modules::conta::Token;
 use crate::shared::erro::ErroDaApi;
 use crate::shared::estado::EstadoDoApp;
@@ -22,8 +22,48 @@ impl From<ErroDaConversa> for ErroDaApi {
             ErroDaConversa::SessaoInvalida => Self::NaoAutorizado,
             ErroDaConversa::NaoSaoAmigos => Self::Proibido,
             ErroDaConversa::RapidoDemais => Self::MuitasRequisicoes,
-            ErroDaConversa::TextoVazio => Self::Invalido(erro.to_string()),
+            ErroDaConversa::TextoVazio | ErroDaConversa::SugestaoInvalida => Self::Invalido(erro.to_string()),
             ErroDaConversa::Falha(falha) => Self::Interno(falha.0),
+        }
+    }
+}
+
+/// Uma música para o amigo tocar: um chart do Encore (`rock`, pelo md5) ou um conjunto do osu! (`mania`, pelo id).
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct SugestaoDaMensagem {
+    /// `rock` ou `mania`.
+    modo: String,
+    musica: String,
+    versao: Option<String>,
+    titulo: String,
+    #[serde(default)]
+    artista: String,
+    #[serde(default)]
+    dificuldade: String,
+}
+
+impl SugestaoDaMensagem {
+    fn no_dominio(self) -> Result<SugestaoDeMusica, ErroDaConversa> {
+        Ok(SugestaoDeMusica {
+            modo: ModoDaSugestao::do_texto(&self.modo).ok_or(ErroDaConversa::SugestaoInvalida)?,
+            musica: self.musica,
+            versao: self.versao,
+            titulo: self.titulo,
+            artista: self.artista,
+            dificuldade: self.dificuldade,
+        })
+    }
+}
+
+impl From<SugestaoDeMusica> for SugestaoDaMensagem {
+    fn from(s: SugestaoDeMusica) -> Self {
+        Self {
+            modo: s.modo.como_texto().into(),
+            musica: s.musica,
+            versao: s.versao,
+            titulo: s.titulo,
+            artista: s.artista,
+            dificuldade: s.dificuldade,
         }
     }
 }
@@ -34,6 +74,7 @@ pub struct MensagemDaConversa {
     de: Uuid,
     para: Uuid,
     texto: String,
+    sugestao: Option<SugestaoDaMensagem>,
     enviada_em: DateTime<Utc>,
 }
 
@@ -44,6 +85,7 @@ impl From<MensagemPrivada> for MensagemDaConversa {
             de: m.de,
             para: m.para,
             texto: m.texto,
+            sugestao: m.sugestao.map(Into::into),
             enviada_em: m.enviada_em,
         }
     }
@@ -51,7 +93,9 @@ impl From<MensagemPrivada> for MensagemDaConversa {
 
 #[derive(Deserialize, ToSchema)]
 pub struct CorpoDaMensagem {
+    #[serde(default)]
     texto: String,
+    sugestao: Option<SugestaoDaMensagem>,
 }
 
 #[derive(Deserialize, utoipa::IntoParams)]
@@ -75,7 +119,7 @@ impl From<NaoLidas> for NaoLidasDoAmigo {
     }
 }
 
-/// Manda uma mensagem para o amigo. Fica guardada e chega na hora se ele estiver online.
+/// Manda uma mensagem para o amigo, com uma sugestão de música se quiser. Fica guardada e chega na hora se ele estiver online.
 #[utoipa::path(post, path = "/amigos/{conta_id}/mensagens", params(("conta_id" = Uuid, Path)), request_body = CorpoDaMensagem, responses((status = 201, body = MensagemDaConversa), (status = 400), (status = 401), (status = 403), (status = 429)), security(("token" = [])))]
 pub async fn enviar(
     State(estado): State<EstadoDoApp>,
@@ -86,7 +130,8 @@ pub async fn enviar(
     if corpo.texto.len() > TAMANHO_MAXIMO_DO_CORPO {
         return Err(ErroDaApi::Invalido("mensagem grande demais".into()));
     }
-    let mensagem = estado.conversa.enviar(&token, conta_id, &corpo.texto).await?;
+    let sugestao = corpo.sugestao.map(SugestaoDaMensagem::no_dominio).transpose()?;
+    let mensagem = estado.conversa.enviar(&token, conta_id, &corpo.texto, sugestao).await?;
     Ok((StatusCode::CREATED, Json(mensagem.into())))
 }
 

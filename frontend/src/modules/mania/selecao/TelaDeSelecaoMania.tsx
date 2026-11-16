@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react"
+import { BotaoDeSugerir } from "@/modules/amigos"
+import { sugestaoDoConjunto } from "./sugestaoDoConjunto"
 import { Download, FileAudio, Info, ListOrdered } from "lucide-react"
 import {
   AvisoDaLista,
@@ -205,6 +207,12 @@ export function TelaDeSelecaoMania({
   }, [idDoConjunto, aoMudarSelecao])
   const dificuldade =
     conjunto?.mapas.find((m) => m.hash === hash) ?? conjunto?.mapas[0]
+  const sugerir = conjunto && (
+    <BotaoDeSugerir
+      sugestao={sugestaoDoConjunto(conjunto, dificuldade)}
+      motivoSemSugestao="Só dá para sugerir mapas baixados do osu!."
+    />
+  )
 
   const escolher = (i: number) => {
     const proximo = lista[i]
@@ -503,6 +511,7 @@ export function TelaDeSelecaoMania({
               />
             )
           }
+          sugerir={sugerir}
           detalhes={detalhes}
           ranking={ranking || undefined}
           tocar={tocar}
@@ -529,6 +538,7 @@ export function TelaDeSelecaoMania({
                       aoAlternar={alternarFavoritaAtual}
                     />
                   }
+                  sugerir={sugerir}
                 />
               )}
 

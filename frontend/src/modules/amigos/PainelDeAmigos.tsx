@@ -3,7 +3,7 @@ import { EtiquetaDeModo } from "@/shared/ui/EtiquetaDeModo";
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Check, Copy, Ellipsis, Eye, MessageSquare, Search, Send, UserPlus, Users, X } from "lucide-react";
 import { FotoDaConta } from "@/modules/conta";
-import { descreverEstado, podeAssistir, usePresenca, type PessoaOnline } from "@/modules/presenca";
+import { descreverEstado, podeAssistir, usePresenca, type PessoaOnline, type SugestaoDeMusica } from "@/modules/presenca";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu";
@@ -25,6 +25,8 @@ interface Props {
   aoAssistir?: (pessoa: PessoaOnline) => void;
   /** Abre o perfil do amigo. */
   aoVerPerfil?: (amigo: PessoaDaAmizade) => void;
+  /** Toca a música que um amigo sugeriu na conversa. */
+  aoTocarSugestao?: (sugestao: SugestaoDeMusica) => void;
 }
 
 export function useAmigos() {
@@ -49,7 +51,7 @@ function agir(acao: (api: ApiDosAmigos, token: string) => Promise<unknown>, suce
 }
 
 /** A lista de amigos ao lado da tela: quem está online, pedidos e sugestões. */
-export function PainelDeAmigos({ aoFechar, salaParaConvidar, aoConvidar, aoAssistir, aoVerPerfil }: Props) {
+export function PainelDeAmigos({ aoFechar, salaParaConvidar, aoConvidar, aoAssistir, aoVerPerfil, aoTocarSugestao }: Props) {
   const { listas, sugestoes } = useAmigos();
   const [aba, setAba] = useState("amigos");
   const [adicionando, setAdicionando] = useState(false);
@@ -85,7 +87,7 @@ export function PainelDeAmigos({ aoFechar, salaParaConvidar, aoConvidar, aoAssis
           <TabsTrigger value="sugestoes">Sugestões</TabsTrigger>
         </TabsList>
         <TabsContent value="amigos" className="flex min-h-0 flex-col gap-4">
-          {listas ? <AbaDeAmigos amigos={listas.amigos} salaParaConvidar={salaParaConvidar} aoConvidar={aoConvidar} aoAssistir={aoAssistir} aoVerPerfil={aoVerPerfil} /> : <Carregando />}
+          {listas ? <AbaDeAmigos amigos={listas.amigos} salaParaConvidar={salaParaConvidar} aoConvidar={aoConvidar} aoAssistir={aoAssistir} aoVerPerfil={aoVerPerfil} aoTocarSugestao={aoTocarSugestao} /> : <Carregando />}
         </TabsContent>
         <TabsContent value="solicitacoes" className="flex min-h-0 flex-col gap-4">
           {listas ? <AbaDePedidos recebidos={listas.recebidos} enviados={listas.enviados} bloqueados={listas.bloqueados} /> : <Carregando />}
@@ -115,7 +117,7 @@ export function Contador({ valor }: { valor: number }) {
 
 const Carregando = () => <p className="m-auto text-base text-texto-suave">Carregando...</p>;
 
-function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar, aoAssistir, aoVerPerfil }: { amigos: PessoaDaAmizade[] } & Pick<Props, "salaParaConvidar" | "aoConvidar" | "aoAssistir" | "aoVerPerfil">) {
+function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar, aoAssistir, aoVerPerfil, aoTocarSugestao }: { amigos: PessoaDaAmizade[] } & Pick<Props, "salaParaConvidar" | "aoConvidar" | "aoAssistir" | "aoVerPerfil" | "aoTocarSugestao">) {
   const presenca = usePresenca();
   const [busca, setBusca] = useState("");
   const [agora] = useState(() => new Date());
@@ -124,7 +126,7 @@ function AbaDeAmigos({ amigos, salaParaConvidar, aoConvidar, aoAssistir, aoVerPe
   if (!amigos.length) return <Vazio>Nenhum amigo ainda. Passe o seu código ou adicione o de alguém.</Vazio>;
   const { online, offline } = separarPorPresenca(filtrarPorNome(amigos, busca), presenca.pessoas);
   const conversando = amigos.find((a) => a.conta_id === conversandoCom);
-  if (conversando) return <ConversaComAmigo amigo={conversando} conectada={presenca.conectada} aoVoltar={() => setConversandoCom(null)} />;
+  if (conversando) return <ConversaComAmigo amigo={conversando} conectada={presenca.conectada} aoVoltar={() => setConversandoCom(null)} aoTocarSugestao={aoTocarSugestao} />;
   const conversar = (amigo: { conta_id: string; nome: string }) => (
     <BotaoDeConversar nome={amigo.nome} naoLidas={lerConversa(todas, amigo.conta_id).naoLidas} aoClicar={() => setConversandoCom(amigo.conta_id)} />
   );

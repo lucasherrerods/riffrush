@@ -1,5 +1,5 @@
 import {
-  lerAvisoDeEspectadores, lerConvite, lerMensagemPrivada, aplicarMensagem, entradasDoLote, entradasParaOLote, ordenarPessoas, urlDaPresenca, urlDaTransmissao, type PessoaOnline } from "./protocolo";
+  lerAvisoDeEspectadores, lerConvite, lerMensagemPrivada, lerSugestao, aplicarMensagem, entradasDoLote, entradasParaOLote, ordenarPessoas, urlDaPresenca, urlDaTransmissao, type PessoaOnline } from "./protocolo";
 
 const pessoa = (id: string, nome: string, estado: PessoaOnline["estado"] = { tipo: "menu" }): PessoaOnline => ({ id, nome, avatar: null, estado });
 const tocando = (transmitindo: boolean): PessoaOnline["estado"] => ({
@@ -97,5 +97,22 @@ describe("lerMensagemPrivada", () => {
     expect(lerMensagemPrivada(JSON.stringify({ tipo: "privada", id: 3, de, para: "b", em: 10 }))).toBeNull();
     expect(lerMensagemPrivada(JSON.stringify({ tipo: "privada", de, para: "b", texto: "oi", em: 10 }))).toBeNull();
     expect(lerMensagemPrivada("{quebrado")).toBeNull();
+  });
+});
+
+describe("lerSugestao", () => {
+  const sugestao = { modo: "mania", musica: "1234", versao: "5678", titulo: "Galaxy Collapse", artista: "Kurokotei", dificuldade: "[Cataclysmic] 7K" } as const;
+
+  it("lê a sugestão de música que veio na mensagem privada", () => {
+    const de = { id: "a", nome: "Ana", avatar: null };
+    const bruta = JSON.stringify({ tipo: "privada", id: 3, de, para: "b", texto: "", sugestao, em: 10 });
+    expect(lerMensagemPrivada(bruta)?.sugestao).toEqual(sugestao);
+  });
+
+  it("ignora a sugestão de um modo que não existe ou sem música", () => {
+    expect(lerSugestao({ ...sugestao, modo: "bateria" })).toBeUndefined();
+    expect(lerSugestao({ ...sugestao, musica: "" })).toBeUndefined();
+    expect(lerSugestao("x")).toBeUndefined();
+    expect(lerSugestao({ ...sugestao, versao: 5, artista: undefined })).toEqual({ ...sugestao, versao: null, artista: "" });
   });
 });

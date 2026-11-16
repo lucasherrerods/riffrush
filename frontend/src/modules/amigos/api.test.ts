@@ -30,6 +30,10 @@ describe("api dos amigos", () => {
     chamada = montar({ id: 1, de: "eu", para: "a", texto: "oi", enviada_em: "2026-11-09T12:00:00Z" });
     expect((await chamada.api.enviarMensagem("t", "a", "oi")).id).toBe(1);
     expect(pedido(chamada.buscar)).toMatchObject({ url: "https://api/amigos/a/mensagens", metodo: "POST", corpo: '{"texto":"oi"}' });
+    const sugestao = { modo: "mania", musica: "1234", versao: "5678", titulo: "Galaxy Collapse", artista: "Kurokotei", dificuldade: "[Cataclysmic] 7K" } as const;
+    chamada = montar({ id: 2, de: "eu", para: "a", texto: "", sugestao, enviada_em: "2026-11-09T12:00:00Z" });
+    await chamada.api.enviarMensagem("t", "a", "", sugestao);
+    expect(JSON.parse(pedido(chamada.buscar).corpo as string)).toEqual({ texto: "", sugestao });
     chamada = montar(null, 204);
     await chamada.api.marcarLidas("t", "a");
     expect(pedido(chamada.buscar)).toMatchObject({ url: "https://api/amigos/a/mensagens/lidas", metodo: "POST" });
