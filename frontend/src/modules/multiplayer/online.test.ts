@@ -22,6 +22,11 @@ describe("lista de salas", () => {
     expect(lista).toEqual([{ codigo: "K7QXM", nome: "Lucas", jogadores: 2 }]);
   });
 
+  it("guarda o modo da sala, e as antigas, sem modo, ficam sem ele", () => {
+    const lista = lerSalasOnline([{ codigo: "K7QXM", nome: "Lu", jogadores: 1, modo: "mania" }, { codigo: "ABCDE", nome: "Ana", jogadores: 1, modo: 3 }]);
+    expect(lista).toEqual([{ codigo: "K7QXM", nome: "Lu", jogadores: 1, modo: "mania" }, { codigo: "ABCDE", nome: "Ana", jogadores: 1 }]);
+  });
+
   it("resposta que não é lista vira lista vazia", () => {
     expect(lerSalasOnline({ erro: true })).toEqual([]);
   });

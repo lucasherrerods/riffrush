@@ -25,6 +25,13 @@ describe("MenuDoMania", () => {
     expect(aoConfigurar).toHaveBeenCalledOnce();
   });
 
+  it("o multiplayer aparece quando o modo oferece", async () => {
+    const aoMultijogador = vi.fn();
+    render(<MenuDoMania aoJogar={() => {}} aoBuscar={() => {}} aoConfigurar={() => {}} aoMultijogador={aoMultijogador} />);
+    await userEvent.click(screen.getByRole("button", { name: "Multiplayer" }));
+    expect(aoMultijogador).toHaveBeenCalledOnce();
+  });
+
   it("com contas, Atividades abre o log", async () => {
     const aoAtividades = vi.fn();
     render(<MenuDoMania aoJogar={vi.fn()} aoBuscar={vi.fn()} aoConfigurar={vi.fn()} aoAtividades={aoAtividades} />);

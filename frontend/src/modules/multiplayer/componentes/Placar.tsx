@@ -13,17 +13,21 @@ export interface LinhaDoPlacar {
   derrota: boolean;
   fantasma: boolean;
   terminou: boolean;
+  /** Um número a mais do modo, como a precisão no Mania. */
+  detalhe?: string;
 }
 
 interface Props {
   linhas: LinhaDoPlacar[];
   rotuloDaDerrota?: string;
+  /** Durante a partida: só a ordem, sem esperar os outros nem coroar ninguém. */
+  aoVivo?: boolean;
 }
 
 /** O placar da sala no fim da partida, atualizado ao vivo enquanto os outros terminam. */
-export function Placar({ linhas, rotuloDaDerrota = "Vaiado" }: Props) {
+export function Placar({ linhas, rotuloDaDerrota = "Vaiado", aoVivo = false }: Props) {
   const ordenadas = [...linhas].sort((a, b) => b.pontos - a.pontos);
-  const esperando = ordenadas.some((l) => !l.terminou);
+  const esperando = !aoVivo && ordenadas.some((l) => !l.terminou);
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-2">
@@ -38,11 +42,12 @@ export function Placar({ linhas, rotuloDaDerrota = "Vaiado" }: Props) {
             {linha.avatar}
             <span className="flex flex-1 items-center gap-2 truncate text-base font-bold">
               <span>{linha.nome}</span>
-              {i === 0 && !esperando && <Crown aria-label="Vencedor" className="size-4 text-ouro" />}
+              {i === 0 && !aoVivo && !esperando && <Crown aria-label="Vencedor" className="size-4 text-ouro" />}
             </span>
             {linha.fantasma && <Ghost aria-label="Virou fantasma" className="size-4 text-texto-suave" />}
             {linha.derrota && <span className="text-base font-bold text-perigo">{rotuloDaDerrota}</span>}
-            {!linha.terminou && <Loader2 className="size-4 animate-spin text-texto-suave" aria-label="Ainda tocando" />}
+            {!aoVivo && !linha.terminou && <Loader2 className="size-4 animate-spin text-texto-suave" aria-label="Ainda tocando" />}
+            {linha.detalhe && <span className="font-mono text-base tabular-nums text-texto-suave">{linha.detalhe}</span>}
             <span className="font-mono text-xl font-black tabular-nums">{linha.pontos.toLocaleString("pt-BR")}</span>
           </motion.li>
         ))}

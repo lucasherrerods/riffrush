@@ -66,3 +66,9 @@ Problemas encontrados de passagem, fora do escopo da mudança que estava sendo f
 - O que se viu: falhou no CI (3,3 s, esperava 2 títulos `h2` e achou 1) e localmente com a suíte inteira; passa rodando só o arquivo.
 - Suspeita: espera curta pela página seguinte ou pelo resultado com a máquina carregada.
 - Próximo passo: trocar as contagens imediatas e esperas fixas por `findAllBy`/`waitFor` e rodar o arquivo várias vezes.
+
+## `cargo clippy` do Tauri acusa tipo complexo em `lan/mod.rs`
+- Onde: `frontend/src-tauri/src/lan/mod.rs`, campo `musica: Arc<RwLock<Option<(String, Vec<u8>)>>>` do `Compartilhado`.
+- O que se viu: `cargo clippy -- -D warnings` local (rustfmt/clippy 1.10, out/2026) falha com `clippy::type_complexity`. O CI não roda clippy nem fmt no `src-tauri`, então não aparece lá. O `cargo fmt` local também reformata vários arquivos do crate.
+- Suspeita: o crate nunca passou por clippy e fmt; o clippy novo ficou mais rígido.
+- Próximo passo: criar um `type` para o arquivo compartilhado, rodar `cargo fmt` no crate num PR só de formatação e incluir fmt e clippy do `src-tauri` no CI.

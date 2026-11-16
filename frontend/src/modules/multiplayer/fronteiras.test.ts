@@ -13,4 +13,9 @@ describe("fronteiras do multijogador", () => {
     const proibidos = arquivos(__dirname).filter((arquivo) => /@\/modules\/(rock|mania)\b/.test(readFileSync(arquivo, "utf8").replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "").replace(/fronteiras/g, "")));
     expect(proibidos).toEqual([]);
   });
+
+  it("o Mania não importa do Rock", () => {
+    const proibidos = arquivos(join(__dirname, "..", "mania")).filter((arquivo) => /@\/modules\/rock/.test(readFileSync(arquivo, "utf8")));
+    expect(proibidos).toEqual([]);
+  });
 });

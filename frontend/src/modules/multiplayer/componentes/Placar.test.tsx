@@ -30,4 +30,15 @@ describe("Placar", () => {
     expect(screen.getByText(/Esperando os outros terminarem/)).toBeInTheDocument();
     expect(screen.queryByLabelText("Vencedor")).toBeNull();
   });
+
+  it("mostra o detalhe de cada linha, como a precisão", () => {
+    render(<Placar linhas={[linha(1, "Lucas", 10, { detalhe: "98,50%" })]} />);
+    expect(screen.getByText("98,50%")).toBeInTheDocument();
+  });
+
+  it("ao vivo, no meio da partida, não fala em esperar nem coroa ninguém", () => {
+    render(<Placar aoVivo linhas={[linha(1, "Lucas", 10, { terminou: false }), linha(2, "Ana", 5, { terminou: false })]} />);
+    expect(screen.queryByText(/Esperando/)).toBeNull();
+    expect(screen.queryByLabelText("Ainda tocando")).toBeNull();
+  });
 });

@@ -7,6 +7,7 @@ import {
   embrulhar,
   expulsoPeloHost,
   gerarCodigo,
+  lerModo,
   listarSalas,
   mensagemDoServidor,
   nomeDoHost,
@@ -70,6 +71,7 @@ const CABECALHO_DE_CRIAR = "x-riffrush-criar";
 const CABECALHO_DO_CODIGO = "x-riffrush-codigo";
 const CABECALHO_DO_NOME = "x-riffrush-nome";
 const CABECALHO_DA_VISIBILIDADE = "x-riffrush-publica";
+const CABECALHO_DO_MODO = "x-riffrush-modo";
 /** De quanto em quanto tempo a sala aberta renova a entrada no diretório. */
 const RENOVACAO_MS = 60 * 1000;
 const PREFIXO = "sala:";
@@ -138,6 +140,7 @@ export class Sala extends DurableObject<Env> {
         codigo,
         nome: nomeDoHost(pedido.headers.get(CABECALHO_DO_NOME)),
         publica: salaPublica(pedido.headers.get(CABECALHO_DA_VISIBILIDADE)),
+        modo: lerModo(pedido.headers.get(CABECALHO_DO_MODO)) ?? null,
       });
       await this.ctx.storage.setAlarm(Date.now() + RENOVACAO_MS);
     }
@@ -164,7 +167,8 @@ export class Sala extends DurableObject<Env> {
     const listada = (await this.ctx.storage.get<boolean>("aberta")) && (await this.ctx.storage.get<boolean>("publica")) !== false;
     if (!listada) return void (await diretorio(this.env).remover(codigo));
     const jogadores = this.ctx.getWebSockets(JOGADOR).filter((s) => s !== saindo).length;
-    await diretorio(this.env).publicar({ codigo, nome: (await this.ctx.storage.get<string>("nome")) ?? nomeDoHost(null), jogadores });
+    const modo = lerModo(await this.ctx.storage.get("modo"));
+    await diretorio(this.env).publicar({ codigo, nome: (await this.ctx.storage.get<string>("nome")) ?? nomeDoHost(null), jogadores, ...(modo && { modo }) });
   }
 
   async webSocketMessage(socket: WebSocket, mensagem: string | ArrayBuffer) {
@@ -629,6 +633,7 @@ function encaminhar(pedido: Request, env: Env, codigo: string, criar: boolean) {
   if (criar) {
     cabecalhos.set(CABECALHO_DO_NOME, new URL(pedido.url).searchParams.get("nome") ?? "");
     cabecalhos.set(CABECALHO_DA_VISIBILIDADE, new URL(pedido.url).searchParams.get("publica") ?? "1");
+    cabecalhos.set(CABECALHO_DO_MODO, new URL(pedido.url).searchParams.get("modo") ?? "");
   }
   cabecalhos.set(CABECALHO_DO_CODIGO, codigo);
   cabecalhos.set(CABECALHO_DE_CRIAR, criar ? "1" : "0");

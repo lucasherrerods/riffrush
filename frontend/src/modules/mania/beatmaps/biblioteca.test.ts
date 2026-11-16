@@ -23,6 +23,15 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("biblioteca do Mania", () => {
+  it("devolve o .osz guardado, para o host da LAN compartilhar o mapa", async () => {
+    const biblioteca = await abrir();
+    const pacote = osz();
+    await importarOsz(biblioteca, pacote, { origem: "importado" });
+    const [salvo] = await biblioteca.listar();
+    expect((await biblioteca.osz?.(salvo.id))?.size).toBe(pacote.size);
+    expect(await biblioteca.osz?.("nada")).toBeUndefined();
+  });
+
   it("importar guarda o conjunto com as dificuldades, sem o texto dos .osu", async () => {
     const biblioteca = await abrir();
     const salvo = await importarOsz(biblioteca, osz(), { origem: "osu", status: "ranked", estrelas: {} });

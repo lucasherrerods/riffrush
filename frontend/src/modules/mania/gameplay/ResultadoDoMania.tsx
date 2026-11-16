@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { GanhoDeXp, type RegistroDaPartida } from "@/modules/conta";
 import { BarraDeDesvio, CartaoDeResultado, GraficoDaPrecisao } from "@/modules/resultado";
 import { useTeclado } from "@/shared/hooks/useTeclado";
@@ -14,14 +15,18 @@ interface Props {
   titulo: string;
   dificuldade: string;
   resultado: ResultadoDoMania;
-  aoJogarDeNovo: () => void;
+  /** Sem ele (na sala, quem decide a próxima é o host), o botão não aparece. */
+  aoJogarDeNovo?: () => void;
   aoVoltar: () => void;
+  rotuloDeVoltar?: string;
+  /** Na sala: o placar com todos os jogadores. */
+  placar?: ReactNode;
   /** Com a conta conectada: o XP da partida (ou a espera por ele). */
   xp?: RegistroDaPartida;
   valeXp?: boolean;
 }
 
-export function ResultadoDoMania({ titulo, dificuldade, resultado, aoJogarDeNovo, aoVoltar, xp, valeXp = false }: Props) {
+export function ResultadoDoMania({ titulo, dificuldade, resultado, aoJogarDeNovo, aoVoltar, rotuloDeVoltar = "Voltar", placar, xp, valeXp = false }: Props) {
   const mods = siglasDosMods(resultado.mods);
   const { julgamentos, desvios } = resultado.estatisticas;
   const { media, ur } = resumoDosDesvios(desvios);
@@ -30,7 +35,7 @@ export function ResultadoDoMania({ titulo, dificuldade, resultado, aoJogarDeNovo
     if (evento.code === "Enter" || evento.code === "Escape") {
       evento.preventDefault();
       aoVoltar();
-    } else if (evento.code === "KeyR") aoJogarDeNovo();
+    } else if (evento.code === "KeyR") aoJogarDeNovo?.();
   });
   return (
     <CartaoDeResultado
@@ -46,6 +51,7 @@ export function ResultadoDoMania({ titulo, dificuldade, resultado, aoJogarDeNovo
       julgamentos={NOMES_DOS_JULGAMENTOS.map((nome, i) => ({ rotulo: nome, valor: resultado.contagem[i] }))}
       extra={
         <>
+          {placar}
           <GraficoDaPrecisao curva={curvaDaPrecisao(julgamentos, PONTOS_DA_CURVA)} />
           <BarraDeDesvio histograma={histogramaDosDesvios(desvios, resultado.janelaMs, FAIXAS_DO_DESVIO)} mediaMs={media} ur={ur} />
           {xp && <GanhoDeXp xp={xp} valeXp={valeXp} modo="mania" />}
@@ -54,9 +60,9 @@ export function ResultadoDoMania({ titulo, dificuldade, resultado, aoJogarDeNovo
       botoes={
         <>
           <Button variant="secondary" onClick={aoVoltar}>
-            Voltar
+            {rotuloDeVoltar}
           </Button>
-          <Button onClick={aoJogarDeNovo}>Jogar de novo</Button>
+          {aoJogarDeNovo && <Button onClick={aoJogarDeNovo}>Jogar de novo</Button>}
         </>
       }
     />
