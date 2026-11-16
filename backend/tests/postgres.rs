@@ -7,7 +7,7 @@ use riffrush_api::modules::catalogo::{CatalogoPostgres, DadosDaMusica, Repositor
 use riffrush_api::modules::conta::{
     ContasPostgres, FilaDePartidas, PartidaNaFila, PartidaRegistrada, PerfilDoGoogle, RepositorioDeContas, RepositorioDeSessoes,
 };
-use riffrush_api::modules::conversa::{CifraDasMensagens, ConversasPostgres, NaoLidas, NovaMensagem, RepositorioDeConversas};
+use riffrush_api::modules::conversa::{CifraDasMensagens, ConversasPostgres, ModoDaSugestao, NaoLidas, NovaMensagem, RepositorioDeConversas, SugestaoDeMusica};
 use riffrush_api::modules::moderacao::{Denuncia, ModeracaoPostgres, RepositorioDeModeracao, Situacao};
 use riffrush_api::modules::perfil::{FormatoDaImagem, Imagem, PerfilPostgres, RepositorioDoPerfil, TipoDeImagem};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar, ResumoDaPartida};
@@ -1159,6 +1159,7 @@ async fn conversas_guardam_paginam_contam_as_nao_lidas_e_somem_com_a_conta() {
         de,
         para,
         texto: texto.into(),
+        sugestao: None,
         enviada_em: agora,
     };
 
@@ -1202,6 +1203,7 @@ async fn conversas_guardam_o_texto_cifrado_e_cifram_as_antigas() {
             de: ana,
             para: beto,
             texto: "segredo novo".into(),
+            sugestao: None,
             enviada_em: agora,
         })
         .await
@@ -1309,4 +1311,33 @@ async fn partidas_do_julgamento_antigo_passam_para_o_score_v1_e_o_xp_da_conta_vi
         .filter(|p| p.conta_id == conta)
         .collect();
     assert_eq!(restantes.iter().map(|p| p.id).collect::<Vec<_>>(), [segunda]);
+}
+
+#[tokio::test]
+async fn conversas_guardam_a_sugestao_de_musica() {
+    let Some(banco) = banco().await else { return };
+    let conversas = conversas_cifradas(&banco.0);
+    let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+    let beto = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+    let sugestao = SugestaoDeMusica {
+        modo: ModoDaSugestao::Rock,
+        musica: "fb0079d4c2e025d5b8dd70724750a923".into(),
+        versao: Some("expert".into()),
+        titulo: "Riff".into(),
+        artista: "Banda".into(),
+        dificuldade: "Expert · Guitarra".into(),
+    };
+    let guardada = conversas
+        .guardar(&NovaMensagem {
+            de: ana,
+            para: beto,
+            texto: String::new(),
+            sugestao: Some(sugestao.clone()),
+            enviada_em: Utc::now(),
+        })
+        .await
+        .unwrap();
+    assert_eq!(guardada.sugestao.as_ref(), Some(&sugestao));
+    let historico = conversas.mensagens(beto, ana, None, 50).await.unwrap();
+    assert_eq!((historico[0].texto.as_str(), historico[0].sugestao.as_ref()), ("", Some(&sugestao)));
 }

@@ -95,6 +95,18 @@ describe("PainelDeAmigos", () => {
     expect(screen.getByText("Online (1)")).toBeInTheDocument();
   });
 
+  it("a música que o amigo sugeriu aparece como cartão, e Tocar abre a música", async () => {
+    const sugestao = { modo: "mania", musica: "1234", versao: "5678", titulo: "Galaxy Collapse", artista: "Kurokotei", dificuldade: "[Cataclysmic] 7K" } as const;
+    conversasFalsas.definir({ a: { mensagens: [{ id: 1, de: "a", texto: "", sugestao, em: 1 }], naoLidas: 0, carregada: true } });
+    const aoTocarSugestao = vi.fn();
+    const { usuario } = abrir({ aoTocarSugestao });
+    await usuario.click(await screen.findByRole("button", { name: "Conversar com AnaRock" }));
+    const cartao = screen.getByRole("group", { name: "Música sugerida: Galaxy Collapse" });
+    expect(cartao).toHaveTextContent("Kurokotei · [Cataclysmic] 7K");
+    await usuario.click(within(cartao).getByRole("button", { name: /Tocar/ }));
+    expect(aoTocarSugestao).toHaveBeenCalledWith(sugestao);
+  });
+
   it("com o amigo offline, a mensagem sai e fica guardada para ele", async () => {
     const { usuario } = abrir();
     await usuario.click(await screen.findByRole("button", { name: "Conversar com RafaBass" }));

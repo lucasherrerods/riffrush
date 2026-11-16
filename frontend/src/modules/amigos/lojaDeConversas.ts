@@ -1,4 +1,4 @@
-import type { MensagemPrivada } from "@/modules/presenca";
+import type { MensagemPrivada, SugestaoDeMusica } from "@/modules/presenca";
 import type { ApiDosAmigos } from "./api";
 import { definirNaoLidas, juntarHistorico, lerConversa, marcarComoLida, receberPrivada, type Conversas } from "./conversas";
 
@@ -53,14 +53,17 @@ export class LojaDeConversas {
     }
   }
 
-  enviar = async (amigo: string, texto: string) => {
+  /** Devolve se a API guardou a mensagem. */
+  enviar = async (amigo: string, texto: string, sugestao?: SugestaoDeMusica) => {
     const token = this.deps.token();
-    if (!token) return;
+    if (!token) return false;
     try {
-      const mensagem = await this.deps.api.enviarMensagem(token, amigo, texto);
+      const mensagem = await this.deps.api.enviarMensagem(token, amigo, texto, sugestao);
       this.mudar(juntarHistorico(this.atual, amigo, [mensagem]));
+      return true;
     } catch (erro) {
       this.deps.avisarErro((erro as Error).message);
+      return false;
     }
   };
 

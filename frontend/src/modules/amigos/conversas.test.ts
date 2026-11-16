@@ -55,3 +55,14 @@ describe("não lidas", () => {
     expect(lerConversa({}, "ninguem")).toEqual({ mensagens: [], naoLidas: 0, carregada: false });
   });
 });
+
+describe("sugestões de música na conversa", () => {
+  const sugestao = { modo: "mania", musica: "1234", versao: "5678", titulo: "Galaxy Collapse", artista: "Kurokotei", dificuldade: "[Cataclysmic] 7K" } as const;
+
+  it("a sugestão vem junto do histórico e da mensagem entregue na hora", () => {
+    let conversas: Conversas = juntarHistorico({}, "ana", [{ id: 1, de: "ana", para: "eu", texto: "", sugestao, enviada_em: "2026-11-09T12:00:00Z" }]);
+    expect(lerConversa(conversas, "ana").mensagens[0].sugestao).toEqual(sugestao);
+    conversas = receberPrivada(conversas, { id: 2, de: { id: "ana", nome: "Ana", avatar: null }, para: "eu", texto: "toca essa", sugestao, em: 5 }, "eu");
+    expect(lerConversa(conversas, "ana").mensagens[1]).toMatchObject({ texto: "toca essa", sugestao });
+  });
+});

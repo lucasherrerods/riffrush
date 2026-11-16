@@ -45,7 +45,7 @@ describe("LojaDeConversas", () => {
   it("a mensagem recusada pela API vira aviso", async () => {
     const { loja, api, avisarErro } = montar();
     api.enviarMensagem.mockRejectedValueOnce(new Error("mensagens demais em pouco tempo"));
-    await loja.enviar("ana", "oi");
+    expect(await loja.enviar("ana", "oi")).toBe(false);
     expect(avisarErro).toHaveBeenCalledWith("mensagens demais em pouco tempo");
   });
 
