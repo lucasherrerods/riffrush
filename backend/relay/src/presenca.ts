@@ -71,6 +71,8 @@ export interface PrivadaDaApi {
   de: Pessoa;
   para: string;
   texto: string;
+  /** Uma música para tocar, no formato da API, que já conferiu os campos. */
+  sugestao?: Record<string, unknown>;
   /** Hora em que a API guardou, em ms. */
   em: number;
 }
@@ -87,7 +89,8 @@ export function lerPrivadaDaApi(corpo: string): PrivadaDaApi | null {
   if (!Number.isInteger(id) || typeof para !== "string" || !ID_DA_CONTA.test(para) || typeof texto !== "string" || typeof em !== "number") return null;
   if (typeof de?.id !== "string" || !ID_DA_CONTA.test(de.id) || typeof de.nome !== "string") return null;
   const avatar = typeof de.avatar === "string" ? de.avatar : null;
-  return { id: id as number, de: { id: de.id, nome: de.nome, avatar }, para, texto, em };
+  const sugestao = dados.sugestao && typeof dados.sugestao === "object" && !Array.isArray(dados.sugestao) ? { sugestao: dados.sugestao as Record<string, unknown> } : {};
+  return { id: id as number, de: { id: de.id, nome: de.nome, avatar }, para, texto, ...sugestao, em };
 }
 
 /** O que o app manda pela presença: o estado novo ou um convite para a sala em que está. */

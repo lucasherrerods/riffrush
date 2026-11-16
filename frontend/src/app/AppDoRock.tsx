@@ -26,6 +26,7 @@ import {
   usePresenca,
   useSouDaModeracao,
   type PessoaOnline,
+  type SugestaoDeMusica,
 } from "@/modules/presenca";
 import { JanelaDoChart, TelaDeBuscaDeMusicas, baixarDoEncore, baixarSng, montarUrlDoChart, sortearChartOficial, type OpcoesDeBaixar, type ResultadoDaBusca } from "@/modules/rock/search";
 import { TelaDeResultado, anotarRecorde, definirRecordes, recordeDe, useRecordes } from "@/modules/rock/results";
@@ -35,7 +36,7 @@ import { TelaDeConfiguracoes, carregarConfiguracoes, salvarConfiguracoes, type C
 import { DIFICULDADES, INSTRUMENTOS, MUSICAS_EMBUTIDAS, dificuldadeMaisProxima, dificuldadesDaMusica, idDoRanking, instrumentoDaMusica, tituloDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { PlacarAoVivo, RankingDaSelecao, TelaDeLeaderboard, TelaDePartidaDoRanking, type MusicaNoRanking } from "@/modules/ranking";
 import { FundoDoRock } from "@/modules/rock";
-import { BotaoDeAmigos, ConvitesDeAmigos, PainelDeAmigos, useIdsDosAmigos, usePainelDeAmigos } from "@/modules/amigos";
+import { BotaoDeAmigos, ConvitesDeAmigos, PainelDeAmigos, tirarSugestaoPendente, tocarSugestaoNoModoCerto, useIdsDosAmigos, usePainelDeAmigos } from "@/modules/amigos";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
@@ -64,6 +65,8 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
   useAtualizacaoAutomatica(tela === "jogo" || tela === "espectador");
   /** md5 do chart do Encore aberto na janela de baixar do leaderboard. */
   const [chartDoLeaderboard, setChartDoLeaderboard] = useState<string | null>(null);
+  // O chart do Encore que um amigo sugeriu e ainda não está na biblioteca: abre a janela para baixar.
+  const [chartSugerido, setChartSugerido] = useState<string | null>(null);
   // Lembrada aqui para o leaderboard voltar nela depois de abrir uma partida.
   const [musicaDoLeaderboard, setMusicaDoLeaderboard] = useState<MusicaNoRanking | null>(null);
   const [configuracoes, setConfiguracoes] = useState<Configuracoes>(carregarConfiguracoes);
@@ -460,6 +463,23 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
     setTela("selecao");
   };
 
+  // A música que um amigo sugeriu: já baixada, abre na seleção com a dificuldade dele; senão, baixa do Encore.
+  const abrirSugestao = (sugestao: SugestaoDeMusica) => {
+    fecharAmigos();
+    const dificuldadeSugerida = DIFICULDADES.find((d) => d.id === sugestao.versao)?.id;
+    if (dificuldadeSugerida) setDificuldade(dificuldadeSugerida);
+    if (baixadasDoEncore.has(sugestao.musica)) abrirNaSelecao(sugestao.musica);
+    else setChartSugerido(sugestao.musica);
+  };
+  const tocarSugestao = (sugestao: SugestaoDeMusica) => tocarSugestaoNoModoCerto(sugestao, "rock", abrirSugestao);
+  // Veio do Mania para tocar uma música do Rock que um amigo sugeriu.
+  useEffect(() => {
+    const sugestao = tirarSugestaoPendente();
+    if (sugestao) abrirSugestao(sugestao);
+    // Só ao montar: o pedido vale uma vez.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const jogarBaixada = (md5: string) => {
     const posicao = musicas.findIndex((m) => m.md5DoEncore === md5);
     // Veio do lobby: volta para a sala, e o host já deixa a música escolhida para todos.
@@ -681,6 +701,18 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 }}
               />
             )}
+            {chartSugerido && !naPista && (
+              <JanelaDoChart
+                md5={chartSugerido}
+                aoFechar={() => setChartSugerido(null)}
+                aoBaixar={baixarMusica}
+                baixadas={baixadasDoEncore}
+                aoJogar={(md5) => {
+                  setChartSugerido(null);
+                  abrirNaSelecao(md5);
+                }}
+              />
+            )}
             {tela === "perfil" && amigoNoPerfil && (
               <PerfilDoAmigo contaId={amigoNoPerfil} aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />
             )}
@@ -817,6 +849,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                   if (tela !== "perfil") setVoltarDoPerfilPara(tela);
                   setTela("perfil");
                 }}
+                aoTocarSugestao={tocarSugestao}
               />
             </motion.div>
           )}

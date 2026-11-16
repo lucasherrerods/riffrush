@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { TelaDeAtividades } from "@/modules/atividades";
 import { PARTE_DA_TELA_DO_MODO, type PalcoCompartilhado } from "@/modules/menu";
 import { CartaoDaConta, PerfilDoAmigo, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
-import { BotaoDeAmigos, PainelDeAmigos, useIdsDosAmigos, usePainelDeAmigos } from "@/modules/amigos";
+import { BotaoDeAmigos, PainelDeAmigos, tirarSugestaoPendente, tocarSugestaoNoModoCerto, useIdsDosAmigos, usePainelDeAmigos } from "@/modules/amigos";
 import {
   ChatGlobal,
   TelaOnline,
@@ -15,6 +15,7 @@ import {
   useSouDaModeracao,
   type PessoaOnline,
   type PreferenciasOnline,
+  type SugestaoDeMusica,
 } from "@/modules/presenca";
 import { entradasParaOLoteDoMania, estadoTocandoNoMania, partidaParaTransmitirNoMania, type MapaAoVivo } from "./aoVivo/protocolo";
 import { TelaDeEspectadorMania } from "./aoVivo/TelaDeEspectadorMania";
@@ -35,7 +36,7 @@ import { TelaDeJogoMania, type EventoDoManiaAoVivo, type MapaParaJogar, type Opc
 import { TelaDeSelecaoMania } from "./selecao/TelaDeSelecaoMania";
 import { carregarConfiguracoesDoMania, salvarConfiguracoesDoMania, type ConfiguracoesDoMania } from "./settings/configuracoesMania";
 import { TelaDeConfiguracoesMania } from "./settings/TelaDeConfiguracoesMania";
-import { baixarOsz, buscarMapas, type FiltrosDaBusca, type MapaDaBusca, type PaginaDaBusca } from "./busca/api";
+import { baixarOsz, buscarConjunto, buscarMapas, type FiltrosDaBusca, type MapaDaBusca, type PaginaDaBusca } from "./busca/api";
 import { sortearMapa, type FiltroDoSorteio } from "./busca/sortear";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
@@ -122,6 +123,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
               fecharAmigos();
               setTela({ nome: "perfil", amigo: amigo.conta_id });
             }}
+            aoTocarSugestao={tocarSugestao}
           />
         </motion.div>
       )}
@@ -226,6 +228,37 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     await guardarDaBusca(osz, mapa);
     setTela({ nome: "selecao", conjuntoId: `osu:${mapa.beatmapsetId}` });
   };
+
+  // O mapa que um amigo sugeriu: já baixado, abre na seleção; senão, baixa do osu! primeiro.
+  // Declaradas como função porque o painel de amigos, montado mais acima, já as usa.
+  async function abrirSugestao(sugestao: SugestaoDeMusica) {
+    fecharAmigos();
+    const id = Number(sugestao.musica);
+    const abrir = () => setTela({ nome: "selecao", conjuntoId: `osu:${id}` });
+    if (baixados.has(id)) return abrir();
+    const carregando = avisar.loading(`Baixando ${sugestao.titulo}...`);
+    try {
+      const mapa = await buscarConjunto(id);
+      if (!mapa) throw new Error("Esse mapa não está mais nos espelhos do osu!.");
+      await guardarDaBusca(await (baixar ?? baixarOsz)(id), mapa);
+      avisar.dismiss(carregando);
+      abrir();
+    } catch (erro) {
+      avisar.error(`${sugestao.titulo}: ${erro instanceof Error ? erro.message : String(erro)}`, { id: carregando });
+    }
+  }
+  function tocarSugestao(sugestao: SugestaoDeMusica) {
+    tocarSugestaoNoModoCerto(sugestao, "mania", (s) => void abrirSugestao(s));
+  }
+  // Veio do Rock para tocar um mapa que um amigo sugeriu: espera a biblioteca para não baixar de novo.
+  const sugestaoPendente = useRef(tirarSugestaoPendente());
+  useEffect(() => {
+    if (!conjuntos || !sugestaoPendente.current) return;
+    const sugestao = sugestaoPendente.current;
+    sugestaoPendente.current = null;
+    void abrirSugestao(sugestao);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conjuntos]);
 
   const aoJogar = async (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva, treino = false, replay?: ReplayAssistido) => {
     const mapa = await carregarMapa(conjunto, dificuldade);

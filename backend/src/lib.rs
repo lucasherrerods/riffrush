@@ -62,6 +62,7 @@ use shared::estado::EstadoDoApp;
         modules::amizade::RespostaDoPedido,
         modules::conversa::MensagemDaConversa,
         modules::conversa::CorpoDaMensagem,
+        modules::conversa::SugestaoDaMensagem,
         modules::conversa::NaoLidasDoAmigo
     )),
     modifiers(&Token)

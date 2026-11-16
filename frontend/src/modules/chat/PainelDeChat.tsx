@@ -16,6 +16,8 @@ export interface MensagemDoChat {
   etiqueta?: ReactNode;
   /** Quando a mensagem chegou, em ms. */
   em?: number;
+  /** Um cartão embaixo do texto, como a música sugerida por um amigo. */
+  anexo?: ReactNode;
 }
 
 export interface AcaoDaMensagem {
@@ -111,8 +113,13 @@ export function PainelDeChat({ titulo, mensagens, aoEnviar, bloqueado, acoesDaMe
                   {m.etiqueta && <span className="mr-1 align-middle">{m.etiqueta}</span>}
                   <span className={cn("font-bold", m.minha ? "text-destaque" : "text-texto")}>{m.autor}</span>
                   {m.selo && <span className="ml-1 rounded-full bg-ouro px-2 text-base font-bold text-fundo max-md:px-1.5 max-md:text-[10px]">{m.selo}</span>}
-                  <span className="text-texto-suave">: </span>
-                  <span>{m.texto}</span>
+                  {m.texto && (
+                    <>
+                      <span className="text-texto-suave">: </span>
+                      <span>{m.texto}</span>
+                    </>
+                  )}
+                  {m.anexo && <span className="mt-1 block">{m.anexo}</span>}
                 </p>
                 {acoesDaMensagem?.(m).map(({ rotulo, icone: Icone, aoClicar }) => (
                   <button

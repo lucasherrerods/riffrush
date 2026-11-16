@@ -20,6 +20,8 @@ interface Props {
   subtitulo?: string;
   capa?: ReactNode;
   favoritar?: ReactNode;
+  /** O botão de sugerir a música para um amigo, ao lado do coração. */
+  sugerir?: ReactNode;
   detalhes?: ReactNode;
   /** Sem ranking, a gaveta mostra só os detalhes. */
   ranking?: ReactNode;
@@ -35,7 +37,7 @@ const ARRASTE_DA_GAVETA = 40;
  * A seleção no celular: a roda ocupa a tela e o resto fica a um gesto.
  * Embaixo, o resumo do selecionado e o tocar; tocar ou arrastar o resumo para cima abre a gaveta com ranking e detalhes.
  */
-export function SelecaoNoCelular({ cabecalho, filtros, extras, lista, titulo, subtitulo, capa, favoritar, detalhes, ranking, tocar, fundo }: Props) {
+export function SelecaoNoCelular({ cabecalho, filtros, extras, lista, titulo, subtitulo, capa, favoritar, sugerir, detalhes, ranking, tocar, fundo }: Props) {
   const [aberta, setAberta] = useState(false);
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
 
@@ -92,6 +94,7 @@ export function SelecaoNoCelular({ cabecalho, filtros, extras, lista, titulo, su
             </span>
             <ChevronUp aria-hidden className={cn("size-5 shrink-0 text-texto-suave transition-transform", aberta && "rotate-180")} />
           </button>
+          {sugerir}
           {favoritar}
         </motion.div>
 

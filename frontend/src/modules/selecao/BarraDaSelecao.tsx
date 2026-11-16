@@ -37,12 +37,20 @@ interface PropsDoTitulo {
   acao?: React.ReactNode;
   /** O coração de favoritar, no canto de cima à direita do cartão (em cima da capa). */
   favoritar?: React.ReactNode;
+  /** O botão de sugerir a música para um amigo, ao lado do coração. */
+  sugerir?: React.ReactNode;
 }
 
+/** Espaço à direita do título para os botões do canto não cobrirem o texto. Com a faixa da capa, eles ficam em cima dela, menos no celular. */
+const FOLGA_DOS_BOTOES = {
+  semFaixa: ["", "pr-14", "pr-26"],
+  comFaixa: ["", "max-md:pr-14", "max-md:pr-26"],
+};
+
 /** O cartão com o nome do que está selecionado. */
-export function TituloDaSelecao({ titulo, subtitulo, aviso, capa, faixa, acao, favoritar }: PropsDoTitulo) {
+export function TituloDaSelecao({ titulo, subtitulo, aviso, capa, faixa, acao, favoritar, sugerir }: PropsDoTitulo) {
   const linha = (
-    <div className={cn("flex items-center gap-4 px-4 py-3", favoritar && (faixa ? "max-md:pr-14" : "pr-14"))}>
+    <div className={cn("flex items-center gap-4 px-4 py-3", FOLGA_DOS_BOTOES[faixa ? "comFaixa" : "semFaixa"][[favoritar, sugerir].filter(Boolean).length])}>
       {capa}
       <div className="min-w-0 flex-1">
         <h2 className="truncate font-titulo text-3xl tracking-wide uppercase max-md:text-2xl">{titulo}</h2>
@@ -56,7 +64,12 @@ export function TituloDaSelecao({ titulo, subtitulo, aviso, capa, faixa, acao, f
     <div className="chapa relative overflow-hidden bg-superficie-elevada/95">
       {faixa && <div className="h-[172px] w-full bordas-esfumadas max-md:hidden">{faixa}</div>}
       {linha}
-      {favoritar && <div className="absolute top-2 right-2">{favoritar}</div>}
+      {(favoritar || sugerir) && (
+        <div className="absolute top-2 right-2 flex gap-2">
+          {sugerir}
+          {favoritar}
+        </div>
+      )}
     </div>
   );
 }
