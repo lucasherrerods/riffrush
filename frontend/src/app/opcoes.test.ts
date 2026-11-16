@@ -54,12 +54,16 @@ describe("opcoesDaPartida", () => {
     expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, qualidadeDoPalco: "leve" }).qualidadeDoPalco).toBe("leve");
   });
 
-  it("leva o jeito de jogar e a tecla da palheta", () => {
-    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, jeitoDeJogar: "palhetada", teclaDaPalheta: "KeyP" }, PREFERENCIAS_DE_AUDIO_PADRAO, false)).toMatchObject({ jeitoDeJogar: "palhetada", teclaDaPalheta: "KeyP" });
+  it("leva a tecla da palheta e o jeito de jogar do aparelho em uso", () => {
+    const c = { ...CONFIGURACOES_PADRAO, jeitoNoTeclado: "palhetada" as const, jeitoNoControle: "gamepad" as const, teclaDaPalheta: "KeyP" };
+    expect(opcoesDaPartida(c, PREFERENCIAS_DE_AUDIO_PADRAO, false, "teclado")).toMatchObject({ jeitoDeJogar: "palhetada", teclaDaPalheta: "KeyP" });
+    expect(opcoesDaPartida(c, PREFERENCIAS_DE_AUDIO_PADRAO, false, "controle").jeitoDeJogar).toBe("gamepad");
+    expect(opcoesDaPartida(c, PREFERENCIAS_DE_AUDIO_PADRAO, false)).toMatchObject({ jeitoNoTeclado: "palhetada", jeitoNoControle: "gamepad" });
   });
 
   it("no celular é sempre tapping: não há palheta na tela de toque", () => {
-    expect(opcoesDaPartida({ ...CONFIGURACOES_PADRAO, jeitoDeJogar: "palhetada" }, PREFERENCIAS_DE_AUDIO_PADRAO, true).jeitoDeJogar).toBe("tapping");
+    const c = { ...CONFIGURACOES_PADRAO, jeitoNoTeclado: "palhetada" as const, jeitoNoControle: "palhetada" as const };
+    expect(opcoesDaPartida(c, PREFERENCIAS_DE_AUDIO_PADRAO, true, "controle").jeitoDeJogar).toBe("tapping");
   });
 
   it("com a nota aberta desligada, a partida joga sem ela", () => {

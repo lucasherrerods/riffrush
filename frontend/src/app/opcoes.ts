@@ -4,8 +4,18 @@ import { VELOCIDADE_DAS_NOTAS, antecedenciaDasNotas, nomeDaTecla, type Configura
 import { carregarHighways, estiloDaCacapa, skinPorId } from "@/modules/rock/skins";
 import { ehTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 
-/** A partida não conhece as configurações: o App traduz o que ela precisa. No celular não há palheta: é sempre tapping. */
-export function opcoesDaPartida(c: Configuracoes, audio: PreferenciasDeAudio = PREFERENCIAS_DE_AUDIO_PADRAO, celular = ehTelaEstreita()): OpcoesDaPartida {
+/**
+ * A partida não conhece as configurações: o App traduz o que ela precisa. O jeito de jogar é o do aparelho em uso.
+ * No celular não há palheta: é sempre tapping.
+ */
+export function opcoesDaPartida(
+  c: Configuracoes,
+  audio: PreferenciasDeAudio = PREFERENCIAS_DE_AUDIO_PADRAO,
+  celular = ehTelaEstreita(),
+  aparelho: "teclado" | "controle" = "teclado",
+): OpcoesDaPartida {
+  const jeitoNoTeclado = celular ? "tapping" : c.jeitoNoTeclado;
+  const jeitoNoControle = celular ? "tapping" : c.jeitoNoControle;
   return {
     teclas: c.teclas,
     teclaDaEstrela: c.teclaDaEstrela,
@@ -17,7 +27,9 @@ export function opcoesDaPartida(c: Configuracoes, audio: PreferenciasDeAudio = P
     semFalha: c.semFalha,
     semAberta: !c.notaAberta,
     velocidadeDaMusica: c.velocidadeDaMusica,
-    jeitoDeJogar: celular ? "tapping" : c.jeitoDeJogar,
+    jeitoDeJogar: aparelho === "controle" ? jeitoNoControle : jeitoNoTeclado,
+    jeitoNoTeclado,
+    jeitoNoControle,
     teclaDaPalheta: c.teclaDaPalheta,
     bot: c.bot,
     efeitos: c.efeitos,

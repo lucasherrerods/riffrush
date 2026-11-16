@@ -82,7 +82,7 @@ export interface Mapa {
   botoesDoControle: number[];
   botaoDaEstrela: number;
   /** Na palhetada, o direcional vira a palheta em vez de tocar de novo os trastes segurados. */
-  jeitoDeJogar?: string;
+  jeitoNoControle?: string;
 }
 
 export interface EventoDeTecla {
@@ -91,7 +91,7 @@ export interface EventoDeTecla {
 }
 
 function teclasDoBotao(botao: number, modo: Modo, mapa: Mapa): string[] {
-  if (modo === "jogo" && mapa.jeitoDeJogar === "palhetada" && PALHETADAS.includes(botao)) return [PALHETA_DO_CONTROLE];
+  if (modo === "jogo" && mapa.jeitoNoControle === "palhetada" && PALHETADAS.includes(botao)) return [PALHETA_DO_CONTROLE];
   if (SETAS[botao]) return [SETAS[botao]];
   if (modo === "menu") {
     if (botao === BOTOES.A || botao === BOTOES.START) return ["Enter"];
@@ -128,7 +128,7 @@ export function traduzir(antes: boolean[], agora: boolean[], emitidos: string[][
     }
   });
 
-  const palhetou = modo === "jogo" && mapa.jeitoDeJogar !== "palhetada" && PALHETADAS.some((b) => agora[b] && !antes[b]);
+  const palhetou = modo === "jogo" && mapa.jeitoNoControle !== "palhetada" && PALHETADAS.some((b) => agora[b] && !antes[b]);
   if (palhetou) {
     mapa.botoesDoControle.forEach((botao, pista) => {
       if (!antes[botao] || !agora[botao]) return;

@@ -94,6 +94,15 @@ impl JeitoDeJogar {
     pub fn do_texto(texto: &str) -> Option<Self> {
         [Self::Tapping, Self::Gamepad, Self::Palhetada].into_iter().find(|j| j.como_texto() == texto)
     }
+
+    /// O ranking em que a partida entra. Tapping e gamepad disputam juntos: o gamepad só compensa a
+    /// velocidade do controle. Igual ao `CASE` das views do ranking no banco.
+    pub fn grupo_do_ranking(self) -> &'static str {
+        match self {
+            Self::Tapping | Self::Gamepad => "trastes",
+            Self::Palhetada => "palhetada",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -258,6 +267,12 @@ pub fn nivel_do_xp(xp_total: u64) -> Nivel {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tapping_e_gamepad_disputam_o_mesmo_ranking_e_a_palhetada_o_proprio() {
+        assert_eq!(JeitoDeJogar::Tapping.grupo_do_ranking(), JeitoDeJogar::Gamepad.grupo_do_ranking());
+        assert_ne!(JeitoDeJogar::Gamepad.grupo_do_ranking(), JeitoDeJogar::Palhetada.grupo_do_ranking());
+    }
 
     #[test]
     fn a_dificuldade_vira_o_mesmo_texto_do_json() {

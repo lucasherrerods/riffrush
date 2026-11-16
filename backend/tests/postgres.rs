@@ -287,7 +287,7 @@ async fn ranking_pega_o_recorde_de_cada_jogador_pelos_pontos() {
 }
 
 #[tokio::test]
-async fn o_ranking_mostra_o_jeito_de_jogar_de_cada_recorde() {
+async fn tapping_e_gamepad_dividem_o_ranking_e_cada_recorde_mostra_o_jeito() {
     let Some(banco) = banco().await else { return };
     let ranking = RankingPostgres(banco.0.clone());
     let musica = format!("teste:{}", Uuid::new_v4());
@@ -318,17 +318,38 @@ async fn o_ranking_mostra_o_jeito_de_jogar_de_cada_recorde() {
     let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     banco.registrar_partida(&jogar(ana.id, 900, Some(JeitoDeJogar::Palhetada))).await.unwrap();
     banco.registrar_partida(&jogar(ana.id, 500, Some(JeitoDeJogar::Tapping))).await.unwrap();
+    banco.registrar_partida(&jogar(ana.id, 700, Some(JeitoDeJogar::Gamepad))).await.unwrap();
     banco.registrar_partida(&jogar(bia.id, 800, Some(JeitoDeJogar::Tapping))).await.unwrap();
 
     let pedir = |jeito| ranking.linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, jeito, 1.0, Ordem::Pontos, 10, None);
-    let tapping = pedir(JeitoDeJogar::Tapping).await.unwrap();
+    let trastes = pedir(JeitoDeJogar::Tapping).await.unwrap();
     assert_eq!(
-        tapping.iter().map(|l| (l.conta_id, l.pontos, l.posicao, l.jogadores)).collect::<Vec<_>>(),
-        [(bia.id, 800, 1, 2), (ana.id, 500, 2, 2)]
+        trastes
+            .iter()
+            .map(|l| (l.conta_id, l.pontos, l.posicao, l.jogadores, l.jeito_de_jogar))
+            .collect::<Vec<_>>(),
+        [
+            (bia.id, 800, 1, 2, Some(JeitoDeJogar::Tapping)),
+            (ana.id, 700, 2, 2, Some(JeitoDeJogar::Gamepad))
+        ]
     );
+    assert_eq!(pedir(JeitoDeJogar::Gamepad).await.unwrap(), trastes);
+    let precisao = ranking
+        .linhas(
+            &musica,
+            Dificuldade::Expert,
+            Instrumento::Guitarra,
+            JeitoDeJogar::Gamepad,
+            1.0,
+            Ordem::Precisao,
+            10,
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(precisao.len(), 2);
     let palhetada = pedir(JeitoDeJogar::Palhetada).await.unwrap();
     assert_eq!(palhetada.iter().map(|l| (l.conta_id, l.pontos)).collect::<Vec<_>>(), [(ana.id, 900)]);
-    assert!(pedir(JeitoDeJogar::Gamepad).await.unwrap().is_empty());
 }
 
 #[tokio::test]

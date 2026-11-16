@@ -8,7 +8,7 @@ import { CampoDeSelecao } from "@/shared/ui/CampoDeSelecao";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import type { ApiDoRanking, MusicaNoRanking, OrdemDoRanking } from "./api";
 import { PainelDeRanking } from "./PainelDeRanking";
-import { OPCOES_DOS_JEITOS } from "./RankingDaSelecao";
+import { OPCOES_DOS_JEITOS, rankingDoJeito } from "./jeitos";
 
 const ORDENS: { id: OrdemDoRanking; rotulo: string }[] = [
   { id: "pontos", rotulo: "Pontos" },
@@ -32,7 +32,7 @@ export function PainelDaMusica({ musica, nome, aoVoltar, aoBaixar, aoOuvir, aoAb
   // Abre onde está o recorde: é onde a disputa é mais interessante.
   const [dificuldade, setDificuldade] = useState<Dificuldade>(musica.recorde?.dificuldade ?? "expert");
   const [instrumento, setInstrumento] = useState<Instrumento>("guitarra");
-  const [jeito, setJeito] = useState<JeitoDeJogar>(musica.recorde?.jeito_de_jogar ?? "gamepad");
+  const [jeito, setJeito] = useState<JeitoDeJogar>(rankingDoJeito(musica.recorde?.jeito_de_jogar ?? "gamepad"));
   const [ordem, setOrdem] = useState<OrdemDoRanking>("pontos");
 
   return (

@@ -35,7 +35,7 @@ pub struct PedidoDoRanking {
     #[serde(default)]
     #[param(value_type = Option<String>, example = "baixo")]
     instrumento: Instrumento,
-    /// Cada jeito de jogar tem o próprio top.
+    /// Tapping e gamepad dividem o mesmo top; a palhetada tem o próprio.
     #[param(value_type = String, example = "gamepad")]
     jeito_de_jogar: JeitoDeJogar,
     /// Sem ela, pelos pontos.

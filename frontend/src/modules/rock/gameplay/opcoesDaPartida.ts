@@ -21,6 +21,9 @@ export interface OpcoesDaPartida {
   velocidadeDaMusica: number;
   /** Como as teclas viram notas. Vai no replay, e a API rejulga com ele. */
   jeitoDeJogar: JeitoDeJogar;
+  /** O jeito escolhido para cada aparelho: na tela dividida, cada jogador usa o do seu. */
+  jeitoNoTeclado: JeitoDeJogar;
+  jeitoNoControle: JeitoDeJogar;
   /** Na palhetada, a tecla que toca o acorde. O direcional do controle chega como `PALHETA_DO_CONTROLE`. */
   teclaDaPalheta: string;
   bot: boolean;
@@ -54,6 +57,8 @@ export const OPCOES_PADRAO_DA_PARTIDA: OpcoesDaPartida = {
   semAberta: false,
   velocidadeDaMusica: 1,
   jeitoDeJogar: "gamepad",
+  jeitoNoTeclado: "tapping",
+  jeitoNoControle: "gamepad",
   teclaDaPalheta: "Enter",
   bot: false,
   efeitos: true,

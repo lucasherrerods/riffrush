@@ -54,10 +54,22 @@ describe("trocarTecla", () => {
     expect(trocarTecla(CONFIGURACOES_PADRAO, INDICE_DA_PALHETA, "ShiftRight").teclaDaPalheta).toBe("ShiftRight");
   });
 
-  it("o jeito de jogar começa no gamepad, também para quem salvou antes dele existir", () => {
-    expect(CONFIGURACOES_PADRAO.jeitoDeJogar).toBe("gamepad");
+  it("o jeito de jogar começa no tapping no teclado e no gamepad no controle", () => {
+    expect(CONFIGURACOES_PADRAO).toMatchObject({ jeitoNoTeclado: "tapping", jeitoNoControle: "gamepad" });
     localStorage.setItem("riffrush.configuracoes", JSON.stringify({ velocidade: 3 }));
-    expect(carregarConfiguracoes().jeitoDeJogar).toBe("gamepad");
+    expect(carregarConfiguracoes()).toMatchObject({ jeitoNoTeclado: "tapping", jeitoNoControle: "gamepad" });
+  });
+
+  it("o jeito único de antes vira o do controle, e o teclado passa para o tapping", () => {
+    localStorage.setItem("riffrush.configuracoes", JSON.stringify({ jeitoDeJogar: "gamepad" }));
+    const carregadas = carregarConfiguracoes();
+    expect(carregadas).toMatchObject({ jeitoNoTeclado: "tapping", jeitoNoControle: "gamepad" });
+    expect(carregadas).not.toHaveProperty("jeitoDeJogar");
+  });
+
+  it("quem tinha escolhido a palhetada continua nela nos dois aparelhos", () => {
+    localStorage.setItem("riffrush.configuracoes", JSON.stringify({ jeitoDeJogar: "palhetada" }));
+    expect(carregarConfiguracoes()).toMatchObject({ jeitoNoTeclado: "palhetada", jeitoNoControle: "palhetada" });
   });
 });
 
