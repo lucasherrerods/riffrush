@@ -35,10 +35,11 @@ export function eventoDoJogador(evento: Event, dispositivo: DispositivoDoJogador
   return indiceDoControle(evento) === dispositivo.indice;
 }
 
-/** No teclado valem as teclas do lado; no controle, o mapeamento das configurações, que é o que o controle simula. */
+/** No teclado valem as teclas do lado; no controle, o mapeamento das configurações, que é o que o controle simula. Cada um no jeito do seu aparelho. */
 export function opcoesDoJogador(opcoes: OpcoesDaPartida, dispositivo: DispositivoDoJogador): OpcoesDaPartida {
-  if (dispositivo.tipo === "controle") return opcoes;
-  return { ...opcoes, ...LAYOUTS_DO_TECLADO[dispositivo.lado], rotulosDosTrastes: undefined };
+  const jeitoDeJogar = dispositivo.tipo === "controle" ? opcoes.jeitoNoControle : opcoes.jeitoNoTeclado;
+  if (dispositivo.tipo === "controle") return opcoes.jeitoDeJogar === jeitoDeJogar ? opcoes : { ...opcoes, jeitoDeJogar };
+  return { ...opcoes, ...LAYOUTS_DO_TECLADO[dispositivo.lado], jeitoDeJogar, rotulosDosTrastes: undefined };
 }
 
 /** Na escolha de dispositivos, o jogador entra apertando uma tecla do seu lado ou qualquer botão do controle. */

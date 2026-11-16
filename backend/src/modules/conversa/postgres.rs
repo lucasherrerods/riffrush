@@ -7,6 +7,7 @@ use uuid::Uuid;
 
 use super::cifra::CifraDasMensagens;
 use super::dominio::{MensagemPrivada, NaoLidas, NovaMensagem};
+use super::formato::{sugestao_do_json, sugestao_em_json};
 use super::portas::RepositorioDeConversas;
 use crate::modules::conta::FalhaExterna;
 
@@ -30,6 +31,7 @@ struct LinhaDaMensagem {
     para: Uuid,
     texto: Option<String>,
     texto_cifrado: Option<Vec<u8>>,
+    sugestao: Option<String>,
     enviada_em: DateTime<Utc>,
 }
 
@@ -45,10 +47,10 @@ struct LinhaDasNaoLidas {
     quantas: i64,
 }
 
-const GUARDAR: &str =
-    "INSERT INTO mensagens_privadas (de, para, texto_cifrado, enviada_em) VALUES ($1, $2, $3, $4) RETURNING id, de, para, texto, texto_cifrado, enviada_em";
+const GUARDAR: &str = "INSERT INTO mensagens_privadas (de, para, texto_cifrado, sugestao, enviada_em) VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, de, para, texto, texto_cifrado, sugestao, enviada_em";
 
-const MENSAGENS: &str = "SELECT id, de, para, texto, texto_cifrado, enviada_em FROM mensagens_privadas
+const MENSAGENS: &str = "SELECT id, de, para, texto, texto_cifrado, sugestao, enviada_em FROM mensagens_privadas
     WHERE LEAST(de, para) = LEAST($1::uuid, $2::uuid) AND GREATEST(de, para) = GREATEST($1::uuid, $2::uuid)
       AND ($3::bigint IS NULL OR id < $3)
     ORDER BY id DESC LIMIT $4";
@@ -79,6 +81,12 @@ impl ConversasPostgres {
             de: l.de,
             para: l.para,
             texto,
+            // Uma sugestão que não se lê mais vira só o recado.
+            sugestao: l
+                .sugestao
+                .as_deref()
+                .and_then(|j| serde_json::from_str(j).ok())
+                .and_then(|v| sugestao_do_json(&v)),
             enviada_em: l.enviada_em,
         })
     }
@@ -106,6 +114,7 @@ impl RepositorioDeConversas for ConversasPostgres {
             .bind(m.de)
             .bind(m.para)
             .bind(self.cifra.cifrar(&m.texto))
+            .bind(m.sugestao.as_ref().map(|s| sugestao_em_json(s).to_string()))
             .bind(m.enviada_em)
             .fetch_one(&self.banco)
             .await

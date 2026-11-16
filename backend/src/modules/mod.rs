@@ -1,4 +1,5 @@
 pub mod amizade;
+pub mod atividades;
 pub mod catalogo;
 pub mod conta;
 pub mod conversa;

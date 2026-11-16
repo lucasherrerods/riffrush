@@ -128,9 +128,16 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
             ) : (
               <>
             <SeletorDeJeitoDeJogar
-              valor={configuracoes.jeitoDeJogar}
-              aoEscolher={(jeitoDeJogar) => mudar({ jeitoDeJogar })}
+              titulo="Jeito de jogar no teclado"
+              valor={configuracoes.jeitoNoTeclado}
+              aoEscolher={(jeitoNoTeclado) => mudar({ jeitoNoTeclado })}
               teclas={{ verde: nomeDaTecla(configuracoes.teclas[0]), vermelho: nomeDaTecla(configuracoes.teclas[1]), palheta: nomeDaTecla(configuracoes.teclaDaPalheta) }}
+            />
+            <SeletorDeJeitoDeJogar
+              titulo="Jeito de jogar no controle"
+              valor={configuracoes.jeitoNoControle}
+              aoEscolher={(jeitoNoControle) => mudar({ jeitoNoControle })}
+              teclas={{ verde: nomeDoBotao(configuracoes.botoesDoControle[0]), vermelho: nomeDoBotao(configuracoes.botoesDoControle[1]), palheta: "▲ ▼" }}
             />
             <p className="px-4 py-2 text-base text-texto-suave max-md:px-2 max-md:py-1 max-md:text-sm">
               {comControle
@@ -148,7 +155,7 @@ export function TelaDeConfiguracoes({ configuracoes, aoMudar, aoVoltar }: Props)
             <LinhaDeOpcao rotulo="Star Power" dica="Ativa o bônus quando a barra passa da metade">
               {comandos(INDICE_DA_ESTRELA, "do star power", configuracoes.teclaDaEstrela, configuracoes.botaoDaEstrela, COR_DA_ESTRELA)}
             </LinhaDeOpcao>
-            {configuracoes.jeitoDeJogar === "palhetada" && (
+            {configuracoes.jeitoNoTeclado === "palhetada" && (
               <LinhaDeOpcao rotulo="Palheta" dica="Toca o acorde dos trastes apertados. No controle é o direcional ▲ ▼">
                 {botaoDeTecla(INDICE_DA_PALHETA, "da palheta", configuracoes.teclaDaPalheta, "var(--cor-borda)")}
               </LinhaDeOpcao>

@@ -78,6 +78,12 @@ describe("lerPrivadaDaApi", () => {
     expect(lerPrivadaDaApi(JSON.stringify(corpo))).toEqual(corpo);
   });
 
+  it("repassa a sugestão de música que a API conferiu, e ignora a que não é um objeto", () => {
+    const sugestao = { modo: "mania", musica: "1234", versao: "5678", titulo: "Galaxy Collapse", artista: "Kurokotei", dificuldade: "[Cataclysmic] 7K" };
+    expect(lerPrivadaDaApi(JSON.stringify({ id: 7, de, para, texto: "", sugestao, em: 1000 }))?.sugestao).toEqual(sugestao);
+    expect(lerPrivadaDaApi(JSON.stringify({ id: 7, de, para, texto: "oi", sugestao: "x", em: 1000 }))?.sugestao).toBeUndefined();
+  });
+
   it("recusa o que veio incompleto ou com conta inválida", () => {
     expect(lerPrivadaDaApi(JSON.stringify({ id: 7, de, para: "../x", texto: "oi", em: 1000 }))).toBeNull();
     expect(lerPrivadaDaApi(JSON.stringify({ id: "7", de, para, texto: "oi", em: 1000 }))).toBeNull();

@@ -48,6 +48,7 @@ async fn montar() -> Montado {
             amizade: riffrush_api::modules::amizade::fakes::servicos_de_amizade(conta.clone(), Default::default()).0,
             mania: riffrush_api::modules::mania::fakes::servicos_vazios(conta.clone()),
             conversa: riffrush_api::modules::conversa::fakes::servicos_vazios(conta.clone()),
+            atividades: riffrush_api::modules::atividades::fakes::servicos_de_atividades().0,
             banco: Arc::new(BancoOk),
             ranking: servicos_do_ranking(conta.clone()).0,
             perfil: riffrush_api::modules::perfil::fakes::servicos_do_perfil(conta.clone()).0,

@@ -43,6 +43,7 @@ async fn cena() -> Cena {
         EstadoDoApp {
             amizade,
             conversa,
+            atividades: riffrush_api::modules::atividades::fakes::servicos_de_atividades().0,
             mania: riffrush_api::modules::mania::fakes::servicos_vazios(conta.clone()),
             banco: Arc::new(BancoOk),
             moderacao: riffrush_api::modules::moderacao::fakes::servicos_de_moderacao(conta.clone(), None).0,
@@ -144,4 +145,23 @@ async fn sem_sessao_nao_entra() {
     let c = cena().await;
     let (status, _) = chamar(&c.app, Method::GET, "/conversas/nao-lidas", "token-falso", None).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn sugere_uma_musica_sem_recado_e_recusa_a_que_nao_da_para_baixar() {
+    let c = cena().await;
+    fazer_amizade(&c).await;
+    let caminho = format!("/amigos/{}/mensagens", c.beto.0);
+    let sugestao =
+        json!({ "modo": "mania", "musica": "1234", "versao": "5678", "titulo": "Galaxy Collapse", "artista": "Kurokotei", "dificuldade": "[Cataclysmic] 7K" });
+    let (status, mensagem) = chamar(&c.app, Method::POST, &caminho, &c.ana.1, Some(json!({ "sugestao": sugestao }))).await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(mensagem["texto"], "");
+    assert_eq!(mensagem["sugestao"], sugestao);
+    let importada = json!({ "modo": "rock", "musica": "arquivo:minha", "titulo": "Minha" });
+    let (status, _) = chamar(&c.app, Method::POST, &caminho, &c.ana.1, Some(json!({ "sugestao": importada }))).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let modo_errado = json!({ "modo": "drums", "musica": "1", "titulo": "x" });
+    let (status, _) = chamar(&c.app, Method::POST, &caminho, &c.ana.1, Some(json!({ "sugestao": modo_errado }))).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
 }

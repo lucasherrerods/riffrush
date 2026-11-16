@@ -4,7 +4,9 @@ use std::sync::{Arc, Mutex};
 use chrono::Duration;
 use uuid::Uuid;
 
-use super::dominio::{limpar_texto, MensagemPrivada, NaoLidas, NovaMensagem, Remetente, MENSAGENS_POR_MINUTO, MENSAGENS_POR_PAGINA};
+use super::dominio::{
+    limpar_sugestao, limpar_texto, MensagemPrivada, NaoLidas, NovaMensagem, Remetente, SugestaoDeMusica, MENSAGENS_POR_MINUTO, MENSAGENS_POR_PAGINA,
+};
 use super::portas::{EntregaNaHora, RepositorioDeConversas};
 use crate::modules::amizade::{Relacao, RepositorioDeAmizades};
 use crate::modules::conta::{Conta, FalhaExterna, ServicosDaConta};
@@ -28,6 +30,8 @@ const JANELAS_GUARDADAS: usize = 10_000;
 pub enum ErroDaConversa {
     #[error("sessão inválida ou expirada")]
     SessaoInvalida,
+    #[error("essa música não dá para sugerir: só charts do Encore ou mapas do osu!")]
+    SugestaoInvalida,
     #[error("só dá para conversar com amigos")]
     NaoSaoAmigos,
     #[error("mensagem vazia")]
@@ -40,9 +44,18 @@ pub enum ErroDaConversa {
 
 impl ServicosDeConversa {
     /// Guarda a mensagem e tenta entregar na hora. Se a entrega falhar, ela continua no histórico.
-    pub async fn enviar(&self, token: &str, para: Uuid, texto: &str) -> Result<MensagemPrivada, ErroDaConversa> {
+    /// Manda um recado, uma sugestão de música ou os dois. Sem sugestão, o recado não pode ficar vazio.
+    pub async fn enviar(&self, token: &str, para: Uuid, texto: &str, sugestao: Option<SugestaoDeMusica>) -> Result<MensagemPrivada, ErroDaConversa> {
         let conta = self.conta_da_sessao(token).await?;
-        let texto = limpar_texto(texto).ok_or(ErroDaConversa::TextoVazio)?;
+        let sugestao = match sugestao {
+            Some(sugestao) => Some(limpar_sugestao(sugestao).ok_or(ErroDaConversa::SugestaoInvalida)?),
+            None => None,
+        };
+        let texto = match (limpar_texto(texto), &sugestao) {
+            (Some(texto), _) => texto,
+            (None, Some(_)) => String::new(),
+            (None, None) => return Err(ErroDaConversa::TextoVazio),
+        };
         self.exigir_amizade(conta.id, para).await?;
         self.contar_envio(conta.id)?;
         let mensagem = self
@@ -51,6 +64,7 @@ impl ServicosDeConversa {
                 de: conta.id,
                 para,
                 texto,
+                sugestao,
                 enviada_em: self.conta.relogio.agora(),
             })
             .await?;
@@ -142,6 +156,7 @@ pub mod fakes {
                 de: nova.de,
                 para: nova.para,
                 texto: nova.texto.clone(),
+                sugestao: nova.sugestao.clone(),
                 enviada_em: nova.enviada_em,
             };
             mensagens.push((mensagem.clone(), None));
@@ -272,7 +287,7 @@ mod tests {
     #[tokio::test]
     async fn amigo_manda_guarda_com_texto_limpo_e_entrega_na_hora() {
         let c = cena().await;
-        let mensagem = c.servicos.enviar(&c.ana.1, c.beto.0, "  bora\njogar?  ").await.unwrap();
+        let mensagem = c.servicos.enviar(&c.ana.1, c.beto.0, "  bora\njogar?  ", None).await.unwrap();
         assert_eq!(mensagem.texto, "bora jogar?");
         assert_eq!((mensagem.de, mensagem.para), (c.ana.0, c.beto.0));
         let entregues = c.entrega.entregues.lock().unwrap();
@@ -284,7 +299,10 @@ mod tests {
     #[tokio::test]
     async fn quem_nao_e_amigo_nao_manda_nem_le() {
         let c = cena().await;
-        assert!(matches!(c.servicos.enviar(&c.caio.1, c.ana.0, "oi").await, Err(ErroDaConversa::NaoSaoAmigos)));
+        assert!(matches!(
+            c.servicos.enviar(&c.caio.1, c.ana.0, "oi", None).await,
+            Err(ErroDaConversa::NaoSaoAmigos)
+        ));
         assert!(matches!(
             c.servicos.historico(&c.caio.1, c.ana.0, None).await,
             Err(ErroDaConversa::NaoSaoAmigos)
@@ -295,9 +313,12 @@ mod tests {
     #[tokio::test]
     async fn texto_vazio_e_sessao_invalida_sao_recusados() {
         let c = cena().await;
-        assert!(matches!(c.servicos.enviar(&c.ana.1, c.beto.0, " \n ").await, Err(ErroDaConversa::TextoVazio)));
         assert!(matches!(
-            c.servicos.enviar("token-falso", c.beto.0, "oi").await,
+            c.servicos.enviar(&c.ana.1, c.beto.0, " \n ", None).await,
+            Err(ErroDaConversa::TextoVazio)
+        ));
+        assert!(matches!(
+            c.servicos.enviar("token-falso", c.beto.0, "oi", None).await,
             Err(ErroDaConversa::SessaoInvalida)
         ));
     }
@@ -312,7 +333,7 @@ mod tests {
             }),
             ..c.servicos.clone()
         };
-        servicos.enviar(&c.ana.1, c.beto.0, "oi").await.unwrap();
+        servicos.enviar(&c.ana.1, c.beto.0, "oi", None).await.unwrap();
         assert_eq!(c.servicos.historico(&c.beto.1, c.ana.0, None).await.unwrap().len(), 1);
     }
 
@@ -320,17 +341,20 @@ mod tests {
     async fn limita_os_envios_por_minuto() {
         let c = cena().await;
         for _ in 0..MENSAGENS_POR_MINUTO {
-            c.servicos.enviar(&c.ana.1, c.beto.0, "oi").await.unwrap();
+            c.servicos.enviar(&c.ana.1, c.beto.0, "oi", None).await.unwrap();
         }
-        assert!(matches!(c.servicos.enviar(&c.ana.1, c.beto.0, "oi").await, Err(ErroDaConversa::RapidoDemais)));
+        assert!(matches!(
+            c.servicos.enviar(&c.ana.1, c.beto.0, "oi", None).await,
+            Err(ErroDaConversa::RapidoDemais)
+        ));
     }
 
     #[tokio::test]
     async fn o_historico_vem_dos_dois_lados_paginado_pelo_id() {
         let c = cena().await;
         for i in 0..3 {
-            c.servicos.enviar(&c.ana.1, c.beto.0, &format!("a{i}")).await.unwrap();
-            c.servicos.enviar(&c.beto.1, c.ana.0, &format!("b{i}")).await.unwrap();
+            c.servicos.enviar(&c.ana.1, c.beto.0, &format!("a{i}"), None).await.unwrap();
+            c.servicos.enviar(&c.beto.1, c.ana.0, &format!("b{i}"), None).await.unwrap();
         }
         let todas = c.servicos.historico(&c.ana.1, c.beto.0, None).await.unwrap();
         assert_eq!(todas.iter().map(|m| m.texto.as_str()).collect::<Vec<_>>(), ["b2", "a2", "b1", "a1", "b0", "a0"]);
@@ -341,11 +365,44 @@ mod tests {
     #[tokio::test]
     async fn conta_as_nao_lidas_por_amigo_e_zera_ao_ler() {
         let c = cena().await;
-        c.servicos.enviar(&c.ana.1, c.beto.0, "oi").await.unwrap();
-        c.servicos.enviar(&c.ana.1, c.beto.0, "ta ai?").await.unwrap();
+        c.servicos.enviar(&c.ana.1, c.beto.0, "oi", None).await.unwrap();
+        c.servicos.enviar(&c.ana.1, c.beto.0, "ta ai?", None).await.unwrap();
         assert_eq!(c.servicos.nao_lidas(&c.beto.1).await.unwrap(), [NaoLidas { de: c.ana.0, quantas: 2 }]);
         assert!(c.servicos.nao_lidas(&c.ana.1).await.unwrap().is_empty());
         c.servicos.marcar_lidas(&c.beto.1, c.ana.0).await.unwrap();
         assert!(c.servicos.nao_lidas(&c.beto.1).await.unwrap().is_empty());
+    }
+    fn sugestao() -> SugestaoDeMusica {
+        SugestaoDeMusica {
+            modo: crate::modules::conversa::dominio::ModoDaSugestao::Mania,
+            musica: "1234".into(),
+            versao: Some("5678".into()),
+            titulo: "Galaxy Collapse".into(),
+            artista: "Kurokotei".into(),
+            dificuldade: "[Cataclysmic] 7K".into(),
+        }
+    }
+
+    #[tokio::test]
+    async fn manda_uma_sugestao_de_musica_sem_recado() {
+        let c = cena().await;
+        let mensagem = c.servicos.enviar(&c.ana.1, c.beto.0, "  ", Some(sugestao())).await.unwrap();
+        assert_eq!(mensagem.texto, "");
+        assert_eq!(mensagem.sugestao, Some(sugestao()));
+        let historico = c.servicos.historico(&c.beto.1, c.ana.0, None).await.unwrap();
+        assert_eq!(historico[0].sugestao, Some(sugestao()));
+    }
+
+    #[tokio::test]
+    async fn a_sugestao_de_uma_musica_que_nao_da_para_baixar_e_recusada() {
+        let c = cena().await;
+        let importada = SugestaoDeMusica {
+            musica: "arquivo:minha".into(),
+            ..sugestao()
+        };
+        assert!(matches!(
+            c.servicos.enviar(&c.ana.1, c.beto.0, "olha", Some(importada)).await,
+            Err(ErroDaConversa::SugestaoInvalida)
+        ));
     }
 }

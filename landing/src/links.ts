@@ -4,6 +4,7 @@ export const LINKS = {
   jogarNoNavegador: "https://riffrush.vercel.app",
   baixar: `${REPOSITORIO}/releases/latest/download/RiffRush-setup.exe`,
   github: REPOSITORIO,
+  novidades: "/novidades/",
 };
 
 /** Âncoras da página, usadas no topo e no rodapé. */

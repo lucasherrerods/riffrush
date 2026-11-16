@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Play, Radio, Search, Settings2, Trophy, Users } from "lucide-react";
+import { Activity, Play, Radio, Search, Settings2, Trophy, Users } from "lucide-react";
 import { LogoDoJogo, TelaInicial, type TrocaDeModo } from "@/modules/menu";
 import { TeclaDoMania } from "./TeclaDoMania";
 
@@ -13,6 +13,8 @@ interface Props {
   aoLeaderboard?: () => void;
   /** Quem está online nos dois modos, para assistir; sem relay ou sem contas, a opção não aparece. */
   aoOnline?: () => void;
+  /** O log do que a galera anda jogando nos dois modos; sem contas, a opção não aparece. */
+  aoAtividades?: () => void;
   /** O chat global, o mesmo do Rock. */
   chat?: ReactNode;
   /** A alavanca que volta para o Rock, embaixo da logo. */
@@ -23,7 +25,7 @@ interface Props {
 }
 
 /** A tela inicial do Mania: a mesma do Rock, com as opções em teclas do mania. */
-export function MenuDoMania({ aoJogar, aoBuscar, aoConfigurar, aoMultijogador, aoLeaderboard, aoOnline, chat, alavanca, troca, estatica }: Props) {
+export function MenuDoMania({ aoJogar, aoBuscar, aoConfigurar, aoMultijogador, aoLeaderboard, aoOnline, aoAtividades, chat, alavanca, troca, estatica }: Props) {
   return (
     <TelaInicial
       logo={<LogoDoJogo modo="Mania" fofa />}
@@ -39,6 +41,7 @@ export function MenuDoMania({ aoJogar, aoBuscar, aoConfigurar, aoMultijogador, a
         { rotulo: "Buscar mapas", icone: Search, acao: aoBuscar },
         ...(aoLeaderboard ? [{ rotulo: "Leaderboard", icone: Trophy, acao: aoLeaderboard }] : []),
         ...(aoOnline ? [{ rotulo: "Online", icone: Radio, acao: aoOnline }] : []),
+        ...(aoAtividades ? [{ rotulo: "Atividades", icone: Activity, acao: aoAtividades }] : []),
         { rotulo: "Configurações", icone: Settings2, acao: aoConfigurar },
       ]}
       classeDoMenu="w-60 gap-1.5"

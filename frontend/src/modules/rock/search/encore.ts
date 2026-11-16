@@ -174,12 +174,6 @@ export function lerRespostaDaBusca(json: unknown): RespostaDaBusca {
   };
 }
 
-export function formatarDuracao(ms: number): string {
-  if (ms <= 0) return "";
-  const segundos = Math.floor(ms / 1000);
-  return `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, "0")}`;
-}
-
 export async function buscarNoEncore(
   filtros: FiltrosDaBusca,
   pagina: number,

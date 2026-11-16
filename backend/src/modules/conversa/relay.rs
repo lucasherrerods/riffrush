@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use serde_json::json;
 
 use super::dominio::{MensagemPrivada, Remetente};
+use super::formato::sugestao_em_json;
 use super::portas::EntregaNaHora;
 use crate::modules::conta::FalhaExterna;
 use crate::modules::moderacao::RelayHttp;
@@ -17,6 +18,7 @@ pub fn corpo_da_entrega(mensagem: &MensagemPrivada, remetente: &Remetente) -> St
         "de": { "id": remetente.id, "nome": remetente.nome, "avatar": remetente.avatar },
         "para": mensagem.para,
         "texto": mensagem.texto,
+        "sugestao": mensagem.sugestao.as_ref().map(sugestao_em_json),
         "em": mensagem.enviada_em.timestamp_millis(),
     })
     .to_string()
@@ -46,6 +48,7 @@ mod tests {
             de,
             para,
             texto: "oi".into(),
+            sugestao: None,
             enviada_em: Utc.timestamp_millis_opt(1_700_000_000_123).unwrap(),
         };
         let remetente = Remetente {
@@ -56,7 +59,7 @@ mod tests {
         let corpo: Value = serde_json::from_str(&corpo_da_entrega(&mensagem, &remetente)).unwrap();
         assert_eq!(
             corpo,
-            json!({ "id": 7, "de": { "id": de, "nome": "Ana", "avatar": null }, "para": para, "texto": "oi", "em": 1_700_000_000_123i64 })
+            json!({ "id": 7, "de": { "id": de, "nome": "Ana", "avatar": null }, "para": para, "texto": "oi", "sugestao": null, "em": 1_700_000_000_123i64 })
         );
     }
 }

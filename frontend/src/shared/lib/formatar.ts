@@ -23,3 +23,10 @@ export function haQuantoTempo(data: string, agora = new Date()) {
 export function porcentagem(fracao: number, casas = 2) {
   return `${(fracao * 100).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas })}%`;
 }
+
+/** Minutos e segundos: "4:23". Vazio sem duração. */
+export function formatarDuracao(ms: number): string {
+  if (ms <= 0) return "";
+  const segundos = Math.floor(ms / 1000);
+  return `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, "0")}`;
+}

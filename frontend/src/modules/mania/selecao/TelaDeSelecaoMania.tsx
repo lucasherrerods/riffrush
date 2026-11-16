@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react"
+import { BotaoDeSugerir } from "@/modules/amigos"
+import { sugestaoDoConjunto } from "./sugestaoDoConjunto"
 import { Download, FileAudio, Info, ListOrdered } from "lucide-react"
 import {
   AvisoDaLista,
@@ -25,6 +27,7 @@ import {
 } from "@/modules/selecao"
 import { useTeclado } from "@/shared/hooks/useTeclado"
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita"
+import { formatarDuracao } from "@/shared/lib/formatar"
 import { cn } from "@/shared/lib/utils"
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes"
 import { NumeroDestacado } from "@/shared/ui/NumeroDestacado"
@@ -114,10 +117,6 @@ const ORDENS: { id: OrdemDaSelecao; rotulo: string }[] = [
 
 const formatarEstrelas = (estrelas: number) =>
   `${estrelas.toFixed(2).replace(".", ",")}★`
-const formatarDuracao = (ms: number) => {
-  const segundos = Math.round(ms / 1000)
-  return `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, "0")}`
-}
 
 function rotuloDaDificuldade(
   conjunto: ConjuntoSalvo,
@@ -208,6 +207,12 @@ export function TelaDeSelecaoMania({
   }, [idDoConjunto, aoMudarSelecao])
   const dificuldade =
     conjunto?.mapas.find((m) => m.hash === hash) ?? conjunto?.mapas[0]
+  const sugerir = conjunto && (
+    <BotaoDeSugerir
+      sugestao={sugestaoDoConjunto(conjunto, dificuldade)}
+      motivoSemSugestao="Só dá para sugerir mapas baixados do osu!."
+    />
+  )
 
   const escolher = (i: number) => {
     const proximo = lista[i]
@@ -506,6 +511,7 @@ export function TelaDeSelecaoMania({
               />
             )
           }
+          sugerir={sugerir}
           detalhes={detalhes}
           ranking={ranking || undefined}
           tocar={tocar}
@@ -532,6 +538,7 @@ export function TelaDeSelecaoMania({
                       aoAlternar={alternarFavoritaAtual}
                     />
                   }
+                  sugerir={sugerir}
                 />
               )}
 

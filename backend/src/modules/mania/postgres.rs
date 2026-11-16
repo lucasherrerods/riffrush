@@ -308,7 +308,7 @@ impl RepositorioDoMania for ManiaPostgres {
                  SELECT beatmap_id, max(beatmapset_id) AS beatmapset_id, count(*) AS partidas, count(DISTINCT conta_id) AS jogadores
                  FROM partidas_do_mania WHERE vale_ranking
                  GROUP BY beatmap_id
-                 ORDER BY count(*) DESC, beatmap_id
+                 ORDER BY count(DISTINCT conta_id) DESC, count(*) DESC, beatmap_id
                  LIMIT $1
              )
              SELECT ct.beatmap_id, ct.beatmapset_id, ct.partidas, ct.jogadores, b.texto,
@@ -320,7 +320,7 @@ impl RepositorioDoMania for ManiaPostgres {
                  WHERE p.beatmap_id = ct.beatmap_id AND p.vale_ranking
                  ORDER BY p.pontuacao DESC, p.jogada_em ASC LIMIT 1
              ) r ON true
-             ORDER BY ct.partidas DESC, ct.beatmap_id",
+             ORDER BY ct.jogadores DESC, ct.partidas DESC, ct.beatmap_id",
         )
         .bind(i64::from(limite))
         .fetch_all(&self.0)

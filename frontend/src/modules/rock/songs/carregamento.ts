@@ -6,7 +6,7 @@ import { mixarEmSegundoPlano } from "./mixagem";
 import { CAPAS } from "@/modules/rock/tema";
 import type { Batida, Dificuldade, Instrumento, Musica, MusicaCarregada } from "./tipos";
 
-const AUDIO_DO_SNG = /^(song|guitar|bass|rhythm|keys|vocals?|vocals_\d|drums(_\d)?|backing)\.(opus|ogg|mp3|wav)$/;
+export const AUDIO_DO_SNG = /^(song|guitar|bass|rhythm|keys|vocals?|vocals_\d|drums(_\d)?|backing)\.(opus|ogg|mp3|wav)$/;
 const CAPA_DO_SNG = /^album\.(jpe?g|png)$/;
 const VIDEO_DO_SNG = /^(video|background)\.(mp4|webm)$/;
 const BATIDA_DOS_AUDIOS_IMPORTADOS = 0.5;

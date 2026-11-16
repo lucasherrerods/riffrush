@@ -1,6 +1,6 @@
 import { codigoDaEntrada, emTicks, entradaDoCodigo, type EntradaDoReplay, type JeitoDeJogar } from "@/modules/rock/gameplay";
 import type { Dificuldade, Instrumento } from "@/modules/rock/songs";
-import type { Modo } from "@/shared/modo";
+import { lerModo, type Modo } from "@/shared/modo";
 
 // O mesmo contrato do relay (backend/relay/src/presenca.ts), que é publicado à parte.
 
@@ -51,11 +51,37 @@ export function lerConvite(bruta: string): ConviteParaSala | null {
 }
 
 /** Mensagem entre amigos que a API guardou e o relay entrega na hora a quem mandou e a quem recebe. */
+/**
+ * Uma música para o amigo tocar, no formato da API: um chart do Encore no Rock (`musica` é o md5)
+ * ou um conjunto do osu! no Mania (`musica` é o id do conjunto).
+ */
+export interface SugestaoDeMusica {
+  modo: Modo;
+  musica: string;
+  /** A dificuldade escolhida: no Rock o id dela, no Mania o id do beatmap. */
+  versao: string | null;
+  titulo: string;
+  artista: string;
+  /** Como a dificuldade aparece no cartão. */
+  dificuldade: string;
+}
+
+/** A sugestão que veio da API ou do relay, ou nada quando não tem o mínimo para abrir a música. */
+export function lerSugestao(bruta: unknown): SugestaoDeMusica | undefined {
+  if (!bruta || typeof bruta !== "object") return undefined;
+  const s = bruta as Record<string, unknown>;
+  const modo = lerModo(s.modo);
+  if (!modo || typeof s.musica !== "string" || !s.musica || typeof s.titulo !== "string") return undefined;
+  const texto = (valor: unknown) => (typeof valor === "string" ? valor : "");
+  return { modo, musica: s.musica, versao: typeof s.versao === "string" ? s.versao : null, titulo: s.titulo, artista: texto(s.artista), dificuldade: texto(s.dificuldade) };
+}
+
 export interface MensagemPrivada {
   id: number;
   de: ConviteParaSala["de"];
   para: string;
   texto: string;
+  sugestao?: SugestaoDeMusica;
   /** Quando a API guardou, em ms. */
   em: number;
 }
@@ -65,7 +91,15 @@ export function lerMensagemPrivada(bruta: string): MensagemPrivada | null {
     const msg = JSON.parse(bruta);
     if (msg?.tipo !== "privada" || !Number.isInteger(msg.id) || typeof msg.texto !== "string" || typeof msg.para !== "string" || typeof msg.em !== "number") return null;
     if (typeof msg.de?.id !== "string" || typeof msg.de.nome !== "string") return null;
-    return { id: msg.id, de: { id: msg.de.id, nome: msg.de.nome, avatar: typeof msg.de.avatar === "string" ? msg.de.avatar : null }, para: msg.para, texto: msg.texto, em: msg.em };
+    const sugestao = lerSugestao(msg.sugestao);
+    return {
+      id: msg.id,
+      de: { id: msg.de.id, nome: msg.de.nome, avatar: typeof msg.de.avatar === "string" ? msg.de.avatar : null },
+      para: msg.para,
+      texto: msg.texto,
+      ...(sugestao && { sugestao }),
+      em: msg.em,
+    };
   } catch {
     return null;
   }

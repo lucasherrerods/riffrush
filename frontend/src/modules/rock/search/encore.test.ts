@@ -1,4 +1,4 @@
-import { FILTROS_PADRAO, usaBuscaAvancada, buscarEntreOsCharts, sortearChartOficial, buscarChartPeloMd5, buscarNoEncore, montarCorpoDaBuscaAvancada, formatarDuracao, lerRespostaDaBusca, montarCorpoDaBusca, montarUrlDoChart, nomeDoArquivo, urlDaCapa, ehUrlDoEncore, linkDoChartConfere, type ResultadoDaBusca } from "./encore";
+import { FILTROS_PADRAO, usaBuscaAvancada, buscarEntreOsCharts, sortearChartOficial, buscarChartPeloMd5, buscarNoEncore, montarCorpoDaBuscaAvancada, lerRespostaDaBusca, montarCorpoDaBusca, montarUrlDoChart, nomeDoArquivo, urlDaCapa, ehUrlDoEncore, linkDoChartConfere, type ResultadoDaBusca } from "./encore";
 
 const itemDaApi = {
   name: "Enter Sandman",
@@ -111,13 +111,6 @@ describe("urlDaCapa", () => {
   });
 });
 
-describe("formatarDuracao", () => {
-  it("mostra minutos e segundos", () => {
-    expect(formatarDuracao(263674)).toBe("4:23");
-    expect(formatarDuracao(5000)).toBe("0:05");
-    expect(formatarDuracao(0)).toBe("");
-  });
-});
 
 describe("buscarChartPeloMd5", () => {
   it("pede o chart pelo hash na busca avançada e devolve só o do md5 pedido", async () => {

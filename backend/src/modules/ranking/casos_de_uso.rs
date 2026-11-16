@@ -158,7 +158,7 @@ pub mod fakes {
                     m == musica_id
                         && *d == dificuldade
                         && *i == instrumento
-                        && l.jeito_de_jogar == Some(jeito)
+                        && l.jeito_de_jogar.map(JeitoDeJogar::grupo_do_ranking) == Some(jeito.grupo_do_ranking())
                         && (l.posicao <= ate || Some(l.conta_id) == conta)
                 })
                 .map(|(_, _, _, l)| l.clone())

@@ -18,13 +18,38 @@ export interface PacoteSng {
   arquivos: Map<string, Uint8Array>;
 }
 
-export function lerSng(buffer: ArrayBufferLike): PacoteSng {
-  const vista = new DataView(buffer);
-  const bytes = new Uint8Array(buffer);
+export interface IndiceDoSng {
+  metadados: Record<string, string>;
+  mascara: Uint8Array;
+  /** Posição de cada arquivo no pacote inteiro, pelo nome em minúsculo. */
+  arquivos: Map<string, { inicio: number; tamanho: number }>;
+}
+
+const INICIO_DOS_METADADOS = 26;
+
+/**
+ * Quantos bytes do começo do pacote bastam para ler o índice, ou null se os bytes
+ * ainda não chegam ao tamanho do índice. Serve para pedir só o começo do arquivo.
+ */
+export function tamanhoDoIndiceDoSng(bytes: Uint8Array): number | null {
+  const vista = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (bytes.length < INICIO_DOS_METADADOS + 8) return null;
+  const inicioDoIndice = INICIO_DOS_METADADOS + 8 + Number(vista.getBigUint64(INICIO_DOS_METADADOS, true));
+  if (bytes.length < inicioDoIndice + 8) return null;
+  return inicioDoIndice + 8 + Number(vista.getBigUint64(inicioDoIndice, true));
+}
+
+export function desmascarar(conteudo: Uint8Array, mascara: Uint8Array): Uint8Array {
+  for (let j = 0; j < conteudo.length; j++) conteudo[j] ^= mascara[j & 15] ^ (j & 0xff);
+  return conteudo;
+}
+
+export function lerIndiceDoSng(bytes: Uint8Array): IndiceDoSng {
+  const vista = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const decodificador = new TextDecoder();
-  if (bytes.length < 26 || decodificador.decode(bytes.subarray(0, 6)) !== "SNGPKG") throw new Error("Arquivo .sng inválido.");
-  const mascara = bytes.slice(10, 26);
-  let posicao = 26;
+  if (bytes.length < INICIO_DOS_METADADOS || decodificador.decode(bytes.subarray(0, 6)) !== "SNGPKG") throw new Error("Arquivo .sng inválido.");
+  const mascara = bytes.slice(10, INICIO_DOS_METADADOS);
+  let posicao = INICIO_DOS_METADADOS;
   const u64 = () => {
     const valor = Number(vista.getBigUint64(posicao, true));
     posicao += 8;
@@ -49,18 +74,24 @@ export function lerSng(buffer: ArrayBufferLike): PacoteSng {
     metadados[chave.toLowerCase()] = texto(i32());
   }
 
-  const arquivos = new Map<string, Uint8Array>();
+  const arquivos: IndiceDoSng["arquivos"] = new Map();
   u64();
   const quantidadeDeArquivos = u64();
   for (let i = 0; i < quantidadeDeArquivos; i++) {
     const nome = texto(bytes[posicao++]).toLowerCase();
     const tamanho = u64();
-    const inicio = u64();
-    const conteudo = bytes.slice(inicio, inicio + tamanho);
-    for (let j = 0; j < conteudo.length; j++) conteudo[j] ^= mascara[j & 15] ^ (j & 0xff);
-    arquivos.set(nome, conteudo);
+    arquivos.set(nome, { tamanho, inicio: u64() });
   }
-  return { metadados, arquivos };
+  return { metadados, mascara, arquivos };
+}
+
+export function lerSng(buffer: ArrayBufferLike): PacoteSng {
+  const bytes = new Uint8Array(buffer);
+  const { metadados, mascara, arquivos } = lerIndiceDoSng(bytes);
+  return {
+    metadados,
+    arquivos: new Map([...arquivos].map(([nome, { inicio, tamanho }]) => [nome, desmascarar(bytes.slice(inicio, inicio + tamanho), mascara)])),
+  };
 }
 
 const ANDAMENTO_PADRAO = 500000;

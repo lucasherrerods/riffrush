@@ -11,8 +11,12 @@ export interface Configuracoes {
   teclaDaEstrela: string;
   /** Na palhetada, a tecla que toca o acorde dos trastes apertados. No controle é o direcional. */
   teclaDaPalheta: string;
-  /** Como as teclas viram notas: tapping, gamepad ou palhetada. No celular é sempre tapping. */
-  jeitoDeJogar: JeitoDeJogar;
+  /**
+   * Como as teclas viram notas, um para cada aparelho: soltar o traste tocar a próxima nota (gamepad) é natural
+   * no controle, mas no teclado parece defeito. No celular é sempre tapping.
+   */
+  jeitoNoTeclado: JeitoDeJogar;
+  jeitoNoControle: JeitoDeJogar;
   /** Índices (Gamepad API) dos botões do controle de cada traste e da aberta, na mesma ordem das teclas. */
   botoesDoControle: number[];
   botaoDaEstrela: number;
@@ -60,7 +64,8 @@ export const CONFIGURACOES_PADRAO: Configuracoes = {
   teclas: ["KeyA", "KeyS", "KeyJ", "KeyK", "KeyL", "KeyD"],
   teclaDaEstrela: "Space",
   teclaDaPalheta: "Enter",
-  jeitoDeJogar: "gamepad",
+  jeitoNoTeclado: "tapping",
+  jeitoNoControle: "gamepad",
   botoesDoControle: BOTOES_DOS_TRASTES_PADRAO,
   botaoDaEstrela: BOTAO_DA_ESTRELA_PADRAO,
   velocidadeDaMusica: 1,
@@ -97,10 +102,19 @@ export const INDICE_DA_PALHETA = 7;
 /** Configurações salvas antes da nota aberta têm só os 5 trastes: a aberta entra com o padrão. */
 const completar = <T>(salvos: T[], padrao: T[]) => [...salvos, ...padrao.slice(salvos.length)];
 
+/**
+ * Antes havia um jeito só para os dois aparelhos. Ele vira o do controle e o teclado passa para o tapping,
+ * a não ser que fosse a palhetada: essa foi escolhida de propósito.
+ */
+function separarJeitoAntigo({ jeitoDeJogar, ...salvas }: Partial<Configuracoes> & { jeitoDeJogar?: JeitoDeJogar }): Partial<Configuracoes> {
+  if (!jeitoDeJogar || salvas.jeitoNoControle) return salvas;
+  return { jeitoNoControle: jeitoDeJogar, jeitoNoTeclado: jeitoDeJogar === "palhetada" ? "palhetada" : "tapping", ...salvas };
+}
+
 export function carregarConfiguracoes(estreita = ehTelaEstreita()): Configuracoes {
   const padrao = configuracoesPadrao(estreita);
   try {
-    const salvas: Configuracoes = { ...padrao, ...JSON.parse(localStorage.getItem(CHAVE) ?? "{}") };
+    const salvas: Configuracoes = { ...padrao, ...separarJeitoAntigo(JSON.parse(localStorage.getItem(CHAVE) ?? "{}")) };
     return { ...salvas, teclas: completar(salvas.teclas, CONFIGURACOES_PADRAO.teclas), botoesDoControle: completar(salvas.botoesDoControle, CONFIGURACOES_PADRAO.botoesDoControle) };
   } catch {
     return padrao;

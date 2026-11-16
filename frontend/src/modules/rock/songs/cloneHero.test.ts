@@ -1,5 +1,5 @@
 import { andamento, construirMidi, construirSng, nomeDaFaixa, notaDesligada, notaLigada, eventoDeTexto } from "@/test/cloneHero";
-import { MapaDeTempo, escolherTrilha, lerChart, lerMidi, lerSng, trilhasDoChart } from "./cloneHero";
+import { MapaDeTempo, desmascarar, escolherTrilha, lerChart, lerIndiceDoSng, lerMidi, lerSng, tamanhoDoIndiceDoSng, trilhasDoChart } from "./cloneHero";
 
 const resumo = (notas: { tempo: number; pista: number; duracao: number; frase: number }[]) =>
   notas.map((n) => `${n.tempo.toFixed(3)}:${n.pista}${n.duracao ? ` s${n.duracao.toFixed(2)}` : ""}${n.frase >= 0 ? " *" : ""}`);
@@ -313,6 +313,27 @@ describe("lerSng", () => {
 
   it("recusa arquivos que não são .sng", () => {
     expect(() => lerSng(new TextEncoder().encode("qualquer coisa").buffer)).toThrow(".sng inválido");
+  });
+});
+
+describe("índice do .sng", () => {
+  const sng = construirSng({ preview_start_time: "1500" }, { "notes.chart": Uint8Array.of(9), "song.ogg": Uint8Array.of(1, 2, 3, 4) });
+  const fimDoIndice = sng.length - 8 - 5;
+
+  it("diz quantos bytes do começo bastam para ler o índice", () => {
+    expect(tamanhoDoIndiceDoSng(sng.subarray(0, fimDoIndice))).toBe(fimDoIndice);
+  });
+
+  it("não sabe o tamanho antes de ter o tamanho dos metadados e do índice", () => {
+    expect(tamanhoDoIndiceDoSng(sng.subarray(0, 30))).toBeNull();
+  });
+
+  it("lê metadados e a posição de cada arquivo só com o começo do pacote", () => {
+    const indice = lerIndiceDoSng(sng.subarray(0, fimDoIndice));
+    expect(indice.metadados).toEqual({ preview_start_time: "1500" });
+    const audio = indice.arquivos.get("song.ogg")!;
+    expect(audio.tamanho).toBe(4);
+    expect([...desmascarar(sng.slice(audio.inicio, audio.inicio + audio.tamanho), indice.mascara)]).toEqual([1, 2, 3, 4]);
   });
 });
 

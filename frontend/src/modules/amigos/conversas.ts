@@ -1,11 +1,13 @@
-import type { MensagemPrivada } from "@/modules/presenca";
+import { lerSugestao, type MensagemPrivada, type SugestaoDeMusica } from "@/modules/presenca";
 import type { MensagemDaApi, NaoLidasDaApi } from "./api";
 
 export interface MensagemDaConversa {
   id: number;
   /** A conta de quem mandou. */
   de: string;
+  /** Pode vir vazio quando a mensagem é só a sugestão. */
   texto: string;
+  sugestao?: SugestaoDeMusica;
   /** Quando a API guardou, em ms. */
   em: number;
 }
@@ -42,7 +44,7 @@ export function receberPrivada(conversas: Conversas, mensagem: MensagemPrivada, 
     ...conversas,
     [amigo]: {
       ...atual,
-      mensagens: juntar(atual.mensagens, [{ id: mensagem.id, de: mensagem.de.id, texto: mensagem.texto, em: mensagem.em }]),
+      mensagens: juntar(atual.mensagens, [{ id: mensagem.id, de: mensagem.de.id, texto: mensagem.texto, ...(mensagem.sugestao && { sugestao: mensagem.sugestao }), em: mensagem.em }]),
       naoLidas: atual.naoLidas + (nova && !minha ? 1 : 0),
     },
   };
@@ -51,7 +53,10 @@ export function receberPrivada(conversas: Conversas, mensagem: MensagemPrivada, 
 /** A página do histórico que a API devolveu (das mais novas para as mais velhas). */
 export function juntarHistorico(conversas: Conversas, amigo: string, daApi: MensagemDaApi[]): Conversas {
   const atual = lerConversa(conversas, amigo);
-  const novas = daApi.map((m) => ({ id: m.id, de: m.de, texto: m.texto, em: Date.parse(m.enviada_em) }));
+  const novas = daApi.map((m) => {
+    const sugestao = lerSugestao(m.sugestao);
+    return { id: m.id, de: m.de, texto: m.texto, ...(sugestao && { sugestao }), em: Date.parse(m.enviada_em) };
+  });
   return { ...conversas, [amigo]: { ...atual, mensagens: juntar(atual.mensagens, novas), carregada: true } };
 }
 

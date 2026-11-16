@@ -92,6 +92,7 @@ async fn cenario() -> Cenario {
             amizade: riffrush_api::modules::amizade::fakes::servicos_de_amizade(conta.clone(), Default::default()).0,
             mania: mania.clone(),
             conversa: riffrush_api::modules::conversa::fakes::servicos_vazios(conta.clone()),
+            atividades: riffrush_api::modules::atividades::fakes::servicos_de_atividades().0,
             banco: Arc::new(BancoOk),
             ranking: riffrush_api::modules::ranking::fakes::servicos_do_ranking(conta.clone()).0,
             perfil: riffrush_api::modules::perfil::fakes::servicos_do_perfil(conta.clone()).0,
@@ -493,4 +494,61 @@ impl SemNanos for chrono::DateTime<Utc> {
         use chrono::SubsecRound;
         self.trunc_subsecs(6)
     }
+}
+
+#[tokio::test]
+async fn postgres_mapas_mais_jogados_vem_por_quantidade_de_jogadores() {
+    let Some(pool) = banco().await else { return };
+    let repositorio = ManiaPostgres(pool.clone());
+    // Mapas só deste teste: um com muitas partidas de uma pessoa, outro com menos partidas de duas.
+    let base = u64::from(Uuid::new_v4().as_u128() as u32) + 1_000_000;
+    let (sozinho, dupla) = (base, base + 1);
+    let ana = nova_conta(&pool, "Ana").await;
+    let bia = nova_conta(&pool, "Bia").await;
+    for partida in [
+        registrada(ana, sozinho, 1, 0),
+        registrada(ana, sozinho, 2, 1),
+        registrada(ana, sozinho, 3, 2),
+        registrada(ana, dupla, 1, 3),
+        registrada(bia, dupla, 2, 4),
+    ] {
+        repositorio.registrar(&partida).await.unwrap();
+    }
+    let mapas = repositorio.mapas_mais_jogados(10_000).await.unwrap();
+    let ordem: Vec<_> = mapas.iter().map(|(m, _)| m.beatmap_id).filter(|id| [sozinho, dupla].contains(id)).collect();
+    assert_eq!(ordem, [dupla, sozinho]);
+}
+
+#[tokio::test]
+async fn a_rota_de_atividades_responde_e_esta_no_openapi() {
+    let c = cenario().await;
+    let (status, corpo) = chamar(&c.app, "GET", "/atividades?limite=5", None, None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(corpo, json!([]));
+    let (_, doc) = chamar(&c.app, "GET", "/openapi.json", None, None).await;
+    assert!(doc["paths"].get("/atividades").is_some());
+}
+
+#[tokio::test]
+async fn postgres_atividades_vem_da_mais_recente_e_pagina_pelo_antes() {
+    use riffrush_api::modules::atividades::{AtividadesPostgres, Evento, RepositorioDeAtividades};
+    let Some(pool) = banco().await else { return };
+    let repositorio = ManiaPostgres(pool.clone());
+    let ana = nova_conta(&pool, "Ana").await;
+    let beatmap = u64::from(Uuid::new_v4().as_u128() as u32) + 1_000_000;
+    // No futuro, para ficarem no topo do log mesmo com o banco cheio de outros testes.
+    let velha = registrada(ana, beatmap, 1, 3_600);
+    let nova = registrada(ana, beatmap, 2, 7_200);
+    repositorio.registrar(&velha).await.unwrap();
+    repositorio.registrar(&nova).await.unwrap();
+
+    let atividades = AtividadesPostgres(pool.clone());
+    let log = atividades.recentes(None, 2).await.unwrap();
+    let quando: Vec<_> = log.iter().map(|(a, _)| a.quando).collect();
+    assert_eq!(quando, [nova.jogada_em.trunc_subsecs_micro(), velha.jogada_em.trunc_subsecs_micro()]);
+    assert!(matches!(log[0].0.evento, Evento::PartidaDoMania { beatmap_id, .. } if beatmap_id == beatmap));
+    assert_eq!(log[0].0.nome, "Ana");
+
+    let depois = atividades.recentes(Some(nova.jogada_em), 1).await.unwrap();
+    assert_eq!(depois[0].0.quando, velha.jogada_em.trunc_subsecs_micro());
 }

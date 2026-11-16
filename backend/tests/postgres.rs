@@ -7,7 +7,7 @@ use riffrush_api::modules::catalogo::{CatalogoPostgres, DadosDaMusica, Repositor
 use riffrush_api::modules::conta::{
     ContasPostgres, FilaDePartidas, PartidaNaFila, PartidaRegistrada, PerfilDoGoogle, RepositorioDeContas, RepositorioDeSessoes,
 };
-use riffrush_api::modules::conversa::{CifraDasMensagens, ConversasPostgres, NaoLidas, NovaMensagem, RepositorioDeConversas};
+use riffrush_api::modules::conversa::{CifraDasMensagens, ConversasPostgres, ModoDaSugestao, NaoLidas, NovaMensagem, RepositorioDeConversas, SugestaoDeMusica};
 use riffrush_api::modules::moderacao::{Denuncia, ModeracaoPostgres, RepositorioDeModeracao, Situacao};
 use riffrush_api::modules::perfil::{FormatoDaImagem, Imagem, PerfilPostgres, RepositorioDoPerfil, TipoDeImagem};
 use riffrush_api::modules::progresso::{Dificuldade, Instrumento, JeitoDeJogar, ResumoDaPartida};
@@ -287,7 +287,7 @@ async fn ranking_pega_o_recorde_de_cada_jogador_pelos_pontos() {
 }
 
 #[tokio::test]
-async fn o_ranking_mostra_o_jeito_de_jogar_de_cada_recorde() {
+async fn tapping_e_gamepad_dividem_o_ranking_e_cada_recorde_mostra_o_jeito() {
     let Some(banco) = banco().await else { return };
     let ranking = RankingPostgres(banco.0.clone());
     let musica = format!("teste:{}", Uuid::new_v4());
@@ -318,17 +318,38 @@ async fn o_ranking_mostra_o_jeito_de_jogar_de_cada_recorde() {
     let bia = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap();
     banco.registrar_partida(&jogar(ana.id, 900, Some(JeitoDeJogar::Palhetada))).await.unwrap();
     banco.registrar_partida(&jogar(ana.id, 500, Some(JeitoDeJogar::Tapping))).await.unwrap();
+    banco.registrar_partida(&jogar(ana.id, 700, Some(JeitoDeJogar::Gamepad))).await.unwrap();
     banco.registrar_partida(&jogar(bia.id, 800, Some(JeitoDeJogar::Tapping))).await.unwrap();
 
     let pedir = |jeito| ranking.linhas(&musica, Dificuldade::Expert, Instrumento::Guitarra, jeito, 1.0, Ordem::Pontos, 10, None);
-    let tapping = pedir(JeitoDeJogar::Tapping).await.unwrap();
+    let trastes = pedir(JeitoDeJogar::Tapping).await.unwrap();
     assert_eq!(
-        tapping.iter().map(|l| (l.conta_id, l.pontos, l.posicao, l.jogadores)).collect::<Vec<_>>(),
-        [(bia.id, 800, 1, 2), (ana.id, 500, 2, 2)]
+        trastes
+            .iter()
+            .map(|l| (l.conta_id, l.pontos, l.posicao, l.jogadores, l.jeito_de_jogar))
+            .collect::<Vec<_>>(),
+        [
+            (bia.id, 800, 1, 2, Some(JeitoDeJogar::Tapping)),
+            (ana.id, 700, 2, 2, Some(JeitoDeJogar::Gamepad))
+        ]
     );
+    assert_eq!(pedir(JeitoDeJogar::Gamepad).await.unwrap(), trastes);
+    let precisao = ranking
+        .linhas(
+            &musica,
+            Dificuldade::Expert,
+            Instrumento::Guitarra,
+            JeitoDeJogar::Gamepad,
+            1.0,
+            Ordem::Precisao,
+            10,
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(precisao.len(), 2);
     let palhetada = pedir(JeitoDeJogar::Palhetada).await.unwrap();
     assert_eq!(palhetada.iter().map(|l| (l.conta_id, l.pontos)).collect::<Vec<_>>(), [(ana.id, 900)]);
-    assert!(pedir(JeitoDeJogar::Gamepad).await.unwrap().is_empty());
 }
 
 #[tokio::test]
@@ -1138,6 +1159,7 @@ async fn conversas_guardam_paginam_contam_as_nao_lidas_e_somem_com_a_conta() {
         de,
         para,
         texto: texto.into(),
+        sugestao: None,
         enviada_em: agora,
     };
 
@@ -1181,6 +1203,7 @@ async fn conversas_guardam_o_texto_cifrado_e_cifram_as_antigas() {
             de: ana,
             para: beto,
             texto: "segredo novo".into(),
+            sugestao: None,
             enviada_em: agora,
         })
         .await
@@ -1288,4 +1311,33 @@ async fn partidas_do_julgamento_antigo_passam_para_o_score_v1_e_o_xp_da_conta_vi
         .filter(|p| p.conta_id == conta)
         .collect();
     assert_eq!(restantes.iter().map(|p| p.id).collect::<Vec<_>>(), [segunda]);
+}
+
+#[tokio::test]
+async fn conversas_guardam_a_sugestao_de_musica() {
+    let Some(banco) = banco().await else { return };
+    let conversas = conversas_cifradas(&banco.0);
+    let ana = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+    let beto = banco.entrar(&perfil(), Uuid::new_v4()).await.unwrap().id;
+    let sugestao = SugestaoDeMusica {
+        modo: ModoDaSugestao::Rock,
+        musica: "fb0079d4c2e025d5b8dd70724750a923".into(),
+        versao: Some("expert".into()),
+        titulo: "Riff".into(),
+        artista: "Banda".into(),
+        dificuldade: "Expert · Guitarra".into(),
+    };
+    let guardada = conversas
+        .guardar(&NovaMensagem {
+            de: ana,
+            para: beto,
+            texto: String::new(),
+            sugestao: Some(sugestao.clone()),
+            enviada_em: Utc::now(),
+        })
+        .await
+        .unwrap();
+    assert_eq!(guardada.sugestao.as_ref(), Some(&sugestao));
+    let historico = conversas.mensagens(beto, ana, None, 50).await.unwrap();
+    assert_eq!((historico[0].texto.as_str(), historico[0].sugestao.as_ref()), ("", Some(&sugestao)));
 }

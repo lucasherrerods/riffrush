@@ -1,4 +1,4 @@
-import { ESPELHOS, ErroDaBusca, baixarOsz, buscarMapas, criarClienteDosEspelhos, traduzirConjunto } from "./api";
+import { ESPELHOS, ErroDaBusca, baixarOsz, buscarConjunto, buscarMapas, criarClienteDosEspelhos, traduzirConjunto } from "./api";
 
 /** Um beatmapset no formato do osu! v2, como os espelhos devolvem. */
 const conjunto = (id = 1, beatmaps = [{ id: 10, mode_int: 3, cs: 4, difficulty_rating: 3.2, version: "Hard", checksum: "a".repeat(32), total_length: 120 }]) => ({
@@ -126,4 +126,19 @@ describe("baixarOsz", () => {
 
 it("os espelhos estão em ordem de preferência", () => {
   expect(ESPELHOS.map((e) => e.nome)).toEqual(["catboy.best", "osu.direct"]);
+});
+
+describe("buscarConjunto", () => {
+  it("pede o conjunto pelo id e traz os números de cada dificuldade", async () => {
+    const dificuldade = { id: 10, mode_int: 3, cs: 4, difficulty_rating: 3.2, version: "Hard", checksum: "a".repeat(32), total_length: 120, bpm: 180, accuracy: 8, drain: 7.5, count_circles: 900, count_sliders: 100 };
+    const buscar = vi.fn(async (_url: string | URL | Request) => resposta(conjunto(7, [dificuldade])));
+    const mapa = await buscarConjunto(7, criarClienteDosEspelhos({ buscar }));
+    expect(String(buscar.mock.calls[0][0])).toBe("https://catboy.best/api/v2/s/7");
+    expect(mapa?.dificuldades[0]).toMatchObject({ beatmapId: 10, bpm: 180, od: 8, hp: 7.5, notas: 1000 });
+  });
+
+  it("conjunto sem dificuldade mania não serve", async () => {
+    const buscar = vi.fn(async () => resposta(conjunto(7, [{ id: 1, mode_int: 0, cs: 4, difficulty_rating: 2, version: "Osu", checksum: "a", total_length: 1 }])));
+    expect(await buscarConjunto(7, criarClienteDosEspelhos({ buscar }))).toBeNull();
+  });
 });

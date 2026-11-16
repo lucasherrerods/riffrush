@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { TelaDeAtividades } from "@/modules/atividades";
 import { PARTE_DA_TELA_DO_MODO, type PalcoCompartilhado } from "@/modules/menu";
 import { CartaoDaConta, PerfilDoAmigo, TelaDePerfil, contasLigadas, sessaoDaConta, useConta, type RegistroDaPartida } from "@/modules/conta";
-import { BotaoDeAmigos, PainelDeAmigos, useIdsDosAmigos, usePainelDeAmigos } from "@/modules/amigos";
+import { BotaoDeAmigos, PainelDeAmigos, tirarSugestaoPendente, tocarSugestaoNoModoCerto, useIdsDosAmigos, usePainelDeAmigos } from "@/modules/amigos";
 import {
   ChatGlobal,
   TelaOnline,
@@ -14,6 +15,7 @@ import {
   useSouDaModeracao,
   type PessoaOnline,
   type PreferenciasOnline,
+  type SugestaoDeMusica,
 } from "@/modules/presenca";
 import { entradasParaOLoteDoMania, estadoTocandoNoMania, partidaParaTransmitirNoMania, type MapaAoVivo } from "./aoVivo/protocolo";
 import { TelaDeEspectadorMania } from "./aoVivo/TelaDeEspectadorMania";
@@ -34,7 +36,7 @@ import { TelaDeJogoMania, type EventoDoManiaAoVivo, type MapaParaJogar, type Opc
 import { TelaDeSelecaoMania } from "./selecao/TelaDeSelecaoMania";
 import { carregarConfiguracoesDoMania, salvarConfiguracoesDoMania, type ConfiguracoesDoMania } from "./settings/configuracoesMania";
 import { TelaDeConfiguracoesMania } from "./settings/TelaDeConfiguracoesMania";
-import { baixarOsz, buscarMapas, type FiltrosDaBusca, type MapaDaBusca, type PaginaDaBusca } from "./busca/api";
+import { baixarOsz, buscarConjunto, buscarMapas, type FiltrosDaBusca, type MapaDaBusca, type PaginaDaBusca } from "./busca/api";
 import { sortearMapa, type FiltroDoSorteio } from "./busca/sortear";
 import { TelaDeBuscaMania } from "./busca/TelaDeBuscaMania";
 import { useAtualizacaoAutomatica } from "@/modules/atualizacao";
@@ -49,7 +51,7 @@ import { PlacarDaSalaMania } from "./multijogador/PlacarDaSalaMania";
 import { enviarEstado, useConexao, voltarParaASala } from "./multijogador/sala";
 import { TelaDeMultijogadorMania } from "./multijogador/TelaDeMultijogadorMania";
 
-type Tela = { nome: "menu" } | { nome: "configuracoes"; voltarPara: Tela } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil"; amigo?: string } | { nome: "online" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "multijogador" } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido; rede?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido; rede?: boolean };
+type Tela = { nome: "menu" } | { nome: "configuracoes"; voltarPara: Tela } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil"; amigo?: string } | { nome: "online" } | { nome: "atividades" } | { nome: "atividades" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "multijogador" } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido; rede?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido; rede?: boolean };
 
 /** A mesma semente para a sala toda: com o Random, todos jogam as colunas na mesma ordem. */
 function sementeDaRodada(rodada = ""): number {
@@ -134,6 +136,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
               fecharAmigos();
               setTela({ nome: "perfil", amigo: amigo.conta_id });
             }}
+            aoTocarSugestao={tocarSugestao}
           />
         </motion.div>
       )}
@@ -238,6 +241,37 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     await guardarDaBusca(osz, mapa);
     setTela({ nome: "selecao", conjuntoId: `osu:${mapa.beatmapsetId}` });
   };
+
+  // O mapa que um amigo sugeriu: já baixado, abre na seleção; senão, baixa do osu! primeiro.
+  // Declaradas como função porque o painel de amigos, montado mais acima, já as usa.
+  async function abrirSugestao(sugestao: SugestaoDeMusica) {
+    fecharAmigos();
+    const id = Number(sugestao.musica);
+    const abrir = () => setTela({ nome: "selecao", conjuntoId: `osu:${id}` });
+    if (baixados.has(id)) return abrir();
+    const carregando = avisar.loading(`Baixando ${sugestao.titulo}...`);
+    try {
+      const mapa = await buscarConjunto(id);
+      if (!mapa) throw new Error("Esse mapa não está mais nos espelhos do osu!.");
+      await guardarDaBusca(await (baixar ?? baixarOsz)(id), mapa);
+      avisar.dismiss(carregando);
+      abrir();
+    } catch (erro) {
+      avisar.error(`${sugestao.titulo}: ${erro instanceof Error ? erro.message : String(erro)}`, { id: carregando });
+    }
+  }
+  function tocarSugestao(sugestao: SugestaoDeMusica) {
+    tocarSugestaoNoModoCerto(sugestao, "mania", (s) => void abrirSugestao(s));
+  }
+  // Veio do Rock para tocar um mapa que um amigo sugeriu: espera a biblioteca para não baixar de novo.
+  const sugestaoPendente = useRef(tirarSugestaoPendente());
+  useEffect(() => {
+    if (!conjuntos || !sugestaoPendente.current) return;
+    const sugestao = sugestaoPendente.current;
+    sugestaoPendente.current = null;
+    void abrirSugestao(sugestao);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conjuntos]);
 
   const aoJogar = async (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva, treino = false, replay?: ReplayAssistido) => {
     const mapa = await carregarMapa(conjunto, dificuldade);
@@ -376,6 +410,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
             aoConfigurar={abrirConfiguracoes}
             aoLeaderboard={contasLigadas ? () => setTela({ nome: "leaderboard" }) : undefined}
             aoOnline={presencaDisponivel && contasLigadas ? () => setTela({ nome: "online" }) : undefined}
+            aoAtividades={contasLigadas ? () => setTela({ nome: "atividades" }) : undefined}
             chat={
               presencaDisponivel && contasLigadas && preferencias.chatGlobal !== false ? (
                 <ChatGlobal className="w-full" aceito={preferencias.chatGlobal} aoResponder={responderAoChat} />
@@ -442,7 +477,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
       </main>
     );
 
-  if (tela.nome === "leaderboard" || tela.nome === "perfil" || tela.nome === "online" || tela.nome === "configuracoes")
+  if (tela.nome === "leaderboard" || tela.nome === "perfil" || tela.nome === "online" || tela.nome === "atividades" || tela.nome === "configuracoes")
     return (
       <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
         <FundoDoMania />
@@ -450,6 +485,8 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         <div className="relative min-h-0 flex-1">
           {tela.nome === "configuracoes" ? (
             <TelaDeConfiguracoesMania opcoes={configuracoes} aoMudar={mudarConfiguracoes} aoVoltar={() => setTela(tela.voltarPara)} />
+          ) : tela.nome === "atividades" ? (
+            <TelaDeAtividades aoVoltar={() => setTela({ nome: "menu" })} nomeDoMapa={nomeNaBiblioteca} />
           ) : tela.nome === "online" ? (
             <TelaOnline
               logado={!!conta}
@@ -467,7 +504,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
               aoVoltar={() => setTela({ nome: "menu" })}
               tituloDaMusica={() => undefined}
               rotuloDasMusicas="Mapas"
-              abaDasMusicas={<AbaDosMapasMaisJogados nomeNaBiblioteca={nomeNaBiblioteca} />}
+              abaDasMusicas={<AbaDosMapasMaisJogados nomeNaBiblioteca={nomeNaBiblioteca} baixados={baixados} aoBaixar={aoBaixar} aoJogar={(beatmapsetId) => setTela({ nome: "selecao", conjuntoId: `osu:${beatmapsetId}` })} baixar={baixar} />}
             />
           ) : tela.nome === "perfil" && tela.amigo ? (
             <PerfilDoAmigo contaId={tela.amigo} aoVoltar={() => setTela({ nome: "menu" })} tituloDaMusica={() => undefined} />
@@ -487,7 +524,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
       {cabecalho}
       <div className="relative min-h-0 flex-1">
         {tela.nome === "busca" ? (
-          <TelaDeBuscaMania aoVoltar={() => setTela({ nome: tela.veioDaSelecao ? "selecao" : "menu" })} baixados={baixados} aoBaixar={aoBaixar} aoJogar={(beatmapsetId) => setTela({ nome: "selecao", conjuntoId: `osu:${beatmapsetId}` })} buscar={buscar} baixar={baixar} />
+          <TelaDeBuscaMania aoVoltar={() => setTela({ nome: tela.veioDaSelecao ? "selecao" : "menu" })} baixados={baixados} aoBaixar={aoBaixar} aoJogar={(beatmapsetId) => setTela({ nome: "selecao", conjuntoId: `osu:${beatmapsetId}` })} buscar={buscar} baixar={baixar} aoMudarPrevia={(tocando) => player.suspender(tocando, { esmaecer: true })} />
         ) : (
           <TelaDeSelecaoMania aoMudarSelecao={mudarSelecao} selecionado={(tela.nome === "selecao" ? tela.conjuntoId : undefined) ?? idAoEntrar ?? undefined} aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", veioDaSelecao: true })} sortearMapa={sortearMapaNovo} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoRemover={(conjunto) => void remover(conjunto.id)} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
         )}

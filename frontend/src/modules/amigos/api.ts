@@ -1,3 +1,4 @@
+import type { SugestaoDeMusica } from "@/modules/presenca";
 import type { Modo } from "@/shared/modo";
 import { URL_DA_API, criarCliente } from "@/shared/lib/api";
 
@@ -37,6 +38,7 @@ export interface MensagemDaApi {
   de: string;
   para: string;
   texto: string;
+  sugestao?: unknown;
   enviada_em: string;
 }
 
@@ -64,7 +66,8 @@ export function criarApiDosAmigos(base: string, buscar?: typeof fetch) {
     /** As mais novas primeiro, 50 por vez; com `antes`, as anteriores a essa mensagem. */
     mensagens: (token: string, contaId: string, antes?: number) =>
       chamar<MensagemDaApi[]>("GET", `${daConta(contaId)}/mensagens${antes ? `?antes=${antes}` : ""}`, { token }),
-    enviarMensagem: (token: string, contaId: string, texto: string) => chamar<MensagemDaApi>("POST", `${daConta(contaId)}/mensagens`, { token, corpo: { texto } }),
+    enviarMensagem: (token: string, contaId: string, texto: string, sugestao?: SugestaoDeMusica) =>
+      chamar<MensagemDaApi>("POST", `${daConta(contaId)}/mensagens`, { token, corpo: { texto, ...(sugestao && { sugestao }) } }),
     marcarLidas: (token: string, contaId: string) => chamar<void>("POST", `${daConta(contaId)}/mensagens/lidas`, { token }),
     naoLidas: (token: string) => chamar<NaoLidasDaApi[]>("GET", "/conversas/nao-lidas", { token }),
   };

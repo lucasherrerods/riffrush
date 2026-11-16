@@ -201,3 +201,28 @@ describe("TelaDeBuscaDeMusicas", () => {
     });
   });
 });
+
+describe("prévia na busca do Rock", () => {
+  beforeEach(() => {
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+  });
+
+  it("toca um trecho do chart pela capa e cala a música de fundo enquanto toca", async () => {
+    const obterPrevia = vi.fn(async () => ({ url: "blob:hit", inicioS: 40 }));
+    const aoMudarPrevia = vi.fn();
+    const { usuario } = abrir(undefined, { obterPrevia, aoMudarPrevia });
+    await usuario.click(await screen.findByRole("button", { name: "Ouvir prévia de Hit" }));
+    expect(obterPrevia).toHaveBeenCalledWith(expect.objectContaining({ titulo: "Hit" }), expect.any(AbortSignal));
+    expect(await screen.findByRole("button", { name: "Parar prévia de Hit" })).toHaveAttribute("aria-pressed", "true");
+    expect(aoMudarPrevia).toHaveBeenLastCalledWith(true);
+    await usuario.click(screen.getByRole("button", { name: "Parar prévia de Hit" }));
+    expect(aoMudarPrevia).toHaveBeenLastCalledWith(false);
+  });
+
+  it("avisa quando a prévia não sai", async () => {
+    const { usuario } = abrir(undefined, { obterPrevia: async () => Promise.reject(new Error("Este chart não tem áudio para ouvir.")) });
+    await usuario.click(await screen.findByRole("button", { name: "Ouvir prévia de Hit" }));
+    expect(await screen.findByText("Este chart não tem áudio para ouvir.")).toBeInTheDocument();
+  });
+});
