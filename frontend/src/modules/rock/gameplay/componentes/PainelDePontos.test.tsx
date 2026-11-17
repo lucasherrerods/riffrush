@@ -1,15 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import { PainelDePontos } from "./PainelDePontos";
 
-const base = { pontos: 12345, sequencia: 27, multiplicador: 3, precisao: 0.968, estrelaAtiva: false };
+const base = { pontos: 12345, sequencia: 27, multiplicador: 3, estrelaAtiva: false };
 
 describe("PainelDePontos", () => {
-  it("mostra pontos, combo, multiplicador e precisão", () => {
+  it("mostra pontos, combo e multiplicador; a precisão fica no topo da partida", () => {
     render(<PainelDePontos {...base} />);
     expect(screen.getByLabelText("Pontos")).toHaveTextContent("012345");
     expect(screen.getByLabelText("Sequência")).toHaveTextContent("27");
     expect(screen.getByLabelText("Multiplicador")).toHaveTextContent("x3");
-    expect(screen.getByLabelText("Precisão")).toHaveTextContent("97%");
+    expect(screen.queryByLabelText("Precisão")).toBeNull();
   });
 
   it("os pontos aparecem num visor digital de 6 dígitos, como no arcade", () => {
@@ -54,10 +54,9 @@ describe("PainelDePontos", () => {
     expect(screen.getByTestId("linha-do-aviso").parentElement).toBe(screen.getByTestId("painel"));
   });
 
-  it("combo e precisão ficam fora do amplificador, logo abaixo", () => {
+  it("o combo fica fora do amplificador, logo abaixo", () => {
     render(<PainelDePontos {...base} />);
     expect(screen.getByTestId("grade")).not.toContainElement(screen.getByLabelText("Sequência"));
-    expect(screen.getByTestId("grade")).not.toContainElement(screen.getByLabelText("Precisão"));
   });
 
   it("o amplificador é a imagem, decorativa, por trás do visor e do mostrador", () => {
@@ -73,15 +72,15 @@ describe("PainelDePontos", () => {
     expect(screen.getByRole("progressbar", { name: "Próximo multiplicador" })).toHaveAttribute("aria-valuenow", "70");
   });
 
-  it("no modo compacto continua mostrando os quatro números", () => {
+  it("no modo compacto continua mostrando os três números", () => {
     render(<PainelDePontos {...base} compacto />);
-    for (const rotulo of ["Pontos", "Sequência", "Multiplicador", "Precisão"]) expect(screen.getByLabelText(rotulo)).toBeInTheDocument();
+    for (const rotulo of ["Pontos", "Sequência", "Multiplicador"]) expect(screen.getByLabelText(rotulo)).toBeInTheDocument();
   });
 
-  it("mostra o aviso do último acerto logo acima da precisão", () => {
+  it("mostra o aviso do último acerto logo acima do combo", () => {
     render(<PainelDePontos {...base} aviso={<span>PERFEITO</span>} />);
     const aviso = screen.getByText("PERFEITO");
-    const precisao = screen.getByLabelText("Precisão");
-    expect(aviso.compareDocumentPosition(precisao) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const combo = screen.getByLabelText("Sequência");
+    expect(aviso.compareDocumentPosition(combo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

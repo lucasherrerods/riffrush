@@ -131,7 +131,7 @@ describe("TelaDeJogo", () => {
       />,
     );
     const placar = await screen.findByText("placar com 0 pontos");
-    expect(placar.closest("[data-parte='canto-esquerdo']")).toHaveClass("top-20", "left-6");
+    expect(placar.closest("[data-parte='canto-esquerdo']")).toHaveClass("top-28", "left-6");
   });
 
   it("carrega as notas do instrumento escolhido e mostra o instrumento no título", async () => {

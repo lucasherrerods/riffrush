@@ -1,4 +1,4 @@
-import { DURACAO_DA_MARCA_MS, MARCAS_NA_BARRA, guardarMarcas, marcasVisiveis, mediaSuavizada, posicaoNaBarra } from "./barraDeUr";
+import { anotarNaBarraDeUr, DURACAO_DA_MARCA_MS, MARCAS_NA_BARRA, guardarMarcas, marcasVisiveis, mediaSuavizada, posicaoNaBarra, type LeituraDaBarraDeUr } from "./barraDeUr";
 
 it("guarda um toque novo por desvio, com a hora em que aconteceu, e esquece os mais antigos", () => {
   const marcas = guardarMarcas([], [-5, 8], 1000);
@@ -36,4 +36,12 @@ it("a média da seta começa no primeiro toque e anda devagar com os seguintes",
   expect(depois).toBeLessThan(0);
   // Sem toque novo ela fica parada: as marcas que somem não mexem na seta.
   expect(mediaSuavizada(depois, [])).toBe(depois);
+});
+
+it("anota os desvios novos: marcas, seta e UR da partida até agora", () => {
+  const ur: LeituraDaBarraDeUr = { marcas: [], janelas: [16, 50], agoraMs: 0 };
+  const todos = [10, -10];
+  anotarNaBarraDeUr(ur, todos, [10, -10], 500);
+  expect(ur).toMatchObject({ marcas: [{ desvio: 10, emMs: 500 }, { desvio: -10, emMs: 500 }], valor: 100 });
+  expect(ur.media).toBeCloseTo(7);
 });

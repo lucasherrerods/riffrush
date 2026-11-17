@@ -663,7 +663,7 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, comA
       {/* Os números ficam colados à esquerda da pista; no celular a pista ocupa a largura toda e eles sobem para o topo. */}
       <div
         data-parte={estreita ? "hud-compacto" : undefined}
-        className={cn("absolute", estreita ? "top-12 right-3 left-3" : "bottom-10 -translate-x-full")}
+        className={cn("absolute", estreita ? "top-16 right-3 left-3" : "bottom-10 -translate-x-full")}
         style={estreita ? undefined : { left: Math.max(layout.centro - layout.largura / 2 - 24, LARGURA_DO_PAINEL + MARGEM_DO_HUD) }}
       >
         {/* O aviso fica no painel, acima da precisão, e não em cima da pista: não tapa as notas que vêm chegando. */}
@@ -701,7 +701,7 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, comA
 }
 
 function PlacarDoHud({ loja, ...resto }: { loja: LojaDoHud<Hud>; compacto: boolean; aviso: React.ReactNode; lateral: React.ReactNode }) {
-  const h = useLoja(loja, (h) => ({ pontos: h.pontos, sequencia: h.sequencia, multiplicador: h.multiplicador, precisao: h.precisao, estrelaAtiva: h.estrelaAtiva }));
+  const h = useLoja(loja, (h) => ({ pontos: h.pontos, sequencia: h.sequencia, multiplicador: h.multiplicador, estrelaAtiva: h.estrelaAtiva }));
   return <PainelDePontos {...h} {...resto} />;
 }
 

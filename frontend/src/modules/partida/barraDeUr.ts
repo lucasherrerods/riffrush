@@ -35,3 +35,28 @@ export function mediaSuavizada(media: number | undefined, desvios: number[]): nu
   for (const d of desvios) atual = atual === undefined ? d : atual + (d - atual) * PESO_DO_TOQUE;
   return atual;
 }
+
+/** A média e o UR (desvio padrão × 10) dos desvios em ms. */
+export function resumoDosDesvios(desvios: number[]) {
+  if (desvios.length === 0) return { media: 0, ur: 0 };
+  const media = desvios.reduce((a, b) => a + b, 0) / desvios.length;
+  const variancia = desvios.reduce((a, d) => a + (d - media) ** 2, 0) / desvios.length;
+  return { media, ur: Math.sqrt(variancia) * 10 };
+}
+
+/** O que a barra de UR precisa em cada quadro. `janelas` vão da mais justa à mais larga, em ms. */
+export interface LeituraDaBarraDeUr {
+  marcas: MarcaDeToque[];
+  janelas: ArrayLike<number>;
+  media?: number;
+  valor?: number;
+  agoraMs: number;
+}
+
+/** Leva os desvios novos para a barra. `todos` já inclui os novos: o UR é da partida inteira. */
+export function anotarNaBarraDeUr(ur: LeituraDaBarraDeUr, todos: number[], novos: number[], agoraMs: number) {
+  if (novos.length === 0) return;
+  ur.marcas = guardarMarcas(ur.marcas, novos, agoraMs);
+  ur.media = mediaSuavizada(ur.media, novos);
+  ur.valor = resumoDosDesvios(todos).ur;
+}

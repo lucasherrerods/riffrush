@@ -32,7 +32,7 @@ export const TelaDeJogo = adiar(() => import("./TelaDeJogo").then((m) => m.TelaD
 export { EntradaDaPartida } from "./componentes/EntradaDaPartida";
 export { IconeDoJeito, NOMES_DOS_JEITOS } from "./componentes/IconeDoJeito";
 export { MedidorDeVida } from "./componentes/MedidorDeVida";
-export { corDaPrecisao } from "./componentes/PainelDePontos";
+export { corDaPrecisao } from "@/modules/partida";
 export { estrelasPorPontos, progressoDasEstrelas } from "./estrelas";
 export { criarSprites } from "./pista/sprites";
 export { rotuloDaVelocidade } from "./velocidade";
