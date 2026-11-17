@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { PerfilDaApi } from "./api";
 import { TelaDePerfil } from "./TelaDePerfil";
@@ -26,6 +26,10 @@ const perfil: PerfilDaApi = {
   mais_tocadas: [
     { musica_id: "encore:abc", partidas: 7 },
     { musica_id: "encore:goofy", partidas: 2, titulo: "Goofy Goober Rock", artista: "Tom Rothrock", capa: "https://files.enchor.us/capa.jpg" },
+  ],
+  conquistas: [
+    { id: "primeira_musica", nome: "Primeira música", descricao: "Jogue uma música", progresso: 1, meta: 1, conquistada: true },
+    { id: "cem_partidas", nome: "Cem partidas", descricao: "Jogue 100 partidas", progresso: 12, meta: 100, conquistada: false },
   ],
   sequencia: { atual: 3, maior: 9 },
   recentes: [{ musica_id: "encore:abc", dificuldade: "expert", pontos: 98_500, acertos: 9, total: 10, precisao: 0.25, derrota: true, jogada_em: "2026-10-20T12:00:00Z" }],
@@ -55,6 +59,15 @@ describe("TelaDePerfil", () => {
     // A precisão da partida vem da API, pesada pelo julgamento como no jogo, e não acertos sobre o total (90%).
     expect(screen.getByText("25,00%")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "XP do nível 4" })).toBeInTheDocument();
+  });
+
+  it("mostra as conquistas, com o progresso das que faltam", async () => {
+    render(<TelaDePerfil aoVoltar={() => {}} tituloDaMusica={tituloDaMusica} carregar={async () => perfil} />);
+
+    const secao = await screen.findByRole("region", { name: "Conquistas 1 de 2" });
+    expect(within(secao).getByRole("listitem", { name: "Primeira música, conquistada" })).toBeInTheDocument();
+    const falta = within(secao).getByRole("listitem", { name: "Cem partidas, 12 de 100" });
+    expect(within(falta).getByText("Jogue 100 partidas")).toBeInTheDocument();
   });
 
   it("mostra os dias seguidos jogando e o recorde", async () => {

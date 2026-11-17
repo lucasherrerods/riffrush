@@ -70,6 +70,7 @@ async fn app() -> (Router, String) {
                 derrota: false,
                 jogada_em: DateTime::UNIX_EPOCH,
             }],
+            feitos: Default::default(),
             dias_jogados: vec![],
         },
     );

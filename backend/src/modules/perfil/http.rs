@@ -10,6 +10,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use super::casos_de_uso::ErroDoPerfil;
+use super::conquistas::Conquista;
 use super::dominio::{EstatisticasDaDificuldade, MusicaMaisTocada, PartidaRecente, PartidasNoInstrumento, Perfil, Recorde};
 use super::imagem::TipoDeImagem;
 use crate::modules::catalogo::DadosDaMusica;
@@ -160,8 +161,33 @@ pub struct RespostaDoPerfil {
     por_instrumento: Vec<InstrumentoDoPerfil>,
     mais_tocadas: Vec<MusicaDoPerfil>,
     recentes: Vec<PartidaDoPerfil>,
+    /// O catálogo inteiro, na ordem fixa; as não conquistadas vêm com o progresso.
+    conquistas: Vec<ConquistaDoPerfil>,
     /// Dias seguidos jogando, no horário de Brasília.
     sequencia: SequenciaDoPerfil,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct ConquistaDoPerfil {
+    id: String,
+    nome: String,
+    descricao: String,
+    progresso: u32,
+    meta: u32,
+    conquistada: bool,
+}
+
+impl From<Conquista> for ConquistaDoPerfil {
+    fn from(c: Conquista) -> Self {
+        Self {
+            conquistada: c.conquistada(),
+            id: c.id.into(),
+            nome: c.nome.into(),
+            descricao: c.descricao.into(),
+            progresso: c.progresso,
+            meta: c.meta,
+        }
+    }
 }
 
 #[derive(Serialize, ToSchema)]
@@ -195,6 +221,7 @@ impl From<Perfil> for RespostaDoPerfil {
                 .map(|m| (m.musica_id.clone(), m))
                 .map(|(id, m)| (m, musicas.get(&id).cloned()).into())
                 .collect(),
+            conquistas: p.conquistas.into_iter().map(Into::into).collect(),
             sequencia: SequenciaDoPerfil {
                 atual: p.sequencia.atual,
                 maior: p.sequencia.maior,
