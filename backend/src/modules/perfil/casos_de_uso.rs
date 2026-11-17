@@ -187,6 +187,7 @@ mod tests {
             por_instrumento: vec![],
             mais_tocadas: vec![],
             recentes: vec![],
+            feitos: Default::default(),
         }
     }
 

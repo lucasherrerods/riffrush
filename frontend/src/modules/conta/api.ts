@@ -133,6 +133,17 @@ export interface PerfilDaApi {
   mais_tocadas: MusicaDoPerfil[];
   /** As últimas partidas, da mais nova para a mais velha. */
   recentes: PartidaDoPerfil[];
+  /** O catálogo inteiro de selos, na ordem fixa, com o progresso de cada um. */
+  conquistas: ConquistaDoPerfil[];
+}
+
+export interface ConquistaDoPerfil {
+  id: string;
+  nome: string;
+  descricao: string;
+  progresso: number;
+  meta: number;
+  conquistada: boolean;
 }
 
 /** A foto aparece em todo canto (ranking, amigos, salas); a capa só no perfil. */

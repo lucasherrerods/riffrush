@@ -1,6 +1,7 @@
 //! O perfil de quem está logado: nível, estatísticas das partidas e as últimas jogadas.
 
 mod casos_de_uso;
+mod conquistas;
 mod dominio;
 mod http;
 mod imagem;
@@ -10,14 +11,15 @@ mod postgres;
 #[cfg(any(test, feature = "testes"))]
 pub use casos_de_uso::fakes;
 pub use casos_de_uso::{ErroDoPerfil, ServicosDoPerfil};
+pub use conquistas::{Conquista, FeitosDaConta};
 pub use dominio::{
     montar_perfil, DadosDoPerfil, EstatisticasDaDificuldade, MusicaMaisTocada, PartidaRecente, PartidasNoInstrumento, Perfil, Recorde, MAIS_TOCADAS,
     PARTIDAS_RECENTES,
 };
 pub use http::{
     __path_imagem, __path_perfil, __path_perfil_do_amigo, __path_recordes, __path_remover_imagem, __path_trocar_imagem, imagem, perfil, perfil_do_amigo,
-    recordes, remover_imagem, rotas, trocar_imagem, DadosDaMusicaNoPerfil, DificuldadeDoPerfil, ImagemTrocada, InstrumentoDoPerfil, MusicaDoPerfil,
-    PartidaDoPerfil, RecordeDaConta, RespostaDoPerfil,
+    recordes, remover_imagem, rotas, trocar_imagem, ConquistaDoPerfil, DadosDaMusicaNoPerfil, DificuldadeDoPerfil, ImagemTrocada, InstrumentoDoPerfil,
+    MusicaDoPerfil, PartidaDoPerfil, RecordeDaConta, RespostaDoPerfil,
 };
 pub use imagem::{ErroDaImagem, FormatoDaImagem, Imagem, TipoDeImagem};
 pub use portas::RepositorioDoPerfil;

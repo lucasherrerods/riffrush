@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 
+use super::conquistas::{conquistas, Conquista, FeitosDaConta};
 use crate::modules::catalogo::DadosDaMusica;
 use crate::modules::conta::Conta;
 use crate::modules::progresso::{precisao_pelo_valor, Dificuldade, Instrumento, Nivel};
@@ -85,6 +86,7 @@ pub struct DadosDoPerfil {
     /// Da mais tocada para a menos, até `MAIS_TOCADAS`.
     pub mais_tocadas: Vec<MusicaMaisTocada>,
     pub recentes: Vec<PartidaRecente>,
+    pub feitos: FeitosDaConta,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -105,6 +107,8 @@ pub struct Perfil {
     pub por_instrumento: Vec<PartidasNoInstrumento>,
     pub mais_tocadas: Vec<MusicaMaisTocada>,
     pub recentes: Vec<PartidaRecente>,
+    /// O catálogo inteiro de selos, com o progresso da conta em cada um.
+    pub conquistas: Vec<Conquista>,
     /// Nome, banda e capa das músicas das listas acima, pelo id. Música do jogo fica de fora.
     pub musicas: HashMap<String, DadosDaMusica>,
 }
@@ -146,8 +150,10 @@ pub fn montar_perfil(conta: Conta, dados: DadosDoPerfil) -> Perfil {
     por_instrumento.sort_by_key(|i| std::cmp::Reverse(i.partidas));
     let valor_dos_acertos = por_dificuldade.iter().map(|e| e.valor_dos_acertos).sum();
     let notas = por_dificuldade.iter().map(|e| e.notas).sum();
+    let nivel = conta.nivel();
     Perfil {
-        nivel: conta.nivel(),
+        conquistas: conquistas(&dados.feitos, nivel.nivel),
+        nivel,
         conta,
         criada_em: dados.criada_em,
         capa: dados.capa,
@@ -200,7 +206,18 @@ mod tests {
             por_instrumento: vec![],
             mais_tocadas: vec![],
             recentes: vec![],
+            feitos: FeitosDaConta::default(),
         }
+    }
+
+    #[test]
+    fn o_perfil_traz_as_conquistas_pelo_nivel_e_pelos_feitos() {
+        let mut entrada = dados(vec![]);
+        entrada.feitos.full_combos = 1;
+        let perfil = montar_perfil(conta(), entrada);
+        let fc = perfil.conquistas.iter().find(|c| c.id == "primeiro_fc").unwrap();
+        assert!(fc.conquistada());
+        assert!(!perfil.conquistas.iter().find(|c| c.id == "nivel_10").unwrap().conquistada());
     }
 
     #[test]
