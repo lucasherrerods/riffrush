@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Lock, Trophy } from "lucide-react";
+import { Flame, Lock, Trophy } from "lucide-react";
 import { BotaoVoltar } from "@/shared/ui/BotaoVoltar";
 import { CapaPequena, DIFICULDADES, INSTRUMENTOS, nomeDaMusica } from "@/modules/rock/songs";
 import { useCarregamento } from "@/shared/hooks/useCarregamento";
@@ -95,6 +95,7 @@ function Conteudo({
               {formatar(xp_no_nivel)} / {formatar(xp_para_o_proximo)} XP
             </span>
           </div>
+          <SequenciaDeDias {...perfil.sequencia} />
         </ImagensDoPerfil>
       </section>
 
@@ -222,5 +223,17 @@ function Conquistas({ conquistas }: { conquistas: ConquistaDoPerfil[] }) {
         ))}
       </ul>
     </section>
+  );
+}
+
+/** Dias seguidos jogando: o foguinho só acende enquanto a sequência vale. */
+function SequenciaDeDias({ atual, maior }: PerfilDaApi["sequencia"]) {
+  return (
+    <p className="flex items-center gap-2 text-sm text-texto-suave max-md:text-xs">
+      <Flame className={cn("size-4", atual > 0 ? "text-destaque" : "opacity-50")} aria-hidden />
+      <span className={cn(atual > 0 && "font-bold text-texto")}>{atual === 0 ? "Nenhum dia seguido" : atual === 1 ? "1 dia seguido" : `${atual} dias seguidos`}</span>
+      <span aria-hidden>·</span>
+      <span>recorde de {maior}</span>
+    </p>
   );
 }

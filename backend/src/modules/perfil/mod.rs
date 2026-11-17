@@ -19,7 +19,7 @@ pub use dominio::{
 pub use http::{
     __path_imagem, __path_perfil, __path_perfil_do_amigo, __path_recordes, __path_remover_imagem, __path_trocar_imagem, imagem, perfil, perfil_do_amigo,
     recordes, remover_imagem, rotas, trocar_imagem, ConquistaDoPerfil, DadosDaMusicaNoPerfil, DificuldadeDoPerfil, ImagemTrocada, InstrumentoDoPerfil,
-    MusicaDoPerfil, PartidaDoPerfil, RecordeDaConta, RespostaDoPerfil,
+    MusicaDoPerfil, PartidaDoPerfil, RecordeDaConta, RespostaDoPerfil, SequenciaDoPerfil,
 };
 pub use imagem::{ErroDaImagem, FormatoDaImagem, Imagem, TipoDeImagem};
 pub use portas::RepositorioDoPerfil;

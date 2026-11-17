@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use uuid::Uuid;
 
-use super::dominio::{montar_perfil, Perfil, Recorde, PARTIDAS_RECENTES};
+use super::dominio::{dia_em_brasilia, montar_perfil, Perfil, Recorde, PARTIDAS_RECENTES};
 use super::imagem::{endereco_da_imagem, pode_trocar, validar_imagem, ErroDaImagem, Imagem, TipoDeImagem};
 use super::portas::RepositorioDoPerfil;
 use crate::modules::amizade::{Relacao, RepositorioDeAmizades};
@@ -43,7 +43,7 @@ impl ServicosDoPerfil {
         let conta = self.conta.conta_da_sessao(token).await.map_err(|_| ErroDoPerfil::SessaoInvalida)?;
         // A conta pode ter sido excluída entre a sessão e a consulta.
         let dados = self.repositorio.dados(conta.id, PARTIDAS_RECENTES).await?.ok_or(ErroDoPerfil::SessaoInvalida)?;
-        let mut perfil = montar_perfil(conta, dados);
+        let mut perfil = montar_perfil(conta, dados, dia_em_brasilia(self.conta.relogio.agora()));
         perfil.musicas = self.catalogo.dados(&perfil.ids_das_musicas()).await;
         Ok(perfil)
     }
@@ -62,7 +62,7 @@ impl ServicosDoPerfil {
         }
         let do_amigo = self.conta.contas.buscar(amigo).await?.ok_or(ErroDoPerfil::NaoEncontrado)?;
         let dados = self.repositorio.dados(amigo, PARTIDAS_RECENTES).await?.ok_or(ErroDoPerfil::NaoEncontrado)?;
-        let mut perfil = montar_perfil(Conta { email: None, ..do_amigo }, dados);
+        let mut perfil = montar_perfil(Conta { email: None, ..do_amigo }, dados, dia_em_brasilia(self.conta.relogio.agora()));
         perfil.musicas = self.catalogo.dados(&perfil.ids_das_musicas()).await;
         Ok(perfil)
     }
@@ -188,6 +188,7 @@ mod tests {
             mais_tocadas: vec![],
             recentes: vec![],
             feitos: Default::default(),
+            dias_jogados: vec![],
         }
     }
 

@@ -163,6 +163,8 @@ pub struct RespostaDoPerfil {
     recentes: Vec<PartidaDoPerfil>,
     /// O catálogo inteiro, na ordem fixa; as não conquistadas vêm com o progresso.
     conquistas: Vec<ConquistaDoPerfil>,
+    /// Dias seguidos jogando, no horário de Brasília.
+    sequencia: SequenciaDoPerfil,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -186,6 +188,13 @@ impl From<Conquista> for ConquistaDoPerfil {
             meta: c.meta,
         }
     }
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct SequenciaDoPerfil {
+    /// Vale enquanto a conta jogou hoje ou ontem; senão é zero.
+    atual: u32,
+    maior: u32,
 }
 
 impl From<Perfil> for RespostaDoPerfil {
@@ -213,6 +222,10 @@ impl From<Perfil> for RespostaDoPerfil {
                 .map(|(id, m)| (m, musicas.get(&id).cloned()).into())
                 .collect(),
             conquistas: p.conquistas.into_iter().map(Into::into).collect(),
+            sequencia: SequenciaDoPerfil {
+                atual: p.sequencia.atual,
+                maior: p.sequencia.maior,
+            },
             recentes: p
                 .recentes
                 .into_iter()

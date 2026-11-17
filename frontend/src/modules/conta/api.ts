@@ -135,6 +135,8 @@ export interface PerfilDaApi {
   recentes: PartidaDoPerfil[];
   /** O catálogo inteiro de selos, na ordem fixa, com o progresso de cada um. */
   conquistas: ConquistaDoPerfil[];
+  /** Dias seguidos jogando, no horário de Brasília. A atual vale enquanto a conta jogou hoje ou ontem. */
+  sequencia: { atual: number; maior: number };
 }
 
 export interface ConquistaDoPerfil {

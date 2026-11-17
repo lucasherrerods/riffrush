@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use riffrush_motor::Julgamento;
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
@@ -112,6 +112,11 @@ const FEITOS: &str = "
            (SELECT COUNT(*) FROM partidas WHERE conta_id = $1 AND NOT derrota AND NOT fantasma AND total > 0 AND acertos = total) AS full_combos,
            (SELECT COUNT(*) FROM partidas WHERE conta_id = $1 AND NOT derrota AND NOT fantasma AND dificuldade = 'expert') AS expert_concluidas,
            (SELECT COUNT(*) FROM amizades WHERE aceita AND (solicitante = $1 OR destinatario = $1)) AS amigos";
+/// Os dias no horário de Brasília (UTC-3, sem horário de verão), juntando o Rock e o Mania.
+const DIAS_JOGADOS: &str = "
+    SELECT ((jogada_em AT TIME ZONE 'UTC') - INTERVAL '3 hours')::DATE AS dia FROM partidas WHERE conta_id = $1
+    UNION
+    SELECT ((jogada_em AT TIME ZONE 'UTC') - INTERVAL '3 hours')::DATE AS dia FROM partidas_do_mania WHERE conta_id = $1";
 
 /// Partidas de apps antigos não têm o valor dos acertos: cada acerto conta como 300.
 fn valor_do_300() -> i32 {
@@ -232,6 +237,11 @@ impl RepositorioDoPerfil for PerfilPostgres {
             expert_concluidas: contagem(feitos.expert_concluidas),
             amigos: contagem(feitos.amigos),
         };
+        let dias_jogados = sqlx::query_scalar::<_, NaiveDate>(DIAS_JOGADOS)
+            .bind(conta_id)
+            .fetch_all(&self.0)
+            .await
+            .map_err(falha)?;
         Ok(Some(DadosDoPerfil {
             criada_em: resumo.criada_em,
             capa: resumo.capa,
@@ -241,6 +251,7 @@ impl RepositorioDoPerfil for PerfilPostgres {
             mais_tocadas,
             recentes,
             feitos,
+            dias_jogados,
         }))
     }
 

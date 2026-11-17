@@ -31,6 +31,7 @@ const perfil: PerfilDaApi = {
     { id: "primeira_musica", nome: "Primeira música", descricao: "Jogue uma música", progresso: 1, meta: 1, conquistada: true },
     { id: "cem_partidas", nome: "Cem partidas", descricao: "Jogue 100 partidas", progresso: 12, meta: 100, conquistada: false },
   ],
+  sequencia: { atual: 3, maior: 9 },
   recentes: [{ musica_id: "encore:abc", dificuldade: "expert", pontos: 98_500, acertos: 9, total: 10, precisao: 0.25, derrota: true, jogada_em: "2026-10-20T12:00:00Z" }],
 };
 
@@ -67,6 +68,20 @@ describe("TelaDePerfil", () => {
     expect(within(secao).getByRole("listitem", { name: "Primeira música, conquistada" })).toBeInTheDocument();
     const falta = within(secao).getByRole("listitem", { name: "Cem partidas, 12 de 100" });
     expect(within(falta).getByText("Jogue 100 partidas")).toBeInTheDocument();
+  });
+
+  it("mostra os dias seguidos jogando e o recorde", async () => {
+    render(<TelaDePerfil aoVoltar={() => {}} tituloDaMusica={tituloDaMusica} carregar={async () => perfil} />);
+
+    expect(await screen.findByText("3 dias seguidos")).toBeInTheDocument();
+    expect(screen.getByText("recorde de 9")).toBeInTheDocument();
+  });
+
+  it("sem sequência, mostra só o recorde, e um dia fica no singular", async () => {
+    render(<TelaDePerfil aoVoltar={() => {}} tituloDaMusica={tituloDaMusica} carregar={async () => ({ ...perfil, sequencia: { atual: 0, maior: 1 } })} />);
+
+    expect(await screen.findByText("Nenhum dia seguido")).toBeInTheDocument();
+    expect(screen.getByText("recorde de 1")).toBeInTheDocument();
   });
 
   it("música que não está na biblioteca aparece pelo id", async () => {

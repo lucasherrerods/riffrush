@@ -71,6 +71,7 @@ async fn app() -> (Router, String) {
                 jogada_em: DateTime::UNIX_EPOCH,
             }],
             feitos: Default::default(),
+            dias_jogados: vec![],
         },
     );
     let app = riffrush_api::app(
