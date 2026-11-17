@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react"
 import { BotaoDeSugerir } from "@/modules/amigos"
+import { BotaoDasPlaylists, BotaoDePlaylist, usePlaylists, type Playlist } from "@/modules/playlists"
 import { sugestaoDoConjunto } from "./sugestaoDoConjunto"
 import { Download, FileAudio, Info, ListOrdered } from "lucide-react"
 import {
@@ -66,6 +67,8 @@ interface Props {
   aoMudarMods: (mods: number) => void
   aoImportar: (arquivos: File[]) => void
   aoJogar: (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => void
+  /** Toca uma playlist em maratona; sem ele os botões de playlist não aparecem. */
+  aoTocarPlaylist?: (playlist: Playlist) => void
   /** Apaga o conjunto da biblioteca; sem ele o menu de opções não aparece. */
   aoRemover?: (conjunto: ConjuntoSalvo) => void
   /** Abre o mapa no treino; sem ele o botão não aparece. */
@@ -81,6 +84,7 @@ interface Props {
 }
 
 const CHAVE_DAS_FAVORITAS = "riffrush:mania:favoritas"
+const CHAVE_DAS_PLAYLISTS = "riffrush:mania:playlists"
 
 const COMANDOS = [
   { teclas: "← →", rotulo: "Dificuldade" },
@@ -146,6 +150,7 @@ export function TelaDeSelecaoMania({
   aoMudarMods,
   aoImportar,
   aoJogar,
+  aoTocarPlaylist,
   aoRemover,
   aoTreinar,
   aoAssistir,
@@ -207,6 +212,13 @@ export function TelaDeSelecaoMania({
   }, [idDoConjunto, aoMudarSelecao])
   const dificuldade =
     conjunto?.mapas.find((m) => m.hash === hash) ?? conjunto?.mapas[0]
+  const playlists = usePlaylists(CHAVE_DAS_PLAYLISTS)
+  const playlist = conjunto && dificuldade && aoTocarPlaylist && (
+    <BotaoDePlaylist
+      faixa={{ musica: conjunto.id, versao: dificuldade.hash, titulo: `${conjunto.titulo} · ${dificuldade.dificuldade}` }}
+      playlists={playlists}
+    />
+  )
   const sugerir = conjunto && (
     <BotaoDeSugerir
       sugestao={sugestaoDoConjunto(conjunto, dificuldade)}
@@ -411,6 +423,7 @@ export function TelaDeSelecaoMania({
       aoMudarOrdem={setOrdem}
       soFavoritas={soFavoritas}
       aoAlternarFavoritas={() => setSoFavoritas((ligado) => !ligado)}
+      playlists={aoTocarPlaylist && <BotaoDasPlaylists playlists={playlists} aoTocar={aoTocarPlaylist} />}
     >
       {opcoesDeTeclas.length > 1 && (
         <GrupoDeOpcoes
@@ -512,6 +525,7 @@ export function TelaDeSelecaoMania({
             )
           }
           sugerir={sugerir}
+          playlist={playlist}
           detalhes={detalhes}
           ranking={ranking || undefined}
           tocar={tocar}
@@ -539,6 +553,7 @@ export function TelaDeSelecaoMania({
                     />
                   }
                   sugerir={sugerir}
+                  playlist={playlist}
                 />
               )}
 
