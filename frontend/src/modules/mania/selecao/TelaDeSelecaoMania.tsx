@@ -84,7 +84,6 @@ interface Props {
 }
 
 const CHAVE_DAS_FAVORITAS = "riffrush:mania:favoritas"
-const CHAVE_DAS_PLAYLISTS = "riffrush:mania:playlists"
 
 const COMANDOS = [
   { teclas: "← →", rotulo: "Dificuldade" },
@@ -212,7 +211,7 @@ export function TelaDeSelecaoMania({
   }, [idDoConjunto, aoMudarSelecao])
   const dificuldade =
     conjunto?.mapas.find((m) => m.hash === hash) ?? conjunto?.mapas[0]
-  const playlists = usePlaylists(CHAVE_DAS_PLAYLISTS)
+  const playlists = usePlaylists("mania")
   const playlist = conjunto && dificuldade && aoTocarPlaylist && (
     <BotaoDePlaylist
       faixa={{ musica: conjunto.id, versao: dificuldade.hash, titulo: `${conjunto.titulo} · ${dificuldade.dificuldade}` }}

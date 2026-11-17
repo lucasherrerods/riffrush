@@ -4,6 +4,3 @@ import { carregarFavoritas as carregarDaChave } from "@/modules/selecao";
 export const CHAVE_DAS_FAVORITAS = "riffrush:favoritas";
 
 export const carregarFavoritas = () => carregarDaChave(CHAVE_DAS_FAVORITAS);
-
-/** Onde as playlists do Rock ficam guardadas. */
-export const CHAVE_DAS_PLAYLISTS = "riffrush:playlists";

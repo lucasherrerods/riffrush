@@ -5,12 +5,12 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { contem, type Faixa } from "./playlists";
-import type { ApiDasPlaylists } from "./usePlaylists";
+import type { ApiDasPlaylistsDoModo } from "./usePlaylists";
 
 interface Props {
   /** A música selecionada na versão escolhida; sem ela o botão fica desligado. */
   faixa: Faixa | null;
-  playlists: ApiDasPlaylists;
+  playlists: ApiDasPlaylistsDoModo;
 }
 
 /** O botão redondo, ao lado do coração, que põe ou tira a música selecionada das playlists. */
@@ -19,8 +19,7 @@ export function BotaoDePlaylist({ faixa, playlists }: Props) {
 
   const criar = (evento: FormEvent) => {
     evento.preventDefault();
-    if (!faixa) return;
-    playlists.alternar(playlists.criar(nome), faixa);
+    if (!faixa || playlists.criar(nome, [faixa]) === null) return;
     setNome("");
   };
 

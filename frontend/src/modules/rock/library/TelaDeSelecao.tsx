@@ -38,7 +38,7 @@ import {
   selecaoNoFiltro,
 } from "@/modules/selecao";
 import { Capa } from "./componentes/Capa";
-import { CHAVE_DAS_FAVORITAS, CHAVE_DAS_PLAYLISTS } from "./favoritas";
+import { CHAVE_DAS_FAVORITAS } from "./favoritas";
 import { filtrarMusicas, type OrdemDaSelecao } from "./filtroDaSelecao";
 import { ehImportada, semAudio } from "./storage/historico";
 
@@ -101,7 +101,7 @@ export function TelaDeSelecao(props: Props) {
   const dispositivo = useDispositivo();
 
   const [favoritas, setFavoritas] = useState(() => carregarFavoritas(CHAVE_DAS_FAVORITAS));
-  const playlists = usePlaylists(CHAVE_DAS_PLAYLISTS);
+  const playlists = usePlaylists("rock");
   const [soFavoritas, setSoFavoritas] = useState(false);
   const [texto, setTexto] = useState("");
   const [ordem, setOrdem] = useState<OrdemDaSelecao>("biblioteca");

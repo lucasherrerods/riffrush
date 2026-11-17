@@ -6,9 +6,15 @@ export interface Faixa {
   titulo: string;
 }
 
+/** A conta guarda até 10 playlists, somando os dois modos, e cada uma até 50 músicas. A API confere de novo. */
+export const MAXIMO_DE_PLAYLISTS = 10;
+export const MAXIMO_DE_FAIXAS = 50;
+
 export interface Playlist {
   id: string;
   nome: string;
+  /** Aparece no perfil para os amigos. */
+  publica: boolean;
   faixas: Faixa[];
 }
 
@@ -17,7 +23,7 @@ const mesmaFaixa = (a: Faixa, b: Faixa) => a.musica === b.musica && a.versao ===
 export const contem = (playlist: Playlist, faixa: Faixa) => playlist.faixas.some((f) => mesmaFaixa(f, faixa));
 
 export function criarPlaylist(lista: Playlist[], nome: string, novoId: () => string = () => crypto.randomUUID()): Playlist[] {
-  return [...lista, { id: novoId(), nome: nome.trim() || `Playlist ${lista.length + 1}`, faixas: [] }];
+  return [...lista, { id: novoId(), nome: nome.trim().slice(0, 40) || `Playlist ${lista.length + 1}`, publica: true, faixas: [] }];
 }
 
 export const renomearPlaylist = (lista: Playlist[], id: string, nome: string): Playlist[] =>
@@ -25,10 +31,16 @@ export const renomearPlaylist = (lista: Playlist[], id: string, nome: string): P
 
 export const apagarPlaylist = (lista: Playlist[], id: string): Playlist[] => lista.filter((p) => p.id !== id);
 
-/** Põe a faixa no fim da playlist, ou tira se ela já estava. */
+/** Põe a faixa no fim da playlist, ou tira se ela já estava. Playlist cheia não ganha mais nenhuma. */
 export function adicionarOuTirar(lista: Playlist[], id: string, faixa: Faixa): Playlist[] {
-  return lista.map((p) => (p.id !== id ? p : { ...p, faixas: contem(p, faixa) ? p.faixas.filter((f) => !mesmaFaixa(f, faixa)) : [...p.faixas, faixa] }));
+  return lista.map((p) => {
+    if (p.id !== id) return p;
+    if (contem(p, faixa)) return { ...p, faixas: p.faixas.filter((f) => !mesmaFaixa(f, faixa)) };
+    return p.faixas.length >= MAXIMO_DE_FAIXAS ? p : { ...p, faixas: [...p.faixas, faixa] };
+  });
 }
+
+export const alternarPublica = (lista: Playlist[], id: string): Playlist[] => lista.map((p) => (p.id === id ? { ...p, publica: !p.publica } : p));
 
 const ehTexto = (v: unknown): v is string => typeof v === "string";
 
@@ -45,7 +57,7 @@ export function carregarPlaylists(chave: string): Playlist[] {
     return lidas.flatMap((v) => {
       const p = v as Partial<Playlist> | null;
       if (!p || !ehTexto(p.id) || !ehTexto(p.nome) || !Array.isArray(p.faixas)) return [];
-      return [{ id: p.id, nome: p.nome, faixas: p.faixas.flatMap(lerFaixa) }];
+      return [{ id: p.id, nome: p.nome, publica: p.publica !== false, faixas: p.faixas.flatMap(lerFaixa) }];
     });
   } catch {
     return [];

@@ -50,7 +50,7 @@ import { acharNaBiblioteca } from "./multijogador/mapaNaRede";
 import { PlacarDaSalaMania } from "./multijogador/PlacarDaSalaMania";
 import { enviarEstado, useConexao, voltarParaASala } from "./multijogador/sala";
 import { TelaDeMultijogadorMania } from "./multijogador/TelaDeMultijogadorMania";
-import { anotar, iniciarMaratona, proximaTocavel, ResultadoDaMaratona, rotuloDeSeguir, type Maratona, type Playlist } from "@/modules/playlists";
+import { anotar, iniciarMaratona, PlaylistsDoPerfil, proximaTocavel, ResultadoDaMaratona, rotuloDeSeguir, type Maratona, type Playlist } from "@/modules/playlists";
 
 type Tela = { nome: "menu" } | { nome: "configuracoes"; voltarPara: Tela } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil"; amigo?: string } | { nome: "online" } | { nome: "atividades" } | { nome: "resultadoDaMaratona" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "multijogador" } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido; rede?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido; rede?: boolean };
 
@@ -538,9 +538,9 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
               abaDasMusicas={<AbaDosMapasMaisJogados nomeNaBiblioteca={nomeNaBiblioteca} baixados={baixados} aoBaixar={aoBaixar} aoJogar={(beatmapsetId) => setTela({ nome: "selecao", conjuntoId: `osu:${beatmapsetId}` })} baixar={baixar} />}
             />
           ) : tela.nome === "perfil" && tela.amigo ? (
-            <PerfilDoAmigo contaId={tela.amigo} aoVoltar={() => setTela({ nome: "menu" })} tituloDaMusica={() => undefined} />
+            <PerfilDoAmigo contaId={tela.amigo} aoVoltar={() => setTela({ nome: "menu" })} tituloDaMusica={() => undefined} extra={<PlaylistsDoPerfil contaId={tela.amigo} />} />
           ) : (
-            <TelaDePerfil mod={souDaModeracao} aoVoltar={() => setTela({ nome: "menu" })} tituloDaMusica={() => undefined} estatisticas={<EstatisticasDoMania />} />
+            <TelaDePerfil mod={souDaModeracao} aoVoltar={() => setTela({ nome: "menu" })} tituloDaMusica={() => undefined} estatisticas={<EstatisticasDoMania />} extra={<PlaylistsDoPerfil />} />
           )}
           {painelDeAmigos}
         </div>

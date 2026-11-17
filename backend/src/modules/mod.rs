@@ -6,6 +6,7 @@ pub mod conversa;
 pub mod mania;
 pub mod moderacao;
 pub mod perfil;
+pub mod playlists;
 pub mod presenca;
 pub mod progresso;
 pub mod ranking;

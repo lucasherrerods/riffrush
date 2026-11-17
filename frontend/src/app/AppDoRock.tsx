@@ -42,7 +42,7 @@ import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { TelaCarregando } from "@/shared/ui/TelaCarregando";
 import { cn } from "@/shared/lib/utils";
-import { anotar, iniciarMaratona, proximaTocavel, ResultadoDaMaratona, rotuloDeSeguir, type Maratona, type Playlist } from "@/modules/playlists";
+import { anotar, iniciarMaratona, PlaylistsDoPerfil, proximaTocavel, ResultadoDaMaratona, rotuloDeSeguir, type Maratona, type Playlist } from "@/modules/playlists";
 import { mesmasOpcoes, opcoesDaPartida } from "./opcoes";
 
 type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "customizacao" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "atividades" | "espectador" | "telaDividida" | "resultadoDividido" | "resultadoDaMaratona";
@@ -738,10 +738,10 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
               />
             )}
             {tela === "perfil" && amigoNoPerfil && (
-              <PerfilDoAmigo contaId={amigoNoPerfil} aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />
+              <PerfilDoAmigo contaId={amigoNoPerfil} aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} extra={<PlaylistsDoPerfil contaId={amigoNoPerfil} />} />
             )}
             {tela === "perfil" && !amigoNoPerfil && (
-              <TelaDePerfil mod={souDaModeracao} aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />
+              <TelaDePerfil mod={souDaModeracao} aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} extra={<PlaylistsDoPerfil />} />
             )}
             {tela === "configuracoes" && (
               <TelaDeConfiguracoes configuracoes={configuracoes} aoMudar={mudarConfiguracoes} aoVoltar={() => setTela(voltarDasConfiguracoesPara)} />

@@ -6,10 +6,12 @@ import { anotar, iniciarMaratona, pularFaixa } from "./maratona";
 import { ResultadoDaMaratona } from "./ResultadoDaMaratona";
 import { esquecerPlaylists, usePlaylists } from "./usePlaylists";
 
+vi.mock("@/modules/conta", () => ({ sessaoDaConta: { token: () => null } }));
+
 const faixa = { musica: "m1", versao: "expert", titulo: "Shine" };
 
 function Selecao({ aoTocar = () => {} }: { aoTocar?: (p: { nome: string }) => void }) {
-  const playlists = usePlaylists("teste:playlists");
+  const playlists = usePlaylists("rock");
   return (
     <>
       <BotaoDePlaylist faixa={faixa} playlists={playlists} />
@@ -35,7 +37,7 @@ it("cria uma playlist com a música, tira e põe de novo", async () => {
   expect(marcada).toHaveAttribute("aria-checked", "true");
   await usuario.click(marcada);
   expect(screen.getByRole("checkbox", { name: /Treino/ })).toHaveAttribute("aria-checked", "false");
-  expect(JSON.parse(localStorage.getItem("teste:playlists")!)[0]).toMatchObject({ nome: "Treino", faixas: [] });
+  expect(JSON.parse(localStorage.getItem("riffrush:playlists")!)[0]).toMatchObject({ nome: "Treino", faixas: [] });
 });
 
 it("toca a playlist em maratona e apaga", async () => {

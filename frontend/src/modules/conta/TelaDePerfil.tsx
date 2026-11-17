@@ -23,6 +23,8 @@ interface Props {
   estatisticas?: ReactNode;
   /** Troca a foto e a capa. Por padrão, as de quem está logado; `null` deixa o perfil só para ver (o de um amigo). */
   editor?: EditorDeImagens | null;
+  /** Seções de outros módulos abaixo do cartão da conta (ex.: as playlists), iguais nos dois modos. */
+  extra?: ReactNode;
 }
 
 const formatar = (n: number) => n.toLocaleString("pt-BR");
@@ -33,7 +35,7 @@ const mesEAno = (data: string) => new Date(data).toLocaleDateString("pt-BR", { m
 
 
 /** O perfil de quem está logado: nível, números das partidas, desempenho por dificuldade e as últimas jogadas. */
-export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar = (sinal) => sessaoDaConta.perfil(sinal), estatisticas, editor = editorDaSessao }: Props) {
+export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar = (sinal) => sessaoDaConta.perfil(sinal), estatisticas, editor = editorDaSessao, extra }: Props) {
   const { estado, tentarDeNovo } = useCarregamento(carregar);
 
   return (
@@ -45,7 +47,7 @@ export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar =
 
       <div className="sem-barra-de-rolagem rolagem-de-toque mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-4 max-md:gap-2">
         <ComCarregamento estado={estado} tentarDeNovo={tentarDeNovo} oQue="o perfil">
-          {(perfil) => <Conteudo perfil={perfil} tituloDaMusica={tituloDaMusica} mod={mod} estatisticas={estatisticas} editor={editor} />}
+          {(perfil) => <Conteudo perfil={perfil} tituloDaMusica={tituloDaMusica} mod={mod} estatisticas={estatisticas} editor={editor} extra={extra} />}
         </ComCarregamento>
       </div>
     </div>
@@ -53,8 +55,8 @@ export function TelaDePerfil({ aoVoltar, tituloDaMusica, mod = false, carregar =
 }
 
 /** O perfil de um amigo: o mesmo do próprio, só para ver. */
-export function PerfilDoAmigo({ contaId, aoVoltar, tituloDaMusica }: { contaId: string } & Pick<Props, "aoVoltar" | "tituloDaMusica">) {
-  return <TelaDePerfil key={contaId} aoVoltar={aoVoltar} tituloDaMusica={tituloDaMusica} carregar={(sinal) => sessaoDaConta.perfilDoAmigo(contaId, sinal)} editor={null} />;
+export function PerfilDoAmigo({ contaId, aoVoltar, tituloDaMusica, extra }: { contaId: string } & Pick<Props, "aoVoltar" | "tituloDaMusica" | "extra">) {
+  return <TelaDePerfil key={contaId} aoVoltar={aoVoltar} tituloDaMusica={tituloDaMusica} carregar={(sinal) => sessaoDaConta.perfilDoAmigo(contaId, sinal)} editor={null} extra={extra} />;
 }
 
 function Conteudo({
@@ -63,12 +65,14 @@ function Conteudo({
   mod,
   estatisticas,
   editor,
+  extra,
 }: {
   perfil: PerfilDaApi;
   tituloDaMusica: Props["tituloDaMusica"];
   mod: boolean;
   estatisticas?: ReactNode;
   editor: EditorDeImagens | null;
+  extra?: ReactNode;
 }) {
   const { nivel, xp_no_nivel, xp_para_o_proximo } = perfil.nivel;
 
@@ -96,6 +100,8 @@ function Conteudo({
           </div>
         </ImagensDoPerfil>
       </section>
+
+      {extra}
 
       {estatisticas ?? <EstatisticasDoRock perfil={perfil} tituloDaMusica={tituloDaMusica} />}
     </>

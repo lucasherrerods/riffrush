@@ -1,58 +1,36 @@
-import { useCallback, useSyncExternalStore } from "react";
-import { adicionarOuTirar, apagarPlaylist, carregarPlaylists, criarPlaylist, salvarPlaylists, type Faixa, type Playlist } from "./playlists";
+import { useSyncExternalStore } from "react";
+import { sessaoDaConta } from "@/modules/conta";
+import type { Modo } from "@/shared/modo";
+import { avisar } from "@/shared/ui/avisos";
+import { apiDasPlaylists } from "./api";
+import { LojaDePlaylists } from "./lojaDePlaylists";
 
-interface Loja {
-  lista: Playlist[];
-  ouvintes: Set<() => void>;
-}
+let lojas: Partial<Record<Modo, LojaDePlaylists>> = {};
 
-const lojas = new Map<string, Loja>();
-
-function lojaDa(chave: string): Loja {
-  let loja = lojas.get(chave);
-  if (!loja) {
-    loja = { lista: carregarPlaylists(chave), ouvintes: new Set() };
-    lojas.set(chave, loja);
+// Testes de outras telas trocam a conta por um falso sem a sessão: aí as playlists ficam só no aparelho.
+function tokenDaConta() {
+  try {
+    return sessaoDaConta.token();
+  } catch {
+    return null;
   }
-  return loja;
 }
 
-function mudar(chave: string, mudanca: (lista: Playlist[]) => Playlist[]) {
-  const loja = lojaDa(chave);
-  loja.lista = mudanca(loja.lista);
-  salvarPlaylists(chave, loja.lista);
-  loja.ouvintes.forEach((ouvir) => ouvir());
+/** A loja de um modo, uma só para o app. */
+export function lojaDoModo(modo: Modo): LojaDePlaylists {
+  return (lojas[modo] ??= new LojaDePlaylists(modo, { api: apiDasPlaylists, token: tokenDaConta, avisarErro: (mensagem) => avisar.error(mensagem) }));
 }
 
 /** Para os testes começarem sem o que outro teste deixou na memória. */
-export const esquecerPlaylists = () => lojas.clear();
+export const esquecerPlaylists = () => {
+  lojas = {};
+};
 
-/** As playlists de um modo, iguais em todas as telas que usam a mesma chave. */
-export function usePlaylists(chave: string) {
-  const inscrever = useCallback(
-    (ouvir: () => void) => {
-      const loja = lojaDa(chave);
-      loja.ouvintes.add(ouvir);
-      return () => loja.ouvintes.delete(ouvir);
-    },
-    [chave],
-  );
-  const playlists = useSyncExternalStore(inscrever, () => lojaDa(chave).lista);
-  return {
-    playlists,
-    /** Cria e devolve o id da nova. */
-    criar: (nome: string) => {
-      let id = "";
-      mudar(chave, (lista) => {
-        const nova = criarPlaylist(lista, nome);
-        id = nova[nova.length - 1].id;
-        return nova;
-      });
-      return id;
-    },
-    alternar: (id: string, faixa: Faixa) => mudar(chave, (lista) => adicionarOuTirar(lista, id, faixa)),
-    apagar: (id: string) => mudar(chave, (lista) => apagarPlaylist(lista, id)),
-  };
+/** As playlists de um modo, iguais em todas as telas. */
+export function usePlaylists(modo: Modo) {
+  const loja = lojaDoModo(modo);
+  const playlists = useSyncExternalStore(loja.inscrever, loja.estado);
+  return { playlists, criar: loja.criar, alternar: loja.alternar, alternarPublica: loja.alternarPublica, apagar: loja.apagar, copiar: loja.copiar };
 }
 
-export type ApiDasPlaylists = ReturnType<typeof usePlaylists>;
+export type ApiDasPlaylistsDoModo = ReturnType<typeof usePlaylists>;

@@ -1,12 +1,12 @@
 import { useState, type KeyboardEvent } from "react";
-import { ListMusic, Play, Trash2 } from "lucide-react";
+import { Eye, EyeOff, ListMusic, Play, Trash2 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import type { Playlist } from "./playlists";
-import type { ApiDasPlaylists } from "./usePlaylists";
+import type { ApiDasPlaylistsDoModo } from "./usePlaylists";
 
 interface Props {
-  playlists: ApiDasPlaylists;
+  playlists: ApiDasPlaylistsDoModo;
   /** Começa a maratona: todas as músicas da playlist em sequência. */
   aoTocar: (playlist: Playlist) => void;
 }
@@ -46,6 +46,16 @@ export function BotaoDasPlaylists({ playlists, aoTocar }: Props) {
                   }}
                 >
                   <Play /> Tocar
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-pressed={p.publica}
+                  aria-label={`${p.nome} aparece no perfil para os amigos`}
+                  title={p.publica ? "Aparece no perfil para os amigos" : "Só você vê"}
+                  onClick={() => playlists.alternarPublica(p.id)}
+                >
+                  {p.publica ? <Eye /> : <EyeOff className="opacity-60" />}
                 </Button>
                 <Button size="icon" variant="ghost" aria-label={`Apagar ${p.nome}`} onClick={() => playlists.apagar(p.id)}>
                   <Trash2 />
