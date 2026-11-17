@@ -39,8 +39,12 @@ const pronta = () => waitFor(() => expect(audio().fontes.length).toBeGreaterThan
 describe("TelaDeJogoMania", () => {
   it("mostra o mapa e toca a música depois da entrada", async () => {
     abrir();
-    expect(screen.getByRole("heading", { name: "Musica" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Carregando o mapa…");
     await pronta();
+    expect(await screen.findByRole("heading", { name: "Musica" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Precisão")).toHaveTextContent("100,00%");
+    expect(screen.getByLabelText("Progresso da música")).toBeInTheDocument();
+    expect(screen.getByLabelText("Barra de UR")).toBeInTheDocument();
     const fonte = audio().fontes.at(-1)!;
     expect(fonte.inicio).toBe(ENTRADA);
     expect(fonte.playbackRate.value).toBe(1);
@@ -109,8 +113,8 @@ describe("TelaDeJogoMania", () => {
       [2000, 1, 0],
     ];
     render(<TelaDeJogoMania mapa={mapa} aoTerminar={aoTerminar} aoSair={vi.fn()} decodificar={decodificar} replay={replay} rotuloDoReplay="REPLAY · Ana" />);
-    expect(screen.getByText("REPLAY · Ana")).toBeInTheDocument();
     await pronta();
+    expect(await screen.findByText("REPLAY · Ana")).toBeInTheDocument();
     fireEvent.keyDown(window, { code: "KeyD" });
     await irPara(1000);
     await irPara(1500);

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Eye, Loader2, Pause, Skull } from "lucide-react";
+import { Eye, Pause, Skull } from "lucide-react";
 import { agoraNoAudio, focoSaiuPeloAlt, momentoDoEvento, obterContextoDeAudio, pausarAudio, retomarAudio, saidaDeAudio, tocarEfeito } from "@/modules/audio";
 import { pontoDaPartida } from "@/modules/player";
 import { suportaWebGL, type Personagem } from "@/modules/rock/character";
 import { cenaDaPartida } from "./cena";
 import { Palco, type EstadoDoPalco } from "@/modules/rock/stage";
-import { DIFICULDADES, INSTRUMENTOS, carregarMusica, trechosDaMusica, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada, type Trecho } from "@/modules/rock/songs";
+import { Capa, DIFICULDADES, INSTRUMENTOS, carregarMusica, trechosDaMusica, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada, type Trecho } from "@/modules/rock/songs";
 import { bloquearTeclasDoSistema, ehAtalhoDoNavegador } from "@/modules/platform";
 import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { cn } from "@/shared/lib/utils";
@@ -24,6 +24,7 @@ import type { EstadoDoJogador } from "./rede";
 import type { Resultado } from "./resultado";
 import { limitesDaVolta, registrarVolta, rotuloDasVoltas, VOLTAS_INICIAIS, type Voltas } from "@/shared/lib/treino";
 import { EscolhaDoTreino } from "@/shared/ui/EscolhaDoTreino";
+import { CabecalhoDaPartida, CarregandoPartida } from "@/modules/partida";
 import { noTempoReal, rotuloDaVelocidade } from "./velocidade";
 import { reiniciaAPartida, type JogadorLocal, type OpcoesDaPartida } from "./opcoesDaPartida";
 
@@ -484,15 +485,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
     >
       {comPalco && carregada && <Palco lerEstado={() => estadoDoPalco.current} comPersonagem={cena.personagem} qualidade={opcoes.qualidadeDoPalco} />}
 
-      {!carregada && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-          <Loader2 className="size-10 animate-spin text-primaria" aria-hidden />
-          <p className="text-lg font-semibold">{musica.arquivo ? "Analisando o áudio..." : "Gravando a banda..."}</p>
-          <p className="text-base text-texto-suave">
-            {musica.titulo} · {rotuloDaDificuldade}
-          </p>
-        </div>
-      )}
+      {!carregada && <CarregandoPartida mensagem={musica.arquivo ? "Analisando o áudio..." : "Gravando a banda..."} titulo={musica.titulo} detalhe={rotuloDaDificuldade} />}
 
       {carregada && (
         <>
@@ -541,59 +534,63 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
             />
           )}
 
-          <header className={cn("absolute top-0 right-0 left-0 flex items-center", estreita ? "gap-2 px-3 pt-1" : "gap-4 px-6 pt-4")}>
-            <div className="min-w-0">
-              <h1 className="texto-titulo-da-partida truncate font-bold">{musica.titulo}</h1>
-              <p className={cn("truncate text-texto-suave", estreita ? "text-xs" : "text-base")}>
-                {musica.artista} · {rotuloDaDificuldade}
-                {opcoes.bot && !replay && <span className="ml-2 rounded bg-estrela px-2 font-black text-fundo">BOT</span>}
-                {velocidade !== 1 && <span className="ml-2 rounded bg-superficie-elevada px-2 font-black">{rotuloDaVelocidade(velocidade)}</span>}
-                {replay && <span className="ml-2 rounded bg-primaria px-2 font-black">{replay.ateAgora === undefined ? "REPLAY" : "AO VIVO"}</span>}
+          <TopoDaPartida
+            loja={loja}
+            titulo={musica.titulo}
+            artista={musica.artista}
+            detalhe={rotuloDaDificuldade}
+            capa={<Capa musica={musica} decorativa className="size-full" />}
+            compacto={estreita}
+            aoIrPara={navegavel ? (fracao) => controles.current.irPara(fracao) : undefined}
+            selos={
+              <>
+                {opcoes.bot && !replay && <span className="rounded bg-estrela px-2 font-black text-fundo">BOT</span>}
+                {velocidade !== 1 && <span className="rounded bg-superficie-elevada px-2 font-black text-texto">{rotuloDaVelocidade(velocidade)}</span>}
+                {replay && <span className="rounded bg-primaria px-2 font-black text-texto">{replay.ateAgora === undefined ? "REPLAY" : "AO VIVO"}</span>}
+                {trecho && <span className="rounded bg-primaria px-2 font-black text-texto">{["TREINO", trecho.nome, rotuloDasVoltas(voltas)].filter(Boolean).join(" · ")}</span>}
+                {opcoes.mostrarFps && <ContadorDeFps loja={lojaDoFps} />}
+              </>
+            }
+            acoes={
+              <>
                 {trecho && (
-                  <span className="ml-2 rounded bg-primaria px-2 font-black">
-                    {["TREINO", trecho.nome, rotuloDasVoltas(voltas)].filter(Boolean).join(" · ")}
+                  <MarcasDoTreino
+                    marcaA={marcaA}
+                    emLoop={trecho.nome === NOME_DO_A_B}
+                    aoMarcarA={() => setMarcaA(Math.max(0, relogio.agora() * velocidade))}
+                    aoMarcarB={() => {
+                      const fim = relogio.agora() * velocidade;
+                      if (marcaA === null || fim <= marcaA) return;
+                      setMarcaA(null);
+                      setTrecho({ nome: NOME_DO_A_B, inicio: marcaA, fim });
+                    }}
+                    aoLimpar={() => {
+                      setMarcaA(null);
+                      setTrecho(musicaInteira(carregada.duracao));
+                    }}
+                  />
+                )}
+                {espectadores > 0 && (
+                  <span
+                    role="status"
+                    aria-label={`${espectadores} ${espectadores === 1 ? "pessoa assistindo" : "pessoas assistindo"}`}
+                    className="flex shrink-0 items-center gap-2 rounded-md border border-primaria/50 bg-primaria/15 px-2 py-1 font-mono text-base font-bold text-primaria tabular-nums"
+                  >
+                    <Eye className="size-4" aria-hidden />
+                    {espectadores}
                   </span>
                 )}
-                {opcoes.mostrarFps && <ContadorDeFps loja={lojaDoFps} />}
-              </p>
-            </div>
-            <ProgressoDaMusica loja={loja} aoIrPara={navegavel ? (fracao) => controles.current.irPara(fracao) : undefined} />
-            {trecho && (
-              <MarcasDoTreino
-                marcaA={marcaA}
-                emLoop={trecho.nome === NOME_DO_A_B}
-                aoMarcarA={() => setMarcaA(Math.max(0, relogio.agora() * velocidade))}
-                aoMarcarB={() => {
-                  const fim = relogio.agora() * velocidade;
-                  if (marcaA === null || fim <= marcaA) return;
-                  setMarcaA(null);
-                  setTrecho({ nome: NOME_DO_A_B, inicio: marcaA, fim });
-                }}
-                aoLimpar={() => {
-                  setMarcaA(null);
-                  setTrecho(musicaInteira(carregada.duracao));
-                }}
-              />
-            )}
-            {espectadores > 0 && (
-              <span
-                role="status"
-                aria-label={`${espectadores} ${espectadores === 1 ? "pessoa assistindo" : "pessoas assistindo"}`}
-                className="flex shrink-0 items-center gap-2 rounded-md border border-primaria/50 bg-primaria/15 px-2 py-1 font-mono text-base font-bold text-primaria tabular-nums"
-              >
-                <Eye className="size-4" aria-hidden />
-                {espectadores}
-              </span>
-            )}
-            <Button variant="ghost" size="icon" onClick={() => controles.current.pausar()} aria-label="Pausar">
-              <Pause />
-            </Button>
-          </header>
+                <Button variant="ghost" size="icon" onClick={() => controles.current.pausar()} aria-label="Pausar">
+                  <Pause />
+                </Button>
+              </>
+            }
+          />
 
           {rede?.adversarios}
 
           {/* Canto superior esquerdo: o clipe da música e, embaixo, o placar do ranking. */}
-          <div data-parte="canto-esquerdo" className="absolute top-20 left-6 flex flex-col gap-4">
+          <div data-parte="canto-esquerdo" className="absolute top-28 left-6 flex flex-col gap-4">
             {urlDoVideo && cena.video && (
               <motion.div initial={{ opacity: 0, x: -32 }} animate={{ opacity: 1, x: 0 }} className="w-[min(26vw,360px)] overflow-hidden rounded-2xl border border-borda">
                 <video ref={video} src={urlDoVideo} muted playsInline className="aspect-video w-full bg-fundo object-cover" />
@@ -673,35 +670,15 @@ function MarcasDoTreino({ marcaA, emLoop, aoMarcarA, aoMarcarB, aoLimpar }: { ma
   );
 }
 
-/** No replay gravado e no treino a barra também é um controle: clicar ou arrastar leva a partida para aquele ponto. */
-function ProgressoDaMusica({ loja, aoIrPara }: { loja: LojaDoHud<Hud>; aoIrPara?: (fracao: number) => void }) {
-  const progresso = useLoja(loja, (h) => h.progresso);
-  return (
-    <div className={cn("relative flex-1", aoIrPara && "py-2")}>
-      <div className="h-1.5 overflow-hidden rounded-full bg-superficie-elevada" aria-label="Progresso da música">
-        <div className="h-full bg-primaria" style={{ width: `${progresso * 100}%` }} />
-      </div>
-      {aoIrPara && (
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.001}
-          value={progresso}
-          onChange={(e) => aoIrPara(Number(e.target.value))}
-          // As teclas são do jogo (o Esc pausa): a barra não fica com o foco depois do clique.
-          onPointerUp={(e) => e.currentTarget.blur()}
-          aria-label="Posição da música"
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-        />
-      )}
-    </div>
-  );
+/** Só o topo re-renderiza quando a precisão e o progresso mudam. */
+function TopoDaPartida({ loja, ...resto }: Omit<React.ComponentProps<typeof CabecalhoDaPartida>, "precisao" | "progresso"> & { loja: LojaDoHud<Hud> }) {
+  const { precisao, progresso } = useLoja(loja, (h) => ({ precisao: h.precisao, progresso: h.progresso }));
+  return <CabecalhoDaPartida {...resto} precisao={precisao} progresso={progresso} />;
 }
 
 function ContadorDeFps({ loja }: { loja: LojaDoHud<{ leitura: LeituraDeFps | null }> }) {
   const fps = useLoja(loja, (l) => l.leitura);
-  return <span className="ml-2 font-mono tabular-nums">{fps ? Math.round(fps.fps) : "–"} FPS{fps && ` · ${Math.round(fps.piorQuadroMs)} ms`}</span>;
+  return <span className="font-mono tabular-nums">{fps ? Math.round(fps.fps) : "–"} FPS{fps && ` · ${Math.round(fps.piorQuadroMs)} ms`}</span>;
 }
 
 /** Só o placar re-renderiza quando os pontos mudam. */

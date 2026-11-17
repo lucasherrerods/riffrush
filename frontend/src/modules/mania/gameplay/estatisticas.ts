@@ -1,3 +1,4 @@
+export { comoPorcentagem, resumoDosDesvios } from "@/modules/partida";
 /** O que a tela de resultado precisa além da contagem: a ordem dos julgamentos e o quanto cada toque saiu do tempo. */
 export interface Estatisticas {
   /** Códigos de MAX (0) a Miss (5), na ordem em que aconteceram. */
@@ -40,13 +41,6 @@ export function curvaDaPrecisao(julgamentos: number[], pontos: number): number[]
   return curva;
 }
 
-export function resumoDosDesvios(desvios: number[]) {
-  if (desvios.length === 0) return { media: 0, ur: 0 };
-  const media = desvios.reduce((a, b) => a + b, 0) / desvios.length;
-  const variancia = desvios.reduce((a, d) => a + (d - media) ** 2, 0) / desvios.length;
-  return { media, ur: Math.sqrt(variancia) * 10 };
-}
-
 /** Conta os desvios em `faixas` iguais de -janela a +janela; os de fora contam na faixa da ponta. */
 export function histogramaDosDesvios(desvios: number[], janela: number, faixas: number): number[] {
   const contagem = new Array<number>(faixas).fill(0);
@@ -57,4 +51,3 @@ export function histogramaDosDesvios(desvios: number[], janela: number, faixas: 
   return contagem;
 }
 
-export const comoPorcentagem = (precisao: number) => `${(precisao * 100).toFixed(2).replace(".", ",")}%`;

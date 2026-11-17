@@ -36,7 +36,7 @@ import {
   salvarFavoritas,
   selecaoNoFiltro,
 } from "@/modules/selecao";
-import { Capa } from "./componentes/Capa";
+import { Capa } from "@/modules/rock/songs";
 import { CHAVE_DAS_FAVORITAS } from "./favoritas";
 import { filtrarMusicas, type OrdemDaSelecao } from "./filtroDaSelecao";
 import { ehImportada, semAudio } from "./storage/historico";

@@ -10,8 +10,10 @@ import { aplicarEventos, desenharPista, type QuadroDaPista } from "./desenhar";
 import { MODS } from "./mods";
 import { colunaDoToque, geometriaDaPista, type GeometriaDaPista } from "./pista";
 import { colunaDaTecla, teclasDoMapa } from "./teclas";
-import { comoPorcentagem, registrarEventos, resumoDosDesvios, type Estatisticas } from "./estatisticas";
-import { guardarMarcas, mediaSuavizada } from "./barraDeUr";
+import { registrarEventos, type Estatisticas } from "./estatisticas";
+import { anotarNaBarraDeUr, BarraDeUrDaPartida, CabecalhoDaPartida, CarregandoPartida, type LeituraDaBarraDeUr } from "@/modules/partida";
+import { CORES_DOS_JULGAMENTOS } from "../tema";
+import { CapaDaFonte } from "../selecao/CapaDoConjunto";
 import { mapaDoTrecho, trechosDoMapa } from "./treino";
 
 /** A música começa depois deste respiro, para o jogador se posicionar. */
@@ -75,6 +77,9 @@ const LOTE_MS = 1000;
 
 export interface MapaParaJogar {
   titulo: string;
+  artista?: string;
+  /** A capa do conjunto: a URL do site ou o fundo guardado. */
+  capa?: Blob | string;
   dificuldade: string;
   /** O id da dificuldade no osu!, para a API conferir a partida. */
   beatmapId?: number;
@@ -120,6 +125,9 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
   const canvas = useRef<HTMLCanvasElement>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [precisao, setPrecisao] = useState(1);
+  const [progresso, setProgresso] = useState(0);
+  /** A barra de UR do topo lê daqui a cada quadro. */
+  const lerUr = useRef<() => LeituraDaBarraDeUr | null>(() => null);
   const [pronta, setPronta] = useState(false);
   const [trechos, setTrechos] = useState<Trecho[] | null>(null);
   const [trecho, setTrecho] = useState<Trecho | null>(null);
@@ -205,18 +213,16 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
       transmitir({ tipo: "inicio" });
 
       const emMs = (tempoDoAudio: number) => Math.round((tempoDoAudio - inicio) * 1000 - opcoes.atrasoMs);
-      const quadro: QuadroDaPista = { agoraMs: emMs(agoraNoAudio(contexto)), rolagemMs: opcoes.rolagemMs, notas, estados, apertadas, combo: 0, vida: 1, ur: { marcas: [], janelas: motor.janelas() } };
+      const quadro: QuadroDaPista = { agoraMs: emMs(agoraNoAudio(contexto)), rolagemMs: opcoes.rolagemMs, notas, estados, apertadas, combo: 0, vida: 1 };
+      // Até o 50: o Miss não tem desvio para marcar.
+      const ur: LeituraDaBarraDeUr = { marcas: [], janelas: Array.from(motor.janelas()).slice(0, 5), agoraMs: quadro.agoraMs };
+      lerUr.current = () => ((ur.agoraMs = quadro.agoraMs), ur);
       const estatisticas: Estatisticas = { julgamentos: [], desvios: [] };
       const lerEventos = () => {
         const eventos = motor.eventos();
         const desviosAntes = estatisticas.desvios.length;
         registrarEventos(estatisticas, eventos);
-        if (quadro.ur && estatisticas.desvios.length > desviosAntes) {
-          const novos = estatisticas.desvios.slice(desviosAntes);
-          quadro.ur.marcas = guardarMarcas(quadro.ur.marcas, novos, quadro.agoraMs);
-          quadro.ur.media = mediaSuavizada(quadro.ur.media, novos);
-          quadro.ur.valor = resumoDosDesvios(estatisticas.desvios).ur;
-        }
+        anotarNaBarraDeUr(ur, estatisticas.desvios, estatisticas.desvios.slice(desviosAntes), quadro.agoraMs);
         const julgamento = aplicarEventos(estados, notas, eventos);
         if (julgamento !== undefined) {
           quadro.julgamento = { codigo: julgamento, emMs: quadro.agoraMs };
@@ -361,6 +367,8 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
 
       let pedido = 0;
       let faltaNaTela = 0;
+      let progressoNaTela = 0;
+      const duracaoMs = (buffer.duration / velocidade) * 1000;
       let voltasFeitas = 0;
       const desenhar = () => {
         const agora = agoraNoAudio(contexto);
@@ -376,6 +384,9 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
           ultimoPlacarMs = quadro.agoraMs;
           retornos.current.aoAtualizar(jogada(false));
         }
+        // Em passos de 0,2%: o React só re-renderiza quando a barra anda de verdade.
+        const progressoAgora = Math.round(Math.max(0, Math.min(1, quadro.agoraMs / duracaoMs)) * 500) / 500;
+        if (progressoAgora !== progressoNaTela) setProgresso((progressoNaTela = progressoAgora));
         if (c && geometria) {
           c.setTransform(quadro.escala ?? 1, 0, 0, quadro.escala ?? 1, 0, 0);
           desenharPista(c, geometria, quadro);
@@ -423,45 +434,49 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
 
   const escolhendo = treino && !trecho;
   return (
-    <main className="relative h-full bg-fundo text-texto">
-      <header className="absolute inset-x-0 top-0 flex items-baseline justify-between gap-4 px-6 py-4">
-        <div>
-          <h1 className="font-titulo text-2xl tracking-wide">{mapa.titulo}</h1>
-          <p aria-label="Precisão" className="font-titulo text-xl tabular-nums text-texto-suave">
-            {comoPorcentagem(precisao)}
-          </p>
-        </div>
-        {replay && <p className="rounded bg-primaria px-2 font-black">{rotuloDoReplay ?? "REPLAY"}</p>}
-        {trecho && (
-          <p className="rounded bg-primaria px-2 font-black">{["TREINO", trecho.nome, rotuloDasVoltas(voltas)].filter(Boolean).join(" · ")}</p>
-        )}
-        <div className="flex items-baseline gap-4">
-          {trecho && (
-            <Button
-              variant="ghost"
-              size="sm"
-              // As teclas são do jogo: o botão não fica com o foco depois do clique.
-              onPointerUp={(e) => e.currentTarget.blur()}
-              onClick={() => {
-                setPronta(false);
-                setFalta(0);
-                setTrecho(null);
-              }}
-            >
-              Trocar trecho
-            </Button>
-          )}
-          <p className="text-texto-suave">{mapa.dificuldade}</p>
-        </div>
-      </header>
-      {rede?.adversarios && <div className="pointer-events-none absolute top-20 right-6 z-10 w-72 max-md:right-2 max-md:w-48">{rede.adversarios}</div>}
-      <canvas ref={canvas} aria-label="Pista do Mania" className="h-full w-full touch-none select-none" />
+    <main className="relative h-full overflow-hidden bg-fundo text-texto">
+      <canvas ref={canvas} aria-label="Pista do Mania" className="absolute inset-0 h-full w-full touch-none select-none" />
+      {pronta && <BarraDeUrDaPartida ler={() => lerUr.current()} cores={CORES_DOS_JULGAMENTOS} />}
+      {pronta && (
+        <CabecalhoDaPartida
+          titulo={mapa.titulo}
+          artista={mapa.artista}
+          detalhe={mapa.dificuldade}
+          capa={<CapaDaFonte fonte={mapa.capa} />}
+          precisao={precisao}
+          progresso={progresso}
+          selos={
+            <>
+              {replay && <span className="rounded bg-primaria px-2 font-black text-texto">{rotuloDoReplay ?? "REPLAY"}</span>}
+              {trecho && <span className="rounded bg-primaria px-2 font-black text-texto">{["TREINO", trecho.nome, rotuloDasVoltas(voltas)].filter(Boolean).join(" · ")}</span>}
+            </>
+          }
+          acoes={
+            trecho && (
+              <Button
+                variant="ghost"
+                size="sm"
+                // As teclas são do jogo: o botão não fica com o foco depois do clique.
+                onPointerUp={(e) => e.currentTarget.blur()}
+                onClick={() => {
+                  setPronta(false);
+                  setFalta(0);
+                  setTrecho(null);
+                }}
+              >
+                Trocar trecho
+              </Button>
+            )
+          }
+        />
+      )}
+      {rede?.adversarios && <div className="pointer-events-none absolute top-28 right-6 z-10 w-72 max-md:right-2 max-md:w-48">{rede.adversarios}</div>}
       {falta > 0 && (
         <p role="timer" className="pointer-events-none absolute inset-0 grid place-items-center font-titulo text-8xl">
           {falta}
         </p>
       )}
-      {!pronta && !erro && !(escolhendo && trechos) && <p className="absolute inset-0 grid place-items-center text-texto-suave">Carregando o mapa…</p>}
+      {!pronta && !erro && !(escolhendo && trechos) && <CarregandoPartida mensagem="Carregando o mapa…" titulo={mapa.titulo} detalhe={mapa.dificuldade} />}
       <AnimatePresence>
         {escolhendo && trechos && (
           <EscolhaDoTreino

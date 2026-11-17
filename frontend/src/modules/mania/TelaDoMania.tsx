@@ -26,7 +26,7 @@ import { AbaDosMapasMaisJogados } from "./ranking/AbaDosMapasMaisJogados";
 import { EstatisticasDoMania } from "./perfil/EstatisticasDoMania";
 import { cn } from "@/shared/lib/utils";
 import { Avisos, avisar } from "@/shared/ui/avisos";
-import { abrirBibliotecaDoMania, beatmapIdParaAApi, valeXpNoMania, type BibliotecaDoMania, type ConjuntoSalvo, type DificuldadeSalva } from "./beatmaps/biblioteca";
+import { abrirBibliotecaDoMania, beatmapIdParaAApi, fonteDaCapa, valeXpNoMania, type BibliotecaDoMania, type ConjuntoSalvo, type DificuldadeSalva } from "./beatmaps/biblioteca";
 import { MODS } from "./gameplay/mods";
 import { empacotarReplayDoMania, lerReplayDoMania, type ReplayDoMania } from "./gameplay/replay";
 import { apiDoRanking, type PosicaoNoRankingDoMania } from "./ranking/api";
@@ -207,6 +207,8 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
       if (!lido || !audio) return null;
       return {
         titulo: conjunto.tituloUnicode || conjunto.titulo,
+        artista: conjunto.artistaUnicode || conjunto.artista,
+        capa: fonteDaCapa(conjunto),
         dificuldade: lido.dificuldade,
         beatmapId: beatmapIdParaAApi(conjunto, lido.beatmapId),
         valeXp: valeXpNoMania(conjunto) && !!lido.beatmapId,
