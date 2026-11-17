@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Flame, Lock, Trophy } from "lucide-react";
 import { BotaoVoltar } from "@/shared/ui/BotaoVoltar";
 import { CapaPequena, DIFICULDADES, INSTRUMENTOS, nomeDaMusica } from "@/modules/rock/songs";
 import { useCarregamento } from "@/shared/hooks/useCarregamento";
@@ -7,7 +8,7 @@ import { cn } from "@/shared/lib/utils";
 import { BarraDeProgresso } from "@/shared/ui/BarraDeProgresso";
 import { NumeroDestacado } from "@/shared/ui/NumeroDestacado";
 import { ComCarregamento } from "@/shared/ui/ComCarregamento";
-import type { PerfilDaApi } from "./api";
+import type { ConquistaDoPerfil, PerfilDaApi } from "./api";
 import { ImagensDoPerfil, editorDaSessao, type EditorDeImagens } from "./ImagensDoPerfil";
 import { SeloMod } from "@/shared/ui/SeloMod";
 import { sessaoDaConta } from "./sessao";
@@ -98,8 +99,11 @@ function Conteudo({
               {formatar(xp_no_nivel)} / {formatar(xp_para_o_proximo)} XP
             </span>
           </div>
+          <SequenciaDeDias {...perfil.sequencia} />
         </ImagensDoPerfil>
       </section>
+
+      <Conquistas conquistas={perfil.conquistas} />
 
       {extra}
 
@@ -197,5 +201,45 @@ function EstatisticasDoRock({ perfil, tituloDaMusica }: { perfil: PerfilDaApi; t
         </div>
       )}
     </>
+  );
+}
+
+/** Os selos do perfil: os conquistados acesos, os outros apagados com o que falta. */
+function Conquistas({ conquistas }: { conquistas: ConquistaDoPerfil[] }) {
+  if (conquistas.length === 0) return null;
+  const feitas = conquistas.filter((c) => c.conquistada).length;
+  const titulo = `Conquistas ${feitas} de ${conquistas.length}`;
+  return (
+    <section aria-label={titulo} className="placa flex flex-col gap-4 p-6 max-md:gap-3 max-md:p-3">
+      <h3 className="titulo-de-secao font-titulo tracking-wide">
+        Conquistas <span className="text-texto-suave tabular-nums">{feitas}/{conquistas.length}</span>
+      </h3>
+      <ul className="grid grid-cols-2 gap-3 max-md:gap-2 md:grid-cols-5">
+        {conquistas.map((c) => (
+          <li
+            key={c.id}
+            aria-label={c.conquistada ? `${c.nome}, conquistada` : `${c.nome}, ${c.progresso} de ${c.meta}`}
+            className={cn("flex flex-col items-center gap-1 rounded-md border border-borda p-3 text-center", c.conquistada ? "bg-superficie-elevada" : "opacity-50")}
+          >
+            {c.conquistada ? <Trophy className="size-6 text-destaque" aria-hidden /> : <Lock className="size-6 text-texto-suave" aria-hidden />}
+            <span className="text-sm font-bold leading-tight">{c.nome}</span>
+            <span className="text-xs text-texto-suave">{c.descricao}</span>
+            {!c.conquistada && c.meta > 1 && <BarraDeProgresso fracao={c.progresso / c.meta} rotulo={`Progresso de ${c.nome}`} className="mt-1 w-full" />}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Dias seguidos jogando: o foguinho só acende enquanto a sequência vale. */
+function SequenciaDeDias({ atual, maior }: PerfilDaApi["sequencia"]) {
+  return (
+    <p className="flex items-center gap-2 text-sm text-texto-suave max-md:text-xs">
+      <Flame className={cn("size-4", atual > 0 ? "text-destaque" : "opacity-50")} aria-hidden />
+      <span className={cn(atual > 0 && "font-bold text-texto")}>{atual === 0 ? "Nenhum dia seguido" : atual === 1 ? "1 dia seguido" : `${atual} dias seguidos`}</span>
+      <span aria-hidden>·</span>
+      <span>recorde de {maior}</span>
+    </p>
   );
 }

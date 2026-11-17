@@ -41,6 +41,8 @@ use shared::estado::EstadoDoApp;
         modules::ranking::RecordeNoRanking,
         modules::ranking::PartidaDoRanking,
         modules::perfil::RespostaDoPerfil,
+        modules::perfil::ConquistaDoPerfil,
+        modules::perfil::SequenciaDoPerfil,
         modules::perfil::RecordeDaConta,
         modules::perfil::ImagemTrocada,
         modules::presenca::RespostaDaFicha,
