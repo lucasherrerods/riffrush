@@ -27,6 +27,7 @@ const perfil: PerfilDaApi = {
     { musica_id: "encore:abc", partidas: 7 },
     { musica_id: "encore:goofy", partidas: 2, titulo: "Goofy Goober Rock", artista: "Tom Rothrock", capa: "https://files.enchor.us/capa.jpg" },
   ],
+  sequencia: { atual: 3, maior: 9 },
   recentes: [{ musica_id: "encore:abc", dificuldade: "expert", pontos: 98_500, acertos: 9, total: 10, precisao: 0.25, derrota: true, jogada_em: "2026-10-20T12:00:00Z" }],
 };
 
@@ -54,6 +55,20 @@ describe("TelaDePerfil", () => {
     // A precisão da partida vem da API, pesada pelo julgamento como no jogo, e não acertos sobre o total (90%).
     expect(screen.getByText("25,00%")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "XP do nível 4" })).toBeInTheDocument();
+  });
+
+  it("mostra os dias seguidos jogando e o recorde", async () => {
+    render(<TelaDePerfil aoVoltar={() => {}} tituloDaMusica={tituloDaMusica} carregar={async () => perfil} />);
+
+    expect(await screen.findByText("3 dias seguidos")).toBeInTheDocument();
+    expect(screen.getByText("recorde de 9")).toBeInTheDocument();
+  });
+
+  it("sem sequência, mostra só o recorde, e um dia fica no singular", async () => {
+    render(<TelaDePerfil aoVoltar={() => {}} tituloDaMusica={tituloDaMusica} carregar={async () => ({ ...perfil, sequencia: { atual: 0, maior: 1 } })} />);
+
+    expect(await screen.findByText("Nenhum dia seguido")).toBeInTheDocument();
+    expect(screen.getByText("recorde de 1")).toBeInTheDocument();
   });
 
   it("música que não está na biblioteca aparece pelo id", async () => {

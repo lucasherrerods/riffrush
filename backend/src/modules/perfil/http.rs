@@ -160,6 +160,15 @@ pub struct RespostaDoPerfil {
     por_instrumento: Vec<InstrumentoDoPerfil>,
     mais_tocadas: Vec<MusicaDoPerfil>,
     recentes: Vec<PartidaDoPerfil>,
+    /// Dias seguidos jogando, no horário de Brasília.
+    sequencia: SequenciaDoPerfil,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct SequenciaDoPerfil {
+    /// Vale enquanto a conta jogou hoje ou ontem; senão é zero.
+    atual: u32,
+    maior: u32,
 }
 
 impl From<Perfil> for RespostaDoPerfil {
@@ -186,6 +195,10 @@ impl From<Perfil> for RespostaDoPerfil {
                 .map(|m| (m.musica_id.clone(), m))
                 .map(|(id, m)| (m, musicas.get(&id).cloned()).into())
                 .collect(),
+            sequencia: SequenciaDoPerfil {
+                atual: p.sequencia.atual,
+                maior: p.sequencia.maior,
+            },
             recentes: p
                 .recentes
                 .into_iter()
