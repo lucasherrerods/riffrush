@@ -133,6 +133,8 @@ export interface PerfilDaApi {
   mais_tocadas: MusicaDoPerfil[];
   /** As últimas partidas, da mais nova para a mais velha. */
   recentes: PartidaDoPerfil[];
+  /** Dias seguidos jogando, no horário de Brasília. A atual vale enquanto a conta jogou hoje ou ontem. */
+  sequencia: { atual: number; maior: number };
 }
 
 /** A foto aparece em todo canto (ranking, amigos, salas); a capa só no perfil. */

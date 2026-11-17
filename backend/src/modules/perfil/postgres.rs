@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use riffrush_motor::Julgamento;
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
@@ -94,6 +94,12 @@ const RECENTES: &str = "
            derrota, jogada_em
     FROM partidas WHERE conta_id = $1
     ORDER BY jogada_em DESC LIMIT $2";
+
+/// Os dias no horário de Brasília (UTC-3, sem horário de verão), juntando o Rock e o Mania.
+const DIAS_JOGADOS: &str = "
+    SELECT ((jogada_em AT TIME ZONE 'UTC') - INTERVAL '3 hours')::DATE AS dia FROM partidas WHERE conta_id = $1
+    UNION
+    SELECT ((jogada_em AT TIME ZONE 'UTC') - INTERVAL '3 hours')::DATE AS dia FROM partidas_do_mania WHERE conta_id = $1";
 
 /// Partidas de apps antigos não têm o valor dos acertos: cada acerto conta como 300.
 fn valor_do_300() -> i32 {
@@ -202,6 +208,11 @@ impl RepositorioDoPerfil for PerfilPostgres {
                 })
             })
             .collect();
+        let dias_jogados = sqlx::query_scalar::<_, NaiveDate>(DIAS_JOGADOS)
+            .bind(conta_id)
+            .fetch_all(&self.0)
+            .await
+            .map_err(falha)?;
         Ok(Some(DadosDoPerfil {
             criada_em: resumo.criada_em,
             capa: resumo.capa,
@@ -210,6 +221,7 @@ impl RepositorioDoPerfil for PerfilPostgres {
             por_instrumento,
             mais_tocadas,
             recentes,
+            dias_jogados,
         }))
     }
 

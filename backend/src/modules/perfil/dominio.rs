@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 
 use crate::modules::catalogo::DadosDaMusica;
 use crate::modules::conta::Conta;
@@ -85,6 +85,42 @@ pub struct DadosDoPerfil {
     /// Da mais tocada para a menos, até `MAIS_TOCADAS`.
     pub mais_tocadas: Vec<MusicaMaisTocada>,
     pub recentes: Vec<PartidaRecente>,
+    /// Os dias, no horário de Brasília, em que a conta jogou no Rock ou no Mania, sem repetir.
+    pub dias_jogados: Vec<NaiveDate>,
+}
+
+/// Dias seguidos jogando: a sequência que ainda vale e a maior que a conta já fez.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SequenciaDeDias {
+    pub atual: u32,
+    pub maior: u32,
+}
+
+/// O dia de uma hora no horário de Brasília, que não tem horário de verão desde 2019.
+pub fn dia_em_brasilia(hora: DateTime<Utc>) -> NaiveDate {
+    (hora - Duration::hours(3)).date_naive()
+}
+
+/// A sequência atual só vale se o último dia jogado for hoje ou ontem: quem ainda não jogou hoje não perde a dela.
+pub fn sequencia_de_dias(dias: &[NaiveDate], hoje: NaiveDate) -> SequenciaDeDias {
+    let mut dias: Vec<NaiveDate> = dias.iter().copied().filter(|d| *d <= hoje).collect();
+    dias.sort_unstable();
+    dias.dedup();
+    let (mut maior, mut corrente) = (0u32, 0u32);
+    let mut anterior: Option<NaiveDate> = None;
+    for dia in &dias {
+        corrente = match anterior {
+            Some(a) if *dia - a == Duration::days(1) => corrente + 1,
+            _ => 1,
+        };
+        maior = maior.max(corrente);
+        anterior = Some(*dia);
+    }
+    let atual = match anterior {
+        Some(ultimo) if hoje - ultimo <= Duration::days(1) => corrente,
+        _ => 0,
+    };
+    SequenciaDeDias { atual, maior }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -105,6 +141,7 @@ pub struct Perfil {
     pub por_instrumento: Vec<PartidasNoInstrumento>,
     pub mais_tocadas: Vec<MusicaMaisTocada>,
     pub recentes: Vec<PartidaRecente>,
+    pub sequencia: SequenciaDeDias,
     /// Nome, banda e capa das músicas das listas acima, pelo id. Música do jogo fica de fora.
     pub musicas: HashMap<String, DadosDaMusica>,
 }
@@ -123,7 +160,7 @@ impl Perfil {
 }
 
 /// Soma as dificuldades no total e completa as que a conta nunca jogou.
-pub fn montar_perfil(conta: Conta, dados: DadosDoPerfil) -> Perfil {
+pub fn montar_perfil(conta: Conta, dados: DadosDoPerfil, hoje: NaiveDate) -> Perfil {
     let por_dificuldade: Vec<_> = [Dificuldade::Facil, Dificuldade::Medio, Dificuldade::Dificil, Dificuldade::Expert]
         .into_iter()
         .map(|dificuldade| {
@@ -160,6 +197,7 @@ pub fn montar_perfil(conta: Conta, dados: DadosDoPerfil) -> Perfil {
         por_instrumento,
         mais_tocadas: dados.mais_tocadas,
         recentes: dados.recentes,
+        sequencia: sequencia_de_dias(&dados.dias_jogados, hoje),
         musicas: HashMap::new(),
     }
 }
@@ -200,12 +238,71 @@ mod tests {
             por_instrumento: vec![],
             mais_tocadas: vec![],
             recentes: vec![],
+            dias_jogados: vec![],
         }
+    }
+
+    fn hoje() -> NaiveDate {
+        dia(2026, 11, 17)
+    }
+
+    fn dia(ano: i32, mes: u32, d: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(ano, mes, d).unwrap()
+    }
+
+    #[test]
+    fn sem_partidas_a_sequencia_e_zero() {
+        assert_eq!(sequencia_de_dias(&[], hoje()), SequenciaDeDias { atual: 0, maior: 0 });
+    }
+
+    #[test]
+    fn conta_os_dias_seguidos_ate_hoje_sem_ligar_para_ordem_e_repeticao() {
+        let dias = [dia(2026, 11, 17), dia(2026, 11, 15), dia(2026, 11, 16), dia(2026, 11, 16)];
+        assert_eq!(sequencia_de_dias(&dias, hoje()), SequenciaDeDias { atual: 3, maior: 3 });
+    }
+
+    #[test]
+    fn quem_jogou_ontem_ainda_nao_perdeu_a_sequencia() {
+        let dias = [dia(2026, 11, 15), dia(2026, 11, 16)];
+        assert_eq!(sequencia_de_dias(&dias, hoje()).atual, 2);
+    }
+
+    #[test]
+    fn pular_um_dia_zera_a_atual_mas_guarda_a_maior() {
+        let dias = [
+            dia(2026, 11, 1),
+            dia(2026, 11, 2),
+            dia(2026, 11, 3),
+            dia(2026, 11, 10),
+            dia(2026, 11, 11),
+            dia(2026, 11, 15),
+        ];
+        assert_eq!(sequencia_de_dias(&dias, hoje()), SequenciaDeDias { atual: 0, maior: 3 });
+    }
+
+    #[test]
+    fn a_sequencia_atravessa_a_virada_do_mes() {
+        let dias = [dia(2026, 10, 31), dia(2026, 11, 1)];
+        assert_eq!(sequencia_de_dias(&dias, dia(2026, 11, 1)), SequenciaDeDias { atual: 2, maior: 2 });
+    }
+
+    #[test]
+    fn o_dia_vira_a_meia_noite_de_brasilia() {
+        let hora = |h| DateTime::parse_from_rfc3339(h).unwrap().with_timezone(&Utc);
+        assert_eq!(dia_em_brasilia(hora("2026-11-17T02:59:00Z")), dia(2026, 11, 16));
+        assert_eq!(dia_em_brasilia(hora("2026-11-17T03:00:00Z")), dia(2026, 11, 17));
+    }
+
+    #[test]
+    fn o_perfil_traz_a_sequencia_dos_dias_jogados() {
+        let mut entrada = dados(vec![]);
+        entrada.dias_jogados = vec![dia(2026, 11, 16), dia(2026, 11, 17)];
+        assert_eq!(montar_perfil(conta(), entrada, hoje()).sequencia, SequenciaDeDias { atual: 2, maior: 2 });
     }
 
     #[test]
     fn conta_nova_tem_tudo_zerado_e_as_quatro_dificuldades() {
-        let perfil = montar_perfil(conta(), dados(vec![]));
+        let perfil = montar_perfil(conta(), dados(vec![]), hoje());
         assert_eq!((perfil.partidas, perfil.derrotas, perfil.melhor_pontuacao), (0, 0, 0));
         assert_eq!(perfil.precisao, 0.0);
         let ordem: Vec<_> = perfil.por_dificuldade.iter().map(|e| e.dificuldade).collect();
@@ -220,6 +317,7 @@ mod tests {
                 estatisticas(Dificuldade::Expert, 2, 900 * 300, 1000, 80_000),
                 estatisticas(Dificuldade::Facil, 3, 100 * 300, 100, 20_000),
             ]),
+            hoje(),
         );
         assert_eq!((perfil.partidas, perfil.derrotas), (5, 2));
         assert_eq!(perfil.melhor_pontuacao, 80_000);
@@ -232,7 +330,7 @@ mod tests {
     #[test]
     fn precisao_pesa_o_julgamento_de_cada_nota_como_no_jogo() {
         // 100 notas acertadas, todas ÓTIMO (100 de 300): o jogo mostra 33%, não 100%.
-        let perfil = montar_perfil(conta(), dados(vec![estatisticas(Dificuldade::Medio, 1, 100 * 100, 100, 0)]));
+        let perfil = montar_perfil(conta(), dados(vec![estatisticas(Dificuldade::Medio, 1, 100 * 100, 100, 0)]), hoje());
         assert!((perfil.precisao - 1.0 / 3.0).abs() < 1e-9);
         assert!((perfil.por_dificuldade[1].precisao() - 1.0 / 3.0).abs() < 1e-9);
     }
@@ -257,7 +355,7 @@ mod tests {
         let no = |instrumento, partidas| PartidasNoInstrumento { instrumento, partidas };
         let mut entrada = dados(vec![]);
         entrada.por_instrumento = vec![no(Instrumento::Baixo, 2), no(Instrumento::Teclado, 0), no(Instrumento::Guitarra, 7)];
-        let perfil = montar_perfil(conta(), entrada);
+        let perfil = montar_perfil(conta(), entrada, hoje());
         assert_eq!(perfil.por_instrumento, [no(Instrumento::Guitarra, 7), no(Instrumento::Baixo, 2)]);
     }
 
@@ -279,6 +377,6 @@ mod tests {
             partidas: 3,
         }];
         entrada.recentes = vec![recente("b"), recente("a"), recente("c")];
-        assert_eq!(montar_perfil(conta(), entrada).ids_das_musicas(), ["a", "b", "c"]);
+        assert_eq!(montar_perfil(conta(), entrada, hoje()).ids_das_musicas(), ["a", "b", "c"]);
     }
 }
