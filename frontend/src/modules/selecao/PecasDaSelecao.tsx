@@ -113,6 +113,8 @@ interface PropsDosFiltros<O extends string> {
   children?: React.ReactNode;
   /** "3 de 10 músicas", abaixo dos filtros. */
   contagem?: string;
+  /** O botão das playlists do modo, ao lado dos favoritos. */
+  playlists?: React.ReactNode;
 }
 
 /** A busca, os filtros, a ordem e o sorteio acima da roda, iguais nos dois modos. */
@@ -128,6 +130,7 @@ export function FiltrosDaBiblioteca<O extends string>(props: PropsDosFiltros<O>)
           <Heart className={cn(props.soFavoritas ? "fill-current" : "opacity-70")} />
           <span className="max-md:sr-only">Favoritos</span>
         </Button>
+        {props.playlists}
         {props.aoSortear && (
           <Button variant="outline" disabled={!props.podeSortear} onClick={props.aoSortear} aria-label="Aleatório">
             <Dices className="opacity-70" />

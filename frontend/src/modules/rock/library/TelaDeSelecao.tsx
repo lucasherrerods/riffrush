@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { BotaoDeSugerir } from "@/modules/amigos";
+import { BotaoDasPlaylists, BotaoDePlaylist, usePlaylists, type Playlist } from "@/modules/playlists";
 import { sugestaoDaMusica } from "./sugestaoDaMusica";
 import { FileAudio, Flame, Info, ListOrdered, RotateCcw, Search, Trophy } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
@@ -52,6 +53,8 @@ interface Props {
   aoDificuldade: (dificuldade: Dificuldade) => void;
   aoInstrumento: (instrumento: Instrumento) => void;
   aoJogar: () => void;
+  /** Toca uma playlist em maratona; sem ele o botão das playlists não aparece. */
+  aoTocarPlaylist?: (playlist: Playlist) => void;
   /** Abre a música no modo treino; sem ele o botão não aparece. */
   aoTreinar?: () => void;
   aoVoltar: () => void;
@@ -98,6 +101,7 @@ export function TelaDeSelecao(props: Props) {
   const dispositivo = useDispositivo();
 
   const [favoritas, setFavoritas] = useState(() => carregarFavoritas(CHAVE_DAS_FAVORITAS));
+  const playlists = usePlaylists("rock");
   const [soFavoritas, setSoFavoritas] = useState(false);
   const [texto, setTexto] = useState("");
   const [ordem, setOrdem] = useState<OrdemDaSelecao>("biblioteca");
@@ -221,6 +225,7 @@ export function TelaDeSelecao(props: Props) {
 
   const favoritar = <BotaoDeFavoritar favorita={favorita} aoAlternar={alternarFavoritaAtual} />;
   const sugerir = !vazia && <BotaoDeSugerir sugestao={sugestaoDaMusica(musica, dificuldade, instrumento)} motivoSemSugestao="Só dá para sugerir músicas baixadas do Encore." />;
+  const playlist = !vazia && props.aoTocarPlaylist && <BotaoDePlaylist faixa={{ musica: musica.id, versao: dificuldade, titulo: `${musica.titulo} · ${rotuloDaDificuldade ?? dificuldade}` }} playlists={playlists} />;
   const escolhaDoInstrumento = instrumentos.length > 1 && (
     <GrupoDeOpcoes titulo="Instrumento" tituloEscondido opcoes={instrumentos.map((i) => ({ id: i.id, rotulo: i.rotulo }))} valor={instrumento} aoEscolher={escolherInstrumento} />
   );
@@ -271,6 +276,7 @@ export function TelaDeSelecao(props: Props) {
       aoMudarOrdem={setOrdem}
       soFavoritas={soFavoritas}
       aoAlternarFavoritas={alternarFiltro}
+      playlists={props.aoTocarPlaylist && <BotaoDasPlaylists playlists={playlists} aoTocar={props.aoTocarPlaylist} />}
       contagem={visiveis.length ? `${Math.max(visiveis.indexOf(indice), 0) + 1} de ${visiveis.length} ${visiveis.length === 1 ? "música" : "músicas"}${visiveis.length < musicas.length ? ` · ${musicas.length} na biblioteca` : ""}` : ""}
     />
   );
@@ -360,6 +366,7 @@ export function TelaDeSelecao(props: Props) {
         capa={!vazia && <Capa musica={musica} decorativa className="size-full" />}
         favoritar={!vazia && favoritar}
         sugerir={sugerir}
+        playlist={playlist}
         detalhes={
           !vazia && (
             <>
@@ -402,6 +409,7 @@ export function TelaDeSelecao(props: Props) {
               acao={escolhaDoInstrumento}
               favoritar={favoritar}
               sugerir={sugerir}
+        playlist={playlist}
             />
 
             {ranking ? (

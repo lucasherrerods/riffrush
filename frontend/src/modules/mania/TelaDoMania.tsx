@@ -50,8 +50,9 @@ import { acharNaBiblioteca } from "./multijogador/mapaNaRede";
 import { PlacarDaSalaMania } from "./multijogador/PlacarDaSalaMania";
 import { enviarEstado, useConexao, voltarParaASala } from "./multijogador/sala";
 import { TelaDeMultijogadorMania } from "./multijogador/TelaDeMultijogadorMania";
+import { anotar, iniciarMaratona, PlaylistsDoPerfil, proximaTocavel, ResultadoDaMaratona, rotuloDeSeguir, type Maratona, type Playlist } from "@/modules/playlists";
 
-type Tela = { nome: "menu" } | { nome: "configuracoes"; voltarPara: Tela } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil"; amigo?: string } | { nome: "online" } | { nome: "atividades" } | { nome: "atividades" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "multijogador" } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido; rede?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido; rede?: boolean };
+type Tela = { nome: "menu" } | { nome: "configuracoes"; voltarPara: Tela } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil"; amigo?: string } | { nome: "online" } | { nome: "atividades" } | { nome: "resultadoDaMaratona" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "multijogador" } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido; rede?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido; rede?: boolean };
 
 /** A mesma semente para a sala toda: com o Random, todos jogam as colunas na mesma ordem. */
 function sementeDaRodada(rodada = ""): number {
@@ -290,6 +291,21 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     });
   };
 
+  // A playlist tocando em sequência; cada partida terminada anota o resultado nela.
+  const [maratona, setMaratona] = useState<Maratona | null>(null);
+  /** Toca a próxima faixa da maratona; o mapa que não está mais na biblioteca é pulado. No fim, mostra o placar. */
+  const seguirMaratona = (atual: Maratona) => {
+    const { maratona: m, alvo } = proximaTocavel(atual, (faixa) => {
+      const conjunto = conjuntos?.find((c) => c.id === faixa.musica);
+      const dificuldade = conjunto?.mapas.find((d) => d.hash === faixa.versao);
+      return conjunto && dificuldade ? { conjunto, dificuldade } : null;
+    });
+    setMaratona(m);
+    if (!alvo) return setTela({ nome: "resultadoDaMaratona" });
+    void aoJogar(alvo.conjunto, alvo.dificuldade);
+  };
+  const tocarPlaylist = (playlist: Playlist) => seguirMaratona(iniciarMaratona(playlist.nome, playlist.faixas));
+
   /** Como no Rock: baixa o replay da partida do ranking, confere que é desta dificuldade e assiste no mapa da biblioteca. */
   const aoAssistir = async (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva, linha: PosicaoNoRankingDoMania) => {
     const replay = await apiDoRanking
@@ -335,6 +351,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
    * sem XP, para aparecer no ranking com todas as partidas. Replay assistido não vale nada. */
   const aoTerminar = (mapa: MapaParaJogar, aoVivo: MapaAoVivo, resultado: Resultado, replay?: ReplayAssistido, rede?: boolean) => {
     setTela({ nome: "resultado", mapa, aoVivo, resultado, replay, rede });
+    if (!replay && !rede) setMaratona((m) => m && anotar(m, { pontos: resultado.pontuacao, precisao: resultado.precisao, derrota: resultado.derrota }));
     setXp(undefined);
     if (!conta || replay) return;
     if (!mapa.beatmapId || resultado.mods & MODS.AT) return setXp({ recusada: true });
@@ -358,7 +375,11 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         treino={tela.treino}
         replay={tela.replay?.entradas}
         rotuloDoReplay={tela.replay && `REPLAY · ${tela.replay.nome}`}
-        aoSair={() => (tela.rede ? voltarParaSala() : setTela({ nome: "selecao" }))}
+        aoSair={() => {
+          setMaratona(null);
+          if (tela.rede) voltarParaSala();
+          else setTela({ nome: "selecao" });
+        }}
         aoMarcarPontoDaMusica={retomarTrilha}
         aoTransmitir={canal && transmitir}
         rede={
@@ -382,9 +403,9 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         resultado={tela.resultado}
         xp={xp}
         valeXp={tela.mapa.valeXp && !tela.replay}
-        aoJogarDeNovo={tela.rede ? undefined : () => setTela({ nome: "jogo", mapa: tela.mapa, aoVivo: tela.aoVivo, replay: tela.replay })}
-        aoVoltar={() => (tela.rede ? voltarParaSala() : setTela({ nome: "selecao" }))}
-        rotuloDeVoltar={tela.rede ? "Voltar para a sala" : undefined}
+        aoJogarDeNovo={tela.rede || maratona ? undefined : () => setTela({ nome: "jogo", mapa: tela.mapa, aoVivo: tela.aoVivo, replay: tela.replay })}
+        aoVoltar={() => (tela.rede ? voltarParaSala() : maratona ? seguirMaratona(maratona) : setTela({ nome: "selecao" }))}
+        rotuloDeVoltar={tela.rede ? "Voltar para a sala" : maratona ? rotuloDeSeguir(maratona) : undefined}
         placar={
           tela.rede &&
           conexao.sala && (
@@ -479,13 +500,23 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
       </main>
     );
 
-  if (tela.nome === "leaderboard" || tela.nome === "perfil" || tela.nome === "online" || tela.nome === "atividades" || tela.nome === "configuracoes")
+  if (tela.nome === "leaderboard" || tela.nome === "perfil" || tela.nome === "online" || tela.nome === "atividades" || tela.nome === "configuracoes" || tela.nome === "resultadoDaMaratona")
     return (
       <main className="dark relative flex h-dvh w-screen flex-col overflow-hidden bg-fundo text-texto">
         <FundoDoMania />
         {cabecalho}
         <div className="relative min-h-0 flex-1">
-          {tela.nome === "configuracoes" ? (
+          {tela.nome === "resultadoDaMaratona" ? (
+            maratona && (
+              <ResultadoDaMaratona
+                maratona={maratona}
+                aoContinuar={() => {
+                  setMaratona(null);
+                  setTela({ nome: "selecao" });
+                }}
+              />
+            )
+          ) : tela.nome === "configuracoes" ? (
             <TelaDeConfiguracoesMania opcoes={configuracoes} aoMudar={mudarConfiguracoes} aoVoltar={() => setTela(tela.voltarPara)} />
           ) : tela.nome === "atividades" ? (
             <TelaDeAtividades aoVoltar={() => setTela({ nome: "menu" })} nomeDoMapa={nomeNaBiblioteca} />
@@ -509,9 +540,9 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
               abaDasMusicas={<AbaDosMapasMaisJogados nomeNaBiblioteca={nomeNaBiblioteca} baixados={baixados} aoBaixar={aoBaixar} aoJogar={(beatmapsetId) => setTela({ nome: "selecao", conjuntoId: `osu:${beatmapsetId}` })} baixar={baixar} />}
             />
           ) : tela.nome === "perfil" && tela.amigo ? (
-            <PerfilDoAmigo contaId={tela.amigo} aoVoltar={() => setTela({ nome: "menu" })} tituloDaMusica={() => undefined} />
+            <PerfilDoAmigo contaId={tela.amigo} aoVoltar={() => setTela({ nome: "menu" })} tituloDaMusica={() => undefined} extra={<PlaylistsDoPerfil contaId={tela.amigo} />} />
           ) : (
-            <TelaDePerfil mod={souDaModeracao} aoVoltar={() => setTela({ nome: "menu" })} tituloDaMusica={() => undefined} estatisticas={<EstatisticasDoMania />} />
+            <TelaDePerfil mod={souDaModeracao} aoVoltar={() => setTela({ nome: "menu" })} tituloDaMusica={() => undefined} estatisticas={<EstatisticasDoMania />} extra={<PlaylistsDoPerfil />} />
           )}
           {painelDeAmigos}
         </div>
@@ -528,7 +559,10 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
         {tela.nome === "busca" ? (
           <TelaDeBuscaMania aoVoltar={() => setTela({ nome: tela.veioDaSelecao ? "selecao" : "menu" })} baixados={baixados} aoBaixar={aoBaixar} aoJogar={(beatmapsetId) => setTela({ nome: "selecao", conjuntoId: `osu:${beatmapsetId}` })} buscar={buscar} baixar={baixar} aoMudarPrevia={(tocando) => player.suspender(tocando, { esmaecer: true })} />
         ) : (
-          <TelaDeSelecaoMania aoMudarSelecao={mudarSelecao} selecionado={(tela.nome === "selecao" ? tela.conjuntoId : undefined) ?? idAoEntrar ?? undefined} aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", veioDaSelecao: true })} sortearMapa={sortearMapaNovo} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={aoJogar} aoRemover={(conjunto) => void remover(conjunto.id)} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
+          <TelaDeSelecaoMania aoMudarSelecao={mudarSelecao} selecionado={(tela.nome === "selecao" ? tela.conjuntoId : undefined) ?? idAoEntrar ?? undefined} aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", veioDaSelecao: true })} sortearMapa={sortearMapaNovo} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={(conjunto, dificuldade) => {
+            setMaratona(null);
+            void aoJogar(conjunto, dificuldade);
+          }} aoTocarPlaylist={tocarPlaylist} aoRemover={(conjunto) => void remover(conjunto.id)} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />
         )}
         {painelDeAmigos}
       </div>
