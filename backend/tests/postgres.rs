@@ -730,22 +730,35 @@ async fn ranking_geral_da_a_posicao_certa_fora_do_top_e_no_empate() {
     banco.registrar_partida(&partida(primeiro.id, 7)).await.unwrap();
     banco.registrar_partida(&partida(empatado.id, 7)).await.unwrap();
 
-    let linhas = ranking.geral(1, Some(empatado.id)).await.unwrap();
-
     // A posição tem que bater com a numeração de todas as contas.
-    let (esperada, jogadores): (i64, i64) = sqlx::query_as(
-        "SELECT posicao, jogadores FROM (
-             SELECT id, ROW_NUMBER() OVER (ORDER BY xp_total DESC, criada_em ASC) AS posicao, COUNT(*) OVER () AS jogadores
-             FROM contas WHERE xp_total > 0
-         ) n WHERE id = $1",
-    )
-    .bind(empatado.id)
-    .fetch_one(&banco.0)
-    .await
-    .unwrap();
-    let minha = linhas.iter().find(|l| l.conta_id == empatado.id).unwrap();
-    assert_eq!((i64::from(minha.posicao), i64::from(minha.jogadores)), (esperada, jogadores));
-    assert_eq!(linhas[0].posicao, 1);
+    let numeracao = || async {
+        sqlx::query_as::<_, (i64, i64)>(
+            "SELECT posicao, jogadores FROM (
+                 SELECT id, ROW_NUMBER() OVER (ORDER BY xp_total DESC, criada_em ASC) AS posicao, COUNT(*) OVER () AS jogadores
+                 FROM contas WHERE xp_total > 0
+             ) n WHERE id = $1",
+        )
+        .bind(empatado.id)
+        .fetch_one(&banco.0)
+        .await
+        .unwrap()
+    };
+    // Os outros testes usam o mesmo banco ao mesmo tempo: só compara quando ninguém mexeu
+    // nas contas entre a numeração de antes e a de depois do ranking.
+    let mut conferiu = false;
+    for _ in 0..5 {
+        let antes = numeracao().await;
+        let linhas = ranking.geral(1, Some(empatado.id)).await.unwrap();
+        if numeracao().await != antes {
+            continue;
+        }
+        let minha = linhas.iter().find(|l| l.conta_id == empatado.id).unwrap();
+        assert_eq!((i64::from(minha.posicao), i64::from(minha.jogadores)), antes);
+        assert_eq!(linhas[0].posicao, 1);
+        conferiu = true;
+        break;
+    }
+    assert!(conferiu, "as contas mudaram em todas as tentativas");
 }
 
 #[tokio::test]

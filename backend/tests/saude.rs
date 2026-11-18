@@ -98,6 +98,18 @@ async fn o_cors_libera_a_origem_do_app_sem_credenciais() {
 }
 
 #[tokio::test]
+async fn o_cors_libera_o_put_das_playlists() {
+    let preflight = Request::options("/eu/playlists/00000000-0000-0000-0000-000000000001")
+        .header("origin", "http://localhost:1420")
+        .header("access-control-request-method", "PUT")
+        .body(Body::empty())
+        .unwrap();
+    let (_, cabecalhos, _) = pedir(true, preflight).await;
+    let metodos = cabecalhos["access-control-allow-methods"].to_str().unwrap();
+    assert!(metodos.split(',').any(|m| m.trim() == "PUT"), "{metodos}");
+}
+
+#[tokio::test]
 async fn pedido_invalido_responde_no_formato_de_erro_da_api() {
     let (status, corpo) = chamar(true, "/ranking?musica_id=x&dificuldade=zzz").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
