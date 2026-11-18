@@ -72,3 +72,9 @@ Problemas encontrados de passagem, fora do escopo da mudança que estava sendo f
 - O que se viu: `cargo clippy -- -D warnings` local (rustfmt/clippy 1.10, out/2026) falha com `clippy::type_complexity`. O CI não roda clippy nem fmt no `src-tauri`, então não aparece lá. O `cargo fmt` local também reformata vários arquivos do crate.
 - Suspeita: o crate nunca passou por clippy e fmt; o clippy novo ficou mais rígido.
 - Próximo passo: criar um `type` para o arquivo compartilhado, rodar `cargo fmt` no crate num PR só de formatação e incluir fmt e clippy do `src-tauri` no CI.
+
+## Testes de sala e de modo falham com a suíte inteira do frontend
+- Onde: `src/app/App.modo.test.tsx` ("monta o jogo do modo ativo"), `src/modules/mania/multijogador/sala.test.ts` (o host compartilha o .osz antes de avisar a sala) e `src/modules/multiplayer/sala/conexao.test.ts` (a sala da LAN nasce com o modo).
+- O que se viu: falharam juntos numa rodada de `npm test` local (com o `TelaDeBuscaMania` acima); os quatro arquivos passam rodando sozinhos.
+- Suspeita: esperas curtas ou estado de módulo compartilhado com a máquina carregada.
+- Próximo passo: rodar cada arquivo várias vezes com `--sequence.shuffle` e trocar as esperas fixas por `waitFor`/`findBy`.

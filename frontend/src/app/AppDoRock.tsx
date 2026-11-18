@@ -42,9 +42,10 @@ import { useTelaEstreita } from "@/shared/hooks/useTelaEstreita";
 import { Avisos, avisar } from "@/shared/ui/avisos";
 import { TelaCarregando } from "@/shared/ui/TelaCarregando";
 import { cn } from "@/shared/lib/utils";
+import { anotar, iniciarMaratona, PlaylistsDoPerfil, proximaTocavel, ResultadoDaMaratona, rotuloDeSeguir, type Maratona, type Playlist } from "@/modules/playlists";
 import { mesmasOpcoes, opcoesDaPartida } from "./opcoes";
 
-type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "customizacao" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "atividades" | "espectador" | "telaDividida" | "resultadoDividido";
+type Tela = "privacidade" | "termos" | "menu" | "selecao" | "configuracoes" | "customizacao" | "personagem" | "multijogador" | "buscaDeMusicas" | "jogo" | "resultado" | "perfil" | "leaderboard" | "partidaDoRanking" | "online" | "atividades" | "espectador" | "telaDividida" | "resultadoDividido" | "resultadoDaMaratona";
 
 interface PartidaEmRede {
   musica: Musica;
@@ -76,6 +77,8 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
   const [musicas, setMusicas] = useState<Musica[]>(MUSICAS_EMBUTIDAS);
   const [indice, setIndice] = useState(0);
   const [dificuldade, setDificuldade] = useState<Dificuldade>("medio");
+  // A playlist tocando em sequência; cada partida terminada anota o resultado nela.
+  const [maratona, setMaratona] = useState<Maratona | null>(null);
   const [instrumento, setInstrumento] = useState<Instrumento>("guitarra");
   // A partida do ranking aberta, com a música dela e a tela de onde veio.
   const [partidaAberta, setPartidaAberta] = useState<{ id: string; titulo: string; artista: string; voltarPara: Tela } | null>(null);
@@ -358,8 +361,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
     setTela("configuracoes");
   };
 
-  const jogar = async (treino = false) => {
-    const escolhida = musicas[indice];
+  const jogar = async (treino = false, escolhida = musicas[indice]) => {
     void biblioteca.usar(escolhida.id);
     const pronta = await biblioteca.prepararParaTocar(escolhida);
     if (pronta !== escolhida) setMusicas((atuais) => juntarMusicas(atuais, [pronta]));
@@ -370,6 +372,20 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
     setEntrada({ segurando: true });
     setTela("jogo");
   };
+
+  /** Toca a próxima faixa da maratona; a que não está mais na biblioteca é pulada. No fim, mostra o placar. */
+  const seguirMaratona = (atual: Maratona) => {
+    const { maratona: m, alvo } = proximaTocavel(atual, (faixa) => {
+      const posicao = musicas.findIndex((x) => x.id === faixa.musica);
+      return posicao >= 0 ? { posicao, dificuldade: faixa.versao as Dificuldade } : null;
+    });
+    setMaratona(m);
+    if (!alvo) return setTela("resultadoDaMaratona");
+    setIndice(alvo.posicao);
+    setDificuldade(alvo.dificuldade);
+    void jogar(false, musicas[alvo.posicao]);
+  };
+  const tocarPlaylist = (playlist: Playlist) => seguirMaratona(iniciarMaratona(playlist.nome, playlist.faixas));
 
   const assistirReplay = async (bytes: Uint8Array, dificuldadeDoReplay: Dificuldade, instrumentoDoReplay: Instrumento, musicaDoReplay = musicas[indice]) => {
     const replay = await desempacotarReplay(bytes).catch(() => null);
@@ -410,6 +426,7 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
           })
           .catch((erro) => avisar.error(`Não deu para registrar o XP: ${erro instanceof Error ? erro.message : String(erro)}`));
       }
+      setMaratona((m) => m && anotar(m, { pontos: r.pontos, precisao: r.precisao ?? (r.total ? r.acertos / r.total : 0), derrota: r.derrota }));
       setTela("resultado");
     },
     [configuracoes.bot, emRede?.rodada],
@@ -587,8 +604,15 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 aoSelecionar={setIndice}
                 aoDificuldade={setDificuldade}
                 aoInstrumento={setInstrumento}
-                aoJogar={() => void jogar()}
-                aoTreinar={divididos ? undefined : () => void jogar(true)}
+                aoJogar={() => {
+                  setMaratona(null);
+                  void jogar();
+                }}
+                aoTreinar={divididos ? undefined : () => {
+                  setMaratona(null);
+                  void jogar(true);
+                }}
+                aoTocarPlaylist={divididos ? undefined : tocarPlaylist}
                 aoVoltar={() => {
                   setDivididos(null);
                   setTela("menu");
@@ -714,10 +738,10 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
               />
             )}
             {tela === "perfil" && amigoNoPerfil && (
-              <PerfilDoAmigo contaId={amigoNoPerfil} aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />
+              <PerfilDoAmigo contaId={amigoNoPerfil} aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} extra={<PlaylistsDoPerfil contaId={amigoNoPerfil} />} />
             )}
             {tela === "perfil" && !amigoNoPerfil && (
-              <TelaDePerfil mod={souDaModeracao} aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} />
+              <TelaDePerfil mod={souDaModeracao} aoVoltar={() => setTela(voltarDoPerfilPara)} tituloDaMusica={(id) => tituloDaMusica(musicas, id)} extra={<PlaylistsDoPerfil />} />
             )}
             {tela === "configuracoes" && (
               <TelaDeConfiguracoes configuracoes={configuracoes} aoMudar={mudarConfiguracoes} aoVoltar={() => setTela(voltarDasConfiguracoesPara)} />
@@ -779,7 +803,10 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 }
                 // Em rede o canto mostra a sala; sozinho, o ranking global da música.
                 placar={contasLigadas && !emRede && !assistindo && !divididos && !treinando ? (pontos) => <PlacarAoVivo musicaId={idDoRanking(musica)} dificuldade={dificuldadeDaPartida} instrumento={instrumentoDaPartida} jeito={opcoes.jeitoDeJogar} velocidade={configuracoes.velocidadeDaMusica} pontos={pontos} /> : undefined}
-                aoSair={assistindo ? sairDoReplay : () => setTela(emRede ? "multijogador" : "selecao")}
+                aoSair={assistindo ? sairDoReplay : () => {
+                  setMaratona(null);
+                  setTela(emRede ? "multijogador" : "selecao");
+                }}
                 aoTerminar={assistindo ? sairDoReplay : terminar}
                 transmissao={transmissao}
                 espectadores={transmissao ? espectadores : 0}
@@ -802,6 +829,15 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
             {tela === "resultadoDividido" && resultadosDivididos && (
               <ResultadoDaTelaDividida titulo={musica.titulo} artista={musica.artista} resultados={resultadosDivididos} aoRepetir={() => void jogar()} aoContinuar={() => setTela("selecao")} />
             )}
+            {tela === "resultadoDaMaratona" && maratona && (
+              <ResultadoDaMaratona
+                maratona={maratona}
+                aoContinuar={() => {
+                  setMaratona(null);
+                  setTela("selecao");
+                }}
+              />
+            )}
             {tela === "resultado" && resultado && (
               <TelaDeResultado
                 titulo={musica.titulo}
@@ -811,12 +847,13 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 volumeDosEfeitos={audio.volumeDosEfeitos}
                 aoRepetir={() => void jogar()}
                 aoContinuar={() => {
+                  if (maratona) return seguirMaratona(maratona);
                   if (!emRede) return setTela("selecao");
                   setEmRede(null);
                   voltarParaASala();
                   setTela("multijogador");
                 }}
-                rotuloDeContinuar={emRede ? "Voltar para a sala" : undefined}
+                rotuloDeContinuar={emRede ? "Voltar para a sala" : maratona ? rotuloDeSeguir(maratona) : undefined}
                 extra={
                   <>
                     {xpDaPartida && <GanhoDeXp xp={xpDaPartida} valeXp={!!musica.md5DoEncore} />}

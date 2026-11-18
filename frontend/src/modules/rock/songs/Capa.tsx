@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Disc3 } from "lucide-react";
-import type { Musica } from "@/modules/rock/songs";
+import type { Musica } from "./tipos";
 import { cn } from "@/shared/lib/utils";
 
 /** A imagem de capa da música ou, sem ela, o gradiente com um disco girando. */

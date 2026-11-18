@@ -7,6 +7,7 @@ use crate::modules::conversa::ServicosDeConversa;
 use crate::modules::mania::ServicosDoMania;
 use crate::modules::moderacao::ServicosDeModeracao;
 use crate::modules::perfil::ServicosDoPerfil;
+use crate::modules::playlists::ServicosDePlaylists;
 use crate::modules::presenca::ServicosDePresenca;
 use crate::modules::ranking::ServicosDoRanking;
 use crate::modules::saude::VerificadorDoBanco;
@@ -24,4 +25,5 @@ pub struct EstadoDoApp {
     pub amizade: ServicosDeAmizade,
     pub conversa: ServicosDeConversa,
     pub atividades: ServicosDeAtividades,
+    pub playlists: ServicosDePlaylists,
 }

@@ -43,6 +43,7 @@ async fn cena() -> Cena {
         EstadoDoApp {
             amizade,
             conversa,
+            playlists: riffrush_api::modules::playlists::fakes::servicos_vazios(conta.clone()),
             atividades: riffrush_api::modules::atividades::fakes::servicos_de_atividades().0,
             mania: riffrush_api::modules::mania::fakes::servicos_vazios(conta.clone()),
             banco: Arc::new(BancoOk),

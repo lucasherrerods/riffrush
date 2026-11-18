@@ -9,22 +9,18 @@ interface Props {
   pontos: number;
   sequencia: number;
   multiplicador: number;
-  /** 0 a 1. */
-  precisao: number;
   estrelaAtiva: boolean;
   /** Celular: uma linha só, no topo. */
   compacto?: boolean;
-  /** O julgamento do último acerto, logo acima da precisão. */
+  /** O julgamento do último acerto, logo abaixo do combo. */
   aviso?: ReactNode;
-  /** No modo compacto, o que fica à direita de combo e precisão (ex.: o medidor de rock). */
+  /** No modo compacto, o que fica à direita do combo (ex.: o medidor de rock). */
   lateral?: ReactNode;
 }
 
 const RAIO_DO_ANEL = 44;
 const VOLTA = 2 * Math.PI * RAIO_DO_ANEL;
 
-/** Cor da precisão (0 a 1): verde acima de 95%, ouro acima de 80%, vermelho abaixo. */
-export const corDaPrecisao = (precisao: number) => (precisao >= 0.95 ? "text-sucesso" : precisao >= 0.8 ? "text-ouro" : "text-perigo");
 /** O visor de pontos tem 6 dígitos, como num fliperama; uma pontuação maior aparece inteira. */
 const DIGITOS_DO_VISOR = 6;
 
@@ -32,10 +28,9 @@ const DIGITOS_DO_VISOR = 6;
  * Números da partida feitos para ler de relance, num painel de amplificador como no Guitar Hero:
  * o visor digital com os pontos, o anel do multiplicador mostrando quanto falta para o próximo e o combo.
  */
-export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, estrelaAtiva, compacto = false, aviso, lateral }: Props) {
+export function PainelDePontos({ pontos, sequencia, multiplicador, estrelaAtiva, compacto = false, aviso, lateral }: Props) {
   const cor = estrelaAtiva ? COR_DA_ESTRELA : CORES_DO_MULTIPLICADOR[Math.min(3, Math.max(0, multiplicador - 1))];
   const progresso = progressoDoMultiplicador(sequencia);
-  const porcentagem = `${Math.round(precisao * 100)}%`;
 
   const anel = (
     <motion.div
@@ -85,27 +80,15 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
   // Altura reservada: a linha não pula quando o aviso aparece e some.
   const linhaDoAviso = <div data-testid="linha-do-aviso" className={cn("texto-aviso-da-partida", compacto ? "h-5" : "h-7")}>{aviso}</div>;
 
-  const acerto = (
-    <div className="flex flex-col items-start">
-      {compacto && linhaDoAviso}
-      <p className={cn("font-bold tracking-[0.1em] text-texto-suave", compacto ? "text-xs" : "text-base")}>
-        PRECISÃO{" "}
-        <span aria-label="Precisão" className={cn("font-titulo tracking-normal tabular-nums", compacto ? "text-base" : "text-2xl", corDaPrecisao(precisao))}>
-          {porcentagem}
-        </span>
-      </p>
-    </div>
-  );
-
   if (compacto) {
     return (
-      // Celular: a pontuação centralizada logo abaixo do título; combo, precisão e o anel empilhados à esquerda.
+      // Celular: a pontuação centralizada logo abaixo do topo; combo, aviso e o anel empilhados à esquerda.
       <div className="flex flex-col gap-1">
         <div className="flex justify-center">{pontuacao}</div>
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-col items-start gap-1">
             {combo}
-            {acerto}
+            {linhaDoAviso}
             {anel}
           </div>
           {lateral}
@@ -157,7 +140,7 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
   );
 
   return (
-    // Largura fixa: o aviso, o combo e a precisão não deslocam o amplificador nem invadem a pista.
+    // Largura fixa: o aviso e o combo não deslocam o amplificador nem invadem a pista.
     <div data-testid="painel" className="flex w-56 flex-col items-start gap-3">
       {/* A imagem é a moldura; o visor e o mostrador ficam por cima, na grade do alto-falante. */}
       <div data-testid="grade" className="relative aspect-[352/467] w-56">
@@ -166,10 +149,7 @@ export function PainelDePontos({ pontos, sequencia, multiplicador, precisao, est
         {mostrador}
       </div>
       {linhaDoAviso}
-      <div className="flex w-full items-end justify-between gap-2 whitespace-nowrap">
-        {combo}
-        {acerto}
-      </div>
+      {combo}
     </div>
   );
 }

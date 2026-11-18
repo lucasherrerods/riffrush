@@ -92,6 +92,7 @@ async fn cenario() -> Cenario {
             amizade: riffrush_api::modules::amizade::fakes::servicos_de_amizade(conta.clone(), Default::default()).0,
             mania: mania.clone(),
             conversa: riffrush_api::modules::conversa::fakes::servicos_vazios(conta.clone()),
+            playlists: riffrush_api::modules::playlists::fakes::servicos_vazios(conta.clone()),
             atividades: riffrush_api::modules::atividades::fakes::servicos_de_atividades().0,
             banco: Arc::new(BancoOk),
             ranking: riffrush_api::modules::ranking::fakes::servicos_do_ranking(conta.clone()).0,

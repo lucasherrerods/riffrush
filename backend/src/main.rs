@@ -9,6 +9,7 @@ use riffrush_api::modules::conversa::{CifraDasMensagens, ConversasPostgres, Entr
 use riffrush_api::modules::mania::{self, CredenciaisDoOsu, ManiaPostgres, Osu, ServicosDoMania};
 use riffrush_api::modules::moderacao::{ModeracaoPostgres, RelayHttp, ServicosDeModeracao};
 use riffrush_api::modules::perfil::{PerfilPostgres, ServicosDoPerfil};
+use riffrush_api::modules::playlists::{PlaylistsPostgres, ServicosDePlaylists};
 use riffrush_api::modules::presenca::ServicosDePresenca;
 use riffrush_api::modules::ranking::{RankingPostgres, ServicosDoRanking};
 use riffrush_api::modules::rejulgamento::{iniciar_trabalhador, RejulgamentoPostgres, ServicosDoRejulgamento};
@@ -140,7 +141,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         conta: conta.clone(),
         janelas: Default::default(),
     };
+    let playlists = ServicosDePlaylists {
+        repositorio: Arc::new(PlaylistsPostgres(banco.clone())),
+        conta: conta.clone(),
+        amizades: amizade.repositorio.clone(),
+    };
     let estado = EstadoDoApp {
+        playlists,
         amizade,
         conversa,
         atividades: ServicosDeAtividades {

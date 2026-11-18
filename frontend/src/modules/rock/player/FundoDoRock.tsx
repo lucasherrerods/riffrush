@@ -1,6 +1,6 @@
 import { Fundo } from "@/modules/menu";
 import { usePlayerDeMusica } from "@/modules/player";
-import { Capa } from "@/modules/rock/library";
+import { Capa } from "@/modules/rock/songs";
 import { playerDeMusica } from "./playerDeMusica";
 
 /** O fundo da tela inicial do Rock: a capa da música que toca, borrada, sobre a grade do palco. */
