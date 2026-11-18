@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { tocarEfeito } from "@/modules/audio";
-import { CLASSE_DA_CAPA_DA_ESCOLHA, ListaDeEscolhaDaSala, LobbyDaSala } from "@/modules/multiplayer";
+import { CLASSE_DA_CAPA_DA_ESCOLHA, CartaoDaEscolha, ListaDeEscolhaDaSala, LobbyDaSala } from "@/modules/multiplayer";
 import { Avatar } from "@/modules/rock/character";
 import { useSeguirMusica } from "@/modules/rock/player";
-import { CapaPequena, DIFICULDADES, INSTRUMENTOS, dificuldadesDaMusica, instrumentosDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
+import { Capa, CapaPequena, DIFICULDADES, INSTRUMENTOS, dificuldadesDaMusica, instrumentosDaMusica, type Dificuldade, type Instrumento, type Musica } from "@/modules/rock/songs";
 import { avisar } from "@/shared/ui/avisos";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { Input } from "@/shared/ui/input";
@@ -30,6 +30,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
   const escolherNaSala = (m: Musica, d: Dificuldade, i: Instrumento = sala.instrumento) => void escolher(m, d, i).catch((erro) => avisar.error(erro instanceof Error ? erro.message : String(erro)));
   const musica = musicas.find((m) => m.id === sala.musica.id);
   const tituloDaMusica = musica?.titulo ?? ("titulo" in sala.musica ? sala.musica.titulo : sala.musica.id);
+  const artistaDaMusica = musica?.artista ?? ("artista" in sala.musica ? sala.musica.artista : undefined);
   const [filtro, setFiltro] = useState("");
   const termo = filtro.trim().toLowerCase();
   const naLista = musicas.filter((m) => !termo || `${m.titulo} ${m.artista}`.toLowerCase().includes(termo));
@@ -63,7 +64,16 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
           />
         </>
       ) : (
-        <p className="text-2xl font-black max-md:text-lg">{tituloDaMusica}</p>
+        <CartaoDaEscolha
+          capa={musica ? <Capa musica={musica} decorativa className="size-full" /> : <CapaPequena className="size-full" />}
+          titulo={tituloDaMusica}
+          subtitulo={artistaDaMusica}
+          estatisticas={[
+            { rotulo: "Dificuldade", valor: DIFICULDADES.find((d) => d.id === sala.dificuldade)?.rotulo },
+            { rotulo: "Instrumento", valor: INSTRUMENTOS.find((i) => i.id === sala.instrumento)?.rotulo },
+            ...(musica ? [{ rotulo: "BPM", valor: Math.round(musica.bpm) || undefined }, { rotulo: "Gênero", valor: musica.genero || undefined }] : []),
+          ].filter((e) => e.valor !== undefined)}
+        />
       )}
     </>
   );
@@ -80,12 +90,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
         />
       )}
     </>
-  ) : (
-    <p className="text-base text-texto-suave">
-      {sala.instrumento !== "guitarra" && <>Instrumento: {INSTRUMENTOS.find((i) => i.id === sala.instrumento)?.rotulo} · </>}
-      Dificuldade: {DIFICULDADES.find((d) => d.id === sala.dificuldade)?.rotulo}
-    </p>
-  );
+  ) : null;
 
   return (
     <LobbyDaSala

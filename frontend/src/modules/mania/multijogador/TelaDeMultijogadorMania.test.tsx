@@ -52,6 +52,13 @@ describe("TelaDeMultijogadorMania", () => {
     expect(screen.getByRole("group", { name: "Mods" })).toBeInTheDocument();
   });
 
+  it("sem mapa escolhido, o convidado espera o host, sem aviso de download", () => {
+    naSala({ souHost: false, meuId: 2 });
+    abrir();
+    expect(screen.getByText("O host ainda não escolheu o mapa.")).toBeInTheDocument();
+    expect(screen.queryByText("Baixando o mapa...")).toBeNull();
+  });
+
   it("o convidado vê se o mapa da sala já está instalado", () => {
     const mapa = { tipo: "osu" as const, beatmapsetId: 7, hash: "h1", titulo: "Musica", artista: "Banda", dificuldade: "Hard", teclas: 4 };
     naSala({ souHost: false, meuId: 2, mapa });
@@ -83,7 +90,10 @@ describe("TelaDeMultijogadorMania", () => {
   it("o convidado que já tem o mapa vê o nome e dá pronto", async () => {
     naSala({ souHost: false, meuId: 2, jogadores: [{ id: 1, personagem: { nome: "Ana" } }, { id: 2, personagem: { nome: "Lu" } }], mapa: { tipo: "osu", beatmapsetId: 7, hash: "h1", titulo: "Musica", artista: "Banda", dificuldade: "Hard", teclas: 4 } });
     abrir();
-    expect(screen.getByText("Musica [Hard]")).toBeInTheDocument();
+    expect(screen.getByText("Musica")).toBeInTheDocument();
+    expect(screen.getByText("Banda")).toBeInTheDocument();
+    expect(screen.getByText("Hard")).toBeInTheDocument();
+    expect(screen.getByText("4K")).toBeInTheDocument();
     await userEvent.click(await screen.findByRole("button", { name: /Estou pronto/ }));
     await waitFor(() => expect(sala.marcarPronto).toHaveBeenCalledWith(true));
     expect(dependencias.baixarOsz).not.toHaveBeenCalled();

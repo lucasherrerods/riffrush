@@ -13,7 +13,8 @@ import { CabecalhoDoPlayerDeMusica, indiceVizinho, useMusicaAoEntrar, useTrilhaD
 import { musicaDeAbertura, playerDeMusica, useSeguirMusica } from "@/modules/rock/player";
 import { aplicarModoDeJanela, definirTelaCheia, ehJanelaNativa, estaEmTelaCheia, modoDoF11 } from "@/modules/platform";
 import { TelaDeDocumento, documentoDoEndereco } from "@/modules/legal";
-import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, entrarNaSalaOnline, enviarEstado, escolherNaSala, podeTocarOnline, resolverMusica, useConexao, voltarParaASala } from "@/modules/rock/multiplayer";
+import { useSalaSoNasTelasDela } from "@/modules/multiplayer";
+import { Adversarios, Placar, TelaDeMultijogador, type PersonagemNaSala, ehClienteWebDaSala, entrarNaSalaOnline, enviarEstado, escolherNaSala, podeTocarOnline, sairDaSala, resolverMusica, useConexao, voltarParaASala } from "@/modules/rock/multiplayer";
 import {
   ChatGlobal,
   TelaDeEspectador,
@@ -219,6 +220,13 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
       })
       .catch((erro) => avisar.error(String(erro)));
   }, [conexao, musicas]);
+
+  const telaMantemASala =
+    tela === "multijogador" ||
+    (tela === "buscaDeMusicas" && voltarDaBuscaPara === "multijogador") ||
+    (tela === "personagem" && voltarDoPersonagemPara === "multijogador") ||
+    ((tela === "jogo" || tela === "resultado") && !!emRede);
+  useSalaSoNasTelasDela(!!conexao.sala, telaMantemASala, () => sairDaSala());
 
   // A sala acabou no meio da partida.
   useEffect(() => {

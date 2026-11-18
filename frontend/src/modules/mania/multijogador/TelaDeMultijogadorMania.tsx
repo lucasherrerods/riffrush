@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
+import { Music } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
-import { CLASSE_DA_CAPA_DA_ESCOLHA, ListaDeEscolhaDaSala, LobbyDaSala, ProcurarSala, TelaDaSala, ehClienteWebDaSala } from "@/modules/multiplayer";
+import { CLASSE_DA_CAPA_DA_ESCOLHA, CartaoDaEscolha, EsperandoAEscolha, ListaDeEscolhaDaSala, LobbyDaSala, ProcurarSala, TelaDaSala, ehClienteWebDaSala } from "@/modules/multiplayer";
 import { BotaoDeModificadores } from "@/modules/selecao";
 import { formatarDuracao } from "@/shared/lib/formatar";
 import { cn } from "@/shared/lib/utils";
@@ -8,11 +9,11 @@ import { avisar } from "@/shared/ui/avisos";
 import { Input } from "@/shared/ui/input";
 import type { ConjuntoSalvo, DificuldadeSalva } from "../beatmaps/biblioteca";
 import { formatarEstrelas } from "../beatmaps/dificuldades";
-import { CapaDoConjunto } from "../selecao/CapaDoConjunto";
+import { CapaDaFonte, CapaDoConjunto } from "../selecao/CapaDoConjunto";
 import { siglasDosMods } from "../gameplay/mods";
 import { SeletorDeMods } from "../selecao/SeletorDeMods";
-import { acharNaBiblioteca, podeJogarOnline, type DependenciasDoMapa } from "./mapaNaRede";
-import type { EstadoDaSalaDoMania, PerfilDoMania } from "./protocolo";
+import { acharNaBiblioteca, podeJogarOnline, type MapaDaBiblioteca, type DependenciasDoMapa } from "./mapaNaRede";
+import type { EstadoDaSalaDoMania, MapaNaRede, PerfilDoMania } from "./protocolo";
 import {
   comecar,
   criarSalaOnline,
@@ -110,7 +111,7 @@ interface PropsDoLobby {
 
 /** O lobby neutro com a escolha de mapa e mods do Mania. */
 function LobbyDoMania({ sala, enderecoDoCelular, codigo, online, conjuntos, dependencias, lerOsz, volumeDosEfeitos }: PropsDoLobby) {
-  const { preparo } = useMapaDaSala(sala.mapa, sala.souHost, dependencias);
+  const { preparo, achado: resolvido } = useMapaDaSala(sala.mapa, sala.souHost, dependencias);
   const [filtro, setFiltro] = useState("");
   const grupos = useMemo(() => {
     const termo = filtro.trim().toLowerCase();
@@ -132,8 +133,8 @@ function LobbyDoMania({ sala, enderecoDoCelular, codigo, online, conjuntos, depe
   };
 
   const mods = siglasDosMods(sala.mods);
-  const instalado = !!sala.mapa && !!acharNaBiblioteca(sala.mapa, conjuntos);
-  const nomeDoMapa = sala.mapa ? `${sala.mapa.titulo} [${sala.mapa.dificuldade}]` : "O host ainda não escolheu o mapa.";
+  const naBiblioteca = sala.mapa ? acharNaBiblioteca(sala.mapa, conjuntos) : null;
+  const achado = naBiblioteca ?? resolvido;
 
   const escolha = (
     <>
@@ -174,10 +175,7 @@ function LobbyDoMania({ sala, enderecoDoCelular, codigo, online, conjuntos, depe
           />
         </>
       ) : (
-        <>
-          <p className="text-2xl font-black max-md:text-lg">{nomeDoMapa}</p>
-          {sala.mapa && <p className={cn("text-base font-semibold", instalado ? "text-sucesso" : "text-texto-suave")}>{instalado ? "Instalado" : "Ainda não instalado"}</p>}
-        </>
+        <EscolhaDoHost mapa={sala.mapa} achado={achado ?? undefined} instalado={!!naBiblioteca} />
       )}
     </>
   );
@@ -197,7 +195,7 @@ function LobbyDoMania({ sala, enderecoDoCelular, codigo, online, conjuntos, depe
             {mods.length > 0 && <p className="text-base text-texto-suave">Mods: {mods.join(" ")}</p>}
           </div>
         ) : (
-          <p className="text-base text-texto-suave">{sala.mapa && `${sala.mapa.teclas}K`}{mods.length > 0 && ` · Mods: ${mods.join(" ")}`}</p>
+          mods.length > 0 && <p className="text-base text-texto-suave">Mods: {mods.join(" ")}</p>
         )
       }
       preparo={preparo}
@@ -209,6 +207,36 @@ function LobbyDoMania({ sala, enderecoDoCelular, codigo, online, conjuntos, depe
       aoExpulsar={(id) => expulsar(id)}
       aoPassarLideranca={(id) => passarLideranca(id)}
       aoEnviarChat={(texto) => enviarChat(texto)}
+    />
+  );
+}
+
+/** O convidado vê o mapa do host com a capa e os números dele; os números saem do .osu quando ele já está na biblioteca. */
+function EscolhaDoHost({ mapa, achado, instalado }: { mapa: MapaNaRede | null; achado?: MapaDaBiblioteca; instalado: boolean }) {
+  if (!mapa) return <EsperandoAEscolha icone={Music} texto="O host ainda não escolheu o mapa." />;
+  const d = achado?.dificuldade;
+  const estrelas = d && achado.conjunto.estrelas?.[d.hash];
+  const estatisticas = [
+    { rotulo: "Dificuldade", valor: mapa.dificuldade },
+    { rotulo: "Teclas", valor: `${mapa.teclas}K` },
+    ...(estrelas !== undefined && estrelas !== null ? [{ rotulo: "Estrelas", valor: formatarEstrelas(estrelas) }] : []),
+    ...(d
+      ? [
+          { rotulo: "Duração", valor: d.duracaoMs ? formatarDuracao(d.duracaoMs) : undefined },
+          { rotulo: "Notas", valor: d.notas?.toLocaleString("pt-BR") },
+          { rotulo: "Notas longas", valor: d.notasLongas?.toLocaleString("pt-BR") },
+          { rotulo: "Precisão (OD)", valor: d.od },
+          { rotulo: "Vida (HP)", valor: d.hp },
+        ].filter((e) => e.valor !== undefined && e.valor !== "")
+      : []),
+  ];
+  return (
+    <CartaoDaEscolha
+      capa={achado ? <CapaDoConjunto conjunto={achado.conjunto} /> : <CapaDaFonte fonte={undefined} />}
+      titulo={mapa.titulo}
+      subtitulo={mapa.artista}
+      etiqueta={<p className={cn("text-base font-semibold", instalado ? "text-sucesso" : "text-texto-suave")}>{instalado ? "Instalado" : "Ainda não instalado"}</p>}
+      estatisticas={estatisticas}
     />
   );
 }

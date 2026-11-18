@@ -45,10 +45,10 @@ import { CabecalhoDoPlayerDeMusica, useMusicaAoEntrar, useSeguirMapa, useTrilhaD
 import { criarPlayerDoMania, faixasDaBiblioteca, playerDoMania } from "./player/trilhaDoMania";
 import { FundoDoMania } from "./menu/FundoDoMania";
 import { MenuDoMania } from "./menu/MenuDoMania";
-import { ehClienteWebDaSala } from "@/modules/multiplayer";
+import { ehClienteWebDaSala, useSalaSoNasTelasDela } from "@/modules/multiplayer";
 import { acharNaBiblioteca } from "./multijogador/mapaNaRede";
 import { PlacarDaSalaMania } from "./multijogador/PlacarDaSalaMania";
-import { enviarEstado, useConexao, voltarParaASala } from "./multijogador/sala";
+import { enviarEstado, sairDaSala, useConexao, voltarParaASala } from "./multijogador/sala";
 import { TelaDeMultijogadorMania } from "./multijogador/TelaDeMultijogadorMania";
 import { anotar, iniciarMaratona, PlaylistsDoPerfil, proximaTocavel, ResultadoDaMaratona, rotuloDeSeguir, type Maratona, type Playlist } from "@/modules/playlists";
 
@@ -334,6 +334,9 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
       setTela({ nome: "jogo", rede: true, modsDaSala: sala.mods, mapa, aoVivo: { titulo: mapa.titulo, artista: mapaDaSala.artista, dificuldade: mapa.dificuldade, teclas: achado.dificuldade.teclas, hash: mapa.hash } });
     });
   }, [conexao, conjuntos, carregarMapa]);
+  const telaMantemASala =
+    tela.nome === "multijogador" || (tela.nome === "busca" && tela.voltarPara === "multijogador") || ((tela.nome === "jogo" || tela.nome === "resultado") && !!tela.rede);
+  useSalaSoNasTelasDela(!!conexao.sala, telaMantemASala, () => sairDaSala());
   // A sala acabou no meio da partida: volta para a tela de salas, com o aviso.
   const emRede = (tela.nome === "jogo" || tela.nome === "resultado") && !!tela.rede;
   useEffect(() => {
