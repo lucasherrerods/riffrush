@@ -352,7 +352,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     voltarParaASala();
     setTela({ nome: "multijogador" });
   };
-  const perfil = useMemo(() => ({ nome: conta?.nome?.trim().slice(0, 16) || "Jogador", ...(conta?.nivel?.nivel && { nivel: conta.nivel.nivel }) }), [conta]);
+  const perfil = useMemo(() => ({ nome: conta?.nome?.trim().slice(0, 16) || "Jogador", ...(conta?.nivel?.nivel && { nivel: conta.nivel.nivel }), ...(conta?.avatar && { avatar: conta.avatar }) }), [conta]);
 
   /** Com a conta conectada, o replay vai para a API, que confere a partida e devolve o XP. Fora do ranked ela vai também,
    * sem XP, para aparecer no ranking com todas as partidas. Replay assistido não vale nada. */
