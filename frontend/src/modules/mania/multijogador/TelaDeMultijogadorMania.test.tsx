@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ConexaoDaSala } from "@/modules/multiplayer";
 import type { ConjuntoSalvo, DificuldadeSalva } from "../beatmaps/biblioteca";
@@ -31,7 +31,34 @@ const abrir = () =>
 
 beforeEach(() => vi.clearAllMocks());
 
+const outra = { ...dificuldade, hash: "h3", dificuldade: "Easy", duracaoMs: 203_000 } as DificuldadeSalva;
+const comDuas = { ...conjunto, estrelas: { h3: 2.5 }, mapas: [dificuldade, outra] } as ConjuntoSalvo;
+
 describe("TelaDeMultijogadorMania", () => {
+  it("as dificuldades da mesma música ficam juntas, sob o nome dela", () => {
+    naSala();
+    render(<TelaDeMultijogadorMania perfil={{ nome: "Lu" }} conjuntos={[comDuas]} volumeDosEfeitos={0} dependencias={dependencias} lerOsz={vi.fn()} aoVoltar={vi.fn()} aoBuscarMapas={vi.fn()} />);
+    const grupo = screen.getByRole("group", { name: "Musica" });
+    expect(within(grupo).getAllByRole("radio").map((r) => r.textContent)).toEqual([expect.stringContaining("Hard"), expect.stringContaining("Easy")]);
+    expect(within(grupo).getByText("3:23")).toBeInTheDocument();
+    expect(within(grupo).getByText("2,50★")).toBeInTheDocument();
+  });
+
+  it("os mods do host ficam guardados num botão, não soltos no lobby", async () => {
+    naSala();
+    abrir();
+    expect(screen.queryByRole("group", { name: "Mods" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: /Modificadores/ }));
+    expect(screen.getByRole("group", { name: "Mods" })).toBeInTheDocument();
+  });
+
+  it("o convidado vê se o mapa da sala já está instalado", () => {
+    const mapa = { tipo: "osu" as const, beatmapsetId: 7, hash: "h1", titulo: "Musica", artista: "Banda", dificuldade: "Hard", teclas: 4 };
+    naSala({ souHost: false, meuId: 2, mapa });
+    abrir();
+    expect(screen.getByText("Instalado")).toBeInTheDocument();
+  });
+
   it("fora da sala, mostra quem vai entrar e a busca das salas online", () => {
     vi.mocked(sala.useConexao).mockReturnValue({ sala: null, endereco: "" });
     abrir();

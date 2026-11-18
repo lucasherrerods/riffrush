@@ -36,6 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs"
 import type { ConjuntoSalvo, DificuldadeSalva } from "../beatmaps/biblioteca"
 import {
   faixaDasEstrelas,
+  formatarEstrelas,
   type FaixaDeDificuldade,
 } from "../beatmaps/dificuldades"
 import type { PosicaoNoRankingDoMania } from "../ranking/api"
@@ -117,9 +118,6 @@ const ORDENS: { id: OrdemDaSelecao; rotulo: string }[] = [
   { id: "artista", rotulo: "Artista" },
   { id: "estrelas", rotulo: "Estrelas" },
 ]
-
-const formatarEstrelas = (estrelas: number) =>
-  `${estrelas.toFixed(2).replace(".", ",")}★`
 
 function rotuloDaDificuldade(
   conjunto: ConjuntoSalvo,

@@ -52,7 +52,7 @@ import { enviarEstado, useConexao, voltarParaASala } from "./multijogador/sala";
 import { TelaDeMultijogadorMania } from "./multijogador/TelaDeMultijogadorMania";
 import { anotar, iniciarMaratona, PlaylistsDoPerfil, proximaTocavel, ResultadoDaMaratona, rotuloDeSeguir, type Maratona, type Playlist } from "@/modules/playlists";
 
-type Tela = { nome: "menu" } | { nome: "configuracoes"; voltarPara: Tela } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; veioDaSelecao?: boolean } | { nome: "leaderboard" } | { nome: "perfil"; amigo?: string } | { nome: "online" } | { nome: "atividades" } | { nome: "resultadoDaMaratona" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "multijogador" } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido; rede?: boolean } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido; rede?: boolean };
+type Tela = { nome: "menu" } | { nome: "configuracoes"; voltarPara: Tela } | { nome: "selecao"; conjuntoId?: string } | { nome: "busca"; voltarPara?: "selecao" | "multijogador" } | { nome: "leaderboard" } | { nome: "perfil"; amigo?: string } | { nome: "online" } | { nome: "atividades" } | { nome: "resultadoDaMaratona" } | { nome: "espectador"; pessoa: PessoaOnline } | { nome: "multijogador" } | { nome: "jogo"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; treino?: boolean; replay?: ReplayAssistido; rede?: boolean; modsDaSala?: number } | { nome: "resultado"; mapa: MapaParaJogar; aoVivo: MapaAoVivo; resultado: Resultado; replay?: ReplayAssistido; rede?: boolean };
 
 /** A mesma semente para a sala toda: com o Random, todos jogam as colunas na mesma ordem. */
 function sementeDaRodada(rodada = ""): number {
@@ -195,7 +195,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   const canal = useMemo(() => (transmitindo && conta ? abrirCanalDeTransmissao(conta.id) : undefined), [transmitindo, conta?.id, jogando]); // eslint-disable-line react-hooks/exhaustive-deps
   const transmitir = (evento: EventoDoManiaAoVivo) => {
     if (!canal || !jogando) return;
-    if (evento.tipo === "inicio") canal.comecar(partidaParaTransmitirNoMania(jogando.aoVivo, mods, semente));
+    if (evento.tipo === "inicio") canal.comecar(partidaParaTransmitirNoMania(jogando.aoVivo, jogando.modsDaSala ?? mods, semente));
     else if (evento.tipo === "lote") canal.mandar({ tipo: "lote", ate: evento.ate, entradas: entradasParaOLoteDoMania(evento.entradas) });
     else canal.encerrar();
   };
@@ -318,6 +318,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   };
 
   // A sala deu a largada: todos abrem o mesmo mapa, com os mods do host, no mesmo instante.
+  // Os mods da sala vão só na tela da partida, para não ficarem ligados na seleção solo depois.
   const conexao = useConexao();
   const partidasVistas = useRef(0);
   useEffect(() => {
@@ -329,9 +330,8 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     if (!achado) return void avisar.error("Você ainda não tem o mapa da sala.");
     void carregarMapa(achado.conjunto, achado.dificuldade).then((mapa) => {
       if (!mapa) return avisar.error("Não foi possível abrir o mapa da sala.");
-      setMods(sala.mods);
       setSemente(sementeDaRodada(sala.rodada));
-      setTela({ nome: "jogo", rede: true, mapa, aoVivo: { titulo: mapa.titulo, artista: mapaDaSala.artista, dificuldade: mapa.dificuldade, teclas: achado.dificuldade.teclas, hash: mapa.hash } });
+      setTela({ nome: "jogo", rede: true, modsDaSala: sala.mods, mapa, aoVivo: { titulo: mapa.titulo, artista: mapaDaSala.artista, dificuldade: mapa.dificuldade, teclas: achado.dificuldade.teclas, hash: mapa.hash } });
     });
   }, [conexao, conjuntos, carregarMapa]);
   // A sala acabou no meio da partida: volta para a tela de salas, com o aviso.
@@ -368,7 +368,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
     return (
       <TelaDeJogoMania
         mapa={tela.mapa}
-        mods={tela.replay?.mods ?? mods}
+        mods={tela.replay?.mods ?? tela.modsDaSala ?? mods}
         semente={tela.replay?.semente ?? semente}
         opcoes={opcoes}
         decodificar={decodificar}
@@ -491,7 +491,7 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
               },
             }}
             aoVoltar={() => setTela({ nome: "menu" })}
-            aoBuscarMapas={() => setTela({ nome: "busca" })}
+            aoBuscarMapas={() => setTela({ nome: "busca", voltarPara: "multijogador" })}
             aoConvidarAmigos={contasLigadas ? alternarAmigos : undefined}
           />
           {painelDeAmigos}
@@ -557,9 +557,9 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
       {cabecalho}
       <div className="relative min-h-0 flex-1">
         {tela.nome === "busca" ? (
-          <TelaDeBuscaMania aoVoltar={() => setTela({ nome: tela.veioDaSelecao ? "selecao" : "menu" })} baixados={baixados} aoBaixar={aoBaixar} aoJogar={(beatmapsetId) => setTela({ nome: "selecao", conjuntoId: `osu:${beatmapsetId}` })} buscar={buscar} baixar={baixar} aoMudarPrevia={(tocando) => player.suspender(tocando, { esmaecer: true })} />
+          <TelaDeBuscaMania aoVoltar={() => setTela({ nome: tela.voltarPara ?? "menu" })} baixados={baixados} aoBaixar={aoBaixar} aoJogar={(beatmapsetId) => setTela({ nome: "selecao", conjuntoId: `osu:${beatmapsetId}` })} buscar={buscar} baixar={baixar} aoMudarPrevia={(tocando) => player.suspender(tocando, { esmaecer: true })} />
         ) : (
-          <TelaDeSelecaoMania aoMudarSelecao={mudarSelecao} selecionado={(tela.nome === "selecao" ? tela.conjuntoId : undefined) ?? idAoEntrar ?? undefined} aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", veioDaSelecao: true })} sortearMapa={sortearMapaNovo} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={(conjunto, dificuldade) => {
+          <TelaDeSelecaoMania aoMudarSelecao={mudarSelecao} selecionado={(tela.nome === "selecao" ? tela.conjuntoId : undefined) ?? idAoEntrar ?? undefined} aoVoltar={() => setTela({ nome: "menu" })} aoBuscarMapas={() => setTela({ nome: "busca", voltarPara: "selecao" })} sortearMapa={sortearMapaNovo} conjuntos={conjuntos} mods={mods} aoMudarMods={setMods} aoImportar={aoImportar} aoJogar={(conjunto, dificuldade) => {
             setMaratona(null);
             void aoJogar(conjunto, dificuldade);
           }} aoTocarPlaylist={tocarPlaylist} aoRemover={(conjunto) => void remover(conjunto.id)} aoTreinar={(conjunto, dificuldade) => void aoJogar(conjunto, dificuldade, true)} aoAssistir={(conjunto, dificuldade, linha) => void aoAssistir(conjunto, dificuldade, linha)} />

@@ -771,7 +771,6 @@ export function AppDoRock({ alavanca, palco }: { alavanca?: ReactNode; palco?: P
                 personagem={personagemEmJogo}
                 musicas={musicas}
                 volumeDosEfeitos={audio.volumeDosEfeitos}
-                sortearAleatoria={sortearOficial}
                 aoConvidarAmigos={contasLigadas && salaParaConvidar ? abrirAmigos : undefined}
                 aoVoltar={() => setTela("menu")}
                 aoEditarPersonagem={() => {

@@ -43,7 +43,7 @@ describe("Lobby", () => {
     const { rerender } = render(lobby(primeira.id));
 
     expect(() => rerender(lobby(segunda.id))).not.toThrow();
-    expect(screen.getByRole("radio", { name: `${segunda.titulo} - ${segunda.artista}` })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: `${segunda.titulo} [Médio]` })).toHaveAttribute("aria-checked", "true");
   });
 
   it("mostra o nível de quem tem conta, embaixo do nome", () => {
@@ -103,22 +103,19 @@ describe("Lobby", () => {
     expect(screen.getByText(/Quem entrar na sala lê o chat/)).toBeInTheDocument();
   });
 
-  it("o filtro de favoritos mostra só as músicas favoritadas", async () => {
-    localStorage.setItem("riffrush:favoritas", JSON.stringify([segunda.id]));
+  it("cada música agrupa as dificuldades dela, e escolher uma escolhe a música e a dificuldade", async () => {
     render(lobby(primeira.id));
-    await userEvent.click(screen.getByRole("button", { name: /Favoritos/ }));
-    const lista = screen.getByRole("radiogroup", { name: "Música" });
-    expect(within(lista).getAllByRole("radio")).toHaveLength(1);
-    expect(within(lista).getByRole("radio", { name: new RegExp(segunda.titulo) })).toBeInTheDocument();
-    localStorage.clear();
+    const grupo = screen.getByRole("group", { name: segunda.titulo });
+    expect(within(grupo).getByText(segunda.artista)).toBeInTheDocument();
+    await userEvent.click(within(grupo).getByRole("radio", { name: `${segunda.titulo} [Difícil]` }));
+    expect(escolher).toHaveBeenCalledWith(segunda, "dificil", expect.anything());
   });
 
-  it("a Aleatória sorteia um chart oficial na dificuldade e no instrumento da sala e escolhe ele", async () => {
-    const sortearAleatoria = vi.fn(() => Promise.resolve(segunda));
-    const naSala = sala(primeira.id);
-    render(<Lobby sala={naSala} endereco="" musicas={MUSICAS_DE_TESTE} volumeDosEfeitos={0} sortearAleatoria={sortearAleatoria} />);
-    await userEvent.click(screen.getByRole("button", { name: "Aleatória" }));
-    expect(sortearAleatoria).toHaveBeenCalledWith(naSala.dificuldade, naSala.instrumento);
-    expect(escolher).toHaveBeenCalledWith(segunda, expect.anything(), expect.anything());
+  it("a busca filtra a lista pelo título ou artista", async () => {
+    render(lobby(primeira.id));
+    await userEvent.type(screen.getByRole("textbox", { name: "Procurar música" }), segunda.titulo);
+    const lista = screen.getByRole("radiogroup", { name: "Música" });
+    expect(within(lista).getAllByRole("group").map((g) => g.getAttribute("aria-label"))).toEqual([segunda.titulo]);
   });
+
 });

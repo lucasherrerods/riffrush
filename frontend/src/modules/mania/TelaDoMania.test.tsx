@@ -278,6 +278,18 @@ describe("TelaDoMania", () => {
       expect(await screen.findByRole("heading", { name: "Multiplayer" })).toBeInTheDocument();
     });
 
+    it("o Buscar mapas da sala volta para a sala, não para o menu", async () => {
+      const sala = { status: "naSala", souHost: true, meuId: 1, hostId: 1, jogadores: [{ id: 1, personagem: { nome: "Ana" } }], prontos: [], adversarios: {}, partidas: 0, inicio: 0, chat: [], baldesDoChat: {}, expulsos: [], personagem: { nome: "Ana" }, mapa: null, mods: 0 };
+      rede.mudar({ sala, endereco: "" });
+      render(<TelaDoMania abrirBiblioteca={async () => bibliotecaNaMemoria()} />);
+      const usuario = userEvent.setup();
+      await usuario.click(screen.getByRole("button", { name: "Multiplayer" }));
+      await usuario.click(await screen.findByRole("button", { name: "Buscar mapas" }));
+      expect(await screen.findByRole("heading", { name: "Buscar mapas" })).toBeInTheDocument();
+      await usuario.click(screen.getByRole("button", { name: "Voltar" }));
+      expect(await screen.findByRole("heading", { name: "Multiplayer" })).toBeInTheDocument();
+    });
+
     it("a largada da sala abre o mapa para todos, manda o placar e o resultado mostra a sala", async () => {
       const { usuario } = await abrir();
       await screen.findByText(/Nenhum mapa ainda/);
