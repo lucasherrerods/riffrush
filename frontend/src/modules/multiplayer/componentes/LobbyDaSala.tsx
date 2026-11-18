@@ -22,8 +22,9 @@ export interface PropsDoLobby {
   codigo?: string;
   /** Só para o host da LAN: o endereço que o celular abre pelo QR code. */
   enderecoDoCelular?: string;
-  /** O que o host escolhe (a música, o mapa): a lista para o host, o nome para os convidados. */
-  escolha: ReactNode;
+  /** O que o host escolhe (a música, o mapa): a lista para o host, o cartão para os convidados.
+   * Como função, recebe a ação do convidado (o pronto) para pôr dentro do cartão; aí o lobby não a repete embaixo. */
+  escolha: ReactNode | ((acaoDoConvidado: ReactNode) => ReactNode);
   /** As opções da escolha, ao lado da largada (dificuldade, instrumento, mods). */
   opcoes?: ReactNode;
   /** Se o convidado já tem a escolha do host para dar pronto. */
@@ -90,6 +91,38 @@ export function LobbyDaSala({
       setComecando(false);
     }
   };
+
+  // O que o convidado faz com a escolha: o pronto, ou o aviso do download. O modo pode pôr isso dentro do próprio cartão.
+  const acaoDoConvidado =
+    preparo.tipo === "esperando" ? null : preparo.tipo === "baixando" ? (
+              <p className="flex items-center justify-center gap-2 py-4 text-base text-texto-suave">
+                <Loader2 className="size-4 animate-spin" aria-hidden /> {rotuloDoDownload}
+              </p>
+            ) : preparo.tipo === "erro" ? (
+              <p role="alert" className="py-4 text-center text-base text-texto-suave">
+                {preparo.mensagem}
+              </p>
+            ) : estouPronto ? (
+              <div className="flex flex-col gap-2">
+                <p className="flex items-center justify-center gap-2 text-base text-texto-suave">
+                  <Loader2 className="size-4 animate-spin" aria-hidden /> Pronto! Esperando o host começar...
+                </p>
+                <Button variant="outline" onClick={() => aoPronto(false)}>
+                  Cancelar pronto
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="lg"
+                className="h-14 text-lg font-black max-md:h-10 max-md:text-base"
+                onClick={() => {
+                  tocarEfeito("selecionar", volumeDosEfeitos);
+                  aoPronto(true);
+                }}
+              >
+                <Check className="opacity-70" /> Estou pronto
+              </Button>
+    );
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:flex-none max-md:grid-cols-1 max-md:gap-2">
@@ -178,11 +211,12 @@ export function LobbyDaSala({
             sala.souHost ? "grid-cols-2 grid-rows-[minmax(0,1fr)]" : "grid-cols-1 grid-rows-[minmax(0,1fr)_auto]",
           )}
         >
-          <div className="flex min-h-0 min-w-0 flex-col gap-2">{escolha}</div>
+          <div className="flex min-h-0 min-w-0 flex-col gap-2">{typeof escolha === "function" ? escolha(sala.souHost ? null : acaoDoConvidado) : escolha}</div>
 
-          <div className={cn("flex min-w-0 flex-col justify-end gap-4 max-md:gap-3", !sala.souHost && "w-full max-w-md justify-self-end empty:hidden")}>
-            {opcoes}
-            {sala.souHost ? (
+          {(sala.souHost || typeof escolha !== "function") && (
+            <div className={cn("flex min-w-0 flex-col justify-end gap-4 max-md:gap-3", !sala.souHost && "w-full max-w-md justify-self-end empty:hidden")}>
+              {opcoes}
+              {sala.souHost ? (
               <div className="flex flex-col gap-2">
                 <Button size="lg" disabled={comecando || !podeComecar || !todos} className="h-14 text-lg font-black max-md:h-10 max-md:text-base" onClick={() => void darLargada()}>
                   {comecando ? <Loader2 className="animate-spin" /> : <Play className="fill-current opacity-70" />} Começar partida
@@ -193,36 +227,11 @@ export function LobbyDaSala({
                   </p>
                 )}
               </div>
-            ) : preparo.tipo === "esperando" ? null : preparo.tipo === "baixando" ? (
-              <p className="flex items-center justify-center gap-2 py-4 text-base text-texto-suave">
-                <Loader2 className="size-4 animate-spin" aria-hidden /> {rotuloDoDownload}
-              </p>
-            ) : preparo.tipo === "erro" ? (
-              <p role="alert" className="py-4 text-center text-base text-texto-suave">
-                {preparo.mensagem}
-              </p>
-            ) : estouPronto ? (
-              <div className="flex flex-col gap-2">
-                <p className="flex items-center justify-center gap-2 text-base text-texto-suave">
-                  <Loader2 className="size-4 animate-spin" aria-hidden /> Pronto! Esperando o host começar...
-                </p>
-                <Button variant="outline" onClick={() => aoPronto(false)}>
-                  Cancelar pronto
-                </Button>
-              </div>
-            ) : (
-              <Button
-                size="lg"
-                className="h-14 text-lg font-black max-md:h-10 max-md:text-base"
-                onClick={() => {
-                  tocarEfeito("selecionar", volumeDosEfeitos);
-                  aoPronto(true);
-                }}
-              >
-                <Check className="opacity-70" /> Estou pronto
-              </Button>
-            )}
-          </div>
+              ) : (
+                acaoDoConvidado
+              )}
+            </div>
+          )}
         </section>
       </div>
 

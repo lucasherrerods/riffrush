@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { tocarEfeito } from "@/modules/audio";
 import { CLASSE_DA_CAPA_DA_ESCOLHA, CartaoDaEscolha, ListaDeEscolhaDaSala, LobbyDaSala } from "@/modules/multiplayer";
 import { Avatar } from "@/modules/rock/character";
@@ -35,9 +35,9 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
   const termo = filtro.trim().toLowerCase();
   const naLista = musicas.filter((m) => !termo || `${m.titulo} ${m.artista}`.toLowerCase().includes(termo));
 
-  const escolha = (
+  const escolha = (acao: ReactNode) => (
     <>
-      <p className="text-base font-semibold text-texto-suave">Música</p>
+      {sala.souHost && <p className="text-base font-semibold text-texto-suave">Música</p>}
       {sala.souHost ? (
         <>
           <Input placeholder="Procurar na biblioteca" aria-label="Procurar música" value={filtro} onChange={(e) => setFiltro(e.target.value)} />
@@ -68,11 +68,9 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
           capa={musica ? <Capa musica={musica} decorativa className="size-full" /> : <CapaPequena className="size-full" />}
           titulo={tituloDaMusica}
           subtitulo={artistaDaMusica}
-          estatisticas={[
-            { rotulo: "Dificuldade", valor: DIFICULDADES.find((d) => d.id === sala.dificuldade)?.rotulo },
-            { rotulo: "Instrumento", valor: INSTRUMENTOS.find((i) => i.id === sala.instrumento)?.rotulo },
-            ...(musica ? [{ rotulo: "BPM", valor: Math.round(musica.bpm) || undefined }, { rotulo: "Gênero", valor: musica.genero || undefined }] : []),
-          ].filter((e) => e.valor !== undefined)}
+          destaque={[DIFICULDADES.find((d) => d.id === sala.dificuldade)?.rotulo, INSTRUMENTOS.find((i) => i.id === sala.instrumento)?.rotulo].filter(Boolean).join(" · ")}
+          estatisticas={(musica ? [{ rotulo: "BPM", valor: Math.round(musica.bpm) || undefined }, { rotulo: "Gênero", valor: musica.genero || undefined }] : []).filter((e) => e.valor !== undefined)}
+          acao={acao}
         />
       )}
     </>

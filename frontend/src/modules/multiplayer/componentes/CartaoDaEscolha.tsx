@@ -10,32 +10,38 @@ interface Props {
   capa: ReactNode;
   titulo: string;
   subtitulo?: string;
-  /** Uma linha curta embaixo do título, como "Instalado". */
-  etiqueta?: ReactNode;
+  /** A linha em destaque embaixo do título: a dificuldade e o que mais pesa nela. */
+  destaque?: ReactNode;
   estatisticas: EstatisticaDaEscolha[];
+  /** O pronto do convidado, que fecha a coluna das informações. */
+  acao?: ReactNode;
 }
 
-/** O que o convidado vê da escolha do host: a capa grande e os números da música. */
-export function CartaoDaEscolha({ capa, titulo, subtitulo, etiqueta, estatisticas }: Props) {
+/** O que o convidado vê da escolha do host: a capa em destaque e os números ao lado. */
+export function CartaoDaEscolha({ capa, titulo, subtitulo, destaque, estatisticas, acao }: Props) {
   return (
-    <div className="flex min-h-0 flex-1 items-center gap-8 max-md:flex-col max-md:items-start max-md:gap-3">
-      <div className="aspect-square w-72 shrink-0 max-lg:w-56 overflow-hidden rounded-lg bg-superficie-elevada max-md:w-28">{capa}</div>
-      <div className="flex min-w-0 flex-1 flex-col gap-4 max-md:gap-2">
-        <div className="min-w-0">
-          <p className="text-4xl font-black max-md:text-lg">{titulo}</p>
-          {subtitulo && <p className="truncate text-xl text-texto-suave max-md:text-base">{subtitulo}</p>}
-          {etiqueta}
+    <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-lg">
+      <div className="relative grid min-h-0 flex-1 grid-cols-[auto_minmax(0,1fr)] items-stretch gap-8 p-4 max-md:grid-cols-1 max-md:gap-3 max-md:p-2">
+        <div className="aspect-square h-full max-h-96 min-h-48 overflow-hidden rounded-lg max-md:h-28 max-md:min-h-0">{capa}</div>
+        <div className="flex min-w-0 flex-col gap-4 py-2 max-md:gap-2 max-md:py-0">
+          <div className="min-w-0">
+            <p className="text-5xl leading-tight font-black max-lg:text-3xl max-md:text-xl">{titulo}</p>
+            {subtitulo && <p className="truncate text-xl text-texto-suave max-md:text-base">{subtitulo}</p>}
+          </div>
+          {destaque && <p className="font-titulo text-2xl tracking-wide text-destaque max-md:text-lg">{destaque}</p>}
+          {estatisticas.length > 0 && (
+            <dl className="flex flex-wrap gap-x-8 gap-y-3 max-md:gap-x-4">
+              {estatisticas.map((e) => (
+                // O número vem antes na tela, mas o rótulo continua antes no HTML, como pede o <dl>.
+                <div key={e.rotulo} className="flex min-w-0 flex-col-reverse">
+                  <dt className="text-sm text-texto-suave">{e.rotulo}</dt>
+                  <dd className="font-titulo text-2xl max-md:text-lg">{e.valor}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          {acao && <div className="mt-auto max-w-md">{acao}</div>}
         </div>
-        {estatisticas.length > 0 && (
-          <dl className="grid grid-cols-4 gap-x-6 gap-y-4 max-lg:grid-cols-2 max-md:gap-y-2">
-            {estatisticas.map((e) => (
-              <div key={e.rotulo} className="min-w-0">
-                <dt className="text-sm text-texto-suave">{e.rotulo}</dt>
-                <dd className="truncate font-titulo text-lg">{e.valor}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
       </div>
     </div>
   );

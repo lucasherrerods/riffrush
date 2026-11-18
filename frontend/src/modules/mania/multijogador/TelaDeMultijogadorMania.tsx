@@ -1,10 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Music } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { CLASSE_DA_CAPA_DA_ESCOLHA, CartaoDaEscolha, EsperandoAEscolha, ListaDeEscolhaDaSala, LobbyDaSala, ProcurarSala, TelaDaSala, ehClienteWebDaSala } from "@/modules/multiplayer";
 import { BotaoDeModificadores } from "@/modules/selecao";
 import { formatarDuracao } from "@/shared/lib/formatar";
-import { cn } from "@/shared/lib/utils";
 import { avisar } from "@/shared/ui/avisos";
 import { Input } from "@/shared/ui/input";
 import type { ConjuntoSalvo, DificuldadeSalva } from "../beatmaps/biblioteca";
@@ -137,9 +136,9 @@ function LobbyDoMania({ sala, enderecoDoCelular, codigo, online, conjuntos, depe
   const naBiblioteca = sala.mapa ? acharNaBiblioteca(sala.mapa, conjuntos) : null;
   const achado = naBiblioteca ?? resolvido;
 
-  const escolha = (
+  const escolha = (acao: ReactNode) => (
     <>
-      <p className="text-base font-semibold text-texto-suave">Mapa</p>
+      {sala.souHost && <p className="text-base font-semibold text-texto-suave">Mapa</p>}
       {sala.souHost ? (
         <>
           <Input placeholder="Procurar na biblioteca" aria-label="Procurar mapa" value={filtro} onChange={(e) => setFiltro(e.target.value)} />
@@ -176,7 +175,7 @@ function LobbyDoMania({ sala, enderecoDoCelular, codigo, online, conjuntos, depe
           />
         </>
       ) : (
-        <EscolhaDoHost mapa={sala.mapa} achado={achado ?? undefined} instalado={!!naBiblioteca} />
+        <EscolhaDoHost mapa={sala.mapa} achado={achado ?? undefined} acao={acao} />
       )}
     </>
   );
@@ -214,14 +213,11 @@ function LobbyDoMania({ sala, enderecoDoCelular, codigo, online, conjuntos, depe
 }
 
 /** O convidado vê o mapa do host com a capa e os números dele; os números saem do .osu quando ele já está na biblioteca. */
-function EscolhaDoHost({ mapa, achado, instalado }: { mapa: MapaNaRede | null; achado?: MapaDaBiblioteca; instalado: boolean }) {
+function EscolhaDoHost({ mapa, achado, acao }: { mapa: MapaNaRede | null; achado?: MapaDaBiblioteca; acao: ReactNode }) {
   if (!mapa) return <EsperandoAEscolha icone={Music} texto="O host ainda não escolheu o mapa." />;
   const d = achado?.dificuldade;
   const estrelas = d && achado.conjunto.estrelas?.[d.hash];
   const estatisticas = [
-    { rotulo: "Dificuldade", valor: mapa.dificuldade },
-    { rotulo: "Teclas", valor: `${mapa.teclas}K` },
-    ...(estrelas !== undefined && estrelas !== null ? [{ rotulo: "Estrelas", valor: formatarEstrelas(estrelas) }] : []),
     ...(d
       ? [
           { rotulo: "Duração", valor: d.duracaoMs ? formatarDuracao(d.duracaoMs) : undefined },
@@ -237,7 +233,8 @@ function EscolhaDoHost({ mapa, achado, instalado }: { mapa: MapaNaRede | null; a
       capa={achado ? <CapaDoConjunto conjunto={achado.conjunto} /> : <CapaDaFonte fonte={undefined} />}
       titulo={mapa.titulo}
       subtitulo={mapa.artista}
-      etiqueta={<p className={cn("text-base font-semibold", instalado ? "text-sucesso" : "text-texto-suave")}>{instalado ? "Instalado" : "Ainda não instalado"}</p>}
+      destaque={[mapa.dificuldade, estrelas !== undefined && estrelas !== null ? formatarEstrelas(estrelas) : null, `${mapa.teclas}K`].filter(Boolean).join(" · ")}
+      acao={acao}
       estatisticas={estatisticas}
     />
   );

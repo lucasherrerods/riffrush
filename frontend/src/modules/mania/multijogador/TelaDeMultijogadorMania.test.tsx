@@ -59,13 +59,6 @@ describe("TelaDeMultijogadorMania", () => {
     expect(screen.queryByText("Baixando o mapa...")).toBeNull();
   });
 
-  it("o convidado vê se o mapa da sala já está instalado", () => {
-    const mapa = { tipo: "osu" as const, beatmapsetId: 7, hash: "h1", titulo: "Musica", artista: "Banda", dificuldade: "Hard", teclas: 4 };
-    naSala({ souHost: false, meuId: 2, mapa });
-    abrir();
-    expect(screen.getByText("Instalado")).toBeInTheDocument();
-  });
-
   it("fora da sala, mostra quem vai entrar e a busca das salas online", () => {
     vi.mocked(sala.useConexao).mockReturnValue({ sala: null, endereco: "" });
     abrir();
@@ -92,8 +85,7 @@ describe("TelaDeMultijogadorMania", () => {
     abrir();
     expect(screen.getByText("Musica")).toBeInTheDocument();
     expect(screen.getByText("Banda")).toBeInTheDocument();
-    expect(screen.getByText("Hard")).toBeInTheDocument();
-    expect(screen.getByText("4K")).toBeInTheDocument();
+    expect(screen.getByText("Hard · 4K")).toBeInTheDocument();
     await userEvent.click(await screen.findByRole("button", { name: /Estou pronto/ }));
     await waitFor(() => expect(sala.marcarPronto).toHaveBeenCalledWith(true));
     expect(dependencias.baixarOsz).not.toHaveBeenCalled();
