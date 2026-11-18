@@ -11,7 +11,8 @@ import { MAXIMO_DE_JOGADORES, todosProntos, type Jogador, type MensagemDoChatDaS
 import { IconeDeChute } from "./IconeDeChute";
 
 /** Pronta sem nada só no host, no instante antes de achar a escolha na biblioteca. */
-export type PreparoDaEscolha = { tipo: "baixando" } | { tipo: "pronta" } | { tipo: "erro"; mensagem: string };
+/** "esperando": o host ainda não escolheu nada, então não há o que baixar nem pronto para dar. */
+export type PreparoDaEscolha = { tipo: "esperando" } | { tipo: "baixando" } | { tipo: "pronta" } | { tipo: "erro"; mensagem: string };
 
 export interface PropsDoLobby {
   sala: { souHost: boolean; meuId: number; hostId: number; jogadores: Jogador[]; prontos: number[]; chat: MensagemDoChatDaSala[] };
@@ -145,11 +146,16 @@ export function LobbyDaSala({
           })}
         </ul>
 
-        {/* A escolha à esquerda, as opções e a largada à direita. A lista ocupa a altura livre e rola. */}
-        <section className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-6 placa p-6 max-md:flex-none max-md:grid-cols-1 max-md:grid-rows-none max-md:gap-3 max-md:p-3">
+        {/* Host: a lista à esquerda, as opções e a largada à direita. Convidado: a escolha do host na placa toda, e o pronto embaixo. */}
+        <section
+          className={cn(
+            "grid min-h-0 flex-1 gap-6 placa p-6 max-md:flex-none max-md:grid-cols-1 max-md:grid-rows-none max-md:gap-3 max-md:p-3",
+            sala.souHost ? "grid-cols-2 grid-rows-[minmax(0,1fr)]" : "grid-cols-1 grid-rows-[minmax(0,1fr)_auto]",
+          )}
+        >
           <div className="flex min-h-0 min-w-0 flex-col gap-2">{escolha}</div>
 
-          <div className="flex min-w-0 flex-col justify-end gap-4 max-md:gap-3">
+          <div className={cn("flex min-w-0 flex-col justify-end gap-4 max-md:gap-3", !sala.souHost && "w-full max-w-md justify-self-end empty:hidden")}>
             {opcoes}
             {sala.souHost ? (
               <div className="flex flex-col gap-2">
@@ -162,7 +168,7 @@ export function LobbyDaSala({
                   </p>
                 )}
               </div>
-            ) : preparo.tipo === "baixando" ? (
+            ) : preparo.tipo === "esperando" ? null : preparo.tipo === "baixando" ? (
               <p className="flex items-center justify-center gap-2 py-4 text-base text-texto-suave">
                 <Loader2 className="size-4 animate-spin" aria-hidden /> {rotuloDoDownload}
               </p>

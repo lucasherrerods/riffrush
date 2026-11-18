@@ -1,14 +1,19 @@
 import { useMemo, useState } from "react";
+import { Music } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
-import { LobbyDaSala, ProcurarSala, TelaDaSala, ehClienteWebDaSala } from "@/modules/multiplayer";
+import { CLASSE_DA_CAPA_DA_ESCOLHA, CartaoDaEscolha, EsperandoAEscolha, ListaDeEscolhaDaSala, LobbyDaSala, ProcurarSala, TelaDaSala, ehClienteWebDaSala } from "@/modules/multiplayer";
+import { BotaoDeModificadores } from "@/modules/selecao";
+import { formatarDuracao } from "@/shared/lib/formatar";
 import { cn } from "@/shared/lib/utils";
 import { avisar } from "@/shared/ui/avisos";
 import { Input } from "@/shared/ui/input";
 import type { ConjuntoSalvo, DificuldadeSalva } from "../beatmaps/biblioteca";
+import { formatarEstrelas } from "../beatmaps/dificuldades";
+import { CapaDaFonte, CapaDoConjunto } from "../selecao/CapaDoConjunto";
 import { siglasDosMods } from "../gameplay/mods";
 import { SeletorDeMods } from "../selecao/SeletorDeMods";
-import { podeJogarOnline, type DependenciasDoMapa } from "./mapaNaRede";
-import type { EstadoDaSalaDoMania, PerfilDoMania } from "./protocolo";
+import { acharNaBiblioteca, podeJogarOnline, type MapaDaBiblioteca, type DependenciasDoMapa } from "./mapaNaRede";
+import type { EstadoDaSalaDoMania, MapaNaRede, PerfilDoMania } from "./protocolo";
 import {
   comecar,
   criarSalaOnline,
@@ -106,15 +111,20 @@ interface PropsDoLobby {
 
 /** O lobby neutro com a escolha de mapa e mods do Mania. */
 function LobbyDoMania({ sala, enderecoDoCelular, codigo, online, conjuntos, dependencias, lerOsz, volumeDosEfeitos }: PropsDoLobby) {
-  const { preparo } = useMapaDaSala(sala.mapa, sala.souHost, dependencias);
+  const { preparo, achado: resolvido } = useMapaDaSala(sala.mapa, sala.souHost, dependencias);
   const [filtro, setFiltro] = useState("");
-  const opcoes = useMemo(() => {
+  const grupos = useMemo(() => {
     const termo = filtro.trim().toLowerCase();
+    let restantes = MAXIMO_NA_LISTA;
     return conjuntos
       .filter((c) => !online || podeJogarOnline(c))
-      .flatMap((conjunto) => conjunto.mapas.map((dificuldade) => ({ conjunto, dificuldade, nome: `${conjunto.tituloUnicode || conjunto.titulo} [${dificuldade.dificuldade}]` })))
-      .filter((o) => !termo || `${o.nome} ${o.conjunto.artista}`.toLowerCase().includes(termo))
-      .slice(0, MAXIMO_NA_LISTA);
+      .map((conjunto) => {
+        const titulo = conjunto.tituloUnicode || conjunto.titulo;
+        const dificuldades = conjunto.mapas.filter((d) => !termo || `${titulo} [${d.dificuldade}] ${conjunto.artista}`.toLowerCase().includes(termo)).slice(0, Math.max(restantes, 0));
+        restantes -= dificuldades.length;
+        return { conjunto, titulo, dificuldades };
+      })
+      .filter((g) => g.dificuldades.length > 0);
   }, [conjuntos, online, filtro]);
 
   const escolherNaSala = (conjunto: ConjuntoSalvo, dificuldade: DificuldadeSalva) => {
@@ -123,7 +133,8 @@ function LobbyDoMania({ sala, enderecoDoCelular, codigo, online, conjuntos, depe
   };
 
   const mods = siglasDosMods(sala.mods);
-  const nomeDoMapa = sala.mapa ? `${sala.mapa.titulo} [${sala.mapa.dificuldade}]` : "O host ainda não escolheu o mapa.";
+  const naBiblioteca = sala.mapa ? acharNaBiblioteca(sala.mapa, conjuntos) : null;
+  const achado = naBiblioteca ?? resolvido;
 
   const escolha = (
     <>
@@ -131,28 +142,40 @@ function LobbyDoMania({ sala, enderecoDoCelular, codigo, online, conjuntos, depe
       {sala.souHost ? (
         <>
           <Input placeholder="Procurar na biblioteca" aria-label="Procurar mapa" value={filtro} onChange={(e) => setFiltro(e.target.value)} />
-          {!opcoes.length && <p className="text-sm text-texto-suave">{online ? "Nenhum mapa do osu! na biblioteca. Baixe pela busca." : "Nenhum mapa na biblioteca."}</p>}
-          <div role="radiogroup" aria-label="Mapa" className="rolagem-de-toque flex min-h-48 flex-1 flex-col gap-1 max-md:max-h-48 max-md:min-h-0 max-md:flex-none">
-            {opcoes.map(({ conjunto, dificuldade, nome }) => {
-              const escolhido = dificuldade.hash === sala.mapa?.hash;
-              return (
-                <button
-                  key={`${conjunto.id}:${dificuldade.hash}`}
-                  role="radio"
-                  aria-checked={escolhido}
-                  aria-label={nome}
-                  onClick={() => escolherNaSala(conjunto, dificuldade)}
-                  className={cn("flex items-center gap-4 rounded-lg px-4 py-2 text-left text-base max-md:gap-2 max-md:px-2 max-md:py-1.5 max-md:text-sm", escolhido ? "bg-primaria" : "hover:bg-superficie-hover")}
-                >
-                  <span className="flex-1 truncate font-semibold">{nome}</span>
-                  <span className="text-texto-suave">{dificuldade.teclas}K</span>
-                </button>
-              );
-            })}
-          </div>
+          {!grupos.length && <p className="text-sm text-texto-suave">{online ? "Nenhum mapa do osu! na biblioteca. Baixe pela busca." : "Nenhum mapa na biblioteca."}</p>}
+          <ListaDeEscolhaDaSala
+            rotulo="Mapa"
+            grupos={grupos.map(({ conjunto, titulo, dificuldades }) => ({
+              id: conjunto.id,
+              titulo,
+              subtitulo: conjunto.artistaUnicode || conjunto.artista,
+              capa: <CapaDoConjunto conjunto={conjunto} className={CLASSE_DA_CAPA_DA_ESCOLHA} />,
+              duracao: formatarDuracao(Math.max(...conjunto.mapas.map((m) => m.duracaoMs ?? 0))),
+              itens: dificuldades.map((d) => {
+                const estrelas = conjunto.estrelas?.[d.hash];
+                return {
+                  id: d.hash,
+                  rotulo: d.dificuldade,
+                  nomeAcessivel: `${titulo} [${d.dificuldade}]`,
+                  escolhido: d.hash === sala.mapa?.hash,
+                  detalhe: (
+                    <>
+                      {estrelas !== undefined && <span className="font-mono text-texto-suave">{formatarEstrelas(estrelas)}</span>}
+                      <span className="text-texto-suave">{d.teclas}K</span>
+                    </>
+                  ),
+                };
+              }),
+            }))}
+            aoEscolher={(idDoConjunto, hash) => {
+              const conjunto = conjuntos.find((c) => c.id === idDoConjunto);
+              const dificuldade = conjunto?.mapas.find((m) => m.hash === hash);
+              if (conjunto && dificuldade) escolherNaSala(conjunto, dificuldade);
+            }}
+          />
         </>
       ) : (
-        <p className="text-2xl font-black max-md:text-lg">{nomeDoMapa}</p>
+        <EscolhaDoHost mapa={sala.mapa} achado={achado ?? undefined} instalado={!!naBiblioteca} />
       )}
     </>
   );
@@ -165,9 +188,14 @@ function LobbyDoMania({ sala, enderecoDoCelular, codigo, online, conjuntos, depe
       escolha={escolha}
       opcoes={
         sala.souHost ? (
-          <SeletorDeMods mods={sala.mods} aoMudar={escolherMods} />
+          <div className="flex items-center gap-4">
+            <BotaoDeModificadores ligados={mods.length}>
+              <SeletorDeMods mods={sala.mods} aoMudar={escolherMods} />
+            </BotaoDeModificadores>
+            {mods.length > 0 && <p className="text-base text-texto-suave">Mods: {mods.join(" ")}</p>}
+          </div>
         ) : (
-          <p className="text-base text-texto-suave">{sala.mapa && `${sala.mapa.teclas}K`}{mods.length > 0 && ` · Mods: ${mods.join(" ")}`}</p>
+          mods.length > 0 && <p className="text-base text-texto-suave">Mods: {mods.join(" ")}</p>
         )
       }
       preparo={preparo}
@@ -179,6 +207,36 @@ function LobbyDoMania({ sala, enderecoDoCelular, codigo, online, conjuntos, depe
       aoExpulsar={(id) => expulsar(id)}
       aoPassarLideranca={(id) => passarLideranca(id)}
       aoEnviarChat={(texto) => enviarChat(texto)}
+    />
+  );
+}
+
+/** O convidado vê o mapa do host com a capa e os números dele; os números saem do .osu quando ele já está na biblioteca. */
+function EscolhaDoHost({ mapa, achado, instalado }: { mapa: MapaNaRede | null; achado?: MapaDaBiblioteca; instalado: boolean }) {
+  if (!mapa) return <EsperandoAEscolha icone={Music} texto="O host ainda não escolheu o mapa." />;
+  const d = achado?.dificuldade;
+  const estrelas = d && achado.conjunto.estrelas?.[d.hash];
+  const estatisticas = [
+    { rotulo: "Dificuldade", valor: mapa.dificuldade },
+    { rotulo: "Teclas", valor: `${mapa.teclas}K` },
+    ...(estrelas !== undefined && estrelas !== null ? [{ rotulo: "Estrelas", valor: formatarEstrelas(estrelas) }] : []),
+    ...(d
+      ? [
+          { rotulo: "Duração", valor: d.duracaoMs ? formatarDuracao(d.duracaoMs) : undefined },
+          { rotulo: "Notas", valor: d.notas?.toLocaleString("pt-BR") },
+          { rotulo: "Notas longas", valor: d.notasLongas?.toLocaleString("pt-BR") },
+          { rotulo: "Precisão (OD)", valor: d.od },
+          { rotulo: "Vida (HP)", valor: d.hp },
+        ].filter((e) => e.valor !== undefined && e.valor !== "")
+      : []),
+  ];
+  return (
+    <CartaoDaEscolha
+      capa={achado ? <CapaDoConjunto conjunto={achado.conjunto} /> : <CapaDaFonte fonte={undefined} />}
+      titulo={mapa.titulo}
+      subtitulo={mapa.artista}
+      etiqueta={<p className={cn("text-base font-semibold", instalado ? "text-sucesso" : "text-texto-suave")}>{instalado ? "Instalado" : "Ainda não instalado"}</p>}
+      estatisticas={estatisticas}
     />
   );
 }

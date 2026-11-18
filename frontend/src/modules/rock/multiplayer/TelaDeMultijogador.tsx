@@ -1,6 +1,6 @@
 import { ProcurarSala, TelaDaSala } from "@/modules/multiplayer";
 import { Avatar, type Personagem } from "@/modules/rock/character";
-import type { Dificuldade, Instrumento, Musica } from "@/modules/rock/songs";
+import type { Musica } from "@/modules/rock/songs";
 import { Button } from "@/shared/ui/button";
 import { Lobby } from "./componentes/Lobby";
 import { podeTocarOnline } from "./musicaNaRede";
@@ -14,13 +14,11 @@ interface Props {
   aoEditarPersonagem: () => void;
   /** Abre a busca de músicas sem sair da sala. */
   aoBuscarMusicas: () => void;
-  /** Sorteia e baixa um chart oficial para a sala. */
-  sortearAleatoria?: (dificuldade: Dificuldade, instrumento: Instrumento) => Promise<Musica>;
   /** Abre a lista de amigos para chamar alguém. Só a sala online alcança os amigos. */
   aoConvidarAmigos?: () => void;
 }
 
-export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVoltar, aoEditarPersonagem, aoBuscarMusicas, sortearAleatoria, aoConvidarAmigos }: Props) {
+export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVoltar, aoEditarPersonagem, aoBuscarMusicas, aoConvidarAmigos }: Props) {
   const { sala, info, erro, online, codigo, endereco } = useConexao();
   const musicasDaSala = online ? musicas.filter(podeTocarOnline) : musicas;
 
@@ -55,7 +53,7 @@ export function TelaDeMultijogador({ personagem, musicas, volumeDosEfeitos, aoVo
           }}
         />
       }
-      lobby={sala && <Lobby sala={sala} info={info} codigo={codigo} endereco={endereco} musicas={musicasDaSala} volumeDosEfeitos={volumeDosEfeitos} sortearAleatoria={sortearAleatoria} />}
+      lobby={sala && <Lobby sala={sala} info={info} codigo={codigo} endereco={endereco} musicas={musicasDaSala} volumeDosEfeitos={volumeDosEfeitos} />}
     />
   );
 }

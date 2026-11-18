@@ -9,3 +9,6 @@ export function faixaDasEstrelas(estrelas: number): FaixaDeDificuldade {
   if (estrelas < 6.5) return "Expert";
   return "Expert+";
 }
+
+/** As estrelas do osu! com duas casas: "4,25★". */
+export const formatarEstrelas = (estrelas: number) => `${estrelas.toFixed(2).replace(".", ",")}★`;

@@ -39,19 +39,20 @@ export function ProcurarSala({ retrato, acoes, volumeDosEfeitos }: Props) {
   // O celular que entrou pelo QR code só entra na sala de quem serviu a página.
   const online = temModoOnline() && !noCelular;
 
-  const procurar = async () => {
-    setProcurando(true);
+  // A busca periódica é silenciosa: trocar o texto a cada poucos segundos fazia a lista piscar.
+  const procurar = async (silenciosa = false) => {
+    if (!silenciosa) setProcurando(true);
     try {
       setSalasOnline(await procurarSalasOnline());
     } finally {
-      setProcurando(false);
+      if (!silenciosa) setProcurando(false);
     }
   };
 
   useEffect(() => {
     if (!online) return;
     void procurar();
-    const id = setInterval(() => void procurar(), INTERVALO_DA_BUSCA);
+    const id = setInterval(() => void procurar(true), INTERVALO_DA_BUSCA);
     return () => clearInterval(id);
     // A busca só depende de ter o modo online, que não muda.
     // eslint-disable-next-line react-hooks/exhaustive-deps

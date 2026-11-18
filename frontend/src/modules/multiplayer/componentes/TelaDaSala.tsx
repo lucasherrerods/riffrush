@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ArrowLeft, Download, Loader2, LogOut, UserPlus } from "lucide-react";
 import { useTeclado } from "@/shared/hooks/useTeclado";
 import { Button } from "@/shared/ui/button";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/shared/ui/dialog";
 
 interface Props {
   /** O jogador já está numa sala (conectando ou dentro). */
@@ -24,14 +25,17 @@ interface Props {
 
 /** A moldura da tela de multijogador, igual nos dois modos. */
 export function TelaDaSala({ naSala, conectando, erro, aoVoltar, aoSair, aoBaixar, rotuloDoBaixar = "Baixar músicas", aoConvidarAmigos, busca, lobby }: Props) {
+  const [confirmando, setConfirmando] = useState(false);
+  // Dentro da sala, voltar é sair dela: pergunta antes, para ninguém sair sem querer.
+  const voltar = () => (naSala ? setConfirmando(true) : aoVoltar());
   useTeclado((evento) => {
-    if (evento.code === "Escape" && !(evento.target instanceof HTMLInputElement)) aoVoltar();
+    if (evento.code === "Escape" && !confirmando && !(evento.target instanceof HTMLInputElement)) voltar();
   });
 
   return (
     <div className="respiro-de-tela flex h-full flex-col max-md:rolagem-de-toque">
       <header className="flex items-center gap-4 max-md:gap-2">
-        <Button variant="ghost" size="icon" onClick={aoVoltar} aria-label="Voltar">
+        <Button variant="ghost" size="icon" onClick={voltar} aria-label="Voltar">
           <ArrowLeft />
         </Button>
         <h1 className="titulo-de-tela">Multiplayer</h1>
@@ -66,6 +70,26 @@ export function TelaDaSala({ naSala, conectando, erro, aoVoltar, aoSair, aoBaixa
         </p>
       )}
       {naSala && !conectando && lobby}
+      <Dialog open={confirmando} onOpenChange={setConfirmando}>
+        <DialogContent>
+          <DialogTitle>Sair da sala?</DialogTitle>
+          <DialogDescription>Voltar daqui tira você da sala. Para voltar a jogar com o pessoal, é preciso entrar de novo.</DialogDescription>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Ficar</Button>
+            </DialogClose>
+            <Button
+              onClick={() => {
+                setConfirmando(false);
+                aoSair();
+                aoVoltar();
+              }}
+            >
+              Sair da sala
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
