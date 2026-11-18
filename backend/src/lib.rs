@@ -94,7 +94,7 @@ pub fn app(estado: EstadoDoApp, origens_permitidas: &[String]) -> Router {
     let origens: Vec<HeaderValue> = origens_permitidas.iter().filter_map(|o| o.parse().ok()).collect();
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::list(origens))
-        .allow_methods([Method::GET, Method::POST, Method::DELETE])
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION]);
 
     Router::new()
