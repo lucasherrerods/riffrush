@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import QRCode from "qrcode";
-import { Check, Crown, Globe, Loader2, Play, Smartphone, Users } from "lucide-react";
+import { Check, Crown, Globe, Loader2, Play, Smartphone, User, UserPlus } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { PainelDeChat } from "@/modules/chat";
 import { cn } from "@/shared/lib/utils";
@@ -100,32 +100,42 @@ export function LobbyDaSala({
             return (
               <li
                 key={jogador?.id ?? `vaga-${i}`}
-                className={cn(
-                  "chapa relative flex flex-col items-center p-4 max-md:items-start max-md:p-2",
-                  jogador ? "border-borda bg-superficie" : "border-dashed border-borda bg-fundo",
-                )}
+                className={cn("relative flex flex-col", jogador ? "chapa overflow-hidden border-borda bg-superficie" : "items-center justify-center rounded-lg border-2 border-dashed border-borda")}
               >
                 {jogador ? (
                   <>
-                    {avatar?.(jogador)}
-                    <p className="mt-2 max-w-full truncate text-base font-bold max-md:mt-0 max-md:text-sm">{jogador.personagem.nome}</p>
-                    {jogador.personagem.nivel && <p className="font-titulo text-base leading-none text-destaque max-md:text-sm">Nv {jogador.personagem.nivel}</p>}
-                    <div className="flex flex-wrap gap-1 max-md:mt-1">
-                      {jogador.id === sala.hostId && <span className="rounded-full bg-ouro px-2 text-base font-bold text-fundo max-md:text-xs">Host</span>}
-                      {jogador.id === sala.meuId && <span className="rounded-full bg-superficie-elevada px-2 text-base max-md:text-xs">Você</span>}
-                      {sala.baixando?.includes(jogador.id) && (
-                        <span className="flex items-center gap-1 rounded-full bg-superficie-elevada px-2 text-base text-texto-suave max-md:text-xs">
-                          <Loader2 className="size-4 animate-spin opacity-70" aria-hidden /> Baixando
+                    {/* A carta do jogador: a capa (o personagem no Rock, a foto da conta no Mania) com o nome por cima. */}
+                    <div className="relative grid h-40 place-items-center overflow-hidden bg-superficie-elevada max-md:h-24">
+                      {avatar?.(jogador) ??
+                        (jogador.personagem.avatar ? (
+                          <img src={jogador.personagem.avatar} alt="" referrerPolicy="no-referrer" className="absolute inset-0 size-full object-cover" />
+                        ) : (
+                          <User className="size-12 text-texto-suave opacity-50" aria-hidden />
+                        ))}
+                      <div aria-hidden className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-superficie to-transparent" />
+                      {jogador.id === sala.hostId && (
+                        <span className="absolute top-2 left-2 flex items-center gap-1 rounded-sm bg-ouro px-2 text-sm font-bold text-fundo">
+                          <Crown className="size-4" aria-hidden /> Host
                         </span>
                       )}
+                      {jogador.id === sala.meuId && <span className="absolute top-2 right-2 rounded-sm bg-fundo/80 px-2 text-sm">Você</span>}
                       {sala.prontos.includes(jogador.id) && (
-                        <span className="flex items-center gap-1 rounded-full bg-sucesso px-2 text-base font-bold text-fundo max-md:text-xs">
-                          <Check className="size-4 opacity-70" aria-hidden /> Pronto
+                        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-sm border-2 border-sucesso bg-fundo/80 px-3 font-titulo text-2xl tracking-wider text-sucesso uppercase max-md:text-base">
+                          Pronto
                         </span>
                       )}
+                      <div className="absolute inset-x-0 bottom-0 px-3 pb-2 text-left max-md:px-2 max-md:pb-1">
+                        <p className="truncate text-lg font-black leading-tight max-md:text-sm">{jogador.personagem.nome}</p>
+                        {jogador.personagem.nivel && <p className="font-titulo text-base leading-none text-destaque max-md:text-sm">Nv {jogador.personagem.nivel}</p>}
+                      </div>
                     </div>
+                    {sala.baixando?.includes(jogador.id) && (
+                      <p className="flex items-center gap-1 px-3 pt-2 text-base text-texto-suave max-md:px-2 max-md:text-xs">
+                        <Loader2 className="size-4 animate-spin opacity-70" aria-hidden /> Baixando
+                      </p>
+                    )}
                     {sala.souHost && jogador.id !== sala.meuId && (
-                      <div className="mt-auto flex w-full gap-2 pt-3 max-md:flex-col max-md:gap-1 max-md:pt-2">
+                      <div className="mt-auto flex w-full gap-2 p-3 max-md:flex-col max-md:gap-1 max-md:p-2">
                         {/* Só no online: na LAN a sala e o arquivo compartilhado moram no PC de quem criou. */}
                         {codigo && (
                           <Button
@@ -151,9 +161,9 @@ export function LobbyDaSala({
                     )}
                   </>
                 ) : (
-                  <div className="flex h-32 w-full flex-col items-center justify-center gap-2 text-texto-suave max-md:h-14 max-md:gap-1">
-                    <Users className="opacity-50" aria-hidden />
-                    <p className="text-base max-md:text-sm">Esperando...</p>
+                  <div className="flex h-40 w-full flex-col items-center justify-center gap-2 text-texto-suave max-md:h-24 max-md:gap-1">
+                    <UserPlus className="opacity-50" aria-hidden />
+                    <p className="text-base max-md:text-sm">Vaga livre</p>
                   </div>
                 )}
               </li>

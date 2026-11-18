@@ -36,6 +36,26 @@ function lobby(extra: Partial<PropsDoLobby> = {}) {
 }
 
 describe("LobbyDaSala", () => {
+  it("a foto da conta vira a capa do card, e quem está pronto ganha o carimbo", () => {
+    const { container } = render(
+      <LobbyDaSala
+        sala={sala({ jogadores: [{ id: 1, personagem: { nome: "Lu", avatar: "https://exemplo.com/lu.png" } }, { id: 2, personagem: { nome: "Ana" } }], prontos: [2] })}
+        escolha={null}
+        preparo={{ tipo: "pronta" }}
+        podeComecar
+        volumeDosEfeitos={0}
+        aoComecar={vi.fn(async () => {})}
+        aoPronto={vi.fn()}
+        aoExpulsar={vi.fn()}
+        aoPassarLideranca={vi.fn()}
+        aoEnviarChat={vi.fn(() => true)}
+      />,
+    );
+    expect(container.querySelector('img[src="https://exemplo.com/lu.png"]')).not.toBeNull();
+    expect(screen.getByText("Ana").closest("li")).toHaveTextContent("Pronto");
+    expect(screen.getByText("Lu").closest("li")).not.toHaveTextContent("Pronto");
+  });
+
   it("o card de quem ainda baixa a escolha mostra que está baixando", () => {
     lobby({ sala: sala({ baixando: [2] }) });
     const ana = screen.getByText("Ana").closest("li")!;
@@ -56,7 +76,7 @@ describe("LobbyDaSala", () => {
     lobby();
     expect(screen.getByText("Lu")).toBeInTheDocument();
     expect(screen.getByText("Nv 3")).toBeInTheDocument();
-    expect(screen.getAllByText("Esperando...")).toHaveLength(2);
+    expect(screen.getAllByText("Vaga livre")).toHaveLength(2);
     expect(screen.getByText("o mapa escolhido")).toBeInTheDocument();
   });
 

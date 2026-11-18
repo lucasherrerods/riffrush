@@ -17,6 +17,8 @@ export interface PerfilNaSala {
   nome: string;
   /** O nível da conta, quando o jogador está logado. */
   nivel?: number;
+  /** A foto da conta, que vira a capa do card no lobby. */
+  avatar?: string;
 }
 
 /** O mínimo do placar ao vivo de cada jogador. */
@@ -114,11 +116,13 @@ export interface ReacaoDaSala<E, M> {
   sair?: string;
 }
 
-/** O nível vem do cliente de cada um: só um número de verdade aparece no lobby. */
+/** O nível e a foto vêm do cliente de cada um: só um número de verdade e um endereço https aparecem no lobby. */
 const NIVEL_MAXIMO = 9999;
-function limparNivel<P extends PerfilNaSala>(personagem: P): P {
-  const { nivel, ...resto } = personagem;
-  return (Number.isInteger(nivel) && nivel! >= 1 && nivel! <= NIVEL_MAXIMO ? { ...resto, nivel } : resto) as P;
+const TAMANHO_MAXIMO_DO_AVATAR = 512;
+const avatarValido = (avatar: unknown): avatar is string => typeof avatar === "string" && avatar.length <= TAMANHO_MAXIMO_DO_AVATAR && /^https:\/\/[^\s"'<>]+$/.test(avatar);
+function limparPerfil<P extends PerfilNaSala>(personagem: P): P {
+  const { nivel, avatar, ...resto } = personagem;
+  return { ...resto, ...(Number.isInteger(nivel) && nivel! >= 1 && nivel! <= NIVEL_MAXIMO && { nivel }), ...(avatarValido(avatar) && { avatar }) } as P;
 }
 
 /** O nome é livre: repetido, ganha um número, para ninguém se passar por outro na sala e no chat. */
@@ -189,7 +193,7 @@ export function criarProtocolo<Escolha extends object, NaRede extends object, P 
       case "oi": {
         if (!estado.souHost || estado.expulsos.includes(de)) return nada;
         const outros = estado.jogadores.filter((j) => j.id !== de);
-        const personagem = { ...limparNivel(mensagem.personagem), nome: nomeUnico(mensagem.personagem.nome, outros) };
+        const personagem = { ...limparPerfil(mensagem.personagem), nome: nomeUnico(mensagem.personagem.nome, outros) };
         const jogadores = [...outros, { id: de, personagem }].sort((a, b) => a.id - b.id);
         const novo = { ...estado, jogadores };
         return { estado: novo, enviar: [mensagemDaSala(novo)] };

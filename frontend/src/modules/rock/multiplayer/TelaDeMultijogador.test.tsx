@@ -159,7 +159,7 @@ describe("na sala", () => {
     abrir({ sala: naSala(true), endereco: "http://127.0.0.1:7777" });
     expect(screen.getByRole("img", { name: "Personagem Lucas" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Personagem Vitor" })).toBeInTheDocument();
-    expect(screen.getAllByText("Esperando...")).toHaveLength(2);
+    expect(screen.getAllByText("Vaga livre")).toHaveLength(2);
     expect(screen.getByText("Host")).toBeInTheDocument();
     expect(screen.getByText("Você")).toBeInTheDocument();
   });

@@ -10,7 +10,7 @@ const modoDeTeste: ModoDaSala<Escolha, NaRede> = {
   escreverEscolha: (e) => ({ modo: "teste", mapa: e.mapa }),
   lerEscolha: (m) => (m.modo === "teste" && typeof m.mapa === "string" ? { mapa: m.mapa } : null),
 };
-const protocolo = criarProtocolo<Escolha, NaRede, { nome: string; nivel?: number }, { pontos: number; terminou: boolean }>(modoDeTeste);
+const protocolo = criarProtocolo<Escolha, NaRede, { nome: string; nivel?: number; avatar?: string }, { pontos: number; terminou: boolean }>(modoDeTeste);
 
 function salaDoConvidado() {
   return protocolo.reduzir(protocolo.estadoInicial({ nome: "Ana" }, false), 0, { tipo: "bemVindo", id: 2 }, 0).estado;
@@ -85,5 +85,13 @@ describe("protocolo da sala", () => {
       const sem = protocolo.reduzir(salaDoConvidado(), 1, { tipo: "sala", jogadores: [], prontos: [], modo: "teste", mapa: "c" }, 0);
       expect(sem.estado.baixando).toEqual([]);
     });
+  });
+
+  it("o avatar da conta só entra na sala como endereço https de tamanho razoável", () => {
+    let host = protocolo.reduzir(protocolo.estadoInicial({ nome: "Lu" }, true), 0, { tipo: "bemVindo", id: 1 }, 0).estado;
+    host = protocolo.reduzir(host, 2, { tipo: "oi", personagem: { nome: "Ana", avatar: "https://exemplo.com/a.png" } }, 0).estado;
+    host = protocolo.reduzir(host, 3, { tipo: "oi", personagem: { nome: "Bia", avatar: "javascript:alert(1)" } }, 0).estado;
+    host = protocolo.reduzir(host, 4, { tipo: "oi", personagem: { nome: "Cris", avatar: `https://exemplo.com/${"a".repeat(600)}` } }, 0).estado;
+    expect(host.jogadores.map((j) => j.personagem.avatar)).toEqual(["https://exemplo.com/a.png", undefined, undefined]);
   });
 });
