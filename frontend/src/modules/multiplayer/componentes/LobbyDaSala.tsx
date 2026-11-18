@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import QRCode from "qrcode";
-import { Check, Crown, Globe, Loader2, Play, Smartphone, Users } from "lucide-react";
+import { Check, Crown, Globe, Loader2, Play, Smartphone, User, UserPlus } from "lucide-react";
 import { tocarEfeito } from "@/modules/audio";
 import { PainelDeChat } from "@/modules/chat";
 import { cn } from "@/shared/lib/utils";
@@ -11,18 +11,20 @@ import { MAXIMO_DE_JOGADORES, todosProntos, type Jogador, type MensagemDoChatDaS
 import { IconeDeChute } from "./IconeDeChute";
 
 /** Pronta sem nada só no host, no instante antes de achar a escolha na biblioteca. */
-export type PreparoDaEscolha = { tipo: "baixando" } | { tipo: "pronta" } | { tipo: "erro"; mensagem: string };
+/** "esperando": o host ainda não escolheu nada, então não há o que baixar nem pronto para dar. */
+export type PreparoDaEscolha = { tipo: "esperando" } | { tipo: "baixando" } | { tipo: "pronta" } | { tipo: "erro"; mensagem: string };
 
 export interface PropsDoLobby {
-  sala: { souHost: boolean; meuId: number; hostId: number; jogadores: Jogador[]; prontos: number[]; chat: MensagemDoChatDaSala[] };
+  sala: { souHost: boolean; meuId: number; hostId: number; jogadores: Jogador[]; prontos: number[]; baixando?: number[]; chat: MensagemDoChatDaSala[] };
   /** O retrato de cada jogador no modo (o personagem do Rock). */
   avatar?: (jogador: Jogador) => ReactNode;
   /** Sala online: o código que os amigos digitam. */
   codigo?: string;
   /** Só para o host da LAN: o endereço que o celular abre pelo QR code. */
   enderecoDoCelular?: string;
-  /** O que o host escolhe (a música, o mapa): a lista para o host, o nome para os convidados. */
-  escolha: ReactNode;
+  /** O que o host escolhe (a música, o mapa): a lista para o host, o cartão para os convidados.
+   * Como função, recebe a ação do convidado (o pronto) para pôr dentro do cartão; aí o lobby não a repete embaixo. */
+  escolha: ReactNode | ((acaoDoConvidado: ReactNode) => ReactNode);
   /** As opções da escolha, ao lado da largada (dificuldade, instrumento, mods). */
   opcoes?: ReactNode;
   /** Se o convidado já tem a escolha do host para dar pronto. */
@@ -33,6 +35,8 @@ export interface PropsDoLobby {
   volumeDosEfeitos: number;
   aoComecar: () => Promise<void>;
   aoPronto: (pronto: boolean) => void;
+  /** Só o convidado: avisa a sala se ainda está baixando a escolha. */
+  aoAvisarPreparo?: (baixando: boolean) => void;
   aoExpulsar: (id: number) => void;
   aoPassarLideranca: (id: number) => void;
   aoEnviarChat: (texto: string) => boolean;
@@ -52,6 +56,7 @@ export function LobbyDaSala({
   volumeDosEfeitos,
   aoComecar,
   aoPronto,
+  aoAvisarPreparo,
   aoExpulsar,
   aoPassarLideranca,
   aoEnviarChat,
@@ -63,6 +68,13 @@ export function LobbyDaSala({
   const [qr, setQr] = useState("");
   const [comecando, setComecando] = useState(false);
   const [confirmacao, setConfirmacao] = useState<{ tipo: "lideranca" | "expulsar"; id: number; nome: string } | null>(null);
+
+  const baixandoAgora = preparo.tipo === "baixando";
+  useEffect(() => {
+    if (!sala.souHost) aoAvisarPreparo?.(baixandoAgora);
+    // Só a mudança do download conta: o callback muda a cada render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baixandoAgora, sala.souHost]);
 
   useEffect(() => {
     if (enderecoDoCelular) void QRCode.toDataURL(enderecoDoCelular, { margin: 1, width: 220 }).then(setQr);
@@ -80,89 +92,9 @@ export function LobbyDaSala({
     }
   };
 
-  return (
-    <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:flex-none max-md:grid-cols-1 max-md:gap-2">
-      <div className="col-span-8 flex min-h-0 flex-col gap-4 max-md:col-span-1 max-md:min-h-fit max-md:gap-2">
-        <ul className="grid grid-cols-4 gap-4 max-md:grid-cols-2 max-md:gap-2">
-          {Array.from({ length: MAXIMO_DE_JOGADORES }, (_, i) => {
-            const jogador = sala.jogadores[i];
-            return (
-              <li
-                key={jogador?.id ?? `vaga-${i}`}
-                className={cn(
-                  "chapa relative flex flex-col items-center p-4 max-md:items-start max-md:p-2",
-                  jogador ? "border-borda bg-superficie" : "border-dashed border-borda bg-fundo",
-                )}
-              >
-                {jogador ? (
-                  <>
-                    {avatar?.(jogador)}
-                    <p className="mt-2 max-w-full truncate text-base font-bold max-md:mt-0 max-md:text-sm">{jogador.personagem.nome}</p>
-                    {jogador.personagem.nivel && <p className="font-titulo text-base leading-none text-destaque max-md:text-sm">Nv {jogador.personagem.nivel}</p>}
-                    <div className="flex flex-wrap gap-1 max-md:mt-1">
-                      {jogador.id === sala.hostId && <span className="rounded-full bg-ouro px-2 text-base font-bold text-fundo max-md:text-xs">Host</span>}
-                      {jogador.id === sala.meuId && <span className="rounded-full bg-superficie-elevada px-2 text-base max-md:text-xs">Você</span>}
-                      {sala.prontos.includes(jogador.id) && (
-                        <span className="flex items-center gap-1 rounded-full bg-sucesso px-2 text-base font-bold text-fundo max-md:text-xs">
-                          <Check className="size-4 opacity-70" aria-hidden /> Pronto
-                        </span>
-                      )}
-                    </div>
-                    {sala.souHost && jogador.id !== sala.meuId && (
-                      <div className="mt-auto flex w-full gap-2 pt-3 max-md:flex-col max-md:gap-1 max-md:pt-2">
-                        {/* Só no online: na LAN a sala e o arquivo compartilhado moram no PC de quem criou. */}
-                        {codigo && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            aria-label={`Passar a liderança para ${jogador.personagem.nome}`}
-                            className="flex-1"
-                            onClick={() => setConfirmacao({ tipo: "lideranca", id: jogador.id, nome: jogador.personagem.nome })}
-                          >
-                            <Crown className="text-ouro" /> Tornar host
-                          </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          aria-label={`Expulsar ${jogador.personagem.nome}`}
-                          className="flex-1 border-perigo/60 text-perigo hover:bg-perigo/10 hover:text-perigo"
-                          onClick={() => setConfirmacao({ tipo: "expulsar", id: jogador.id, nome: jogador.personagem.nome })}
-                        >
-                          <IconeDeChute /> Expulsar
-                        </Button>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="flex h-32 w-full flex-col items-center justify-center gap-2 text-texto-suave max-md:h-14 max-md:gap-1">
-                    <Users className="opacity-50" aria-hidden />
-                    <p className="text-base max-md:text-sm">Esperando...</p>
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-
-        {/* A escolha à esquerda, as opções e a largada à direita. A lista ocupa a altura livre e rola. */}
-        <section className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-6 placa p-6 max-md:flex-none max-md:grid-cols-1 max-md:grid-rows-none max-md:gap-3 max-md:p-3">
-          <div className="flex min-h-0 min-w-0 flex-col gap-2">{escolha}</div>
-
-          <div className="flex min-w-0 flex-col justify-end gap-4 max-md:gap-3">
-            {opcoes}
-            {sala.souHost ? (
-              <div className="flex flex-col gap-2">
-                <Button size="lg" disabled={comecando || !podeComecar || !todos} className="h-14 text-lg font-black max-md:h-10 max-md:text-base" onClick={() => void darLargada()}>
-                  {comecando ? <Loader2 className="animate-spin" /> : <Play className="fill-current opacity-70" />} Começar partida
-                </Button>
-                {!todos && (
-                  <p className="text-center text-base text-texto-suave max-md:text-sm">
-                    Esperando todos ficarem prontos ({prontos} de {convidados.length})
-                  </p>
-                )}
-              </div>
-            ) : preparo.tipo === "baixando" ? (
+  // O que o convidado faz com a escolha: o pronto, ou o aviso do download. O modo pode pôr isso dentro do próprio cartão.
+  const acaoDoConvidado =
+    preparo.tipo === "esperando" ? null : preparo.tipo === "baixando" ? (
               <p className="flex items-center justify-center gap-2 py-4 text-base text-texto-suave">
                 <Loader2 className="size-4 animate-spin" aria-hidden /> {rotuloDoDownload}
               </p>
@@ -190,8 +122,116 @@ export function LobbyDaSala({
               >
                 <Check className="opacity-70" /> Estou pronto
               </Button>
-            )}
-          </div>
+    );
+
+  return (
+    <div className="grid min-h-0 flex-1 grid-cols-12 gap-6 max-md:flex-none max-md:grid-cols-1 max-md:gap-2">
+      <div className="col-span-8 flex min-h-0 flex-col gap-4 max-md:col-span-1 max-md:min-h-fit max-md:gap-2">
+        <ul className="grid grid-cols-4 gap-4 max-md:grid-cols-2 max-md:gap-2">
+          {Array.from({ length: MAXIMO_DE_JOGADORES }, (_, i) => {
+            const jogador = sala.jogadores[i];
+            return (
+              <li
+                key={jogador?.id ?? `vaga-${i}`}
+                className={cn("relative flex flex-col", jogador ? "chapa overflow-hidden border-borda bg-superficie" : "items-center justify-center rounded-lg border-2 border-dashed border-borda")}
+              >
+                {jogador ? (
+                  <>
+                    {/* A carta do jogador: a capa (o personagem no Rock, a foto da conta no Mania) com o nome por cima. */}
+                    <div className="relative grid h-40 place-items-center overflow-hidden bg-superficie-elevada max-md:h-24">
+                      {avatar?.(jogador) ??
+                        (jogador.personagem.avatar ? (
+                          <img src={jogador.personagem.avatar} alt="" referrerPolicy="no-referrer" className="absolute inset-0 size-full object-cover" />
+                        ) : (
+                          <User className="size-12 text-texto-suave opacity-50" aria-hidden />
+                        ))}
+                      <div aria-hidden className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-superficie to-transparent" />
+                      {jogador.id === sala.hostId && (
+                        <span className="absolute top-2 left-2 flex items-center gap-1 rounded-sm bg-ouro px-2 text-sm font-bold text-fundo">
+                          <Crown className="size-4" aria-hidden /> Host
+                        </span>
+                      )}
+                      {jogador.id === sala.meuId && <span className="absolute top-2 right-2 rounded-sm bg-fundo/80 px-2 text-sm">Você</span>}
+                      {sala.prontos.includes(jogador.id) && (
+                        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-sm border-2 border-sucesso bg-fundo/80 px-3 font-titulo text-2xl tracking-wider text-sucesso uppercase max-md:text-base">
+                          Pronto
+                        </span>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 px-3 pb-2 text-left max-md:px-2 max-md:pb-1">
+                        <p className="truncate text-lg font-black leading-tight max-md:text-sm">{jogador.personagem.nome}</p>
+                        {jogador.personagem.nivel && <p className="font-titulo text-base leading-none text-destaque max-md:text-sm">Nv {jogador.personagem.nivel}</p>}
+                      </div>
+                    </div>
+                    {sala.baixando?.includes(jogador.id) && (
+                      <p className="flex items-center gap-1 px-3 pt-2 text-base text-texto-suave max-md:px-2 max-md:text-xs">
+                        <Loader2 className="size-4 animate-spin opacity-70" aria-hidden /> Baixando
+                      </p>
+                    )}
+                    {sala.souHost && jogador.id !== sala.meuId && (
+                      <div className="mt-auto flex w-full gap-2 p-3 max-md:flex-col max-md:gap-1 max-md:p-2">
+                        {/* Só no online: na LAN a sala e o arquivo compartilhado moram no PC de quem criou. */}
+                        {codigo && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            aria-label={`Passar a liderança para ${jogador.personagem.nome}`}
+                            className="flex-1"
+                            onClick={() => setConfirmacao({ tipo: "lideranca", id: jogador.id, nome: jogador.personagem.nome })}
+                          >
+                            <Crown className="text-ouro" /> Tornar host
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          aria-label={`Expulsar ${jogador.personagem.nome}`}
+                          className="flex-1 border-perigo/60 text-perigo hover:bg-perigo/10 hover:text-perigo"
+                          onClick={() => setConfirmacao({ tipo: "expulsar", id: jogador.id, nome: jogador.personagem.nome })}
+                        >
+                          <IconeDeChute /> Expulsar
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex h-40 w-full flex-col items-center justify-center gap-2 text-texto-suave max-md:h-24 max-md:gap-1">
+                    <UserPlus className="opacity-50" aria-hidden />
+                    <p className="text-base max-md:text-sm">Vaga livre</p>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Host: a lista à esquerda, as opções e a largada à direita. Convidado: a escolha do host na placa toda, e o pronto embaixo. */}
+        <section
+          className={cn(
+            "grid min-h-0 flex-1 gap-6 placa p-6 max-md:flex-none max-md:grid-cols-1 max-md:grid-rows-none max-md:gap-3 max-md:p-3",
+            sala.souHost ? "grid-cols-2 grid-rows-[minmax(0,1fr)]" : "grid-cols-1 grid-rows-[minmax(0,1fr)_auto]",
+          )}
+        >
+          <div className="flex min-h-0 min-w-0 flex-col gap-2">{typeof escolha === "function" ? escolha(sala.souHost ? null : acaoDoConvidado) : escolha}</div>
+
+          {(sala.souHost || typeof escolha !== "function") && (
+            <div className={cn("flex min-w-0 flex-col justify-end gap-4 max-md:gap-3", !sala.souHost && "w-full max-w-md justify-self-end empty:hidden")}>
+              {opcoes}
+              {sala.souHost ? (
+              <div className="flex flex-col gap-2">
+                <Button size="lg" disabled={comecando || !podeComecar || !todos} className="h-14 text-lg font-black max-md:h-10 max-md:text-base" onClick={() => void darLargada()}>
+                  {comecando ? <Loader2 className="animate-spin" /> : <Play className="fill-current opacity-70" />} Começar partida
+                </Button>
+                {!todos && (
+                  <p className="text-center text-base text-texto-suave max-md:text-sm">
+                    Esperando todos ficarem prontos ({prontos} de {convidados.length})
+                  </p>
+                )}
+              </div>
+              ) : (
+                acaoDoConvidado
+              )}
+            </div>
+          )}
         </section>
       </div>
 
@@ -203,7 +243,6 @@ export function LobbyDaSala({
             <p className="text-base font-bold">Sala online</p>
             <p className="text-base text-texto-suave max-md:text-sm">Passe o código para os amigos:</p>
             <p className="font-mono text-5xl font-bold tracking-[0.2em] text-destaque max-md:text-3xl">{codigo}</p>
-            <p className="text-base text-texto-suave max-md:text-xs">Eles entram em Multijogador, no campo &quot;Código da sala online&quot;.</p>
           </section>
         )}
         {enderecoDoCelular && (

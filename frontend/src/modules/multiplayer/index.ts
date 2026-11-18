@@ -18,5 +18,9 @@ export {
 } from "./sala/protocolo";
 export { PORTA_DA_SALA, criarConexaoDaSala, daMesmaSala, ehClienteWebDaSala, type ConexaoDaSala, type InfoDaSala, type ModoDaConexao, type SalaEncontrada } from "./sala/conexao";
 export { LobbyDaSala, type PreparoDaEscolha, type PropsDoLobby } from "./componentes/LobbyDaSala";
+export { useSalaSoNasTelasDela } from "./sala/useSalaSoNasTelasDela";
+export { PlacarAoVivo, type LinhaAoVivo } from "./componentes/PlacarAoVivo";
+export { CartaoDaEscolha, EsperandoAEscolha, type EstatisticaDaEscolha } from "./componentes/CartaoDaEscolha";
+export { CLASSE_DA_CAPA_DA_ESCOLHA, ListaDeEscolhaDaSala, type GrupoDaEscolha, type ItemDaEscolha } from "./componentes/ListaDeEscolhaDaSala";
 export { ProcurarSala, type AcoesDaBusca } from "./componentes/ProcurarSala";
 export { TelaDaSala } from "./componentes/TelaDaSala";

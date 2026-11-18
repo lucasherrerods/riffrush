@@ -188,6 +188,12 @@ export function criarConexaoDaSala<Escolha extends object, NaRede extends object
     enviar([{ tipo: "pronto", musicaId: protocolo.modo.idDaEscolha(protocolo.escolhaDe(conexao.sala)), pronto }]);
   }
 
+  /** O convidado avisa se ainda está baixando a escolha, para o lobby de todos mostrar. */
+  function avisarPreparo(baixando: boolean) {
+    if (!conexao.sala || conexao.sala.souHost) return;
+    enviar([{ tipo: "preparo", musicaId: protocolo.modo.idDaEscolha(protocolo.escolhaDe(conexao.sala)), baixando }]);
+  }
+
   /** Só o host: dá a largada, se todos estão prontos. */
   function darLargada() {
     if (!conexao.sala?.souHost) return;
@@ -196,6 +202,7 @@ export function criarConexaoDaSala<Escolha extends object, NaRede extends object
   }
 
   function enviarEstado(estado: J) {
+    if (conexao.sala) atualizar({ sala: { ...conexao.sala, minhaJogada: estado } });
     if (conexao.online) {
       const agora = performance.now();
       if (!deveEnviarEstado(ultimoEstado, agora, estado)) return;
@@ -245,6 +252,7 @@ export function criarConexaoDaSala<Escolha extends object, NaRede extends object
     expulsar,
     passarLideranca,
     marcarPronto,
+    avisarPreparo,
     darLargada,
     enviarEstado,
     enviarChat,

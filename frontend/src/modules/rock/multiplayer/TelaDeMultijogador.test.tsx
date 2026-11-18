@@ -17,6 +17,7 @@ vi.mock("./sala", () => ({
   criarSala: vi.fn(),
   entrarNaSala: vi.fn(),
   sairDaSala: vi.fn(),
+  avisarPreparo: vi.fn(),
   // Como o de verdade, devolve uma Promise: o Lobby trata a falha com .catch.
   escolher: vi.fn(async () => {}),
   comecar: vi.fn(),
@@ -158,7 +159,7 @@ describe("na sala", () => {
     abrir({ sala: naSala(true), endereco: "http://127.0.0.1:7777" });
     expect(screen.getByRole("img", { name: "Personagem Lucas" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Personagem Vitor" })).toBeInTheDocument();
-    expect(screen.getAllByText("Esperando...")).toHaveLength(2);
+    expect(screen.getAllByText("Vaga livre")).toHaveLength(2);
     expect(screen.getByText("Host")).toBeInTheDocument();
     expect(screen.getByText("Você")).toBeInTheDocument();
   });
@@ -171,16 +172,16 @@ describe("na sala", () => {
 
   it("o host escolhe a música e a dificuldade", async () => {
     const { usuario } = abrir({ sala: naSala(true), endereco: "" });
-    await usuario.click(screen.getByRole("radio", { name: /Cosmic Riff/ }));
+    await usuario.click(screen.getByRole("radio", { name: "Cosmic Riff [Médio]" }));
     expect(sala.escolher).toHaveBeenCalledWith(MUSICAS_DE_TESTE[2], "medio", "guitarra");
-    await usuario.click(screen.getByRole("radio", { name: "Expert" }));
+    await usuario.click(screen.getByRole("radio", { name: `${MUSICAS_DE_TESTE[0].titulo} [Expert]` }));
     expect(sala.escolher).toHaveBeenCalledWith(MUSICAS_DE_TESTE[0], "expert", "guitarra");
   });
 
   it("o host só vê as dificuldades que o chart da música tem", () => {
     const soExpert = [{ ...MUSICAS_DE_TESTE[0], dificuldades: ["expert" as const] }];
     abrir({ sala: naSala(true), endereco: "" }, soExpert);
-    const grupo = screen.getByRole("radiogroup", { name: "Dificuldade" });
+    const grupo = screen.getByRole("group", { name: soExpert[0].titulo });
     expect(within(grupo).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Expert"]);
   });
 
@@ -197,14 +198,14 @@ describe("na sala", () => {
 
     it("o host vê as dificuldades do instrumento da sala", () => {
       abrir({ sala: naSala(true, { instrumento: "baixo" }), endereco: "" }, banda);
-      const grupo = screen.getByRole("radiogroup", { name: "Dificuldade" });
+      const grupo = screen.getByRole("group", { name: banda[0].titulo });
       expect(within(grupo).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Fácil", "Médio"]);
     });
 
     it("o convidado só vê o instrumento escolhido pelo host", () => {
       abrir({ sala: naSala(false, { instrumento: "baixo" }), endereco: "" }, banda);
       expect(screen.queryByRole("radiogroup", { name: "Instrumento" })).not.toBeInTheDocument();
-      expect(screen.getByText(/Instrumento: Baixo/)).toBeInTheDocument();
+      expect(screen.getByText(/· Baixo$/)).toBeInTheDocument();
     });
   });
 
@@ -214,18 +215,13 @@ describe("na sala", () => {
   });
 
   // Antes só 3 músicas apareciam por vez: pouco para escolher numa biblioteca grande.
-  it("com muitas músicas, lista todas numa lista rolável, e as setas trocam", async () => {
+  it("com muitas músicas, lista todas numa lista rolável", async () => {
     const muitas = Array.from({ length: 12 }, (_, i) => ({ ...MUSICAS_DE_TESTE[0], id: `m${i}`, titulo: `Faixa ${i}` }));
     vi.mocked(sala.useConexao).mockReturnValue({ sala: naSala(true, { musica: { tipo: "embutida", id: "m6" } }), endereco: "" });
     render(<TelaDeMultijogador personagem={lucas} musicas={muitas} volumeDosEfeitos={0} aoVoltar={vi.fn()} aoEditarPersonagem={vi.fn()} aoBuscarMusicas={vi.fn()} />);
-    const usuario = userEvent.setup();
     const lista = screen.getByRole("radiogroup", { name: "Música" });
-    expect(within(lista).getAllByRole("radio")).toHaveLength(12);
+    expect(within(lista).getAllByRole("group")).toHaveLength(12);
     expect(lista).toHaveClass("rolagem-de-toque");
-    await usuario.click(screen.getByRole("button", { name: "Próxima música" }));
-    expect(sala.escolher).toHaveBeenCalledWith(muitas[7], "medio", "guitarra");
-    await usuario.click(screen.getByRole("button", { name: "Música anterior" }));
-    expect(sala.escolher).toHaveBeenCalledWith(muitas[5], "medio", "guitarra");
   });
 
   it("o host online vê o código para os amigos, sem QR code", () => {

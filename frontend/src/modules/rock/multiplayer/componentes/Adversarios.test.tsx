@@ -21,9 +21,10 @@ function sala(extra: Partial<EstadoDaSala> = {}): EstadoDaSala {
 }
 
 describe("Adversarios", () => {
-  it("mostra só os outros jogadores, com chibi, pontos e vida", () => {
-    render(<Adversarios sala={sala({ adversarios: { 2: { pontos: 1234, vida: 0.3, sequencia: 5, pulso: 9, derrota: false, terminou: false } } })} />);
-    expect(screen.queryByRole("img", { name: "Personagem Lucas" })).toBeNull();
+  it("mostra todos, eu incluído, na ordem dos pontos, com chibi, pontos e vida", () => {
+    const minha = { pontos: 500, vida: 0.5, sequencia: 0, pulso: 0, derrota: false, terminou: false };
+    render(<Adversarios sala={sala({ minhaJogada: minha, adversarios: { 2: { pontos: 1234, vida: 0.3, sequencia: 5, pulso: 9, derrota: false, terminou: false } } })} />);
+    expect(screen.getAllByRole("listitem").map((li) => li.getAttribute("aria-label"))).toEqual(["1º Vitor", "2º Lucas"]);
     expect(screen.getByRole("img", { name: "Personagem Vitor" })).toBeInTheDocument();
     expect(screen.getByText("1.234")).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: "Vida de Vitor" })).toHaveAttribute("aria-valuenow", "30");
@@ -31,7 +32,7 @@ describe("Adversarios", () => {
 
   it("antes do primeiro estado, mostra zero pontos e vida pela metade", () => {
     render(<Adversarios sala={sala()} />);
-    expect(screen.getByText("0")).toBeInTheDocument();
+    expect(screen.getAllByText("0")).toHaveLength(2);
     expect(screen.getByRole("meter", { name: "Vida de Vitor" })).toHaveAttribute("aria-valuenow", "50");
   });
 

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { obterContextoDeAudio, preferenciasDeAudio } from "@/modules/audio";
 import { AudioContextFalso } from "@/test/audioFalso";
@@ -38,6 +38,10 @@ const rede = vi.hoisted(() => {
     },
     enviarEstado: vi.fn(),
     voltarParaASala: vi.fn(),
+    sairDaSala: vi.fn(() => {
+      conexao = { sala: null, endereco: "" };
+      ouvintes.forEach((o) => o());
+    }),
   };
 });
 vi.mock("./multijogador/sala", async (original) => {
@@ -48,6 +52,7 @@ vi.mock("./multijogador/sala", async (original) => {
     lerConexao: () => rede.ler(),
     enviarEstado: rede.enviarEstado,
     voltarParaASala: rede.voltarParaASala,
+    sairDaSala: rede.sairDaSala,
   };
 });
 
@@ -278,6 +283,50 @@ describe("TelaDoMania", () => {
       expect(await screen.findByRole("heading", { name: "Multiplayer" })).toBeInTheDocument();
     });
 
+    it("o Buscar mapas da sala volta para a sala, não para o menu", async () => {
+      const sala = { status: "naSala", souHost: true, meuId: 1, hostId: 1, jogadores: [{ id: 1, personagem: { nome: "Ana" } }], prontos: [], adversarios: {}, partidas: 0, inicio: 0, chat: [], baldesDoChat: {}, expulsos: [], personagem: { nome: "Ana" }, mapa: null, mods: 0 };
+      render(<TelaDoMania abrirBiblioteca={async () => bibliotecaNaMemoria()} />);
+      const usuario = userEvent.setup();
+      await usuario.click(screen.getByRole("button", { name: "Multiplayer" }));
+      act(() => rede.mudar({ sala, endereco: "" }));
+      await usuario.click(await screen.findByRole("button", { name: "Buscar mapas" }));
+      expect(await screen.findByRole("heading", { name: "Buscar mapas" })).toBeInTheDocument();
+      await usuario.click(screen.getByRole("button", { name: "Voltar" }));
+      expect(await screen.findByRole("heading", { name: "Multiplayer" })).toBeInTheDocument();
+    });
+
+    it("sair da tela da sala por qualquer caminho tira da sala", async () => {
+      const sala = { status: "naSala", souHost: true, meuId: 1, hostId: 1, jogadores: [{ id: 1, personagem: { nome: "Ana" } }], prontos: [], adversarios: {}, partidas: 0, inicio: 0, chat: [], baldesDoChat: {}, expulsos: [], personagem: { nome: "Ana" }, mapa: null, mods: 0 };
+      render(<TelaDoMania abrirBiblioteca={async () => bibliotecaNaMemoria()} />);
+      const usuario = userEvent.setup();
+      await usuario.click(screen.getByRole("button", { name: "Multiplayer" }));
+      act(() => rede.mudar({ sala, endereco: "" }));
+      await usuario.click(await screen.findByRole("button", { name: "Buscar mapas" }));
+      expect(rede.sairDaSala).not.toHaveBeenCalled();
+      await usuario.click(screen.getByRole("button", { name: "Voltar" }));
+      await usuario.click(await screen.findByRole("button", { name: "Voltar" }));
+      await usuario.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Sair da sala" }));
+      expect(rede.sairDaSala).toHaveBeenCalled();
+      expect(screen.getByRole("navigation", { name: "Menu do Mania" })).toBeInTheDocument();
+    });
+
+    it("o player toca a música do mapa escolhido na sala", async () => {
+      const seguirMapa = vi.spyOn(PlayerDeMusica.prototype, "seguirMapa");
+      const { usuario } = await abrir();
+      await screen.findByText(/Nenhum mapa ainda/);
+      const osz = arquivoOsz();
+      await usuario.upload(screen.getByLabelText("Arquivos .osz"), osz);
+      await screen.findByRole("heading", { name: "Música" });
+      const hash = lerOsz(new Uint8Array(await osz.arrayBuffer())).mapas[0].hash;
+      await usuario.click(screen.getByRole("button", { name: "Voltar" }));
+      await usuario.click(await screen.findByRole("button", { name: "Multiplayer" }));
+      seguirMapa.mockClear();
+      const sala = { status: "naSala", souHost: false, meuId: 2, hostId: 1, jogadores: [{ id: 1, personagem: { nome: "Ana" } }], prontos: [], baixando: [], adversarios: {}, partidas: 0, inicio: 0, chat: [], baldesDoChat: {}, expulsos: [], personagem: { nome: "Jogador" }, mapa: { tipo: "importado", hash, titulo: "Música", artista: "Banda", dificuldade: "Hard", teclas: 4 }, mods: 0 };
+      act(() => rede.mudar({ sala, endereco: "" }));
+      await waitFor(() => expect(seguirMapa).toHaveBeenCalledWith(expect.objectContaining({ titulo: "Música" })));
+      seguirMapa.mockRestore();
+    });
+
     it("a largada da sala abre o mapa para todos, manda o placar e o resultado mostra a sala", async () => {
       const { usuario } = await abrir();
       await screen.findByText(/Nenhum mapa ainda/);
@@ -286,6 +335,9 @@ describe("TelaDoMania", () => {
       await screen.findByRole("heading", { name: "Música" });
       const hash = lerOsz(new Uint8Array(await osz.arrayBuffer())).mapas[0].hash;
       const mapa = { tipo: "importado", hash, titulo: "Música", artista: "Banda", dificuldade: "Hard", teclas: 4 };
+      // Como no app: a largada chega para quem está na tela da sala.
+      await usuario.click(screen.getByRole("button", { name: "Voltar" }));
+      await usuario.click(await screen.findByRole("button", { name: "Multiplayer" }));
       const jogadores = [
         { id: 1, personagem: { nome: "Ana" } },
         { id: 2, personagem: { nome: "Jogador" } },

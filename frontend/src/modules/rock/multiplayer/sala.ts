@@ -22,6 +22,7 @@ export const {
   expulsar,
   passarLideranca,
   marcarPronto,
+  avisarPreparo,
   enviarEstado,
   enviarChat,
   voltarParaASala,

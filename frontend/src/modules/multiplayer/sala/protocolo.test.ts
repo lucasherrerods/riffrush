@@ -10,7 +10,7 @@ const modoDeTeste: ModoDaSala<Escolha, NaRede> = {
   escreverEscolha: (e) => ({ modo: "teste", mapa: e.mapa }),
   lerEscolha: (m) => (m.modo === "teste" && typeof m.mapa === "string" ? { mapa: m.mapa } : null),
 };
-const protocolo = criarProtocolo<Escolha, NaRede, { nome: string; nivel?: number }, { pontos: number; terminou: boolean }>(modoDeTeste);
+const protocolo = criarProtocolo<Escolha, NaRede, { nome: string; nivel?: number; avatar?: string }, { pontos: number; terminou: boolean }>(modoDeTeste);
 
 function salaDoConvidado() {
   return protocolo.reduzir(protocolo.estadoInicial({ nome: "Ana" }, false), 0, { tipo: "bemVindo", id: 2 }, 0).estado;
@@ -21,7 +21,7 @@ describe("protocolo da sala", () => {
     const host = protocolo.reduzir(protocolo.estadoInicial({ nome: "Lu" }, true), 0, { tipo: "bemVindo", id: 1 }, 0).estado;
     const { enviar, estado } = protocolo.escolher(host, { mapa: "b" });
     expect(estado.mapa).toBe("b");
-    expect(enviar).toEqual([{ tipo: "sala", jogadores: [], prontos: [], modo: "teste", mapa: "b" }]);
+    expect(enviar).toEqual([{ tipo: "sala", jogadores: [], prontos: [], baixando: [], modo: "teste", mapa: "b" }]);
   });
 
   it("o convidado lê a escolha do host", () => {
@@ -55,5 +55,43 @@ describe("protocolo da sala", () => {
   it("guarda o placar ao vivo de cada adversário", () => {
     const { estado } = protocolo.reduzir(salaDoConvidado(), 3, { tipo: "estado", pontos: 10, terminou: false }, 0);
     expect(estado.adversarios[3]).toEqual({ pontos: 10, terminou: false });
+  });
+
+  describe("quem ainda está baixando a escolha", () => {
+    function hostComAna() {
+      let host = protocolo.reduzir(protocolo.estadoInicial({ nome: "Lu" }, true), 0, { tipo: "bemVindo", id: 1 }, 0).estado;
+      host = protocolo.reduzir(host, 2, { tipo: "oi", personagem: { nome: "Ana" } }, 0).estado;
+      return host;
+    }
+
+    it("o host anota e avisa a sala, só para a escolha atual", () => {
+      const host = hostComAna();
+      expect(protocolo.reduzir(host, 2, { tipo: "preparo", musicaId: "outro", baixando: true }, 0).estado.baixando).toEqual([]);
+      const { estado, enviar } = protocolo.reduzir(host, 2, { tipo: "preparo", musicaId: "a", baixando: true }, 0);
+      expect(estado.baixando).toEqual([2]);
+      expect(enviar[0]).toMatchObject({ tipo: "sala", baixando: [2] });
+      expect(protocolo.reduzir(estado, 2, { tipo: "preparo", musicaId: "a", baixando: false }, 0).estado.baixando).toEqual([]);
+    });
+
+    it("escolha nova e quem sai limpam a lista", () => {
+      const host = protocolo.reduzir(hostComAna(), 2, { tipo: "preparo", musicaId: "a", baixando: true }, 0).estado;
+      expect(protocolo.escolher(host, { mapa: "b" }).estado.baixando).toEqual([]);
+      expect(protocolo.reduzir(host, 2, { tipo: "saiu" }, 0).estado.baixando).toEqual([]);
+    });
+
+    it("o convidado lê a lista do host, e a de um host antigo, sem ela, vira vazia", () => {
+      const com = protocolo.reduzir(salaDoConvidado(), 1, { tipo: "sala", jogadores: [], prontos: [], baixando: [2], modo: "teste", mapa: "c" }, 0);
+      expect(com.estado.baixando).toEqual([2]);
+      const sem = protocolo.reduzir(salaDoConvidado(), 1, { tipo: "sala", jogadores: [], prontos: [], modo: "teste", mapa: "c" }, 0);
+      expect(sem.estado.baixando).toEqual([]);
+    });
+  });
+
+  it("o avatar da conta só entra na sala como endereço https de tamanho razoável", () => {
+    let host = protocolo.reduzir(protocolo.estadoInicial({ nome: "Lu" }, true), 0, { tipo: "bemVindo", id: 1 }, 0).estado;
+    host = protocolo.reduzir(host, 2, { tipo: "oi", personagem: { nome: "Ana", avatar: "https://exemplo.com/a.png" } }, 0).estado;
+    host = protocolo.reduzir(host, 3, { tipo: "oi", personagem: { nome: "Bia", avatar: "javascript:alert(1)" } }, 0).estado;
+    host = protocolo.reduzir(host, 4, { tipo: "oi", personagem: { nome: "Cris", avatar: `https://exemplo.com/${"a".repeat(600)}` } }, 0).estado;
+    expect(host.jogadores.map((j) => j.personagem.avatar)).toEqual(["https://exemplo.com/a.png", undefined, undefined]);
   });
 });

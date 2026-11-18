@@ -431,6 +431,7 @@ describe("App em rede", () => {
     musica: { tipo: "embutida" as const, id: "spektrem-shine" },
     dificuldade: "expert" as const,
     prontos: [],
+    baixando: [],
     adversarios: {},
     partidas: 1,
     inicio: performance.now() + 5000,

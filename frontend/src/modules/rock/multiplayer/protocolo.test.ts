@@ -51,7 +51,7 @@ describe("reduzir", () => {
   it("o host registra quem chega e manda a sala atualizada para todos", () => {
     const { estado, enviar } = reduzir(salaDoHost(), 2, { tipo: "oi", personagem: vitor }, 0);
     expect(estado.jogadores).toEqual([{ id: 2, personagem: vitor }]);
-    expect(enviar).toEqual([{ tipo: "sala", jogadores: estado.jogadores, musica: estado.musica, dificuldade: estado.dificuldade, instrumento: "guitarra", prontos: [] }]);
+    expect(enviar).toEqual([{ tipo: "sala", jogadores: estado.jogadores, musica: estado.musica, dificuldade: estado.dificuldade, instrumento: "guitarra", prontos: [], baixando: [] }]);
   });
 
   it("um jogador que muda o personagem não aparece duas vezes", () => {

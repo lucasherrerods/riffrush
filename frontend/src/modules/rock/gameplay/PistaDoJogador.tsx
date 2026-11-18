@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "rea
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronsUp } from "lucide-react";
 import { PALHETA_DO_CONTROLE, veioDoControle } from "@/modules/gamepad";
-import { tocarEfeito } from "@/modules/audio";
+import { tocarEfeito, useBipDaContagem } from "@/modules/audio";
 import { Avatar, novaReacao, type Personagem, type Reacao } from "@/modules/rock/character";
 import { escalaDoCanvas, opacidadeDaPista, type EstadoDoPalco } from "@/modules/rock/stage";
 import { PISTA_ABERTA, type Dificuldade, type Instrumento, type Musica, type MusicaCarregada, type Trecho } from "@/modules/rock/songs";
@@ -14,7 +14,7 @@ import { AvisoDeAcerto } from "./componentes/AvisoDeAcerto";
 import { BarraDeEstrelas } from "./componentes/BarraDeEstrelas";
 import { MedidorCompacto } from "./componentes/MedidorCompacto";
 import { MedidorDeRock } from "./componentes/MedidorDeRock";
-import { NumeroDaContagem } from "./componentes/NumeroDaContagem";
+import { NumeroDaContagem } from "@/shared/ui/NumeroDaContagem";
 import { PainelDePontos } from "./componentes/PainelDePontos";
 import { NOMES_DAS_PISTAS } from "./cores";
 import { progressoDasEstrelas } from "./estrelas";
@@ -611,7 +611,7 @@ export function PistaDoJogador(props: Props) {
         </div>
       )}
 
-      <HudDaPartida loja={loja} layout={layout} estreita={estreita} comPalco={comPalco} pausado={pausado} derrota={derrota} comAbertura={opcoes.efeitos} hudEntrou={hudEntrou} personagem={personagemDoHud} bpm={(props.musica.bpm || 120) * velocidade} aoEstrela={() => controle.current.estrela()} />
+      <HudDaPartida loja={loja} bipDaLargada={emRede ? opcoes.volumeDosEfeitos : null} layout={layout} estreita={estreita} comPalco={comPalco} pausado={pausado} derrota={derrota} comAbertura={opcoes.efeitos} hudEntrou={hudEntrou} personagem={personagemDoHud} bpm={(props.musica.bpm || 120) * velocidade} aoEstrela={() => controle.current.estrela()} />
 
       <AnimatePresence>
         {aviso && (
@@ -634,6 +634,8 @@ export function PistaDoJogador(props: Props) {
 
 interface PropsDoHud {
   loja: LojaDoHud<Hud>;
+  /** Na sala: o bip da largada, no volume dos efeitos. */
+  bipDaLargada: number | null;
   layout: ReturnType<typeof layoutDaPista>;
   estreita: boolean;
   comPalco: boolean;
@@ -649,7 +651,7 @@ interface PropsDoHud {
 }
 
 /** Tudo que muda junto com o placar. Cada pedaço lê da loja só o que mostra, então só ele re-renderiza. */
-function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, comAbertura, hudEntrou, personagem, bpm, aoEstrela }: PropsDoHud) {
+function HudDaPartida({ loja, bipDaLargada, layout, estreita, comPalco, pausado, derrota, comAbertura, hudEntrou, personagem, bpm, aoEstrela }: PropsDoHud) {
   const avatarDoJogador = (className: string) => personagem && <AvatarDoHud loja={loja} personagem={personagem} derrota={derrota} bpm={bpm} className={className} />;
 
   const semMovimento = useReducedMotion();
@@ -695,7 +697,7 @@ function HudDaPartida({ loja, layout, estreita, comPalco, pausado, derrota, comA
         </div>
       )}
 
-      <ContagemDoHud loja={loja} pausado={pausado} />
+      <ContagemDoHud loja={loja} pausado={pausado} bipar={bipDaLargada !== null} volume={bipDaLargada ?? 0} />
     </>
   );
 }
@@ -738,7 +740,9 @@ function MedidorDoHud({ loja }: { loja: LojaDoHud<Hud> }) {
   return <MedidorDeRock {...h} className="w-64" />;
 }
 
-function ContagemDoHud({ loja, pausado }: { loja: LojaDoHud<Hud>; pausado: boolean }) {
+function ContagemDoHud({ loja, pausado, bipar, volume }: { loja: LojaDoHud<Hud>; pausado: boolean; bipar: boolean; volume: number }) {
   const contagem = useLoja(loja, (h) => h.contagem);
+  // Na sala, o bip marca a largada igual para todos.
+  useBipDaContagem(contagem, volume, bipar && !pausado);
   return <AnimatePresence>{contagem > 0 && contagem <= 3 && !pausado && <NumeroDaContagem key={contagem} valor={contagem} />}</AnimatePresence>;
 }

@@ -8,14 +8,14 @@ import type { MapaNaRede } from "./protocolo";
  * quando já pode jogar. O host acha o dele na biblioteca.
  */
 export function useMapaDaSala(mapa: MapaNaRede | null, souHost: boolean, dependencias: DependenciasDoMapa): { preparo: PreparoDaEscolha; achado?: MapaDaBiblioteca } {
-  const [estado, setEstado] = useState<{ preparo: PreparoDaEscolha; achado?: MapaDaBiblioteca }>({ preparo: { tipo: souHost ? "pronta" : "baixando" } });
+  const [estado, setEstado] = useState<{ preparo: PreparoDaEscolha; achado?: MapaDaBiblioteca }>({ preparo: { tipo: souHost ? "pronta" : mapa ? "baixando" : "esperando" } });
   // As dependências mudam a cada render (a lista da biblioteca cresce com o próprio download): só o mapa dispara a busca.
   const atuais = useRef(dependencias);
   atuais.current = dependencias;
   const chave = mapa ? `${mapa.tipo}:${mapa.hash}` : "";
 
   useEffect(() => {
-    if (!mapa) return setEstado({ preparo: { tipo: souHost ? "pronta" : "baixando" } });
+    if (!mapa) return setEstado({ preparo: { tipo: souHost ? "pronta" : "esperando" } });
     let valendo = true;
     setEstado({ preparo: { tipo: souHost ? "pronta" : "baixando" } });
     resolverMapa(mapa, atuais.current)
