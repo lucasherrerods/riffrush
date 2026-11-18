@@ -1,4 +1,4 @@
-import type { Resultado } from "@/modules/rock/gameplay";
+import { posicoesPorPontos, type Resultado } from "@/modules/rock/gameplay";
 
 export interface ResultadoDoJogador {
   nome: string;
@@ -8,5 +8,6 @@ export interface ResultadoDoJogador {
 /** Mais pontos vence; empatados dividem a posição, como num pódio. */
 export function classificar(resultados: ResultadoDoJogador[]) {
   const ordenados = [...resultados].sort((a, b) => b.resultado.pontos - a.resultado.pontos);
-  return ordenados.map((linha) => ({ ...linha, posicao: 1 + ordenados.filter((outro) => outro.resultado.pontos > linha.resultado.pontos).length }));
+  const posicoes = posicoesPorPontos(ordenados.map((l) => l.resultado.pontos));
+  return ordenados.map((linha, i) => ({ ...linha, posicao: posicoes[i] }));
 }

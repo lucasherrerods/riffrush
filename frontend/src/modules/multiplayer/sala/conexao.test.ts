@@ -55,4 +55,16 @@ describe("conexão de um modo que não é o Rock", () => {
     conexao.marcarPronto(true);
     expect(socket.enviadas.at(-1)).toEqual({ tipo: "pronto", musicaId: "x", pronto: true });
   });
+
+  it("guarda a minha jogada mais recente, para o placar ao vivo me mostrar junto dos outros", async () => {
+    const conexao = await conexaoDoMania();
+    conexao.entrarNaSala("http://h:7777", { nome: "Ana" });
+    const socket = WebSocketFalso.ultimo!;
+    socket.abrir();
+    socket.receber(0, { tipo: "bemVindo", id: 2 });
+    conexao.enviarEstado({ pontos: 120, terminou: false });
+    expect(conexao.lerConexao().sala?.minhaJogada).toEqual({ pontos: 120, terminou: false });
+    socket.receber(1, { tipo: "comecar", modo: "mania", mapa: "y" });
+    expect(conexao.lerConexao().sala?.minhaJogada).toBeUndefined();
+  });
 });

@@ -24,6 +24,7 @@ import {
   escolherMods,
   expulsar,
   marcarPronto,
+  avisarPreparo,
   passarLideranca,
   procurarSalasOnline,
   sairDaSala,
@@ -204,6 +205,7 @@ function LobbyDoMania({ sala, enderecoDoCelular, codigo, online, conjuntos, depe
       volumeDosEfeitos={volumeDosEfeitos}
       aoComecar={async () => comecar()}
       aoPronto={(pronto) => marcarPronto(pronto)}
+      aoAvisarPreparo={(baixando) => avisarPreparo(baixando)}
       aoExpulsar={(id) => expulsar(id)}
       aoPassarLideranca={(id) => passarLideranca(id)}
       aoEnviarChat={(texto) => enviarChat(texto)}

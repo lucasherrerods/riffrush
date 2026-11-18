@@ -24,6 +24,7 @@ export { desenharPista, type Cena, type Sprites } from "./pista/desenhar";
 export { estiloDoJulgamento } from "./pista/efeitos";
 export { layoutDaPista, type LayoutDaPista } from "./pista/geometria";
 export { resultadoDaPartida, valorDosAcertos, type Resultado } from "./resultado";
+export { posicoesPorPontos } from "./posicoes";
 export { codigoDaEntrada, desempacotarReplay, emTicks, entradaDoCodigo, hashDoChart, type EntradaDoReplay, type EventoDaTransmissao, type Replay } from "./replay";
 export type { EstadoDoJogador } from "./rede";
 export { OPCOES_PADRAO_DA_PARTIDA, type JogadorLocal, type OpcoesDaPartida } from "./opcoesDaPartida";

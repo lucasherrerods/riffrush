@@ -1,4 +1,4 @@
-import { Placar } from "@/modules/multiplayer";
+import { Placar, PlacarAoVivo } from "@/modules/multiplayer";
 import { comoPorcentagem } from "../gameplay/estatisticas";
 import type { EstadoDaSalaDoMania, JogadaDoMania } from "./protocolo";
 
@@ -9,9 +9,9 @@ interface Props {
   aoVivo?: boolean;
 }
 
-/** O placar neutro com a pontuação e a precisão de cada jogador do Mania. */
-export function PlacarDaSalaMania({ sala, eu, aoVivo }: Props) {
-  const linhas = sala.jogadores.map((jogador) => {
+/** As linhas de cada jogador: a minha jogada vem de `eu`, a dos outros da rede. */
+function linhasDoMania(sala: Props["sala"], eu: JogadaDoMania | undefined) {
+  return sala.jogadores.map((jogador) => {
     const meu = jogador.id === sala.meuId;
     const jogada = meu ? eu : sala.adversarios[jogador.id];
     return {
@@ -25,5 +25,16 @@ export function PlacarDaSalaMania({ sala, eu, aoVivo }: Props) {
       terminou: !!jogada?.terminou,
     };
   });
+}
+
+/** O placar neutro com a pontuação e a precisão de cada jogador do Mania. */
+export function PlacarDaSalaMania({ sala, eu, aoVivo }: Props) {
+  const linhas = linhasDoMania(sala, eu);
   return <Placar linhas={linhas} rotuloDaDerrota="Falhou" aoVivo={aoVivo} />;
+}
+
+/** Durante a partida: a posição de todos, eu incluído, com a precisão de cada um. */
+export function PlacarAoVivoDoMania({ sala }: { sala: Pick<EstadoDaSalaDoMania, "jogadores" | "adversarios" | "meuId" | "minhaJogada"> }) {
+  const linhas = linhasDoMania(sala, sala.minhaJogada).map((l) => ({ ...l, extra: l.detalhe && <p className="font-mono text-sm text-texto-suave tabular-nums">{l.detalhe}</p> }));
+  return <PlacarAoVivo linhas={linhas} />;
 }

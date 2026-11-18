@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
 
-/** O número grande do 3, 2, 1: no começo da música e ao voltar da pausa. */
-export function NumeroDaContagem({ valor }: { valor: number }) {
+/** O número grande do 3, 2, 1: na largada da sala e ao voltar da pausa. */
+export function NumeroDaContagem({ valor, rotulo = `Volta em ${valor}` }: { valor: number | string; rotulo?: string }) {
   return (
     <motion.p
       role="timer"
-      aria-label={`Volta em ${valor}`}
+      aria-label={rotulo}
       // Entra rápido e sai sem animação: o número precisa estar certo no instante em que a música começa.
       initial={{ scale: 1.6, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
