@@ -36,6 +36,12 @@ function lobby(extra: Partial<PropsDoLobby> = {}) {
 }
 
 describe("LobbyDaSala", () => {
+  it("com a escolha como função, o pronto do convidado vai dentro dela e não se repete embaixo", () => {
+    lobby({ escolha: (acao) => <section aria-label="cartão">{acao}</section> });
+    expect(screen.getAllByRole("button", { name: /Estou pronto/ })).toHaveLength(1);
+    expect(screen.getByRole("region", { name: "cartão" })).toContainElement(screen.getByRole("button", { name: /Estou pronto/ }));
+  });
+
   it("a foto da conta vira a capa do card, e quem está pronto ganha o carimbo", () => {
     const { container } = render(
       <LobbyDaSala

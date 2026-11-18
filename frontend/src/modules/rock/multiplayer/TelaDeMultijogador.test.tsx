@@ -205,7 +205,7 @@ describe("na sala", () => {
     it("o convidado só vê o instrumento escolhido pelo host", () => {
       abrir({ sala: naSala(false, { instrumento: "baixo" }), endereco: "" }, banda);
       expect(screen.queryByRole("radiogroup", { name: "Instrumento" })).not.toBeInTheDocument();
-      expect(screen.getByText("Instrumento").nextSibling).toHaveTextContent("Baixo");
+      expect(screen.getByText(/· Baixo$/)).toBeInTheDocument();
     });
   });
 
