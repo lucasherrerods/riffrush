@@ -8,7 +8,7 @@ import { avisar } from "@/shared/ui/avisos";
 import { GrupoDeOpcoes } from "@/shared/ui/GrupoDeOpcoes";
 import { Input } from "@/shared/ui/input";
 import type { EstadoDaSala, PersonagemNaSala } from "../protocolo";
-import { comecar, enviarChat, escolher, expulsar, marcarPronto, passarLideranca, type InfoDaSala } from "../sala";
+import { comecar, enviarChat, escolher, expulsar, marcarPronto, avisarPreparo, passarLideranca, type InfoDaSala } from "../sala";
 import { useMusicaDaSala } from "../useMusicaDaSala";
 
 interface Props {
@@ -107,6 +107,7 @@ export function Lobby({ sala, info, codigo, endereco, musicas, volumeDosEfeitos 
         if (musica) await comecar(musica);
       }}
       aoPronto={(pronto) => marcarPronto(pronto)}
+      aoAvisarPreparo={(baixando) => avisarPreparo(baixando)}
       aoExpulsar={(id) => expulsar(id)}
       aoPassarLideranca={(id) => passarLideranca(id)}
       aoEnviarChat={(texto) => enviarChat(texto)}

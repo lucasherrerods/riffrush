@@ -56,7 +56,10 @@ export type MensagemDaSalaEmRede<NaRede, P extends PerfilNaSala, J extends Jogad
   | { tipo: "expulsar"; id: number }
   /** O host passou a liderança para o jogador `id` (só no online). Os expulsos continuam de fora. */
   | { tipo: "transferirHost"; id: number; expulsos: number[] }
-  | ({ tipo: "sala"; jogadores: Jogador<P>[]; prontos: number[] } & NaRede)
+  /** `baixando` falta nas versões antigas, que não sabem dele. */
+  | ({ tipo: "sala"; jogadores: Jogador<P>[]; prontos: number[]; baixando?: number[] } & NaRede)
+  /** O convidado começou (ou terminou) de baixar a escolha `musicaId`, para todos verem no lobby. */
+  | { tipo: "preparo"; musicaId: string; baixando: boolean }
   /** O convidado já tem a escolha `musicaId` e está (ou deixou de estar) pronto para começar. */
   | { tipo: "pronto"; musicaId: string; pronto: boolean }
   /** `rodada` junta as partidas desta largada, para o ranking contar uma vez só. Versões antigas não mandam. */
@@ -85,7 +88,11 @@ export interface EstadoBaseDaSala<P extends PerfilNaSala, J extends JogadaNaSala
   expulsos: number[];
   /** Convidados prontos para a escolha atual. O host mantém a lista e manda para todos. */
   prontos: number[];
+  /** Convidados ainda baixando a escolha atual. Também mantida pelo host. */
+  baixando: number[];
   adversarios: Record<number, J>;
+  /** O meu placar mais recente nesta partida: ele não volta pela rede, e o placar ao vivo me mostra junto dos outros. */
+  minhaJogada?: J;
   /** Conta quantas partidas começaram: a tela de jogo abre a cada aumento. */
   partidas: number;
   /** Instante (performance.now) em que a música começa para todos. */
@@ -144,7 +151,7 @@ export function criarProtocolo<Escolha extends object, NaRede extends object, P 
     return escolha as Escolha;
   };
 
-  const mensagemDaSala = (estado: Estado): Mensagem => ({ tipo: "sala", jogadores: estado.jogadores, prontos: estado.prontos, ...modo.escreverEscolha(escolhaDe(estado)) }) as Mensagem;
+  const mensagemDaSala = (estado: Estado): Mensagem => ({ tipo: "sala", jogadores: estado.jogadores, prontos: estado.prontos, baixando: estado.baixando, ...modo.escreverEscolha(escolhaDe(estado)) }) as Mensagem;
 
   function estadoInicial(personagem: P, souHost: boolean): Estado {
     return {
@@ -156,6 +163,7 @@ export function criarProtocolo<Escolha extends object, NaRede extends object, P 
       jogadores: [],
       expulsos: [],
       prontos: [],
+      baixando: [],
       adversarios: {},
       partidas: 0,
       inicio: 0,
@@ -188,20 +196,26 @@ export function criarProtocolo<Escolha extends object, NaRede extends object, P 
       }
       case "saiu": {
         if (de === estado.hostId && !estado.souHost) return { ...nada, sair: "O host fechou a sala." };
-        const novo = { ...estado, jogadores: estado.jogadores.filter((j) => j.id !== de), prontos: estado.prontos.filter((id) => id !== de) };
+        const novo = { ...estado, jogadores: estado.jogadores.filter((j) => j.id !== de), prontos: estado.prontos.filter((id) => id !== de), baixando: estado.baixando.filter((id) => id !== de) };
         return { estado: novo, enviar: estado.souHost ? [mensagemDaSala(novo)] : [] };
       }
       case "sala": {
         if (estado.souHost) return nada;
-        const { tipo: _, jogadores, prontos, ...naRede } = mensagem;
+        const { tipo: _, jogadores, prontos, baixando, ...naRede } = mensagem;
         const escolha = modo.lerEscolha(naRede as unknown as NaRede);
         if (!escolha) return { ...nada, sair: OUTRO_MODO };
-        return { estado: { ...estado, ...escolha, hostId: de, jogadores, prontos: prontos ?? [] }, enviar: [] };
+        return { estado: { ...estado, ...escolha, hostId: de, jogadores, prontos: prontos ?? [], baixando: Array.isArray(baixando) ? baixando.filter(Number.isInteger) : [] }, enviar: [] };
       }
       case "pronto": {
         if (!estado.souHost || mensagem.musicaId !== modo.idDaEscolha(escolhaDe(estado))) return nada;
         const outros = estado.prontos.filter((id) => id !== de);
         const novo = { ...estado, prontos: mensagem.pronto ? [...outros, de].sort((a, b) => a - b) : outros };
+        return { estado: novo, enviar: [mensagemDaSala(novo)] };
+      }
+      case "preparo": {
+        if (!estado.souHost || mensagem.musicaId !== modo.idDaEscolha(escolhaDe(estado))) return nada;
+        const outros = estado.baixando.filter((id) => id !== de);
+        const novo = { ...estado, baixando: mensagem.baixando ? [...outros, de].sort((a, b) => a - b) : outros };
         return { estado: novo, enviar: [mensagemDaSala(novo)] };
       }
       case "comecar": {
@@ -214,7 +228,9 @@ export function criarProtocolo<Escolha extends object, NaRede extends object, P 
             ...escolha,
             status: "jogando",
             prontos: [],
+            baixando: [],
             adversarios: {},
+            minhaJogada: undefined,
             partidas: estado.partidas + 1,
             inicio: agora + ATRASO_DO_INICIO_MS,
             // A API recusaria a partida com um id malformado: um host modificado não tira o XP de ninguém.
@@ -255,8 +271,8 @@ export function criarProtocolo<Escolha extends object, NaRede extends object, P 
   /** Só o host: troca a escolha da sala. Escolha nova pede o pronto de todos de novo. */
   function escolher(estado: Estado, escolha: Escolha): Reacao {
     if (!estado.souHost) return { estado, enviar: [] };
-    const prontos = modo.idDaEscolha(escolha) === modo.idDaEscolha(escolhaDe(estado)) ? estado.prontos : [];
-    const novo = { ...estado, ...escolha, prontos };
+    const mesma = modo.idDaEscolha(escolha) === modo.idDaEscolha(escolhaDe(estado));
+    const novo = { ...estado, ...escolha, prontos: mesma ? estado.prontos : [], baixando: mesma ? estado.baixando : [] };
     return { estado: novo, enviar: [mensagemDaSala(novo)] };
   }
 
@@ -267,6 +283,7 @@ export function criarProtocolo<Escolha extends object, NaRede extends object, P 
       ...estado,
       jogadores: estado.jogadores.filter((j) => j.id !== id),
       prontos: estado.prontos.filter((p) => p !== id),
+      baixando: estado.baixando.filter((p) => p !== id),
       expulsos: [...estado.expulsos, id],
     };
     return { estado: novo, enviar: [{ tipo: "expulsar", id }, mensagemDaSala(novo)] };

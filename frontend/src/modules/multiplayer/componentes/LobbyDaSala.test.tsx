@@ -36,6 +36,22 @@ function lobby(extra: Partial<PropsDoLobby> = {}) {
 }
 
 describe("LobbyDaSala", () => {
+  it("o card de quem ainda baixa a escolha mostra que está baixando", () => {
+    lobby({ sala: sala({ baixando: [2] }) });
+    const ana = screen.getByText("Ana").closest("li")!;
+    expect(ana).toHaveTextContent("Baixando");
+    expect(screen.getByText("Lu").closest("li")).not.toHaveTextContent("Baixando");
+  });
+
+  it("o convidado avisa a sala quando começa e termina de baixar", () => {
+    const aoAvisarPreparo = vi.fn();
+    const props = { sala: sala(), escolha: null, podeComecar: true, volumeDosEfeitos: 0, aoComecar: vi.fn(async () => {}), aoPronto: vi.fn(), aoExpulsar: vi.fn(), aoPassarLideranca: vi.fn(), aoEnviarChat: vi.fn(() => true), aoAvisarPreparo };
+    const { rerender } = render(<LobbyDaSala {...props} preparo={{ tipo: "baixando" }} />);
+    expect(aoAvisarPreparo).toHaveBeenLastCalledWith(true);
+    rerender(<LobbyDaSala {...props} preparo={{ tipo: "pronta" }} />);
+    expect(aoAvisarPreparo).toHaveBeenLastCalledWith(false);
+  });
+
   it("mostra os jogadores, as vagas e a escolha que o modo mandou", () => {
     lobby();
     expect(screen.getByText("Lu")).toBeInTheDocument();

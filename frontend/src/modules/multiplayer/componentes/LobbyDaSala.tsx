@@ -15,7 +15,7 @@ import { IconeDeChute } from "./IconeDeChute";
 export type PreparoDaEscolha = { tipo: "esperando" } | { tipo: "baixando" } | { tipo: "pronta" } | { tipo: "erro"; mensagem: string };
 
 export interface PropsDoLobby {
-  sala: { souHost: boolean; meuId: number; hostId: number; jogadores: Jogador[]; prontos: number[]; chat: MensagemDoChatDaSala[] };
+  sala: { souHost: boolean; meuId: number; hostId: number; jogadores: Jogador[]; prontos: number[]; baixando?: number[]; chat: MensagemDoChatDaSala[] };
   /** O retrato de cada jogador no modo (o personagem do Rock). */
   avatar?: (jogador: Jogador) => ReactNode;
   /** Sala online: o código que os amigos digitam. */
@@ -34,6 +34,8 @@ export interface PropsDoLobby {
   volumeDosEfeitos: number;
   aoComecar: () => Promise<void>;
   aoPronto: (pronto: boolean) => void;
+  /** Só o convidado: avisa a sala se ainda está baixando a escolha. */
+  aoAvisarPreparo?: (baixando: boolean) => void;
   aoExpulsar: (id: number) => void;
   aoPassarLideranca: (id: number) => void;
   aoEnviarChat: (texto: string) => boolean;
@@ -53,6 +55,7 @@ export function LobbyDaSala({
   volumeDosEfeitos,
   aoComecar,
   aoPronto,
+  aoAvisarPreparo,
   aoExpulsar,
   aoPassarLideranca,
   aoEnviarChat,
@@ -64,6 +67,13 @@ export function LobbyDaSala({
   const [qr, setQr] = useState("");
   const [comecando, setComecando] = useState(false);
   const [confirmacao, setConfirmacao] = useState<{ tipo: "lideranca" | "expulsar"; id: number; nome: string } | null>(null);
+
+  const baixandoAgora = preparo.tipo === "baixando";
+  useEffect(() => {
+    if (!sala.souHost) aoAvisarPreparo?.(baixandoAgora);
+    // Só a mudança do download conta: o callback muda a cada render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baixandoAgora, sala.souHost]);
 
   useEffect(() => {
     if (enderecoDoCelular) void QRCode.toDataURL(enderecoDoCelular, { margin: 1, width: 220 }).then(setQr);
@@ -103,6 +113,11 @@ export function LobbyDaSala({
                     <div className="flex flex-wrap gap-1 max-md:mt-1">
                       {jogador.id === sala.hostId && <span className="rounded-full bg-ouro px-2 text-base font-bold text-fundo max-md:text-xs">Host</span>}
                       {jogador.id === sala.meuId && <span className="rounded-full bg-superficie-elevada px-2 text-base max-md:text-xs">Você</span>}
+                      {sala.baixando?.includes(jogador.id) && (
+                        <span className="flex items-center gap-1 rounded-full bg-superficie-elevada px-2 text-base text-texto-suave max-md:text-xs">
+                          <Loader2 className="size-4 animate-spin opacity-70" aria-hidden /> Baixando
+                        </span>
+                      )}
                       {sala.prontos.includes(jogador.id) && (
                         <span className="flex items-center gap-1 rounded-full bg-sucesso px-2 text-base font-bold text-fundo max-md:text-xs">
                           <Check className="size-4 opacity-70" aria-hidden /> Pronto
@@ -209,7 +224,6 @@ export function LobbyDaSala({
             <p className="text-base font-bold">Sala online</p>
             <p className="text-base text-texto-suave max-md:text-sm">Passe o código para os amigos:</p>
             <p className="font-mono text-5xl font-bold tracking-[0.2em] text-destaque max-md:text-3xl">{codigo}</p>
-            <p className="text-base text-texto-suave max-md:text-xs">Eles entram em Multijogador, no campo &quot;Código da sala online&quot;.</p>
           </section>
         )}
         {enderecoDoCelular && (

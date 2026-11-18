@@ -15,6 +15,7 @@ import { anotarNaBarraDeUr, BarraDeUrDaPartida, CabecalhoDaPartida, CarregandoPa
 import { CORES_DOS_JULGAMENTOS } from "../tema";
 import { CapaDaFonte } from "../selecao/CapaDoConjunto";
 import { mapaDoTrecho, trechosDoMapa } from "./treino";
+import { ContagemDaLargada } from "./ContagemDaLargada";
 
 /** A música começa depois deste respiro, para o jogador se posicionar. */
 const ENTRADA_S = 2;
@@ -113,7 +114,7 @@ interface Props {
   /** Assistindo ao vivo: o performance.now em que a música começou para quem assiste, que entra no meio dela. */
   aoVivo?: { inicio: number };
   /** Partida numa sala: a música larga no `inicio` da sala (performance.now), o placar vai para os outros e os deles aparecem na tela. */
-  rede?: { inicio: number; aoAtualizar: (jogada: JogadaEmRede) => void; adversarios?: ReactNode };
+  rede?: { inicio: number; aoAtualizar: (jogada: JogadaEmRede) => void; adversarios?: ReactNode; volumeDosEfeitos?: number };
 }
 
 const decodificarPadrao = (contexto: AudioContext, bytes: Uint8Array) => contexto.decodeAudioData(bytes.slice().buffer);
@@ -436,6 +437,7 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
   return (
     <main className="relative h-full overflow-hidden bg-fundo text-texto">
       <canvas ref={canvas} aria-label="Pista do Mania" className="absolute inset-0 h-full w-full touch-none select-none" />
+      {rede && <ContagemDaLargada inicio={rede.inicio} volume={rede.volumeDosEfeitos ?? 0} />}
       {pronta && <BarraDeUrDaPartida ler={() => lerUr.current()} cores={CORES_DOS_JULGAMENTOS} />}
       {pronta && (
         <CabecalhoDaPartida
@@ -470,7 +472,7 @@ export function TelaDeJogoMania({ mapa, mods = 0, semente = 0, opcoes = OPCOES_P
           }
         />
       )}
-      {rede?.adversarios && <div className="pointer-events-none absolute top-28 right-6 z-10 w-72 max-md:right-2 max-md:w-48">{rede.adversarios}</div>}
+      {rede?.adversarios}
       {falta > 0 && (
         <p role="timer" className="pointer-events-none absolute inset-0 grid place-items-center font-titulo text-8xl">
           {falta}

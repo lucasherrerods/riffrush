@@ -13,7 +13,8 @@ import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { ehArrasteParaCima } from "./gesto";
 import { MenuDePausa } from "./componentes/MenuDePausa";
-import { NumeroDaContagem } from "./componentes/NumeroDaContagem";
+import { NumeroDaContagem } from "@/shared/ui/NumeroDaContagem";
+import { PosicaoNaTelaDividida } from "./componentes/PosicaoNaTelaDividida";
 import { criarLojaDoHud, useLoja, type LojaDoHud } from "./lojaDoHud";
 import { CONTROLE_VAZIO, HUD_INICIAL, PistaDoJogador, type ControleDoJogador, type FimDoJogador, type Hud, type RelogioDaPartida } from "./PistaDoJogador";
 import { opcoesPeloNumeroDeJogadores, viewportsDaTela } from "./telaDividida";
@@ -513,7 +514,7 @@ export function TelaDeJogo({ musica, dificuldade, instrumento = "guitarra", opco
                   aceitaEvento={divididos[i].aceitaEvento}
                   aoFim={(fim) => fimDoJogador.current(fim, i)}
                 />
-                <span className="pointer-events-none absolute bottom-2 left-2 rounded-sm bg-superficie-elevada px-2 font-titulo text-lg tracking-wide">{divididos[i].nome}</span>
+                <PosicaoNaTelaDividida lojas={lojas} indice={i} nome={divididos[i].nome} />
               </div>
             ))
           ) : (

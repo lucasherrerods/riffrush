@@ -47,7 +47,7 @@ import { FundoDoMania } from "./menu/FundoDoMania";
 import { MenuDoMania } from "./menu/MenuDoMania";
 import { ehClienteWebDaSala, useSalaSoNasTelasDela } from "@/modules/multiplayer";
 import { acharNaBiblioteca } from "./multijogador/mapaNaRede";
-import { PlacarDaSalaMania } from "./multijogador/PlacarDaSalaMania";
+import { PlacarAoVivoDoMania, PlacarDaSalaMania } from "./multijogador/PlacarDaSalaMania";
 import { enviarEstado, sairDaSala, useConexao, voltarParaASala } from "./multijogador/sala";
 import { TelaDeMultijogadorMania } from "./multijogador/TelaDeMultijogadorMania";
 import { anotar, iniciarMaratona, PlaylistsDoPerfil, proximaTocavel, ResultadoDaMaratona, rotuloDeSeguir, type Maratona, type Playlist } from "@/modules/playlists";
@@ -95,7 +95,12 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
   // A música acompanha o mapa selecionado e, depois da partida, continua de onde o jogador saiu.
   const [idSelecionado, setIdSelecionado] = useState<string | null>(null);
   const faixaSelecionada = useMemo(() => faixas.find((f) => f.id === idSelecionado) ?? null, [faixas, idSelecionado]);
-  useSeguirMapa(player, tela.nome === "selecao" ? faixaSelecionada : null, { ficaNaQueTocaAoEntrar: true });
+  // Na sala, o player toca a música do mapa que o host escolheu, assim que ela estiver na biblioteca.
+  const conexao = useConexao();
+  const idDaSala = conexao.sala?.mapa ? acharNaBiblioteca(conexao.sala.mapa, conjuntos ?? [])?.conjunto.id : undefined;
+  const faixaDaSala = useMemo(() => faixas.find((f) => f.id === idDaSala) ?? null, [faixas, idDaSala]);
+  const faixaSeguida = tela.nome === "selecao" ? faixaSelecionada : tela.nome === "multijogador" ? faixaDaSala : null;
+  useSeguirMapa(player, faixaSeguida, { ficaNaQueTocaAoEntrar: tela.nome === "selecao" });
   const faseDaTrilha = tela.nome === "jogo" ? "jogo" : tela.nome === "resultado" && tela.resultado.derrota ? "falha" : "menu";
   const retomarTrilha = useTrilhaDaPartida(player, faixaSelecionada, faseDaTrilha);
   const [idAoEntrar, setIdAoEntrar] = useState<string | null>(null);
@@ -319,7 +324,6 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
 
   // A sala deu a largada: todos abrem o mesmo mapa, com os mods do host, no mesmo instante.
   // Os mods da sala vão só na tela da partida, para não ficarem ligados na seleção solo depois.
-  const conexao = useConexao();
   const partidasVistas = useRef(0);
   useEffect(() => {
     const sala = conexao.sala;
@@ -390,7 +394,8 @@ export function TelaDoMania({ alavanca, palco, abrirBiblioteca = abrirBiblioteca
             ? {
                 inicio: conexao.sala.inicio,
                 aoAtualizar: enviarEstado,
-                adversarios: <PlacarDaSalaMania aoVivo sala={{ ...conexao.sala, jogadores: conexao.sala.jogadores.filter((j) => j.id !== conexao.sala!.meuId) }} eu={{ pontos: 0, precisao: 1, combo: 0, derrota: false, terminou: false }} />,
+                volumeDosEfeitos: audio.volumeDosEfeitos,
+                adversarios: <PlacarAoVivoDoMania sala={conexao.sala} />,
               }
             : undefined
         }

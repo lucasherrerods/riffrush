@@ -310,6 +310,23 @@ describe("TelaDoMania", () => {
       expect(screen.getByRole("navigation", { name: "Menu do Mania" })).toBeInTheDocument();
     });
 
+    it("o player toca a música do mapa escolhido na sala", async () => {
+      const seguirMapa = vi.spyOn(PlayerDeMusica.prototype, "seguirMapa");
+      const { usuario } = await abrir();
+      await screen.findByText(/Nenhum mapa ainda/);
+      const osz = arquivoOsz();
+      await usuario.upload(screen.getByLabelText("Arquivos .osz"), osz);
+      await screen.findByRole("heading", { name: "Música" });
+      const hash = lerOsz(new Uint8Array(await osz.arrayBuffer())).mapas[0].hash;
+      await usuario.click(screen.getByRole("button", { name: "Voltar" }));
+      await usuario.click(await screen.findByRole("button", { name: "Multiplayer" }));
+      seguirMapa.mockClear();
+      const sala = { status: "naSala", souHost: false, meuId: 2, hostId: 1, jogadores: [{ id: 1, personagem: { nome: "Ana" } }], prontos: [], baixando: [], adversarios: {}, partidas: 0, inicio: 0, chat: [], baldesDoChat: {}, expulsos: [], personagem: { nome: "Jogador" }, mapa: { tipo: "importado", hash, titulo: "Música", artista: "Banda", dificuldade: "Hard", teclas: 4 }, mods: 0 };
+      act(() => rede.mudar({ sala, endereco: "" }));
+      await waitFor(() => expect(seguirMapa).toHaveBeenCalledWith(expect.objectContaining({ titulo: "Música" })));
+      seguirMapa.mockRestore();
+    });
+
     it("a largada da sala abre o mapa para todos, manda o placar e o resultado mostra a sala", async () => {
       const { usuario } = await abrir();
       await screen.findByText(/Nenhum mapa ainda/);
